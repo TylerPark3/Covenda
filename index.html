@@ -412,6 +412,12 @@
     .student-simple{padding:72px 0}.student-simple-head{margin-bottom:26px}.student-simple-head p{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}.student-steps article{min-height:124px;justify-content:space-between}.student-steps h3{margin:0;font-size:25px}.student-steps p{display:none}
     .student-start .decision-head p{display:none}.student-start .decision-head h2{font-size:clamp(38px,4.2vw,56px)}
     .student-start .batch-intro{min-height:360px}.student-start .batch-intro h3{font-size:40px}.student-start .batch-intro p{font-size:11px}.student-start .batch-fact{min-height:118px}.student-start .batch-fact b{margin-top:13px;font-size:16px}
+    .form-trap{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;overflow:hidden!important}
+    .submission-note{display:block;color:var(--muted);font-size:10px;line-height:1.55}.submission-note strong{color:var(--ink)}
+    .consent-row{display:flex!important;align-items:flex-start;gap:9px;color:var(--muted);font-size:10px!important;line-height:1.5!important;text-transform:none!important;letter-spacing:0!important}.consent-row input{flex:0 0 auto;width:16px!important;height:16px!important;margin-top:1px}
+    .interest-fields{display:grid;gap:12px;margin:18px 0}.interest-fields .compact-field{margin:0}.interest-fields input,.interest-fields select{width:100%}
+    .live-form-status{min-height:20px;margin-top:10px;color:var(--muted);font-size:10px;font-weight:750;line-height:1.5}.live-form-status.is-error{color:var(--red)}.live-form-status.is-success{color:#157347}
+    .form-actions .form-note{max-width:440px}.meeting-form .consent-row{grid-column:1/-1}.meeting-form .live-form-status{grid-column:1/-1;margin:0}.meeting-form .form-trap{display:none}
     @media(max-width:900px){.student-intent-hero .student-current-card{grid-template-columns:1fr auto}.student-intent-hero .student-current-facts{grid-column:1/-1;grid-row:2}.student-current-action{grid-column:2;grid-row:1}}
     @media(max-width:620px){.student-intent-hero .student-focus-copy{padding:66px 16px 42px}.student-intent-hero .student-focus-copy h1{margin-bottom:28px;font-size:clamp(52px,16vw,64px)}.student-intent-form{grid-template-columns:1fr;padding:7px;border-radius:20px}.student-intent-form input{height:56px!important;padding:0 14px!important;font-size:17px!important}.student-intent-form .primary{width:100%;min-width:0;height:54px}.student-intent-examples{gap:12px;margin-top:16px}.student-intent-examples>span{width:100%}.student-intent-message{font-size:11px!important}.student-intent-hero .student-current-card{grid-template-columns:1fr;gap:22px;padding:26px 20px}.student-intent-hero .student-current-facts{grid-column:auto;grid-row:auto;width:100%}.student-intent-hero .student-current-facts div{padding:0 10px}.student-intent-hero .student-current-facts b{font-size:16px}.student-current-action{grid-column:auto;grid-row:auto;width:100%;justify-items:stretch}.student-current-action .secondary{width:100%}.student-simple{padding:54px 0}.student-simple-head{margin-bottom:20px}.student-simple-head h2{font-size:42px}.student-steps article{min-height:92px;flex-direction:row;align-items:center}.student-steps h3{font-size:22px}}
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.view.active,.toast,.wordmark-path,.state-swap,.buyer-panel:not([hidden]),.tally-metric strong.is-counting,.student-detail[open] .student-detail-body{animation:none!important;transition:none!important}html.motion-ready .reveal,html.motion-ready .app-reveal{opacity:1!important;transform:none!important;clip-path:none!important;transition:none!important}.process-step,.money-echo,.intro-after,.intro-screen,.intro-unlock,button,.workspace-tab,.filter,.buyer-tab,.role-tab,.listing,.ops-module,.candidate-card,.proof-level,.batch-fact,.talent-stat,.talent-profile,.student-detail>summary:after,.impact-person-frame img{transition:none!important}.intro-type-line:after,.intro-caret{animation:none!important}.campus-ticker-window{overflow-x:auto}.campus-ticker-track{animation:none!important;transform:none!important;will-change:auto}.campus-ticker-set[aria-hidden="true"]{display:none}}
@@ -426,7 +432,7 @@
       </div>
     </div>
   </dialog>
-  <div class="demo-bar"><b>Demo mode</b> · Local only.</div>
+  <div class="demo-bar"><b>Pilot intake is live.</b> Prototype workflows remain illustrative. Do not send client files or sensitive data.</div>
   <header>
     <div class="shell topbar">
       <button class="brand" data-view="home" aria-label="ProofPath home"><span class="wordmark" aria-hidden="true"><span class="wordmark-proof">Proof</span><em class="wordmark-path">Path</em></span><small>Paid work trials</small></button>
@@ -711,6 +717,10 @@
           <form class="panel form-card" id="intakeForm">
             <h3>What happened last time?</h3>
             <div class="form-grid">
+              <div class="field"><label for="employerCompany">Company or practice</label><input id="employerCompany" autocomplete="organization" required></div>
+              <div class="field"><label for="employerName">Your name</label><input id="employerName" autocomplete="name" required></div>
+              <div class="field"><label for="employerEmail">Work email</label><input id="employerEmail" type="email" autocomplete="email" required></div>
+              <div class="field"><label for="employerRole">Your role</label><input id="employerRole" autocomplete="organization-title"></div>
               <div class="field"><label for="vertical">Current service path</label><select id="vertical"><option value="accounting">Accounting firm · current test</option><option value="wealth">Wealth management / RIA · second path</option><option value="other" disabled>Other professional work · not active</option></select></div>
               <div class="field"><label for="deadline">Useful by</label><input id="deadline" type="date"></div>
               <div class="field full"><label for="rawTask">Last real instance</label><textarea id="rawTask">Five recent client-onboarding cases moved across email, portal, CRM, and workflow tools. Missing information caused repeat requests and routine questions escalated to a partner.</textarea></div>
@@ -725,8 +735,11 @@
               <div class="field"><label for="systemAccess">System access required</label><select id="systemAccess"><option value="none" selected>None · approved files only</option><option value="temporary">One temporary least-privilege account</option><option value="production">Production or client systems</option></select></div>
               <div class="field full"><span>Approved sources</span><div class="choice-grid"><label class="choice"><input id="publicData" type="checkbox" checked>Public or employer-approved sources</label><label class="choice"><input id="deidentifiedData" type="checkbox" checked>Explicitly de-identified internal examples</label><label class="choice"><input id="clientData" type="checkbox">Client, patient, or customer records</label><label class="choice"><input id="restrictedJudgment" type="checkbox">Regulated or licensed decision</label></div></div>
               <div class="field full"><label for="contextInput">Approved context</label><textarea id="contextInput">A short reviewer walkthrough, five de-identified event logs, redacted onboarding templates, role labels, system descriptions, and one synthetic complete case.</textarea></div>
+              <div class="form-trap" aria-hidden="true"><label for="employerWebsite">Website<input id="employerWebsite" tabindex="-1" autocomplete="off"></label></div>
+              <div class="field full"><label class="consent-row" for="employerConsent"><input id="employerConsent" type="checkbox" required><span>I understand this sends the intake to ProofPath. I have not included client names, client records, tax data, credentials, regulated decisions, or proprietary documents.</span></label></div>
             </div>
-            <div class="form-actions"><span class="form-note">Demo mode · local only.</span><button class="primary" type="submit">Draft Project Packet</button></div>
+            <div class="form-actions"><span class="form-note">ProofPath will use this information to assess fit and respond. No payment or project is created.</span><button class="primary" id="submitEmployer" type="submit">Send problem to ProofPath</button></div>
+            <div class="live-form-status" id="employerSubmitStatus" role="status" aria-live="polite"></div>
           </form>
 
           <aside class="panel packet-card" aria-live="polite">
@@ -768,7 +781,7 @@
         <div class="decision-head"><div><div class="eyebrow">Matched path</div><h2 id="rolePathTitle">Current path.</h2></div></div>
         <div class="role-switch" role="tablist" aria-label="Role paths"><button class="role-tab active" type="button" role="tab" aria-selected="true" data-role-path="accounting"><span>Open example</span><b>Accounting Operations</b></button><button class="role-tab" type="button" role="tab" aria-selected="false" data-role-path="wealth"><span>Next · closed</span><b>Wealth Operations</b></button></div>
         <div class="batch-layout">
-          <form class="batch-intro" id="batchApplyForm"><div class="local-label" id="batchStatus">Illustrative demand</div><h3 id="batchTitle">Accounting Operations</h3><p id="batchSummary">Map onboarding work using safe examples.</p><label class="compact-field" for="studentAvailability">Start date<select id="studentAvailability"><option>Within 2 weeks</option><option selected>Within 30 days</option><option>Within 45 days</option></select></label><label class="compact-field" for="resumeContext">Résumé · optional<input id="resumeContext" type="file" accept=".pdf,.doc,.docx" aria-describedby="resumeNote"></label><small id="resumeNote">Demo only. Nothing uploads.</small><button class="primary" type="submit" id="applyBatch">Apply</button><div class="demo-status" id="batchMessage">Browse now.</div></form>
+          <form class="batch-intro" id="batchApplyForm"><div class="local-label" id="batchStatus">Student interest · live</div><h3 id="batchTitle">Accounting Operations</h3><p id="batchSummary">Tell us what you want to learn and when you could start. This is an interest list, not a job offer.</p><div class="interest-fields"><label class="compact-field" for="studentName">Your name<input id="studentName" autocomplete="name" required></label><label class="compact-field" for="studentEmail">Email<input id="studentEmail" type="email" autocomplete="email" required></label><label class="compact-field" for="studentSchool">School<input id="studentSchool" autocomplete="organization" required></label><label class="compact-field" for="studentLevel">Current level<select id="studentLevel" required><option value="">Choose one</option><option>High school senior</option><option>College freshman</option><option>College sophomore</option><option>Other student</option></select></label><label class="compact-field" for="studentInterest">Work interest<input id="studentInterest" value="Accounting operations" required></label><label class="compact-field" for="studentAvailability">Start date<select id="studentAvailability"><option>Within 2 weeks</option><option selected>Within 30 days</option><option>Within 45 days</option></select></label><div class="form-trap" aria-hidden="true"><label for="studentWebsite">Website<input id="studentWebsite" tabindex="-1" autocomplete="off"></label></div><label class="consent-row" for="studentAge"><input id="studentAge" type="checkbox" required><span>I am 18 or older.</span></label><label class="consent-row" for="studentConsent"><input id="studentConsent" type="checkbox" required><span>ProofPath may use this information to contact me about relevant pilots. No résumé or client data is being requested.</span></label></div><button class="primary" type="submit" id="applyBatch">Join student interest list</button><div class="live-form-status" id="batchMessage" role="status" aria-live="polite">No job guarantee. No student fee.</div></form>
           <div class="batch-facts student-core-facts" aria-label="Core role path facts"><div class="batch-fact"><span>Work</span><b id="batchTask">Onboarding workflow map</b><small>Paid and bounded.</small></div><div class="batch-fact"><span>Pay</span><b id="batchPay">$300 example</b><small>No student fee.</small></div><div class="batch-fact"><span>First step</span><b id="batchAssessment">35-minute sample</b><small>Rubric first.</small></div><div class="batch-fact"><span>Inputs</span><b id="batchBoundary">Public or de-identified</b><small>No client files.</small></div></div>
         </div>
         <details class="batch-secondary"><summary>Rules</summary><div class="batch-secondary-grid"><div><span>AI</span><b id="batchAi">Disclose use</b><small>No public AI on employer material.</small></div><div><span>Demand</span><b id="batchDemandText">1 expected assignment → 3 qualified</b><small>Example only.</small></div></div></details>
@@ -825,14 +838,18 @@
           <div class="calendar-toolbar"><h4 id="scheduleMonthLabel"></h4><div class="month-controls"><button id="previousMonth" type="button" aria-label="Previous month">←</button><button id="nextMonth" type="button" aria-label="Next month">→</button></div></div>
           <div class="calendar-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
           <div class="calendar-days" id="calendarDays" aria-label="Available meeting dates"></div>
-          <div class="time-title">Available times · your local timezone</div>
+          <div class="time-title">Preferred times · your local timezone</div>
           <div class="time-grid" id="timeSlots" aria-label="Available meeting times"></div>
           <form class="meeting-form" id="scheduleForm">
             <label>Your name<input id="meetingName" name="meetingName" autocomplete="name" required></label>
             <label>Work email<input id="meetingEmail" name="meetingEmail" type="email" autocomplete="email" required></label>
+            <label>Company or practice<input id="meetingCompany" name="meetingCompany" autocomplete="organization" required></label>
             <label>What kind of work is stuck?<select id="meetingTopic" name="meetingTopic"><option>Accounting onboarding or operations</option><option>Workflow documentation or training assets</option><option>Wealth operations or public research</option><option>Not sure yet</option></select></label>
+            <div class="form-trap" aria-hidden="true"><label for="meetingWebsite">Website<input id="meetingWebsite" tabindex="-1" autocomplete="off"></label></div>
+            <label class="consent-row" for="meetingConsent"><input id="meetingConsent" type="checkbox" required><span>ProofPath may use these details to confirm the call. This is a request, not a calendar invitation yet.</span></label>
             <div class="schedule-summary" id="scheduleSummary" aria-live="polite">Choose a date and time.</div>
-            <button class="primary" id="confirmMeeting" type="submit" disabled>Confirm this time</button>
+            <button class="primary" id="confirmMeeting" type="submit" disabled>Request this time</button>
+            <div class="live-form-status" id="meetingSubmitStatus" role="status" aria-live="polite"></div>
           </form>
         </div>
         <div class="schedule-success hidden" id="scheduleSuccess" aria-live="polite"><div><strong>✓</strong><h3 id="scheduleSuccessTitle">Time selected.</h3><p id="scheduleSuccessText"></p><div class="actions"><button class="primary" id="chooseAnotherTime" type="button">Choose another time</button><button class="secondary" id="closeScheduleSuccess" type="button">Close</button></div></div></div>
@@ -840,7 +857,7 @@
     </div>
   </dialog>
 
-  <footer><div class="shell footer-row"><span>ProofPath prototype · July 2026</span><span>Illustrative only · No backend, payment processing, or real submissions</span></div></footer>
+  <footer><div class="shell footer-row"><span>ProofPath prototype · July 2026</span><span>Lead forms submit privately · Prototype projects remain illustrative · No payment processing</span></div></footer>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
@@ -878,6 +895,7 @@
     };
     window.PROOFPATH_DEMO_MODEL=demoStore;
     const proofState={selectedRolePath:'accounting',application:false,assessmentPassed:false,projectApplicationSubmitted:false,applicationProjectId:null,applicationBriefReviewed:false,applicationBrief:null,interviewInvited:null,requirementDrafted:false,requirementApproved:false,selectedCandidate:null,agreementSigned:false,submissionRecorded:false,employerAccepted:false,provenOutcome:null,briefStartedAt:null};
+    let studentInterestSubmitted=false;
     const evidenceLevels=['Explorer','Applicant','Role-Qualified','Employer-Verified','Proven'];
     const demoStamp=()=>new Date().toLocaleString(undefined,{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
     function auditDemo(action,evidence='Local demo action',actor='System'){
@@ -922,6 +940,14 @@
       introLater(()=>{closeIntro();resetPageTop()},2350);
     }
     function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.classList.remove('show'),2800)}
+    const leadFormStartedAt=Date.now();
+    function setFormStatus(element,message,state=''){element.textContent=message;element.classList.toggle('is-error',state==='error');element.classList.toggle('is-success',state==='success')}
+    async function submitLead(payload){
+      const response=await fetch('/api/submissions',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({startedAt:leadFormStartedAt,...payload})});
+      let result={};try{result=await response.json()}catch{}
+      if(!response.ok||!result.ok)throw new Error(result.error||'We could not save this right now. Please try again.');
+      return result;
+    }
     function setView(name,{playIntro=true}={}){if(!views[name])return;if(name!=='home')closeIntro();Object.entries(views).forEach(([key,view])=>view.classList.toggle('active',key===name));$$('.primary-nav [data-view]').forEach(button=>button.classList.toggle('active',button.dataset.view===name));window.scrollTo({top:0,behavior:motion()});if(name==='home'&&playIntro&&!introSeen)openIntro()}
     $$('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));
     $('#introUnlock').addEventListener('click',unlockIntro);
@@ -1008,11 +1034,12 @@
       $('#studentCurrentPayLabel').textContent=accounting?'Example pay':'Not funded';
       $('#studentCurrentTime').textContent=accounting?'8–10h':'—';
       $('#studentCurrentTimeLabel').textContent=accounting?'Project':'Not open';
-      $('#batchStatus').textContent=accounting?(demoStore.Batch.expectedAssignments>0?'Open example':'Closed'):'Next path · closed';
+      $('#batchStatus').textContent='Student interest · live';
       $('#batchTitle').textContent=accounting?'Accounting Operations':'Wealth Operations';
-      $('#batchSummary').textContent=accounting?'Map onboarding work using safe examples.':'Public-source operations work. Opens only with employer demand.';
+      $('#batchSummary').textContent=accounting?'Tell us what you want to learn and when you could start. This is an interest list, not a job offer.':'Tell us if you want to hear when this path opens. This is an interest list, not a job offer.';
+      if(!proofState.application)$('#studentInterest').value=accounting?'Accounting operations':'Wealth operations';
       $('#batchTask').textContent=accounting?'Onboarding workflow map':'Public-source research';$('#batchPay').textContent=accounting?'$300 example':'Set with funded demand';$('#batchAssessment').textContent=accounting?'35-minute sample':'Not open';$('#batchBoundary').textContent=accounting?'Public or de-identified':'Public only';$('#batchAi').textContent=accounting?'Disclose use':'Task-specific';$('#batchDemandText').textContent=accounting?`${demoStore.Batch.expectedAssignments} expected → ${demoStore.Batch.targetQualified} qualified`:'Closed';
-      $('#applyBatch').disabled=!accounting||demoStore.Batch.expectedAssignments===0||proofState.application;$('#applyBatch').textContent=proofState.application?'Applied':accounting&&demoStore.Batch.expectedAssignments>0?'Apply':'Closed';animateState($('.batch-layout'));
+      $('#applyBatch').disabled=studentInterestSubmitted||$('#applyBatch').dataset.busy==='true';$('#applyBatch').textContent=studentInterestSubmitted?'Interest received':'Join student interest list';animateState($('.batch-layout'));
     }
     function renderRequirementApproval(){
       const approvals=$$('[data-card-approval]'),ready=approvals.every(input=>input.checked)&&$('#talentReviewer').value.trim();
@@ -1057,7 +1084,16 @@
       button.addEventListener('click',()=>{proofState.selectedRolePath=button.dataset.rolePath;renderRolePath()});
       button.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();let next=index;if(event.key==='ArrowLeft')next=(index-1+rolePathTabs.length)%rolePathTabs.length;if(event.key==='ArrowRight')next=(index+1)%rolePathTabs.length;if(event.key==='Home')next=0;if(event.key==='End')next=rolePathTabs.length-1;rolePathTabs[next].focus();rolePathTabs[next].click()});
     });
-    $('#batchApplyForm').addEventListener('submit',event=>{event.preventDefault();if(proofState.selectedRolePath!=='accounting'||demoStore.Batch.expectedAssignments===0||proofState.application)return;proofState.application=true;demoStore.Application.push({id:'PP-DEMO-APP-001',batch:demoStore.Batch.id,student:demoStore.StudentProfile.id,status:'applicant',resumeIsContextOnly:true,createdAt:demoStamp()});$('#assessmentShell').classList.remove('hidden');$('#batchMessage').textContent='Sample unlocked.';auditDemo('Student applied to Accounting Operations Batch','Optional résumé retained as context, not proof','Sample learner');renderRolePath();renderProofState()});
+    $('#batchApplyForm').addEventListener('submit',async event=>{
+      event.preventDefault();if(studentInterestSubmitted)return;
+      const button=$('#applyBatch');button.dataset.busy='true';button.disabled=true;button.textContent='Sending…';setFormStatus($('#batchMessage'),'Sending your interest…');
+      try{
+        const result=await submitLead({type:'student_interest',website:$('#studentWebsite').value,consent:$('#studentConsent').checked,contact:{name:$('#studentName').value,email:$('#studentEmail').value},school:$('#studentSchool').value,educationLevel:$('#studentLevel').value,interest:$('#studentInterest').value,availability:$('#studentAvailability').value,age18:$('#studentAge').checked});
+        studentInterestSubmitted=true;
+        setFormStatus($('#batchMessage'),`Interest received · reference ${result.reference}. We will contact you if a relevant pilot opens.`,'success');auditDemo('Student interest sent to ProofPath',`${result.reference} · interest is not an application or traction metric`,'Website visitor');toast('Student interest received.');
+      }catch(error){setFormStatus($('#batchMessage'),error.message,'error')}
+      finally{button.dataset.busy='false';renderRolePath();renderProofState()}
+    });
     $('#workSampleForm').addEventListener('submit',event=>{event.preventDefault();const answer=$('#assessmentAnswer').value.trim(),sources=$('#assessmentSources').value.trim();if(answer.length<80||sources.length<12){$('#assessmentMessage').textContent='Add a reviewable exception summary and specific public or synthetic sources.';return}if(!proofState.assessmentPassed){proofState.assessmentPassed=true;demoStore.AssessmentAttempt.push({id:'PP-DEMO-ATT-001',workSample:demoStore.WorkSample.id,student:demoStore.StudentProfile.id,status:'human-reviewed-demo-pass',submittedAt:demoStamp(),result:'Role-Qualified'});['Task accuracy','Source verification','Judgment and escalation','Communication','AI policy compliance'].forEach((capability,index)=>demoStore.EvidenceItem.push({id:`PP-DEMO-EVI-RQ-${index+1}`,subject:demoStore.StudentProfile.id,taskFamily:'Accounting Operations',capability,evidenceSourceType:'ProofPath work sample',sourceReference:`PP-DEMO-ATT-001 · ${demoStore.RubricVersion.version}`,observerOrVerifier:'ProofPath human reviewer role',observationDate:'2026-07-17',expiration:'2027-07-17',visibility:'private',status:'active',correctionHistory:[]}));demoStore.Credential.issueDate='Jul 17, 2026';demoStore.Credential.renewalDate='Jul 17, 2027';demoStore.Credential.lastVerified='Jul 17, 2026';demoStore.Credential.status='active';auditDemo('Role-Qualified prerequisite recorded','Human-reviewed local demo attempt PP-DEMO-ATT-001','ProofPath reviewer role')}$('#assessmentResult').classList.remove('hidden');$('#assessmentMessage').textContent='Local demo review recorded. This does not create a live credential.';$('#resultAiEvidence').textContent=$('#assessmentAiDisclosure').value==='No AI used'?'Student disclosed no AI use.':'Student disclosed AI use only on public or synthetic inputs.';renderProofState()});
     $('#requestCorrection').addEventListener('click',()=>{demoStore.Credential.correctionHistory.push({at:demoStamp(),type:'correction-request',status:'open'});$('#resultRequestStatus').textContent='Correction request recorded in the local audit.';auditDemo('Evidence correction requested','Credential PP-DEMO-AO-RQ-001','Sample learner');renderProofState()});
     $('#requestAppeal').addEventListener('click',()=>{$('#resultRequestStatus').textContent='Appeal recorded; status remains unchanged pending human review.';auditDemo('Assessment appeal requested','Attempt PP-DEMO-ATT-001 · no status changed','Sample learner');renderProofState()});
@@ -1084,7 +1120,7 @@
     function renderScheduleSummary(){
       const ready=selectedMeetingDate&&selectedMeetingTime;
       $('#scheduleSummary').textContent=ready?`${selectedMeetingDate.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'})} at ${selectedMeetingTime} · 20 minutes`:'Choose a date and time.';
-      $('#confirmMeeting').disabled=!ready;
+      $('#confirmMeeting').disabled=!ready||$('#confirmMeeting').dataset.busy==='true';
     }
     function renderTimes(){
       $('#timeSlots').innerHTML=scheduleTimes.map(time=>`<button class="time-slot${time===selectedMeetingTime?' selected':''}" type="button" data-time="${time}" aria-pressed="${time===selectedMeetingTime}" ${selectedMeetingDate?'':'disabled'}>${time}</button>`).join('');
@@ -1116,6 +1152,7 @@
     function resetSchedule(){
       scheduleMonth=new Date(scheduleToday.getFullYear(),scheduleToday.getMonth(),1);selectedMeetingDate=null;selectedMeetingTime=null;
       $('#scheduleForm').reset();$('#schedulePicker').classList.remove('hidden');$('#scheduleSuccess').classList.add('hidden');
+      $('#confirmMeeting').dataset.busy='false';$('#confirmMeeting').textContent='Request this time';setFormStatus($('#meetingSubmitStatus'),'');
       renderCalendar();renderTimes();renderScheduleSummary();
     }
     function openSchedule(){resetSchedule();scheduleDialog.showModal()}
@@ -1123,12 +1160,16 @@
     $('#previousMonth').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()-1,1);selectedMeetingDate=null;selectedMeetingTime=null;renderCalendar();renderTimes();renderScheduleSummary()});
     $('#nextMonth').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()+1,1);selectedMeetingDate=null;selectedMeetingTime=null;renderCalendar();renderTimes();renderScheduleSummary()});
     $('#closeSchedule').addEventListener('click',()=>scheduleDialog.close());
-    $('#scheduleForm').addEventListener('submit',event=>{
+    $('#scheduleForm').addEventListener('submit',async event=>{
       event.preventDefault();if(!selectedMeetingDate||!selectedMeetingTime)return;
-      const when=`${selectedMeetingDate.toLocaleDateString(undefined,{weekday:'short',month:'long',day:'numeric'})} at ${selectedMeetingTime}`;
-      $('#scheduleSuccessTitle').textContent=when;
-      $('#scheduleSuccessText').textContent='This is a local demo confirmation. No calendar invitation or email was sent.';
-      $('#schedulePicker').classList.add('hidden');$('#scheduleSuccess').classList.remove('hidden');toast('Meeting time selected in the local demo.');
+      const button=$('#confirmMeeting');button.dataset.busy='true';button.disabled=true;button.textContent='Sending request…';setFormStatus($('#meetingSubmitStatus'),'Sending your call request…');
+      try{
+        const result=await submitLead({type:'call_request',website:$('#meetingWebsite').value,consent:$('#meetingConsent').checked,contact:{name:$('#meetingName').value,email:$('#meetingEmail').value,company:$('#meetingCompany').value},topic:$('#meetingTopic').value,requestedDate:localDateKey(selectedMeetingDate),requestedTime:selectedMeetingTime,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone||'Browser local time'});
+        const when=`${selectedMeetingDate.toLocaleDateString(undefined,{weekday:'short',month:'long',day:'numeric'})} at ${selectedMeetingTime}`;
+        $('#scheduleSuccessTitle').textContent=`Call requested · ${when}`;
+        $('#scheduleSuccessText').textContent=`Reference ${result.reference}. ProofPath will confirm by email; no calendar invitation has been created yet.`;
+        $('#schedulePicker').classList.add('hidden');$('#scheduleSuccess').classList.remove('hidden');toast('Call request received.');
+      }catch(error){setFormStatus($('#meetingSubmitStatus'),error.message,'error');button.dataset.busy='false';button.textContent='Request this time';renderScheduleSummary()}
     });
     $('#chooseAnotherTime').addEventListener('click',resetSchedule);
     $('#closeScheduleSuccess').addEventListener('click',()=>scheduleDialog.close());
@@ -1153,7 +1194,16 @@
       $('#policyTitle').textContent=policy.title;$('#policyText').textContent=policy.text;$('#employerFunds').textContent=money(data.budget);$('#studentPay').textContent=money(pay);$('#platformFee').textContent=money(fee);$('#totalCharge').textContent=money(data.budget);
       $('#approvePacket').disabled=data.passes<7;$('#packetMessage').textContent=data.passes<7?'Resolve every failed gate before funding.':'All launch controls pass in this illustrative intake.';$('#intakeStatus').textContent=data.passes===7?'Ready to approve':'Needs redesign';$('#intakeStatus').className='tag '+(data.passes===7?'':'red');
     }
-    $('#intakeForm').addEventListener('submit',event=>{event.preventDefault();renderPacket();toast('Project Packet generated from the employer intake.')});
+    $('#intakeForm').addEventListener('submit',async event=>{
+      event.preventDefault();const data=packetData();
+      if(data.unsafe){renderPacket();setFormStatus($('#employerSubmitStatus'),'Remove client records, regulated decisions, and production access before sending.','error');return}
+      const button=$('#submitEmployer');button.disabled=true;button.textContent='Sending…';setFormStatus($('#employerSubmitStatus'),'Saving your intake privately…');
+      try{
+        const result=await submitLead({type:'employer_intake',website:$('#employerWebsite').value,consent:$('#employerConsent').checked,contact:{name:$('#employerName').value,email:$('#employerEmail').value,company:$('#employerCompany').value,role:$('#employerRole').value},project:{vertical:$('#vertical').value,usefulBy:$('#deadline').value,lastInstance:$('#rawTask').value,decisionSupported:$('#businessUse').value,deliverable:$('#deliverable').value,reviewer:$('#reviewer').value,acceptance:$('#acceptance').value,reviewMinutes:Number($('#reviewMinutes').value),studentHours:$('#studentHours').value,internalHoursAvoided:Number($('#internalHours').value||0),budget:Number($('#budget').value),systemAccess:$('#systemAccess').value,sources:{publicOrApproved:$('#publicData').checked,deidentified:$('#deidentifiedData').checked,clientRecords:$('#clientData').checked,restrictedJudgment:$('#restrictedJudgment').checked},approvedContext:$('#contextInput').value}});
+        renderPacket();setFormStatus($('#employerSubmitStatus'),`Problem received · reference ${result.reference}. ProofPath will review fit and respond.`,'success');toast('Employer problem received.');
+      }catch(error){setFormStatus($('#employerSubmitStatus'),error.message,'error')}
+      finally{button.disabled=false;button.textContent='Send problem to ProofPath'}
+    });
     $('#revisePacket').addEventListener('click',()=>{$('#rawTask').focus();toast('Edit the intake, then regenerate the packet.')});
     $('#approvePacket').addEventListener('click',()=>{if(packetData().passes<7)return;$('#packetMessage').textContent='Demo approved and funded. No real payment was created.';$('#intakeStatus').textContent='Approved + funded';$('#intakeStatus').className='tag';$('#projectState').textContent='Funded · ready to assign';const stages=$$('#stageLine .stage');stages.forEach((s,i)=>{s.className='stage '+(i<4?'done':i===4?'current':'')});toast('Funding simulated. The project can now be offered to qualified students.')});
 
