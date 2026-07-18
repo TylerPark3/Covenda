@@ -3,6 +3,9 @@ import { put } from '@vercel/blob';
 const TYPES = new Set(['employer_intake', 'student_interest', 'call_request']);
 const MAX_BODY_BYTES = 24_000;
 const MIN_FORM_TIME_MS = 1_500;
+const RATE_WINDOW_MS = 10 * 60 * 1_000;
+const RATE_LIMIT = 12;
+const rateBuckets = new Map();
 
 function text(value, maxLength) {
   if (typeof value !== 'string') return '';
@@ -12,6 +15,23 @@ function text(value, maxLength) {
 function email(value) {
   const clean = text(value, 254).toLowerCase();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean) ? clean : '';
+}
+
+function webUrl(value, { required = false } = {}) {
+  const clean = text(value, 500);
+  if (!clean && !required) return '';
+  try {
+    const parsed = new URL(clean);
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error();
+    return parsed.toString();
+  } catch {
+    throw new Error(required ? 'Please provide a valid website URL.' : 'Please provide valid HTTP or HTTPS links.');
+  }
+}
+
+function textArray(value, { maxItems = 10, maxLength = 120 } = {}) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map(item => text(item, maxLength)).filter(Boolean))].slice(0, maxItems);
 }
 
 function number(value, min, max) {
@@ -30,6 +50,21 @@ function sameOrigin(req) {
   }
 }
 
+function isRateLimited(req) {
+  const now = Date.now();
+  const rawAddress = text(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown', 200);
+  const key = rawAddress.split(',')[0].trim() || 'unknown';
+  const recent = (rateBuckets.get(key) || []).filter(timestamp => now - timestamp < RATE_WINDOW_MS);
+  recent.push(now);
+  rateBuckets.set(key, recent);
+  if (rateBuckets.size > 1_000) {
+    for (const [address, timestamps] of rateBuckets) {
+      if (!timestamps.some(timestamp => now - timestamp < RATE_WINDOW_MS)) rateBuckets.delete(address);
+    }
+  }
+  return recent.length > RATE_LIMIT;
+}
+
 function contact(value = {}, { companyRequired = false } = {}) {
   const result = {
     name: text(value.name, 100),
@@ -43,11 +78,19 @@ function contact(value = {}, { companyRequired = false } = {}) {
   return result;
 }
 
-function employerRecord(body) {
+export function employerRecord(body) {
+  const organization = body.organization || {};
   const project = body.project || {};
   const sources = project.sources || {};
   const record = {
     contact: contact(body.contact, { companyRequired: true }),
+    organization: {
+      website: webUrl(organization.website, { required: true }),
+      size: text(organization.size, 80),
+      industry: text(organization.industry, 100),
+      reason: text(organization.reason, 1_500),
+      workFrequency: text(organization.workFrequency, 80),
+    },
     project: {
       vertical: text(project.vertical, 40),
       usefulBy: text(project.usefulBy, 20),
@@ -70,6 +113,9 @@ function employerRecord(body) {
       approvedContext: text(project.approvedContext, 2_000),
     },
   };
+  if (!record.organization.size || !record.organization.industry || !record.organization.reason || !record.organization.workFrequency) {
+    throw new Error('Please complete the company profile fields.');
+  }
   if (!record.project.lastInstance || !record.project.decisionSupported || !record.project.deliverable || !record.project.reviewer || !record.project.acceptance) {
     throw new Error('Please complete the problem, output, reviewer, and acceptance fields.');
   }
@@ -79,22 +125,61 @@ function employerRecord(body) {
   return record;
 }
 
-function studentRecord(body) {
+export function studentRecord(body) {
+  const interests = body.interests || {};
+  const links = body.links || {};
+  const preferences = body.preferences || {};
+  const skills = Array.isArray(body.skills)
+    ? body.skills.slice(0, 12).map(skill => ({ name: text(skill?.name, 100), level: text(skill?.level, 80) })).filter(skill => skill.name && skill.level)
+    : [];
   const record = {
     contact: contact(body.contact),
     school: text(body.school, 160),
     educationLevel: text(body.educationLevel, 80),
+    graduationYear: number(body.graduationYear, 2026, 2035),
+    major: text(body.major, 160),
+    timezone: text(body.timezone, 80),
     interest: text(body.interest, 240),
+    interests: {
+      workTypes: textArray(interests.workTypes),
+      industries: textArray(interests.industries),
+      workStyle: text(interests.workStyle, 120),
+      ambiguityComfort: text(interests.ambiguityComfort, 120),
+      avoid: text(interests.avoid, 500),
+    },
+    skills,
+    links: {
+      portfolio: webUrl(links.portfolio),
+      github: webUrl(links.github),
+    },
     availability: text(body.availability, 80),
+    preferences: {
+      hoursPerWeek: text(preferences.hoursPerWeek, 80),
+      duration: text(preferences.duration, 80),
+      minimumCompensation: text(preferences.minimumCompensation, 80),
+      liveMeetings: text(preferences.liveMeetings, 100),
+      screening: text(preferences.screening, 100),
+      priorities: textArray(preferences.priorities),
+      informationNeeded: text(preferences.informationNeeded, 1_000),
+    },
     age18: body.age18 === true,
   };
-  if (!record.school || !record.educationLevel || !record.interest || !record.age18) {
-    throw new Error('Please complete the student interest fields and confirm you are 18 or older.');
+  if (!record.school || !record.educationLevel || record.graduationYear === null || !record.major || !record.timezone || !record.age18) {
+    throw new Error('Please complete the student profile fields and confirm you are 18 or older.');
+  }
+  if (!record.interests.workTypes.length || !record.interests.industries.length || !record.interests.workStyle || !record.interests.ambiguityComfort) {
+    throw new Error('Please complete the student interest fields.');
+  }
+  if (!record.skills.length) {
+    throw new Error('Please add an honest level for at least one skill.');
+  }
+  if (!record.availability || !record.preferences.hoursPerWeek || !record.preferences.duration || !record.preferences.minimumCompensation || !record.preferences.liveMeetings || !record.preferences.screening || !record.preferences.priorities.length) {
+    throw new Error('Please complete the student availability and project preference fields.');
   }
   return record;
 }
 
-function callRecord(body) {
+export function callRecord(body) {
   const record = {
     contact: contact(body.contact, { companyRequired: true }),
     topic: text(body.topic, 240),
@@ -106,6 +191,15 @@ function callRecord(body) {
     throw new Error('Please choose a preferred date and time.');
   }
   return record;
+}
+
+export function submissionDetails(body) {
+  if (!TYPES.has(body.type)) throw new Error('Please choose a valid submission type.');
+  return body.type === 'employer_intake'
+    ? employerRecord(body)
+    : body.type === 'student_interest'
+      ? studentRecord(body)
+      : callRecord(body);
 }
 
 function parseBody(req) {
@@ -141,16 +235,13 @@ export default async function handler(req, res) {
     if (startedAt === null || Date.now() - startedAt < MIN_FORM_TIME_MS) {
       return res.status(429).json({ ok: false, error: 'Please wait a moment and try again.' });
     }
+    if (isRateLimited(req)) return res.status(429).json({ ok: false, error: 'Too many requests. Please try again later.' });
 
-    const details = body.type === 'employer_intake'
-      ? employerRecord(body)
-      : body.type === 'student_interest'
-        ? studentRecord(body)
-        : callRecord(body);
+    const details = submissionDetails(body);
     const createdAt = new Date().toISOString();
     const reference = referenceFor(body.type);
     const record = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       reference,
       type: body.type,
       source: 'proof-path.vercel.app',
