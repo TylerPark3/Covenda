@@ -25,12 +25,35 @@ test('student-first hero offers five work paths and a scroll continuation', () =
   assert.match(hero, /href="#how"/);
 });
 
+test('Covenda restores the skippable editorial intro and keeps it replayable', () => {
+  assert.match(html, /id="introScreen"/);
+  assert.match(html, /Students get paid\./);
+  assert.match(html, /Employers get work done\./);
+  assert.match(html, /id="introEnter"[^>]*>[\s\S]*Enter Covenda/);
+  assert.match(html, /id="introSkip"[^>]*>Skip intro/);
+  assert.match(html, /data-action="replay-intro"/);
+  assert.match(script, /covendaIntroSeen/);
+  assert.match(script, /function openIntro\(/);
+  assert.match(script, /function dismissIntro\(/);
+  assert.match(styles, /--font-display:/);
+  assert.match(styles, /\.intro-statement/);
+});
+
+test('the initial path chooser uses a continuous responsive glass control', () => {
+  assert.match(styles, /\.work-selector[\s\S]*border-radius: 999px/);
+  assert.match(styles, /\.work-option\.is-selected[\s\S]*radial-gradient/);
+  assert.match(styles, /scroll-snap-type: x proximity/);
+  assert.match(html, /<\/div>\s*<button class="gold-button selector-submit"/);
+});
+
 test('audience switch supports student and company site states', () => {
   assert.match(html, /data-audience-option="student"/);
   assert.match(html, /data-audience-option="company"/);
   assert.match(html, /What work keeps getting pushed\?/);
   assert.match(script, /document\.body\.dataset\.audience = audience/);
   assert.match(styles, /body\[data-audience="company"\] \.hero-student/);
+  assert.match(script, /covendaAudience/);
+  assert.match(script, /covendaSelectedWorkType/);
 });
 
 test('company story preserves the managed Project Packet workflow and risk boundary', () => {

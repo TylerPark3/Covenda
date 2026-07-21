@@ -9,6 +9,9 @@ const state = {
 };
 
 const storageKey = 'covendaPilotSubmissions';
+const introStorageKey = 'covendaIntroSeen';
+const audienceStorageKey = 'covendaAudience';
+const workTypeStorageKey = 'covendaSelectedWorkType';
 const draftKeys = {
   studentForm: 'covendaStudentInterestDraft',
   companyForm: 'covendaCompanyProblemDraft',
@@ -37,6 +40,89 @@ function removeStorage(key) {
   } catch {
     // Local draft storage is an enhancement; submission remains available.
   }
+}
+
+let introRun = 0;
+let introTimers = [];
+
+function clearIntroTimers() {
+  introTimers.forEach(window.clearTimeout);
+  introTimers = [];
+}
+
+function introLater(callback, delay) {
+  introTimers.push(window.setTimeout(callback, delay));
+}
+
+function restoreIntroCopy() {
+  $$('.intro-line').forEach(line => {
+    line.textContent = line.dataset.introCopy;
+    line.classList.remove('is-typing');
+  });
+}
+
+function openIntro({ force = false } = {}) {
+  const intro = $('#introScreen');
+  if (!force && readStorage(introStorageKey, false) === true) return;
+  introRun += 1;
+  const run = introRun;
+  clearIntroTimers();
+  intro.classList.remove('is-leaving');
+  if (!intro.open) intro.showModal();
+  document.documentElement.classList.add('intro-open');
+
+  const lines = $$('.intro-line', intro);
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion) {
+    restoreIntroCopy();
+    $('#introEnter').focus();
+    return;
+  }
+
+  lines.forEach(line => {
+    line.textContent = '';
+    line.classList.remove('is-typing');
+  });
+  let lineIndex = 0;
+  let characterIndex = 0;
+  const typeIntro = () => {
+    if (run !== introRun || !intro.open) return;
+    const line = lines[lineIndex];
+    const copy = line.dataset.introCopy;
+    line.classList.add('is-typing');
+    characterIndex += 1;
+    line.textContent = copy.slice(0, characterIndex);
+    line.classList.add('is-typing');
+    if (characterIndex < copy.length) {
+      introLater(typeIntro, copy[characterIndex - 1] === '.' ? 110 : 34);
+      return;
+    }
+    line.classList.remove('is-typing');
+    if (lineIndex < lines.length - 1) {
+      lineIndex += 1;
+      characterIndex = 0;
+      introLater(typeIntro, 180);
+      return;
+    }
+    $('#introEnter').focus();
+  };
+  introLater(typeIntro, 220);
+}
+
+function dismissIntro({ fast = false } = {}) {
+  const intro = $('#introScreen');
+  if (!intro.open || intro.classList.contains('is-leaving')) return;
+  introRun += 1;
+  clearIntroTimers();
+  restoreIntroCopy();
+  writeStorage(introStorageKey, true);
+  intro.classList.add('is-leaving');
+  introLater(() => {
+    intro.close();
+    intro.classList.remove('is-leaving');
+    document.documentElement.classList.remove('intro-open');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, fast ? 80 : 620);
 }
 
 function draftValue(draft, name, fallback = '') {
@@ -134,6 +220,7 @@ function showToast(message) {
 function setAudience(audience) {
   if (!['student', 'company'].includes(audience)) return;
   state.audience = audience;
+  writeStorage(audienceStorageKey, audience);
   document.body.dataset.audience = audience;
   $$('[data-audience-option]').forEach(button => {
     button.setAttribute('aria-pressed', String(button.dataset.audienceOption === audience));
@@ -150,6 +237,7 @@ function setSurface(surface) {
   state.surface = surface;
   document.body.dataset.surface = surface;
   const workspace = surface === 'workspace';
+  if (workspace && $('#introScreen').open) dismissIntro({ fast: true });
   $('#siteShell').hidden = workspace;
   $('#workspaceShell').hidden = !workspace;
   setWorkspaceTab('overview');
@@ -159,6 +247,7 @@ function setSurface(surface) {
 function selectWorkType(workType) {
   if (!workType) return;
   state.workType = workType;
+  writeStorage(workTypeStorageKey, workType);
   $$('.work-option').forEach(button => {
     const selected = button.dataset.workType === workType;
     button.classList.toggle('is-selected', selected);
@@ -568,6 +657,7 @@ $$('[data-audience-option]').forEach(button => button.addEventListener('click', 
 $$('[data-workspace-tab]').forEach(button => button.addEventListener('click', () => setWorkspaceTab(button.dataset.workspaceTab)));
 $$('[data-work-type]').forEach(button => button.addEventListener('click', () => {
   selectWorkType(button.dataset.workType);
+  if (button.classList.contains('work-option')) saveDraft(studentForm);
   if (button.closest('.work-types')) openDialog(studentDialog, studentForm);
 }));
 $$('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
@@ -595,6 +685,10 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   }
   if (action === 'explore-work') $('#workTypes').scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (action === 'project-fit') $('#projectFit').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (action === 'replay-intro') {
+    setSurface('site');
+    openIntro({ force: true });
+  }
 }));
 
 $$('[data-prompt]').forEach(button => button.addEventListener('click', () => {
@@ -604,8 +698,20 @@ $$('[data-prompt]').forEach(button => button.addEventListener('click', () => {
   textarea.focus();
 }));
 
+$('#introEnter').addEventListener('click', () => dismissIntro());
+$('#introSkip').addEventListener('click', () => dismissIntro({ fast: true }));
+$('#introScreen').addEventListener('cancel', event => {
+  event.preventDefault();
+  dismissIntro({ fast: true });
+});
+
+const restoredAudience = readStorage(audienceStorageKey, 'student');
+if (['student', 'company'].includes(restoredAudience)) state.audience = restoredAudience;
 const restoredWorkTypes = checkedValues(studentForm, 'workType');
+const rememberedWorkType = readStorage(workTypeStorageKey, 'Research');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];
+else if (rememberedWorkType) state.workType = rememberedWorkType;
 renderLocalSubmissionState();
 selectWorkType(state.workType);
 setAudience(state.audience);
+window.requestAnimationFrame(() => openIntro());

@@ -36,6 +36,23 @@
     </defs>
   </svg>
 
+  <dialog class="intro-screen" id="introScreen" aria-labelledby="introStatement" tabindex="-1">
+    <div class="intro-shell">
+      <div class="intro-brand" aria-label="Covenda">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i></span>
+        <span>Covenda</span>
+      </div>
+      <h1 class="intro-statement" id="introStatement">
+        <span class="intro-line" data-intro-copy="Students get paid.">Students get paid.</span>
+        <span class="intro-line is-accent" data-intro-copy="Employers get work done.">Employers get work done.</span>
+      </h1>
+      <div class="intro-actions">
+        <button class="intro-enter" id="introEnter" type="button"><svg><use href="#icon-arrow-right"/></svg>Enter Covenda</button>
+        <button class="intro-skip" id="introSkip" type="button">Skip intro</button>
+      </div>
+    </div>
+  </dialog>
+
   <div class="site-shell" id="siteShell">
     <header class="site-header">
       <button class="brand" type="button" data-action="home" aria-label="Covenda home">
@@ -68,8 +85,8 @@
             <button class="work-option" type="button" data-work-type="Operations" aria-pressed="false"><svg><use href="#icon-operations"/></svg><span>Operations</span></button>
             <button class="work-option" type="button" data-work-type="QA & testing" aria-pressed="false"><svg><use href="#icon-shield"/></svg><span>QA &amp; testing</span></button>
             <button class="work-option" type="button" data-work-type="Writing & documentation" aria-pressed="false"><svg><use href="#icon-write"/></svg><span>Writing &amp;<br>documentation</span></button>
-            <button class="gold-button selector-submit" type="button" data-action="student-form">Find my path<svg><use href="#icon-arrow-right"/></svg></button>
           </div>
+          <button class="gold-button selector-submit" type="button" data-action="student-form">Find my path<svg><use href="#icon-arrow-right"/></svg></button>
         </div>
         <button class="quiet-link" type="button" data-action="explore-work">Not sure yet? <span>Explore all project types</span><svg><use href="#icon-chevron"/></svg></button>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
@@ -178,7 +195,7 @@
       </section>
     </main>
 
-    <footer class="site-footer"><span>Covenda · Founder-led pilot</span><span>Structured submissions · No live payment processing</span></footer>
+    <footer class="site-footer"><span>Covenda · Founder-led pilot</span><button type="button" data-action="replay-intro">Replay intro</button><span>Structured submissions · No live payment processing</span></footer>
   </div>
 
   <div class="workspace-shell" id="workspaceShell" hidden>
