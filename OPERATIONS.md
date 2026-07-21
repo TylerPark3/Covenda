@@ -3,9 +3,10 @@
 This project now has one submission path for company forms, student forms, university/partner roster forms, and call requests:
 
 1. The server validates and sanitizes the form.
-2. If Supabase is connected, it writes a structured row to the private `submissions` table.
-3. If Supabase is not connected or temporarily fails, it writes the same record to the existing private Vercel Blob store.
-4. If email notifications are configured, Covenda receives a short alert with the submission reference. Private form answers are deliberately left out of email.
+2. It first writes through Supabase's server-only Data API.
+3. If that route is unavailable, it tries the server-only Postgres connection supplied by the Vercel Supabase integration. Both routes reach the same private `submissions` table.
+4. Only if both database routes fail does it write the record to private Vercel Blob backup and mark the receipt **Primary sync pending**.
+5. If email notifications are configured, Covenda receives a short alert with the submission reference. Private form answers are deliberately left out of email.
 
 The public website never receives a Supabase secret. There is not yet a public or unprotected admin page.
 
@@ -24,6 +25,8 @@ The migration in `supabase/migrations/20260721051450_create_submission_inbox.sql
 
 The later migration `supabase/migrations/20260721060000_allow_university_partner.sql` adds the `university_partner` type and the `UNI-` reference prefix. It is idempotent (drop-if-exists then add), so it is safe to re-run. The API's accepted types and reference prefixes are exported from `api/submissions.js` (`SUBMISSION_TYPES` / `REFERENCE_PREFIXES`) as a single source of truth, and a test asserts the migration allows exactly those — so the API can never accept a type the database would reject.
 
+If an earlier SQL run stopped with `relation "submissions" already exists`, run `supabase/migrations/20260721172703_harden_submission_delivery.sql` in SQL Editor. It is the canonical repair: it adds any missing inbox columns and constraints, restores server-only grants, accepts all current audiences, refreshes the Data API schema, and never deletes existing rows.
+
 Before using real submissions, add these server-only environment variables to the Covenda Vercel project:
 
 | Variable | Purpose |
@@ -32,15 +35,16 @@ Before using real submissions, add these server-only environment variables to th
 | `NEXT_PUBLIC_SUPABASE_URL` | Accepted URL fallback when it is supplied automatically by the Vercel Supabase integration. The URL is public configuration; the secret key is not. |
 | `SUPABASE_SECRET_KEY` | Preferred server-only Supabase secret key. Never add it to client-side code or use a `NEXT_PUBLIC_`/`VITE_` prefix. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Legacy fallback only if the project has not issued a new secret key. |
+| `POSTGRES_URL` | Server-only pooled database connection supplied by the Vercel Supabase integration. This is the independent ingestion fallback when the Data API is unavailable. |
 | `BLOB_READ_WRITE_TOKEN` | Existing private Blob fallback. Keep it while Supabase is being introduced and during the MVP. |
 
 After adding variables, redeploy the Vercel project. Submit one clearly synthetic company form, one synthetic student form, and one synthetic university roster. Confirm all three appear in Supabase Table Editor under `public.submissions` with `EMP-`, `STU-`, and `UNI-` references. Also confirm the website receipt shows the same reference.
 
 ### If receipts appear on the website but not in Supabase
 
-The website keeps local receipts after the server accepts a submission. The server may have used private Blob backup storage if the Supabase URL, key, permission, or Data API schema was unavailable. New receipts now identify the server record as **Primary inbox** or **Secure backup**.
+The website keeps local receipts after the server accepts a submission. The server may have used private Blob backup storage if both Supabase routes were unavailable. New receipts identify the server record as **Primary inbox** or **Backup · sync pending**, and the workspace checks delivery health without exposing private records.
 
-Check that Vercel contains either `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`, plus `SUPABASE_SECRET_KEY`, and redeploy after any environment-variable change. Then run `supabase/migrations/20260721054507_repair_submission_inbox_access.sql` once in Supabase SQL Editor. The repair is safe to repeat: it restores server-only access and asks the Data API to refresh its schema cache without making submissions public.
+Check that Vercel contains either `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`, plus `SUPABASE_SECRET_KEY` and `POSTGRES_URL`, and redeploy after any environment-variable change. Then run `supabase/migrations/20260721172703_harden_submission_delivery.sql` once in Supabase SQL Editor. The repair is safe to repeat.
 
 Existing Blob backup records do not automatically appear in Supabase. Keep their receipt references; they can be backfilled after the primary connection is verified.
 

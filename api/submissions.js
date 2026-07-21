@@ -1,5 +1,6 @@
 import { put } from '@vercel/blob';
 import { createClient } from '@supabase/supabase-js';
+import postgres from 'postgres';
 import { Resend } from 'resend';
 
 // Single source of truth for what the API accepts and the reference it mints.
@@ -321,6 +322,10 @@ export function supabaseConfiguration(env) {
   return url && secret ? { url, secret } : null;
 }
 
+export function postgresConfiguration(env) {
+  return env.POSTGRES_URL || env.DATABASE_URL || '';
+}
+
 function storageErrorSummary(error) {
   return {
     code: error?.code || 'unknown',
@@ -335,9 +340,109 @@ function submissionBlobPath(record) {
   return `submissions/${record.type}/${day}/${stamp}-${record.reference}.json`;
 }
 
+export async function insertPostgresSubmission(record, {
+  connectionString,
+  createPostgresClient = postgres,
+} = {}) {
+  if (!connectionString) throw new Error('Postgres is not configured.');
+  const sql = createPostgresClient(connectionString, {
+    max: 1,
+    prepare: false,
+    idle_timeout: 2,
+    connect_timeout: 6,
+  });
+  const row = submissionRow(record);
+  try {
+    await sql`
+      insert into public.submissions (
+        reference,
+        submission_type,
+        status,
+        source,
+        revision_of,
+        submitter_name,
+        submitter_email,
+        organization_name,
+        summary,
+        ready_count,
+        readiness_total,
+        details,
+        readiness,
+        consent,
+        created_at,
+        updated_at
+      ) values (
+        ${row.reference},
+        ${row.submission_type},
+        ${row.status},
+        ${row.source},
+        ${row.revision_of},
+        ${row.submitter_name},
+        ${row.submitter_email},
+        ${row.organization_name},
+        ${row.summary},
+        ${row.ready_count},
+        ${row.readiness_total},
+        ${sql.json(row.details)},
+        ${row.readiness ? sql.json(row.readiness) : null},
+        ${row.consent},
+        ${row.created_at},
+        ${row.updated_at}
+      )
+      on conflict (reference) do nothing
+    `;
+    return { backend: 'supabase', route: 'postgres' };
+  } finally {
+    await sql.end({ timeout: 1 });
+  }
+}
+
+export async function primaryStorageHealth({
+  env = process.env,
+  createSupabaseClient = createClient,
+  createPostgresClient = postgres,
+} = {}) {
+  const configuration = supabaseConfiguration(env);
+  if (configuration) {
+    try {
+      const supabase = createSupabaseClient(configuration.url, configuration.secret, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      });
+      const { error } = await supabase.from('submissions').select('reference', { head: true, count: 'exact' });
+      if (!error) return { status: 'ready', route: 'data-api' };
+    } catch {
+      // The direct Postgres check below is the independent recovery path.
+    }
+  }
+
+  const connectionString = postgresConfiguration(env);
+  if (connectionString) {
+    const sql = createPostgresClient(connectionString, {
+      max: 1,
+      prepare: false,
+      idle_timeout: 2,
+      connect_timeout: 6,
+    });
+    try {
+      const rows = await sql`select to_regclass('public.submissions')::text as table_name`;
+      if (rows[0]?.table_name === 'submissions') return { status: 'ready', route: 'postgres' };
+    } catch {
+      // Return the safe aggregate status below; never expose connection errors.
+    } finally {
+      await sql.end({ timeout: 1 });
+    }
+  }
+
+  return {
+    status: configuration || connectionString ? 'unavailable' : 'not-configured',
+    route: 'backup',
+  };
+}
+
 export async function persistSubmission(record, {
   env = process.env,
   createSupabaseClient = createClient,
+  insertPostgresRecord = insertPostgresSubmission,
   putBlob = put,
   logger = console,
 } = {}) {
@@ -348,7 +453,7 @@ export async function persistSubmission(record, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
       });
       const { error } = await supabase.from('submissions').insert(submissionRow(record));
-      if (!error) return { backend: 'supabase' };
+      if (!error) return { backend: 'supabase', route: 'data-api' };
       logger.error('Supabase submission storage failed; using the configured Blob fallback.', {
         reference: record.reference,
         ...storageErrorSummary(error),
@@ -359,11 +464,26 @@ export async function persistSubmission(record, {
         ...storageErrorSummary(error),
       });
     }
-  } else {
-    logger.warn?.('Supabase is not fully configured; using the configured Blob fallback.', {
+  }
+
+  const connectionString = postgresConfiguration(env);
+  if (connectionString) {
+    try {
+      return await insertPostgresRecord(record, { connectionString });
+    } catch (error) {
+      logger.error('Direct Postgres submission storage failed; using the configured Blob fallback.', {
+        reference: record.reference,
+        ...storageErrorSummary(error),
+      });
+    }
+  }
+
+  if (!configuration && !connectionString) {
+    logger.warn?.('Primary submission storage is not configured; using the configured Blob fallback.', {
       reference: record.reference,
       hasUrl: Boolean(env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL),
       hasSecret: Boolean(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY),
+      hasPostgresUrl: false,
     });
   }
 
@@ -373,7 +493,12 @@ export async function persistSubmission(record, {
     contentType: 'application/json',
     cacheControlMaxAge: 60,
   });
-  return { backend: 'blob', fallbackReason: configuration ? 'supabase-write-failed' : 'supabase-not-configured' };
+  return {
+    backend: 'blob',
+    route: 'blob',
+    syncStatus: 'pending',
+    fallbackReason: configuration || connectionString ? 'supabase-write-failed' : 'supabase-not-configured',
+  };
 }
 
 function escapeHtml(value) {
@@ -448,8 +573,14 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
+  if (req.method === 'GET') {
+    if (!sameOrigin(req)) return res.status(403).json({ ok: false, error: 'Origin not allowed.' });
+    const primary = await primaryStorageHealth();
+    return res.status(200).json({ ok: true, primary });
+  }
+
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+    res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ ok: false, error: 'Method not allowed.' });
   }
   if (!sameOrigin(req)) return res.status(403).json({ ok: false, error: 'Origin not allowed.' });
@@ -498,6 +629,8 @@ export default async function handler(req, res) {
       createdAt,
       status: 'received',
       storage: persistence.backend,
+      storageRoute: persistence.route,
+      syncStatus: persistence.backend === 'supabase' ? 'synced' : 'pending',
       ...(readiness ? { readiness: { readyCount: readiness.readyCount, total: readiness.total } } : {}),
       ...(revisionOf ? { revisionOf } : {}),
     });

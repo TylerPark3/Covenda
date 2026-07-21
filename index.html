@@ -9,6 +9,9 @@
   <meta name="covenda-calendly-url" content="https://calendly.com/thp2117-columbia/30min">
   <title>Covenda · Real work becomes credible evidence</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,400;6..72,500&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
@@ -64,6 +67,7 @@
         <span>Covenda</span>
       </button>
       <nav class="site-nav" aria-label="Primary navigation">
+        <a class="student-nav-link" href="#studentPathfinder">Explore work</a>
         <a href="#how">How it works</a>
         <a href="#why">Why Covenda</a>
       </nav>
@@ -78,12 +82,17 @@
     </header>
 
     <main>
-      <section class="hero hero-student" aria-labelledby="studentHeroTitle">
+      <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
           <h1 id="studentHeroTitle">What kind of work do you want to prove?</h1>
           <p>Choose a path. We’ll show you paid projects built to produce real evidence—not résumé filler.</p>
         </div>
         <div class="selector-orbit" aria-label="Choose a work path">
+          <div class="selector-fx" aria-hidden="true">
+            <canvas id="selectorFxCanvas"></canvas>
+            <i class="selector-fx-glow selector-fx-glow-a"></i>
+            <i class="selector-fx-glow selector-fx-glow-b"></i>
+          </div>
           <div class="work-selector glass-panel">
             <button class="work-option is-selected" type="button" data-work-type="Research" aria-pressed="true"><svg><use href="#icon-search"/></svg><span>Research</span></button>
             <button class="work-option" type="button" data-work-type="Data & spreadsheets" aria-pressed="false"><svg><use href="#icon-data"/></svg><span>Data &amp;<br>spreadsheets</span></button>
@@ -92,6 +101,11 @@
             <button class="work-option" type="button" data-work-type="Writing & documentation" aria-pressed="false"><svg><use href="#icon-write"/></svg><span>Writing &amp;<br>documentation</span></button>
           </div>
           <button class="gold-button selector-submit" type="button" data-action="student-form">Find my path<svg><use href="#icon-arrow-right"/></svg></button>
+          <nav class="student-journey" aria-label="Student journey">
+            <button type="button" data-action="focus-pathfinder"><i>1</i><span><b>Explore</b><small>Choose a work path</small></span></button>
+            <button type="button" data-action="student-form"><i>2</i><span><b>Profile</b><small>Tell us what fits</small></span></button>
+            <button type="button" data-action="workspace-submissions"><i>3</i><span><b>Track</b><small>See every receipt</small></span></button>
+          </nav>
         </div>
         <button class="quiet-link" type="button" data-action="explore-work">Not sure yet? <span>Explore all project types</span><svg><use href="#icon-chevron"/></svg></button>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
@@ -419,7 +433,7 @@
           <button type="button" data-workspace-tab="profile"><svg><use href="#icon-user"/></svg><span data-student-label="My profile" data-company-label="Company profile">My profile</span></button>
           <button type="button" data-workspace-tab="submissions"><svg><use href="#icon-file"/></svg>Submissions</button>
         </nav>
-        <div class="pilot-state"><i></i><span>Pilot workspace<small>Local preview</small></span></div>
+        <div class="pilot-state" id="deliveryStatus" data-status="checking"><i></i><span>Submission delivery<small>Checking primary inbox…</small></span></div>
       </aside>
       <main class="workspace-main">
         <section class="workspace-view is-active" data-workspace-view="overview">
@@ -504,7 +518,7 @@
           <div class="university-profile-view audience-content" data-for-audience="university"><h1>Your partner profile</h1><p>Your organization details and student roster are shared with the Covenda pilot team as a founder-led intake. No public partner listing or account is created.</p><article class="profile-summary glass-panel"><header><div><small>Roster intake</small><h2 id="universityWorkspaceSummaryTitle">No roster shared yet</h2></div><button class="outline-button compact" type="button" data-action="university-roster">Edit roster</button></header><dl id="universityWorkspaceSummary"><div><dt>Organization</dt><dd>Add your organization and type.</dd></div><div><dt>Students</dt><dd>Add students by interest area.</dd></div><div><dt>Last sent</dt><dd>Nothing sent yet.</dd></div></dl></article><button class="gold-button" type="button" data-action="university-roster">Open roster builder<svg><use href="#icon-arrow-right"/></svg></button></div>
         </section>
         <section class="workspace-view simple-workspace-view submission-workspace-view" data-workspace-view="submissions">
-          <div class="submission-heading"><div><h1>Submission receipts</h1><p>Track what Covenda received and what happens next. Receipts are stored on this device; review decisions arrive separately by email.</p></div><span><svg><use href="#icon-lock"/></svg>Private local record</span></div>
+          <div class="submission-heading"><div><h1>Submission receipts</h1><p>Track what Covenda received and what happens next. Receipts are stored on this device; review decisions arrive separately by email.</p></div><span id="deliveryStatusBadge"><svg><use href="#icon-lock"/></svg>Checking server delivery</span></div>
           <div class="submission-history" id="submissionHistory" aria-live="polite"></div>
         </section>
       </main>
