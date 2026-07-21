@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { authorizeAdmin, listAdminSubmissions, requestAdminLink, updateAdminSubmission } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminSubmissions, requestAdminLink, updateAdminSubmission } from '../api/admin.js';
 
 function authClient({ user, authError = null } = {}) {
   return {
@@ -28,14 +28,18 @@ test('admin authorization requires both an authentic user and the operator allow
 
 test('admin magic link never creates users and uses the current admin URL', async () => {
   let credentials;
+  let clientKey;
   await requestAdminLink('operator@covenda.com', {
     headers: { host: 'proof-path.vercel.app', 'x-forwarded-proto': 'https', 'x-forwarded-for': '203.0.113.10' },
   }, {
-    env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'secret', COVENDA_ADMIN_EMAILS: 'operator@covenda.com' },
-    createSupabaseClient() {
+    env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'secret', SUPABASE_PUBLISHABLE_KEY: 'publishable', COVENDA_ADMIN_EMAILS: 'operator@covenda.com' },
+    createSupabaseClient(url, key) {
+      assert.equal(url, 'https://project.supabase.co');
+      clientKey = key;
       return { auth: { async signInWithOtp(input) { credentials = input; return { error: null }; } } };
     },
   });
+  assert.equal(clientKey, 'publishable');
   assert.deepEqual(credentials, {
     email: 'operator@covenda.com',
     options: { shouldCreateUser: false, emailRedirectTo: 'https://proof-path.vercel.app/admin.html' },
@@ -52,6 +56,38 @@ test('unlisted email receives a generic success without sending a link', async (
   });
   assert.deepEqual(result, { sent: true });
   assert.equal(called, false);
+});
+
+test('admin magic link reports the missing publishable key without exposing a server secret', async () => {
+  await assert.rejects(
+    requestAdminLink('operator@covenda.com', {
+      headers: { host: 'proof-path.vercel.app', 'x-forwarded-for': '203.0.113.12' },
+    }, {
+      env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'secret', COVENDA_ADMIN_EMAILS: 'operator@covenda.com' },
+    }),
+    error => error instanceof AdminOperationalError
+      && error.code === 'ADMIN_SUPABASE_PUBLISHABLE_KEY_MISSING'
+      && !error.publicMessage.includes('secret'),
+  );
+});
+
+test('admin endpoint returns an actionable allowlist diagnostic', async () => {
+  const response = {
+    headers: {},
+    statusCode: 0,
+    payload: null,
+    setHeader(name, value) { this.headers[name] = value; },
+    status(value) { this.statusCode = value; return this; },
+    json(value) { this.payload = value; return this; },
+  };
+  await adminHandler({
+    method: 'POST',
+    headers: { host: 'proof-path.vercel.app', 'x-forwarded-for': '203.0.113.13', 'x-vercel-id': 'test-request' },
+    body: { action: 'request-link', email: 'operator@covenda.com' },
+  }, response, { env: {} });
+  assert.equal(response.statusCode, 503);
+  assert.equal(response.payload.code, 'ADMIN_ALLOWLIST_MISSING');
+  assert.match(response.payload.error, /COVENDA_ADMIN_EMAILS/);
 });
 
 test('admin list is bounded and status update accepts only lifecycle states', async () => {

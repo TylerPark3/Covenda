@@ -5,6 +5,15 @@ import { supabaseConfiguration } from './submissions.js';
 const ADMIN_STATUSES = new Set(['received', 'reviewing', 'needs_information', 'packet_proposed', 'approval_pending', 'approved', 'declined', 'archived']);
 const linkBuckets = new Map();
 
+export class AdminOperationalError extends Error {
+  constructor(code, publicMessage, cause = null) {
+    super(publicMessage, cause ? { cause } : undefined);
+    this.name = 'AdminOperationalError';
+    this.code = code;
+    this.publicMessage = publicMessage;
+  }
+}
+
 function text(value, maxLength) {
   return typeof value === 'string' ? value.replace(/\0/g, '').trim().slice(0, maxLength) : '';
 }
@@ -25,9 +34,45 @@ function allowedEmails(env) {
 }
 
 function serverClient(env, createSupabaseClient) {
+  const hasUrl = Boolean(env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL);
+  const hasSecret = Boolean(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY);
+  if (!hasUrl) {
+    throw new AdminOperationalError(
+      'ADMIN_SUPABASE_URL_MISSING',
+      'The admin inbox is missing its Supabase project URL. Confirm SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL in Vercel, then redeploy.',
+    );
+  }
+  if (!hasSecret) {
+    throw new AdminOperationalError(
+      'ADMIN_SUPABASE_SECRET_MISSING',
+      'The admin inbox is missing its server-only Supabase key. Confirm SUPABASE_SECRET_KEY in Vercel, then redeploy.',
+    );
+  }
   const configuration = supabaseConfiguration(env);
-  if (!configuration) throw new Error('Admin storage is not configured.');
   return createSupabaseClient(configuration.url, configuration.secret, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+}
+
+function passwordlessClient(env, createSupabaseClient) {
+  const url = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
+  const publishableKey = env.SUPABASE_PUBLISHABLE_KEY
+    || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    || env.SUPABASE_ANON_KEY
+    || env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url) {
+    throw new AdminOperationalError(
+      'ADMIN_SUPABASE_URL_MISSING',
+      'Magic-link login is missing its Supabase project URL. Confirm SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL in Vercel, then redeploy.',
+    );
+  }
+  if (!publishableKey) {
+    throw new AdminOperationalError(
+      'ADMIN_SUPABASE_PUBLISHABLE_KEY_MISSING',
+      'Magic-link login is missing its Supabase publishable key. Confirm SUPABASE_PUBLISHABLE_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in Vercel, then redeploy.',
+    );
+  }
+  return createSupabaseClient(url, publishableKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
 }
@@ -72,7 +117,12 @@ export async function authorizeAdmin(req, {
   const token = bearerToken(req);
   if (!token) return null;
   const allowlist = allowedEmails(env);
-  if (!allowlist.size) throw new Error('Admin allowlist is not configured.');
+  if (!allowlist.size) {
+    throw new AdminOperationalError(
+      'ADMIN_ALLOWLIST_MISSING',
+      'Admin access is not configured for this deployment. Add a non-empty COVENDA_ADMIN_EMAILS value in Vercel, then redeploy.',
+    );
+  }
   const supabase = serverClient(env, createSupabaseClient);
   const { data, error } = await supabase.auth.getUser(token);
   const userEmail = email(data?.user?.email);
@@ -88,14 +138,25 @@ export async function requestAdminLink(address, req, {
   if (!cleanEmail) throw new Error('Enter a valid operator email.');
   if (linkRateLimited(req, cleanEmail)) throw new Error('Please wait before requesting another sign-in link.');
   const allowlist = allowedEmails(env);
-  if (!allowlist.size) throw new Error('Admin allowlist is not configured.');
+  if (!allowlist.size) {
+    throw new AdminOperationalError(
+      'ADMIN_ALLOWLIST_MISSING',
+      'Admin access is not configured for this deployment. Add a non-empty COVENDA_ADMIN_EMAILS value in Vercel, then redeploy.',
+    );
+  }
   if (!allowlist.has(cleanEmail)) return { sent: true };
-  const supabase = serverClient(env, createSupabaseClient);
+  const supabase = passwordlessClient(env, createSupabaseClient);
   const { error } = await supabase.auth.signInWithOtp({
     email: cleanEmail,
     options: { shouldCreateUser: false, emailRedirectTo: redirectUrl(req) },
   });
-  if (error) throw new Error('The sign-in email could not be sent.');
+  if (error) {
+    throw new AdminOperationalError(
+      'ADMIN_MAGIC_LINK_FAILED',
+      'Supabase could not send the sign-in link. Confirm this email exists under Authentication → Users and that Email sign-in is enabled.',
+      error,
+    );
+  }
   return { sent: true };
 }
 
@@ -125,7 +186,36 @@ export async function updateAdminSubmission(supabase, input) {
   return data;
 }
 
+function adminFailure(error) {
+  if (error instanceof AdminOperationalError) {
+    return { status: 503, code: error.code, message: error.publicMessage };
+  }
+  const internalMessage = text(error?.message, 2_000);
+  if (/submissions|schema cache|permission denied|relation .* does not exist/i.test(internalMessage)) {
+    return {
+      status: 503,
+      code: 'ADMIN_SUBMISSIONS_UNAVAILABLE',
+      message: 'The admin login worked, but Supabase could not read public.submissions. Run the inbox repair migration and confirm the Vercel Supabase variables point to the same project.',
+    };
+  }
+  return { status: 503, code: 'ADMIN_UNAVAILABLE', message: 'The operator inbox is temporarily unavailable. Check the newest /api/admin error in Vercel Runtime Logs.' };
+}
+
+function logAdminFailure(req, error, failure, startedAt) {
+  console.error(JSON.stringify({
+    level: 'error',
+    message: 'Admin API failed',
+    route: '/api/admin',
+    method: req.method,
+    requestId: text(req.headers['x-vercel-id'], 200) || null,
+    code: failure.code,
+    error: text(error?.cause?.message || error?.message || error, 2_000),
+    durationMs: Date.now() - startedAt,
+  }));
+}
+
 export default async function handler(req, res, dependencies = {}) {
+  const startedAt = Date.now();
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
 
@@ -156,7 +246,9 @@ export default async function handler(req, res, dependencies = {}) {
     return res.status(200).json({ ok: true, submission });
   } catch (error) {
     const expected = error instanceof SyntaxError || /^(Enter|Choose|Please|Unknown)/.test(error?.message || '');
-    if (!expected) console.error('Admin API failed', error);
-    return res.status(expected ? 400 : 503).json({ ok: false, error: expected ? error.message : 'The operator inbox is temporarily unavailable.' });
+    if (expected) return res.status(400).json({ ok: false, code: 'ADMIN_INPUT_INVALID', error: error.message });
+    const failure = adminFailure(error);
+    logAdminFailure(req, error, failure, startedAt);
+    return res.status(failure.status).json({ ok: false, code: failure.code, error: failure.message });
   }
 }
