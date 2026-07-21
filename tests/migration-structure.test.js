@@ -14,6 +14,10 @@ const universityMigration = readFileSync(
   new URL('../supabase/migrations/20260721060000_allow_university_partner.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const deliveryRepair = readFileSync(
+  new URL('../supabase/migrations/20260721172703_harden_submission_delivery.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -56,4 +60,16 @@ test('university migration idempotently allows university_partner and the UNI- r
   assert.match(universityMigration, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(universityMigration, /grant delete/);
   assert.doesNotMatch(universityMigration, /anon|authenticated/);
+});
+
+test('delivery repair upgrades an existing inbox without deleting data or exposing browser roles', () => {
+  assert.match(deliveryRepair, /create table if not exists public\.submissions/);
+  assert.match(deliveryRepair, /add column if not exists submission_type/);
+  assert.match(deliveryRepair, /add column if not exists details jsonb/);
+  assert.match(deliveryRepair, /create unique index if not exists submissions_reference_unique_idx/);
+  assert.match(deliveryRepair, /university_partner/);
+  assert.match(deliveryRepair, /grant select, insert, update on table public\.submissions to service_role/);
+  assert.match(deliveryRepair, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(deliveryRepair, /drop table|truncate|delete from|grant delete/);
+  assert.doesNotMatch(deliveryRepair, /grant [^;]* to (anon|authenticated)/);
 });

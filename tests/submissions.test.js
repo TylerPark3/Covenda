@@ -10,6 +10,8 @@ import handler, {
   notifyOperator,
   operatorNotification,
   persistSubmission,
+  postgresConfiguration,
+  primaryStorageHealth,
   REFERENCE_PREFIXES,
   studentRecord,
   submissionDetails,
@@ -327,9 +329,65 @@ test('persistSubmission prefers Supabase when the server secret is configured', 
     async putBlob() { blobCalled = true; },
   });
   assert.equal(result.backend, 'supabase');
+  assert.equal(result.route, 'data-api');
   assert.equal(insertedTable, 'submissions');
   assert.equal(insertedRow.reference, 'EMP-QA2026');
   assert.equal(blobCalled, false);
+});
+
+test('Postgres configuration uses the server-only Vercel integration URL', () => {
+  assert.equal(postgresConfiguration({ POSTGRES_URL: 'postgres://pooled.example/db' }), 'postgres://pooled.example/db');
+  assert.equal(postgresConfiguration({ DATABASE_URL: 'postgres://fallback.example/db' }), 'postgres://fallback.example/db');
+  assert.equal(postgresConfiguration({}), '');
+});
+
+test('persistSubmission reaches the Supabase table through Postgres when the Data API fails', async () => {
+  let directRecord;
+  let directUrl;
+  let blobCalled = false;
+  const result = await persistSubmission(employerSubmissionRecord(), {
+    env: {
+      SUPABASE_URL: 'https://project.supabase.co',
+      SUPABASE_SECRET_KEY: 'sb_secret_test',
+      POSTGRES_URL: 'postgres://pooled.example/db',
+    },
+    createSupabaseClient() {
+      return { from: () => ({ insert: async () => ({ error: { code: '42501', message: 'permission denied' } }) }) };
+    },
+    async insertPostgresRecord(record, { connectionString }) {
+      directRecord = record;
+      directUrl = connectionString;
+      return { backend: 'supabase', route: 'postgres' };
+    },
+    async putBlob() { blobCalled = true; },
+    logger: { error() {} },
+  });
+  assert.equal(result.backend, 'supabase');
+  assert.equal(result.route, 'postgres');
+  assert.equal(directRecord.reference, 'EMP-QA2026');
+  assert.equal(directUrl, 'postgres://pooled.example/db');
+  assert.equal(blobCalled, false);
+});
+
+test('primary storage health prefers the Data API without exposing submission data', async () => {
+  const health = await primaryStorageHealth({
+    env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_test' },
+    createSupabaseClient() {
+      return {
+        from(table) {
+          assert.equal(table, 'submissions');
+          return {
+            async select(column, options) {
+              assert.equal(column, 'reference');
+              assert.deepEqual(options, { head: true, count: 'exact' });
+              return { error: null };
+            },
+          };
+        },
+      };
+    },
+  });
+  assert.deepEqual(health, { status: 'ready', route: 'data-api' });
 });
 
 test('persistSubmission falls back to private Blob storage if Supabase is unavailable', async () => {
@@ -427,9 +485,15 @@ test('operator notification is optional and uses an idempotent send when enabled
   assert.equal(sendOptions.idempotencyKey, 'covenda-submission-emp-qa2026');
 });
 
-test('handler rejects non-POST and cross-origin requests before storage', async () => {
+test('handler exposes safe delivery health and rejects unsupported or cross-origin requests', async () => {
+  const healthResponse = responseRecorder();
+  await handler({ method: 'GET', headers: {} }, healthResponse);
+  assert.equal(healthResponse.statusCode, 200);
+  assert.equal(healthResponse.body.ok, true);
+  assert.ok(['ready', 'unavailable', 'not-configured'].includes(healthResponse.body.primary.status));
+
   const methodResponse = responseRecorder();
-  await handler({ method: 'GET', headers: {} }, methodResponse);
+  await handler({ method: 'PUT', headers: {} }, methodResponse);
   assert.equal(methodResponse.statusCode, 405);
 
   const originResponse = responseRecorder();

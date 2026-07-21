@@ -7,6 +7,8 @@ const state = {
   workType: 'Research',
   toastTimer: null,
 };
+let selectorFxController = null;
+let deliveryHealthRequest = null;
 
 // Single config spot for the "Schedule a demo" flow. Set the event URL in the
 // <meta name="covenda-calendly-url"> tag in index.html. Must be an https
@@ -355,6 +357,7 @@ function setSurface(surface) {
   $('#siteShell').hidden = workspace;
   $('#workspaceShell').hidden = !workspace;
   setWorkspaceTab('overview');
+  if (workspace) refreshDeliveryHealth();
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
@@ -364,8 +367,15 @@ function selectWorkType(workType) {
   writeStorage(workTypeStorageKey, workType);
   $$('.work-option').forEach(button => {
     const selected = button.dataset.workType === workType;
+    const newlySelected = selected && !button.classList.contains('is-selected');
     button.classList.toggle('is-selected', selected);
     button.setAttribute('aria-pressed', String(selected));
+    if (newlySelected) {
+      button.classList.remove('just-selected');
+      window.requestAnimationFrame(() => button.classList.add('just-selected'));
+      window.setTimeout(() => button.classList.remove('just-selected'), 460);
+      selectorFxController?.pulse(button);
+    }
   });
   $('#workspacePrimaryPath').textContent = workType;
   $$('input[name="workType"]', $('#studentForm')).forEach(input => {
@@ -737,6 +747,47 @@ async function sendSubmission(payload) {
   return result;
 }
 
+function submissionDeliveryMessage(result) {
+  return result.syncStatus === 'synced' || result.storage === 'supabase'
+    ? ' · synced to Covenda’s primary inbox.'
+    : ' · saved securely; primary inbox sync is pending.';
+}
+
+function applyDeliveryHealth(primary) {
+  const status = primary?.status || 'unavailable';
+  const sidebar = $('#deliveryStatus');
+  const sidebarCopy = $('small', sidebar);
+  const badge = $('#deliveryStatusBadge');
+  const copy = {
+    ready: 'Primary inbox connected',
+    unavailable: 'Backup-only mode · primary inbox needs attention',
+    'not-configured': 'Primary inbox is not configured',
+    checking: 'Checking primary inbox…',
+  }[status] || 'Delivery status unavailable';
+  if (sidebar) sidebar.dataset.status = status;
+  if (sidebarCopy) sidebarCopy.textContent = copy;
+  if (badge) {
+    badge.classList.toggle('is-ready', status === 'ready');
+    badge.classList.toggle('is-pending', status !== 'ready');
+    badge.lastChild.textContent = status === 'ready' ? ' Primary inbox connected' : ' Primary sync needs attention';
+  }
+}
+
+function refreshDeliveryHealth({ force = false } = {}) {
+  if (deliveryHealthRequest && !force) return deliveryHealthRequest;
+  applyDeliveryHealth({ status: 'checking' });
+  deliveryHealthRequest = fetch('/api/submissions', { headers: { Accept: 'application/json' } })
+    .then(response => response.json())
+    .then(result => applyDeliveryHealth(result.primary))
+    .catch(() => applyDeliveryHealth({ status: 'unavailable' }))
+    .finally(() => { deliveryHealthRequest = null; });
+  return deliveryHealthRequest;
+}
+
+function applySubmissionDelivery(result) {
+  applyDeliveryHealth({ status: result.storage === 'supabase' ? 'ready' : 'unavailable' });
+}
+
 function savedSubmissions() {
   const items = readStorage(storageKey, []);
   return Array.isArray(items) ? items : [];
@@ -769,8 +820,8 @@ function submissionLabel(item) {
 
 function submissionStorageLabel(item) {
   if (item.storage === 'supabase') return 'Primary inbox';
-  if (item.storage === 'blob') return 'Secure backup';
-  return 'Server confirmed';
+  if (item.storage === 'blob') return 'Backup · sync pending';
+  return 'Delivery unverified';
 }
 
 function submissionProgress(item) {
@@ -904,7 +955,12 @@ function renderReceipt(item) {
   category.textContent = item.revisionOf ? 'Company problem revision' : submissionLabel(item);
   title.textContent = item.title || submissionLabel(item);
   status.className = 'receipt-status';
-  status.append(createIcon('icon-check'), document.createTextNode('Received'));
+  const primaryPending = item.storage !== 'supabase' || item.syncStatus === 'pending';
+  if (primaryPending) status.classList.add('is-pending');
+  status.append(
+    createIcon(primaryPending ? 'icon-clock' : 'icon-check'),
+    document.createTextNode(primaryPending ? 'Primary sync pending' : 'Received'),
+  );
   heading.append(category, title);
   header.append(heading, status);
 
@@ -1235,14 +1291,17 @@ studentForm.addEventListener('submit', async event => {
   message.textContent = '';
   try {
     const result = await sendSubmission(studentPayload(studentForm));
+    applySubmissionDelivery(result);
     message.classList.add('is-success');
-    message.textContent = 'Interest profile received. Reference ' + result.reference + (result.storage === 'blob' ? ' · secure backup storage used.' : '.');
+    message.textContent = 'Interest profile received. Reference ' + result.reference + submissionDeliveryMessage(result);
     discardDraft(studentForm, { reset: false });
     saveSubmission({
       type: 'student_interest',
       reference: result.reference,
       status: result.status || 'received',
       storage: result.storage || 'confirmed',
+      storageRoute: result.storageRoute || '',
+      syncStatus: result.syncStatus || (result.storage === 'supabase' ? 'synced' : 'pending'),
       createdAt: result.createdAt || new Date().toISOString(),
       title: formValue(studentForm, 'studentName') + ' · interest profile',
       summary: [checkedValues(studentForm, 'workType').join(', '), formValue(studentForm, 'studentAvailability')].filter(Boolean).join(' · '),
@@ -1286,14 +1345,17 @@ companyForm.addEventListener('submit', async event => {
     const payload = companyPayload(companyForm);
     const revisionOf = payload.revisionOf || '';
     const result = await sendSubmission(payload);
+    applySubmissionDelivery(result);
     message.classList.add('is-success');
-    message.textContent = (revisionOf ? 'Revised company problem received. Reference ' : 'Company problem received. Reference ') + result.reference + (result.storage === 'blob' ? ' · secure backup storage used.' : '.');
+    message.textContent = (revisionOf ? 'Revised company problem received. Reference ' : 'Company problem received. Reference ') + result.reference + submissionDeliveryMessage(result);
     discardDraft(companyForm, { reset: false });
     saveSubmission({
       type: 'employer_intake',
       reference: result.reference,
       status: result.status || 'received',
       storage: result.storage || 'confirmed',
+      storageRoute: result.storageRoute || '',
+      syncStatus: result.syncStatus || (result.storage === 'supabase' ? 'synced' : 'pending'),
       createdAt: result.createdAt || new Date().toISOString(),
       title: formValue(companyForm, 'companyName') + ' · company problem',
       summary: [formValue(companyForm, 'companyDeliverable'), formValue(companyForm, 'companyDeadline')].filter(Boolean).join(' · '),
@@ -1459,13 +1521,16 @@ async function submitRoster() {
   submit.textContent = 'Sending…';
   try {
     const result = await sendSubmission(universityPayload());
+    applySubmissionDelivery(result);
     message.classList.add('is-success');
-    message.textContent = 'Roster received. Reference ' + result.reference + (result.storage === 'blob' ? ' · secure backup storage used.' : '.');
+    message.textContent = 'Roster received. Reference ' + result.reference + submissionDeliveryMessage(result);
     saveSubmission({
       type: 'university_partner',
       reference: result.reference,
       status: result.status || 'received',
       storage: result.storage || 'confirmed',
+      storageRoute: result.storageRoute || '',
+      syncStatus: result.syncStatus || (result.storage === 'supabase' ? 'synced' : 'pending'),
       createdAt: result.createdAt || new Date().toISOString(),
       title: partner.orgName + ' · student roster',
       summary: universityRoster.length + (universityRoster.length === 1 ? ' student · ' : ' students · ') + partner.orgType,
@@ -1606,6 +1671,11 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   const action = button.dataset.action;
   if (action === 'home' || action === 'site') setSurface('site');
   if (action === 'workspace') setSurface('workspace');
+  if (action === 'workspace-submissions') {
+    setAudience('student');
+    setSurface('workspace');
+    setWorkspaceTab('submissions');
+  }
   if (action === 'student-form') {
     selectWorkType(state.workType);
     openDialog(studentDialog, studentForm);
@@ -1639,6 +1709,10 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     saveRosterDraft();
   }
   if (action === 'roster-submit') submitRoster();
+  if (action === 'focus-pathfinder') {
+    $('#studentPathfinder').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.setTimeout(() => $('.work-option.is-selected')?.focus(), 420);
+  }
   if (action === 'explore-work') $('#workTypes').scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (action === 'project-fit') $('#projectFit').scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (action === 'replay-intro') {
@@ -1909,10 +1983,150 @@ function initFlowDemo() {
   observer.observe(demo);
 }
 
+function initSelectorFx() {
+  const canvas = $('#selectorFxCanvas');
+  const field = canvas?.closest('.selector-fx');
+  const orbit = canvas?.closest('.selector-orbit');
+  if (!canvas || !field || !orbit) return null;
+  const context = canvas.getContext('2d');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const particles = [];
+  const pointer = { x: 0, y: 0, active: false };
+  const pulse = { x: 0, y: 0, strength: 0 };
+  let width = 0;
+  let height = 0;
+  let previousTime = 0;
+
+  function seedParticles() {
+    particles.length = 0;
+    const count = Math.max(22, Math.min(38, Math.round(width / 34)));
+    for (let index = 0; index < count; index += 1) {
+      particles.push({
+        x: Math.random() * width,
+        y: 54 + Math.random() * Math.max(40, height - 108),
+        vx: (Math.random() - .5) * .12,
+        vy: (Math.random() - .5) * .09,
+        radius: .8 + Math.random() * 1.7,
+        alpha: .16 + Math.random() * .34,
+      });
+    }
+  }
+
+  function draw(time = 0) {
+    const elapsed = Math.min(32, time - previousTime || 16);
+    previousTime = time;
+    context.clearRect(0, 0, width, height);
+    const influenceX = pointer.active ? pointer.x : width * .5;
+    const influenceY = pointer.active ? pointer.y : height * .52;
+
+    for (let index = 0; index < particles.length; index += 1) {
+      const particle = particles[index];
+      if (!reduceMotion) {
+        const dx = influenceX - particle.x;
+        const dy = influenceY - particle.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        if (distance < 180) {
+          particle.vx += (dx / distance) * .0008 * elapsed;
+          particle.vy += (dy / distance) * .0008 * elapsed;
+        }
+        particle.vx *= .992;
+        particle.vy *= .992;
+        particle.x += particle.vx * elapsed;
+        particle.y += particle.vy * elapsed;
+        if (particle.x < -10) particle.x = width + 10;
+        if (particle.x > width + 10) particle.x = -10;
+        if (particle.y < 38) particle.y = height - 38;
+        if (particle.y > height - 32) particle.y = 38;
+      }
+
+      for (let otherIndex = index + 1; otherIndex < particles.length; otherIndex += 1) {
+        const other = particles[otherIndex];
+        const distance = Math.hypot(particle.x - other.x, particle.y - other.y);
+        if (distance > 112) continue;
+        context.beginPath();
+        context.moveTo(particle.x, particle.y);
+        context.lineTo(other.x, other.y);
+        context.strokeStyle = `rgba(180,123,32,${(1 - distance / 112) * .12})`;
+        context.lineWidth = .7;
+        context.stroke();
+      }
+
+      context.beginPath();
+      context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+      context.fillStyle = `rgba(159,101,10,${particle.alpha})`;
+      context.fill();
+    }
+
+    if (pulse.strength > .01) {
+      const radius = 28 + (1 - pulse.strength) * 100;
+      const gradient = context.createRadialGradient(pulse.x, pulse.y, 0, pulse.x, pulse.y, radius);
+      gradient.addColorStop(0, `rgba(231,198,121,${pulse.strength * .34})`);
+      gradient.addColorStop(1, 'rgba(231,198,121,0)');
+      context.fillStyle = gradient;
+      context.beginPath();
+      context.arc(pulse.x, pulse.y, radius, 0, Math.PI * 2);
+      context.fill();
+      if (!reduceMotion) pulse.strength *= .94;
+    }
+
+    if (!reduceMotion) window.requestAnimationFrame(draw);
+  }
+
+  function resize() {
+    const bounds = field.getBoundingClientRect();
+    width = Math.max(1, bounds.width);
+    height = Math.max(1, bounds.height);
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    seedParticles();
+    if (reduceMotion) draw();
+  }
+
+  orbit.addEventListener('pointermove', event => {
+    const bounds = field.getBoundingClientRect();
+    pointer.x = event.clientX - bounds.left;
+    pointer.y = event.clientY - bounds.top;
+    pointer.active = true;
+  });
+  orbit.addEventListener('pointerleave', () => { pointer.active = false; });
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(field);
+  else window.addEventListener('resize', resize);
+  resize();
+  if (!reduceMotion) window.requestAnimationFrame(draw);
+
+  return {
+    pulse(button) {
+      const fieldBounds = field.getBoundingClientRect();
+      const buttonBounds = button.getBoundingClientRect();
+      pulse.x = buttonBounds.left + buttonBounds.width / 2 - fieldBounds.left;
+      pulse.y = buttonBounds.top + buttonBounds.height / 2 - fieldBounds.top;
+      pulse.strength = 1;
+      if (reduceMotion) draw();
+    },
+  };
+}
+
+function initButtonFeedback() {
+  document.addEventListener('pointerdown', event => {
+    const button = event.target.closest('button:not(:disabled)');
+    if (button) button.classList.add('is-pressing');
+  });
+  for (const eventName of ['pointerup', 'pointercancel']) {
+    document.addEventListener(eventName, () => {
+      $$('.is-pressing').forEach(button => button.classList.remove('is-pressing'));
+    });
+  }
+}
+
 restoreRosterDraft();
 renderLocalSubmissionState();
 selectWorkType(state.workType);
 setAudience(state.audience);
+selectorFxController = initSelectorFx();
+selectorFxController?.pulse($('.work-option.is-selected'));
+initButtonFeedback();
 initCovendaMotion();
 initFlowDemo();
 window.requestAnimationFrame(() => openIntro());

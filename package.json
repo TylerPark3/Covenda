@@ -10,6 +10,7 @@
   "dependencies": {
     "@supabase/supabase-js": "2.110.7",
     "@vercel/blob": "^2.6.1",
+    "postgres": "3.4.9",
     "resend": "6.17.2"
   }
 }

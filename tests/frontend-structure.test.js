@@ -44,6 +44,11 @@ test('the initial path chooser uses a continuous responsive glass control', () =
   assert.match(styles, /\.work-option\.is-selected[\s\S]*radial-gradient/);
   assert.match(styles, /scroll-snap-type: x proximity/);
   assert.match(html, /<\/div>\s*<button class="gold-button selector-submit"/);
+  assert.match(html, /id="selectorFxCanvas"/);
+  assert.match(html, /class="student-journey"/);
+  assert.match(script, /function initSelectorFx\(\)/);
+  assert.match(script, /function initButtonFeedback\(\)/);
+  assert.match(styles, /\.selector-fx/);
 });
 
 test('audience switch supports student and company site states', () => {
@@ -71,7 +76,7 @@ test('workspace includes honest student and company pilot states', () => {
   assert.match(html, /No universal score/);
   assert.match(html, /Turn one delayed problem into a bounded project/);
   assert.match(html, /Payment and publication are not active in this pilot workspace/);
-  assert.match(html, /Pilot workspace/);
+  assert.match(html, /Submission delivery/);
 });
 
 test('both live submission paths have progressive forms and consent', () => {
@@ -112,7 +117,9 @@ test('server-confirmed submissions become durable review receipts', () => {
   assert.match(script, /Download receipt/);
   assert.match(script, /function submissionStorageLabel\(item\)/);
   assert.match(script, /Primary inbox/);
-  assert.match(script, /Secure backup/);
+  assert.match(script, /Backup · sync pending/);
+  assert.match(script, /function refreshDeliveryHealth/);
+  assert.match(script, /Primary sync pending/);
   assert.match(script, /setWorkspaceTab\('submissions'\)/);
   assert.match(styles, /\.receipt-progress/);
   assert.match(styles, /\.receipt-action/);
@@ -178,6 +185,9 @@ test('design system stays true white and supports responsive and reduced-motion 
   assert.match(styles, /backdrop-filter: blur/);
   assert.match(styles, /@media \(max-width: 560px\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(styles, /--font-ui: "Manrope"/);
+  assert.match(styles, /--font-display: "Newsreader"/);
+  assert.match(html, /fonts\.googleapis\.com/);
 });
 
 test('page avoids unsupported marketplace claims and legacy branding', () => {
