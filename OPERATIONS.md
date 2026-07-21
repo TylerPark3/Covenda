@@ -1,6 +1,6 @@
 # Covenda submission operations
 
-This project now has one submission path for company forms, student forms, and call requests:
+This project now has one submission path for company forms, student forms, university/partner roster forms, and call requests:
 
 1. The server validates and sanitizes the form.
 2. If Supabase is connected, it writes a structured row to the private `submissions` table.
@@ -22,6 +22,8 @@ npx supabase db push
 
 The migration in `supabase/migrations/20260721051450_create_submission_inbox.sql` creates the private inbox. It enables and forces Row Level Security, grants no access to anonymous or signed-in website users, and allows the server role to read, insert, and update records. It does not grant deletion.
 
+The later migration `supabase/migrations/20260721060000_allow_university_partner.sql` adds the `university_partner` type and the `UNI-` reference prefix. It is idempotent (drop-if-exists then add), so it is safe to re-run. The API's accepted types and reference prefixes are exported from `api/submissions.js` (`SUBMISSION_TYPES` / `REFERENCE_PREFIXES`) as a single source of truth, and a test asserts the migration allows exactly those — so the API can never accept a type the database would reject.
+
 Before using real submissions, add these server-only environment variables to the Covenda Vercel project:
 
 | Variable | Purpose |
@@ -32,7 +34,7 @@ Before using real submissions, add these server-only environment variables to th
 | `SUPABASE_SERVICE_ROLE_KEY` | Legacy fallback only if the project has not issued a new secret key. |
 | `BLOB_READ_WRITE_TOKEN` | Existing private Blob fallback. Keep it while Supabase is being introduced and during the MVP. |
 
-After adding variables, redeploy the Vercel project. Submit one clearly synthetic company form and one synthetic student form. Confirm both appear in Supabase Table Editor under `public.submissions` with `EMP-` and `STU-` references. Also confirm the website receipt shows the same reference.
+After adding variables, redeploy the Vercel project. Submit one clearly synthetic company form, one synthetic student form, and one synthetic university roster. Confirm all three appear in Supabase Table Editor under `public.submissions` with `EMP-`, `STU-`, and `UNI-` references. Also confirm the website receipt shows the same reference.
 
 ### If receipts appear on the website but not in Supabase
 

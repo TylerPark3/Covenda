@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import handler, {
   callRecord,
@@ -9,9 +10,11 @@ import handler, {
   notifyOperator,
   operatorNotification,
   persistSubmission,
+  REFERENCE_PREFIXES,
   studentRecord,
   submissionDetails,
   submissionRow,
+  SUBMISSION_TYPES,
   supabaseConfiguration,
   universityRecord,
 } from '../api/submissions.js';
@@ -171,6 +174,30 @@ test('callRecord requires a dated call request', () => {
 
 test('submissionDetails rejects unknown submission types', () => {
   assert.throws(() => submissionDetails({ type: 'admin_export' }), /valid submission type/i);
+});
+
+test('API accepted types + reference prefixes stay in sync with the DB migration', () => {
+  // Guardrail for the Point-1 bug class: the API must never accept a type (or
+  // mint a reference prefix) that the database's constraints would reject.
+  const migration = readFileSync(
+    new URL('../supabase/migrations/20260721060000_allow_university_partner.sql', import.meta.url),
+    'utf8',
+  );
+
+  // Every type the API accepts must appear in the type-allowed constraint.
+  for (const type of SUBMISSION_TYPES) {
+    assert.match(migration, new RegExp(`'${type}'`), `migration is missing submission type: ${type}`);
+  }
+
+  // Every reference prefix the API mints must be in the reference-format regex,
+  // e.g. ^(EMP|STU|CALL|UNI)-[A-Z0-9]{6,20}$
+  const allowedPrefixes = migration.match(/\^\(([A-Z|]+)\)-/)?.[1]?.split('|') ?? [];
+  for (const type of SUBMISSION_TYPES) {
+    assert.ok(
+      allowedPrefixes.includes(REFERENCE_PREFIXES[type]),
+      `migration reference format is missing prefix ${REFERENCE_PREFIXES[type]} (for ${type})`,
+    );
+  }
 });
 
 test('universityRecord keeps a validated student roster and drops invalid rows', () => {

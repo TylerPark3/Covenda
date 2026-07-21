@@ -2,7 +2,18 @@ import { put } from '@vercel/blob';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 
-const TYPES = new Set(['employer_intake', 'student_interest', 'call_request', 'university_partner']);
+// Single source of truth for what the API accepts and the reference it mints.
+// The Supabase migration constraints MUST allow exactly these — a test
+// (tests/submissions.test.js) fails if the two ever drift apart, so a new
+// audience can never pass the API and then get rejected by the database.
+export const REFERENCE_PREFIXES = {
+  employer_intake: 'EMP',
+  student_interest: 'STU',
+  call_request: 'CALL',
+  university_partner: 'UNI',
+};
+export const SUBMISSION_TYPES = Object.keys(REFERENCE_PREFIXES);
+const TYPES = new Set(SUBMISSION_TYPES);
 const MAX_BODY_BYTES = 24_000;
 const MIN_FORM_TIME_MS = 1_500;
 const RATE_WINDOW_MS = 10 * 60 * 1_000;
@@ -258,7 +269,7 @@ function parseBody(req) {
 }
 
 function referenceFor(type) {
-  const prefix = { employer_intake: 'EMP', student_interest: 'STU', call_request: 'CALL', university_partner: 'UNI' }[type];
+  const prefix = REFERENCE_PREFIXES[type];
   return `${prefix}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
 }
 
