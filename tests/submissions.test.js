@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import handler, { callRecord, employerRecord, studentRecord, submissionDetails } from '../api/submissions.js';
+import handler, { callRecord, employerReadiness, employerRecord, studentRecord, submissionDetails } from '../api/submissions.js';
 
 function responseRecorder() {
   return {
@@ -78,6 +78,23 @@ test('employerRecord accepts a bounded company problem', () => {
   assert.equal(record.organization.website, 'https://example.com/');
   assert.equal(record.project.systemAccess, 'none');
   assert.equal(record.project.sources.clientRecords, false);
+});
+
+test('employer readiness reports scoping inputs without implying approval', () => {
+  const readiness = employerReadiness(employerRecord(validEmployer));
+  assert.deepEqual(readiness, {
+    checks: { outcome: true, review: true, context: true, boundary: true, time: true, terms: true },
+    readyCount: 6,
+    total: 6,
+  });
+
+  const incomplete = structuredClone(validEmployer);
+  incomplete.project.usefulBy = '';
+  incomplete.project.internalHoursAvoided = 0;
+  const incompleteReadiness = employerReadiness(employerRecord(incomplete));
+  assert.equal(incompleteReadiness.readyCount, 4);
+  assert.equal(incompleteReadiness.checks.time, false);
+  assert.equal(incompleteReadiness.checks.terms, false);
 });
 
 test('employerRecord rejects unsafe access and records', () => {

@@ -33,6 +33,8 @@
       <symbol id="icon-spark" viewBox="0 0 24 24"><path d="M12 2c.8 5.4 2.6 7.2 8 8-5.4.8-7.2 2.6-8 8-.8-5.4-2.6-7.2-8-8 5.4-.8 7.2-2.6 8-8Z"/><path d="M19 16c.3 2 1 2.7 3 3-2 .3-2.7 1-3 3-.3-2-1-2.7-3-3 2-.3 2.7-1 3-3Z"/></symbol>
       <symbol id="icon-close" viewBox="0 0 24 24"><path d="m5 5 14 14M19 5 5 19"/></symbol>
       <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+      <symbol id="icon-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+      <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M5 21h14"/></symbol>
     </defs>
   </svg>
 
@@ -238,7 +240,7 @@
                   <h2>Your Covenda activity</h2>
                   <ol class="activity-list">
                     <li><span class="activity-number"><svg><use href="#icon-check"/></svg></span><div><h3>Interest profile</h3><p>Tell us what you want to build proof of.</p></div><div class="activity-action"><span class="status ready" id="studentProfileStatus">Ready to submit</span><button class="gold-button compact" type="button" data-action="student-form">Complete interest profile</button></div></li>
-                    <li><span class="activity-number">2</span><div><h3>Project application</h3><p>Available if a reviewed pilot project fits your interests.</p></div><div class="activity-action"><span class="status"><svg><use href="#icon-clock"/></svg>Available after review</span><button class="locked-button" type="button" disabled><svg><use href="#icon-lock"/></svg>Locked</button></div></li>
+                    <li><span class="activity-number">2</span><div><h3>Project application</h3><p>Available if a reviewed pilot project fits your interests.</p></div><div class="activity-action"><span class="status" id="studentReviewStatus"><svg><use href="#icon-clock"/></svg>Available after review</span><button class="locked-button" type="button" disabled><svg><use href="#icon-lock"/></svg>Locked</button></div></li>
                     <li><span class="activity-number">3</span><div><h3>Verified work record</h3><p>Created after accepted paid work.</p></div><div class="activity-action"><span class="status">Created after accepted work</span><button class="locked-button" type="button" disabled><svg><use href="#icon-lock"/></svg>Locked</button></div></li>
                   </ol>
                 </section>
@@ -260,7 +262,7 @@
                 <header><div><h2>Your project pipeline</h2><p>The first step is a real company problem—not a polished job post.</p></div><button class="gold-button compact" type="button" data-action="company-form">Submit company problem</button></header>
                 <ol class="company-status-list">
                   <li><span>1</span><div><h3>Problem submitted</h3><p>Company context, useful result, and safe inputs.</p></div><b class="status ready" id="companyProblemStatus">Ready to submit</b></li>
-                  <li><span>2</span><div><h3>Scoping review</h3><p>Covenda tests value, boundaries, and reviewer burden.</p></div><b class="status"><svg><use href="#icon-clock"/></svg>Available after submission</b></li>
+                  <li><span>2</span><div><h3>Scoping review</h3><p>Covenda tests value, boundaries, and reviewer burden.</p></div><b class="status" id="companyScopingStatus"><svg><use href="#icon-clock"/></svg>Available after submission</b></li>
                   <li><span>3</span><div><h3>Approve Project Packet</h3><p>You approve the deliverable, inputs, criteria, deadline, and pay.</p></div><b class="status">Future gated step</b></li>
                   <li><span>4</span><div><h3>Fund before publication</h3><p>No student assignment before scope and funding are confirmed.</p></div><b class="status">Future gated step</b></li>
                 </ol>
@@ -279,8 +281,9 @@
           <div class="student-profile-view audience-content" data-for-audience="student"><h1>Your student profile</h1><p>Your interests and honest skill self-assessment help Covenda decide what pilot work may fit. This profile is private by default.</p><article class="profile-summary glass-panel"><header><div><small>Local profile preview</small><h2 id="studentWorkspaceSummaryTitle">No draft details yet</h2></div><button class="outline-button compact" type="button" data-action="student-form">Edit profile</button></header><dl id="studentWorkspaceSummary"><div><dt>Work paths</dt><dd>Choose the work you want to prove.</dd></div><div><dt>Strongest skill</dt><dd>Add an honest current level.</dd></div><div><dt>Availability</dt><dd>Set your preferred timing.</dd></div></dl></article><button class="gold-button" type="button" data-action="student-form">Open interest profile<svg><use href="#icon-arrow-right"/></svg></button></div>
           <div class="company-profile-view audience-content" data-for-audience="company"><h1>Your company profile</h1><p>Company details give Covenda enough context to follow up on a real problem. No public company listing is created by this form.</p><article class="profile-summary glass-panel"><header><div><small>Working Project Packet</small><h2 id="companyWorkspaceSummaryTitle">No company problem draft yet</h2></div><button class="outline-button compact" type="button" data-action="company-form">Edit packet</button></header><dl id="companyWorkspaceSummary"><div><dt>Deliverable</dt><dd>Describe a useful finish.</dd></div><div><dt>Information boundary</dt><dd>Identify safe approved inputs.</dd></div><div><dt>Time-saving case</dt><dd>Estimate employee time avoided.</dd></div></dl></article><button class="gold-button" type="button" data-action="company-form">Open company intake<svg><use href="#icon-arrow-right"/></svg></button></div>
         </section>
-        <section class="workspace-view simple-workspace-view" data-workspace-view="submissions">
-          <h1>Submissions</h1><p id="submissionHistory">No locally confirmed submissions yet. After a successful form submission, its reference will appear here on this device.</p>
+        <section class="workspace-view simple-workspace-view submission-workspace-view" data-workspace-view="submissions">
+          <div class="submission-heading"><div><h1>Submission receipts</h1><p>Track what Covenda received and what happens next. Receipts are stored on this device; review decisions arrive separately by email.</p></div><span><svg><use href="#icon-lock"/></svg>Private local record</span></div>
+          <div class="submission-history" id="submissionHistory" aria-live="polite"></div>
         </section>
       </main>
     </div>
@@ -378,8 +381,14 @@
       </section>
       <section class="form-step form-review-step" data-company-step="4">
         <div class="review-intro"><div><small>Review before sending</small><h3>Your working Project Packet</h3></div><p>This is a summary of your input—not a published project. Covenda reviews and restructures it after submission.</p></div>
+        <div class="packet-preview-label"><span>Working packet preview</span><span>Built from your answers</span></div>
         <dl class="form-review-summary packet-review-summary" id="companyReviewSummary"></dl>
         <div class="time-case" id="companyTimeCase"><svg><use href="#icon-clock"/></svg><div><strong>Estimated time-saving case</strong><span>Add employee time avoided and review minutes to calculate it.</span></div></div>
+        <section class="packet-readiness" aria-labelledby="companyReadinessTitle">
+          <header><div><small>Scoping readiness</small><h4 id="companyReadinessTitle">What Covenda can review now</h4></div><strong id="companyReadinessStatus">0 of 6 inputs ready</strong></header>
+          <ul id="companyReadinessChecks"></ul>
+          <footer><svg><use href="#icon-shield"/></svg><p><strong>Readiness is not approval.</strong>Covenda still checks scope, value, safety, fairness, and review burden with a human.</p></footer>
+        </section>
         <div class="review-boundary"><svg><use href="#icon-shield"/></svg><p><strong>Human scoping comes next.</strong>No payment, publication, or student assignment occurs from this submission.</p></div>
       </section>
       <div class="form-message" id="companyFormMessage" role="status" aria-live="polite"></div>

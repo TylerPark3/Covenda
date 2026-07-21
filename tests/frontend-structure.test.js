@@ -100,12 +100,40 @@ test('drafts persist locally and feed review and workspace summaries', () => {
   assert.match(html, /data-clear-draft/);
 });
 
+test('server-confirmed submissions become durable review receipts', () => {
+  assert.match(html, /Submission receipts/);
+  assert.match(html, /id="submissionHistory"/);
+  assert.match(html, /id="studentReviewStatus"/);
+  assert.match(html, /id="companyScopingStatus"/);
+  assert.match(script, /function renderReceipt\(item\)/);
+  assert.match(script, /function renderSubmissionHistory\(\)/);
+  assert.match(script, /Queued for human review/);
+  assert.match(script, /Copy reference/);
+  assert.match(script, /Download receipt/);
+  assert.match(script, /setWorkspaceTab\('submissions'\)/);
+  assert.match(styles, /\.receipt-progress/);
+  assert.match(styles, /\.receipt-action/);
+});
+
 test('company review calculates the net time case without promising launch', () => {
   assert.match(script, /function companyTimeCase\(form\)/);
   assert.match(script, /net: avoided - reviewHours/);
   assert.match(script, /Covenda still validates this estimate/);
   assert.match(script, /would redesign or stop this project/);
   assert.match(html, /No payment, publication, or student assignment occurs from this submission/);
+});
+
+test('company review exposes a six-part Project Packet readiness model', () => {
+  assert.match(html, /id="companyReadinessStatus"/);
+  assert.match(html, /id="companyReadinessChecks"/);
+  assert.match(html, /Readiness is not approval/);
+  assert.match(script, /function companyPacketReadiness\(input\)/);
+  for (const key of ['outcome', 'review', 'context', 'boundary', 'time', 'terms']) {
+    assert.match(script, new RegExp("key: '" + key + "'"));
+  }
+  assert.match(script, /Human review still required/);
+  assert.match(script, /packetReadiness: result\.readiness/);
+  assert.match(styles, /\.packet-readiness/);
 });
 
 test('forms preserve backend safety and evidence requirements', () => {

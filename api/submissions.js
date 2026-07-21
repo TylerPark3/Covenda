@@ -125,6 +125,22 @@ export function employerRecord(body) {
   return record;
 }
 
+export function employerReadiness(record) {
+  const project = record.project || {};
+  const sources = project.sources || {};
+  const netTime = project.internalHoursAvoided - (project.reviewMinutes / 60);
+  const checks = {
+    outcome: Boolean(project.deliverable && project.decisionSupported),
+    review: Boolean(project.reviewer && project.acceptance),
+    context: Boolean(project.approvedContext && (sources.publicOrApproved || sources.deidentified)),
+    boundary: project.systemAccess === 'none' && !sources.clientRecords && !sources.restrictedJudgment,
+    time: Number.isFinite(netTime) && project.internalHoursAvoided > 0 && netTime > 0,
+    terms: Boolean(project.studentHours && project.usefulBy && Number.isFinite(project.budget) && project.budget > 0),
+  };
+  const readyCount = Object.values(checks).filter(Boolean).length;
+  return { checks, readyCount, total: Object.keys(checks).length };
+}
+
 export function studentRecord(body) {
   const interests = body.interests || {};
   const links = body.links || {};
@@ -238,16 +254,19 @@ export default async function handler(req, res) {
     if (isRateLimited(req)) return res.status(429).json({ ok: false, error: 'Too many requests. Please try again later.' });
 
     const details = submissionDetails(body);
+    const readiness = body.type === 'employer_intake' ? employerReadiness(details) : null;
     const createdAt = new Date().toISOString();
     const reference = referenceFor(body.type);
     const record = {
-      schemaVersion: 2,
+      schemaVersion: 4,
       reference,
       type: body.type,
-      source: 'proof-path.vercel.app',
+      source: 'covenda-web',
       createdAt,
+      status: 'received',
       consent: true,
       details,
+      ...(readiness ? { readiness } : {}),
     };
     const day = createdAt.slice(0, 10).replaceAll('-', '/');
     const stamp = createdAt.replace(/[-:.]/g, '').replace('Z', 'Z');
@@ -257,7 +276,7 @@ export default async function handler(req, res) {
       contentType: 'application/json',
       cacheControlMaxAge: 60,
     });
-    return res.status(201).json({ ok: true, reference });
+    return res.status(201).json({ ok: true, reference, createdAt, status: 'received', ...(readiness ? { readiness: { readyCount: readiness.readyCount, total: readiness.total } } : {}) });
   } catch (error) {
     const expected = error instanceof SyntaxError || (error instanceof Error && error.message.startsWith('Please'));
     if (!expected) console.error('Submission storage failed', error);
