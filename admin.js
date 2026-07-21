@@ -14,6 +14,7 @@ function setMessage(text, error = false) { const message = $('#adminLoginMessage
 function textValue(value) { if (value === null || value === undefined || value === '') return '—'; if (Array.isArray(value)) return value.map(textValue).join(', '); if (typeof value === 'boolean') return value ? 'Yes' : 'No'; if (typeof value === 'object') return Object.entries(value).map(([key,val]) => `${labelize(key)}: ${textValue(val)}`).join(' · '); return String(value); }
 function labelize(value) { return String(value).replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('_',' ').replace(/^./, char => char.toUpperCase()); }
 function dateLabel(value, full = false) { const date = new Date(value); if (Number.isNaN(date.getTime())) return '—'; return date.toLocaleString([], full ? { dateStyle:'medium', timeStyle:'short' } : { month:'short', day:'numeric' }); }
+function localDateTimeValue(value) { const date = new Date(value); if (!value || Number.isNaN(date.getTime())) return ''; return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0,16); }
 function authHeaders() { return { Authorization: `Bearer ${token()}`, 'Content-Type':'application/json' }; }
 
 async function adminRequest(options = {}) {
@@ -58,12 +59,15 @@ function filteredSubmissions() {
   const rows = submissions.filter(item => {
     const typeMatch = activeType === 'all' || item.submission_type === activeType;
     const statusMatch = status === 'all' || item.status === status;
-    const haystack = [item.reference,item.submitter_name,item.submitter_email,item.organization_name,item.summary].join(' ').toLowerCase();
+    const haystack = [item.reference,item.submitter_name,item.submitter_email,item.organization_name,item.summary,item.internal_note].join(' ').toLowerCase();
     return typeMatch && statusMatch && (!query || haystack.includes(query));
   });
   return rows.sort((a,b) => {
     if (sort === 'oldest') return new Date(a.created_at) - new Date(b.created_at);
-    if (sort === 'attention') return (attentionOrder[a.status] ?? 99) - (attentionOrder[b.status] ?? 99) || new Date(b.created_at) - new Date(a.created_at);
+    if (sort === 'attention') {
+      const due = item => item.follow_up_at && new Date(item.follow_up_at).getTime() <= Date.now() ? 0 : 1;
+      return due(a) - due(b) || (attentionOrder[a.status] ?? 99) - (attentionOrder[b.status] ?? 99) || new Date(b.created_at) - new Date(a.created_at);
+    }
     return new Date(b.created_at) - new Date(a.created_at);
   });
 }
@@ -108,10 +112,45 @@ function detailSections(item) {
   return [...common,section('Request',[['Topic',details.topic],['Date',details.requestedDate],['Time',details.requestedTime],['Timezone',details.timezone]])];
 }
 
+function workflowSection(item) {
+  const wrapper=document.createElement('section'); wrapper.className='detail-section detail-workflow';
+  const heading=document.createElement('h3'); heading.textContent='Operator workspace';
+  const intro=document.createElement('p'); intro.className='workflow-intro'; intro.textContent='Keep private context and the next follow-up with this submission.';
+  const form=document.createElement('form');
+  const noteLabel=document.createElement('label'); noteLabel.append(document.createTextNode('Private note'));
+  const note=document.createElement('textarea'); note.name='internal_note'; note.maxLength=2000; note.rows=5; note.placeholder='Add the context another operator should know…'; note.value=item.internal_note || '';
+  const noteMeta=document.createElement('span'); noteMeta.className='workflow-note-meta'; const count=document.createElement('span'); count.textContent=`${note.value.length} / 2,000`; const privacy=document.createElement('span'); privacy.textContent='Operators only'; noteMeta.append(privacy,count); note.addEventListener('input',()=>{ count.textContent=`${note.value.length} / 2,000`; }); noteLabel.append(note,noteMeta);
+  const followLabel=document.createElement('label'); followLabel.append(document.createTextNode('Follow-up date'));
+  const followUp=document.createElement('input'); followUp.name='follow_up_at'; followUp.type='datetime-local'; followUp.value=localDateTimeValue(item.follow_up_at); followLabel.append(followUp);
+  const actions=document.createElement('div'); actions.className='workflow-actions'; const feedback=document.createElement('span'); feedback.dataset.workflowMessage=''; feedback.setAttribute('aria-live','polite');
+  const save=document.createElement('button'); save.type='submit'; save.textContent='Save operator update'; actions.append(feedback,save);
+  form.append(noteLabel,followLabel,actions);
+  form.addEventListener('submit',async event=>{
+    event.preventDefault(); save.disabled=true; save.textContent='Saving…'; feedback.textContent='';
+    try {
+      const result=await adminRequest({method:'PATCH',body:JSON.stringify({reference:item.reference,internal_note:note.value,follow_up_at:followUp.value ? new Date(followUp.value).toISOString() : null})});
+      const index=submissions.findIndex(entry=>entry.reference===item.reference); submissions[index]=result.submission; updateQueueSummary(); renderRows();
+      const message=$('[data-workflow-message]',$('#adminDetail')); if (message) message.textContent='Saved just now';
+    } catch(error) { feedback.textContent=error.message; feedback.classList.add('is-error'); save.disabled=false; save.textContent='Save operator update'; }
+  });
+  wrapper.append(heading,intro,form);
+  if (item.reviewed_at) { const audit=document.createElement('p'); audit.className='workflow-audit'; audit.textContent=`Last saved ${dateLabel(item.reviewed_at,true)}${item.reviewed_by ? ` by ${item.reviewed_by}` : ''}.`; wrapper.append(audit); }
+  return wrapper;
+}
+
 function renderDetail(item) {
-  const detail=$('#adminDetail'); detail.replaceChildren(); const head=document.createElement('header'); head.className='detail-head'; const row=document.createElement('div'); row.className='detail-head-row'; const title=document.createElement('h2'); title.textContent=item.reference; const copy=document.createElement('button'); copy.type='button'; copy.className='copy-admin-reference'; copy.append(icon('a-copy'),document.createTextNode('Copy reference')); copy.addEventListener('click',async()=>{ await navigator.clipboard.writeText(item.reference); copy.lastChild.textContent=' Copied'; }); row.append(title,copy);
-  const label=document.createElement('label'); label.className='detail-status-label'; label.append(document.createTextNode('Status')); const select=document.createElement('select'); Object.entries(statusLabels).forEach(([value,text])=>{ const option=document.createElement('option'); option.value=value; option.textContent=text; option.selected=value===item.status; select.append(option); }); select.addEventListener('change',async()=>{ select.disabled=true; try { const result=await adminRequest({method:'PATCH',body:JSON.stringify({reference:item.reference,status:select.value})}); const index=submissions.findIndex(entry=>entry.reference===item.reference); submissions[index]=result.submission; updateQueueSummary(); renderRows(); } catch(error) { alert(error.message); select.value=item.status; } finally { select.disabled=false; } }); label.append(select); head.append(row,label); detail.append(head,...detailSections(item));
-  const timeline=document.createElement('section'); timeline.className='detail-section'; const timelineTitle=document.createElement('h3'); timelineTitle.textContent='Timeline'; const list=document.createElement('ol'); list.className='detail-timeline'; [['Submitted',item.created_at],['Last updated',item.updated_at]].forEach(([name,date])=>{ const li=document.createElement('li'); const strong=document.createElement('strong'); const span=document.createElement('span'); strong.textContent=name; span.textContent=dateLabel(date,true); li.append(strong,span); list.append(li); }); timeline.append(timelineTitle,list); detail.append(timeline);
+  const detail=$('#adminDetail'); detail.replaceChildren();
+  const head=document.createElement('header'); head.className='detail-head';
+  const row=document.createElement('div'); row.className='detail-head-row';
+  const title=document.createElement('h2'); title.textContent=item.reference;
+  const copy=document.createElement('button'); copy.type='button'; copy.className='copy-admin-reference'; copy.append(icon('a-copy'),document.createTextNode('Copy reference')); copy.addEventListener('click',async()=>{ await navigator.clipboard.writeText(item.reference); copy.lastChild.textContent=' Copied'; }); row.append(title,copy);
+  const label=document.createElement('label'); label.className='detail-status-label'; label.append(document.createTextNode('Status'));
+  const select=document.createElement('select'); Object.entries(statusLabels).forEach(([value,text])=>{ const option=document.createElement('option'); option.value=value; option.textContent=text; option.selected=value===item.status; select.append(option); });
+  select.addEventListener('change',async()=>{ select.disabled=true; try { const result=await adminRequest({method:'PATCH',body:JSON.stringify({reference:item.reference,status:select.value})}); const index=submissions.findIndex(entry=>entry.reference===item.reference); submissions[index]=result.submission; updateQueueSummary(); renderRows(); } catch(error) { alert(error.message); select.value=item.status; } finally { select.disabled=false; } });
+  label.append(select); head.append(row,label); detail.append(head,...detailSections(item),workflowSection(item));
+  const timeline=document.createElement('section'); timeline.className='detail-section'; const timelineTitle=document.createElement('h3'); timelineTitle.textContent='Timeline'; const list=document.createElement('ol'); list.className='detail-timeline';
+  const events=[['Submitted',item.created_at],['Last updated',item.updated_at],['Follow-up',item.follow_up_at]].filter(([,date])=>date);
+  events.forEach(([name,date])=>{ const li=document.createElement('li'); const strong=document.createElement('strong'); const span=document.createElement('span'); strong.textContent=name; span.textContent=dateLabel(date,true); li.append(strong,span); list.append(li); }); timeline.append(timelineTitle,list); detail.append(timeline);
 }
 
 async function loadInbox({ announce = false } = {}) {

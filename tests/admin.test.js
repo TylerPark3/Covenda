@@ -109,5 +109,34 @@ test('admin list is bounded and status update accepts only lifecycle states', as
   };
   const updated = await updateAdminSubmission({ from() { return updateQuery; } }, { reference: 'stu-ab12cd34', status: 'reviewing' });
   assert.equal(updated.status, 'reviewing');
-  await assert.rejects(() => updateAdminSubmission({ from() { throw new Error('must not query'); } }, { reference: 'STU-AB12CD34', status: 'deleted' }), /valid submission and status/);
+  await assert.rejects(() => updateAdminSubmission({ from() { throw new Error('must not query'); } }, { reference: 'STU-AB12CD34', status: 'deleted' }), /valid submission status/);
+});
+
+test('admin workflow update validates and records private follow-up context', async () => {
+  let update;
+  const updateQuery = {
+    update(value) { update = value; return this; },
+    eq(column, value) { assert.equal(column, 'reference'); assert.equal(value, 'EMP-AB12CD34'); return this; },
+    select(value) { assert.equal(value, '*'); return this; },
+    async single() { return { data: { reference: 'EMP-AB12CD34', ...update }, error: null }; },
+  };
+  const result = await updateAdminSubmission(
+    { from(table) { assert.equal(table, 'submissions'); return updateQuery; } },
+    { reference: 'emp-ab12cd34', internal_note: 'Needs a scoped follow-up.', follow_up_at: '2026-07-24T15:30:00.000Z' },
+    'OPERATOR@COVENDA.COM',
+  );
+  assert.equal(result.internal_note, 'Needs a scoped follow-up.');
+  assert.equal(result.follow_up_at, '2026-07-24T15:30:00.000Z');
+  assert.equal(result.reviewed_by, 'operator@covenda.com');
+  assert.match(result.reviewed_at, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(result.updated_at, result.reviewed_at);
+
+  await assert.rejects(
+    () => updateAdminSubmission({ from() { throw new Error('must not query'); } }, { reference: 'EMP-AB12CD34', internal_note: 'x'.repeat(2_001) }),
+    /under 2,000 characters/,
+  );
+  await assert.rejects(
+    () => updateAdminSubmission({ from() { throw new Error('must not query'); } }, { reference: 'EMP-AB12CD34', follow_up_at: 'not-a-date' }),
+    /valid follow-up date/,
+  );
 });

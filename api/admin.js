@@ -170,15 +170,43 @@ export async function listAdminSubmissions(supabase) {
   return Array.isArray(data) ? data : [];
 }
 
-export async function updateAdminSubmission(supabase, input) {
+export async function updateAdminSubmission(supabase, input, operatorEmail = '') {
   const reference = text(input.reference, 40).toUpperCase();
-  const status = text(input.status, 40);
-  if (!/^(EMP|STU|CALL|UNI)-[A-Z0-9]{6,20}$/.test(reference) || !ADMIN_STATUSES.has(status)) {
-    throw new Error('Choose a valid submission and status.');
+  if (!/^(EMP|STU|CALL|UNI)-[A-Z0-9]{6,20}$/.test(reference)) {
+    throw new Error('Choose a valid submission.');
   }
+
+  const changes = {};
+  if (Object.hasOwn(input, 'status')) {
+    const status = text(input.status, 40);
+    if (!ADMIN_STATUSES.has(status)) throw new Error('Choose a valid submission status.');
+    changes.status = status;
+  }
+  if (Object.hasOwn(input, 'internal_note')) {
+    if (typeof input.internal_note !== 'string') throw new Error('Enter a valid internal note.');
+    const internalNote = text(input.internal_note, 2_001);
+    if (internalNote.length > 2_000) throw new Error('Keep the internal note under 2,000 characters.');
+    changes.internal_note = internalNote;
+  }
+  if (Object.hasOwn(input, 'follow_up_at')) {
+    if (input.follow_up_at === null || input.follow_up_at === '') {
+      changes.follow_up_at = null;
+    } else {
+      const followUp = new Date(input.follow_up_at);
+      if (Number.isNaN(followUp.getTime())) throw new Error('Choose a valid follow-up date and time.');
+      changes.follow_up_at = followUp.toISOString();
+    }
+  }
+  if (!Object.keys(changes).length) throw new Error('Choose a workflow change to save.');
+
+  const reviewer = email(operatorEmail);
+  if (reviewer) changes.reviewed_by = reviewer;
+  changes.reviewed_at = new Date().toISOString();
+  changes.updated_at = changes.reviewed_at;
+
   const { data, error } = await supabase
     .from('submissions')
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(changes)
     .eq('reference', reference)
     .select('*')
     .single();
@@ -195,7 +223,7 @@ function adminFailure(error) {
     return {
       status: 503,
       code: 'ADMIN_SUBMISSIONS_UNAVAILABLE',
-      message: 'The admin login worked, but Supabase could not read public.submissions. Run the inbox repair migration and confirm the Vercel Supabase variables point to the same project.',
+      message: 'The admin login worked, but Supabase could not use public.submissions. Apply the newest pending inbox migrations and confirm the Vercel Supabase variables point to the same project.',
     };
   }
   return { status: 503, code: 'ADMIN_UNAVAILABLE', message: 'The operator inbox is temporarily unavailable. Check the newest /api/admin error in Vercel Runtime Logs.' };
@@ -242,10 +270,10 @@ export default async function handler(req, res, dependencies = {}) {
       return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions });
     }
 
-    const submission = await updateAdminSubmission(admin.supabase, body(req));
+    const submission = await updateAdminSubmission(admin.supabase, body(req), admin.email);
     return res.status(200).json({ ok: true, submission });
   } catch (error) {
-    const expected = error instanceof SyntaxError || /^(Enter|Choose|Please|Unknown)/.test(error?.message || '');
+    const expected = error instanceof SyntaxError || /^(Enter|Choose|Keep|Please|Unknown)/.test(error?.message || '');
     if (expected) return res.status(400).json({ ok: false, code: 'ADMIN_INPUT_INVALID', error: error.message });
     const failure = adminFailure(error);
     logAdminFailure(req, error, failure, startedAt);

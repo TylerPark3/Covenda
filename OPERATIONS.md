@@ -82,6 +82,8 @@ Vercel environment changes never update an already-built deployment. After chang
 
 The endpoint never creates a user from a sign-in attempt (`shouldCreateUser: false`). An authentic Supabase account is necessary but not sufficient: its normalized email must also appear in `COVENDA_ADMIN_EMAILS`. Keep the Supabase JWT expiry short for this operator surface; signing out clears the token from the current browser session, while already-issued access tokens remain valid until expiry.
 
+The operator inbox also stores a private internal note and optional follow-up date on each submission. Apply `supabase/migrations/20260721225331_add_operator_follow_up_fields.sql` before using those controls in production. The migration preserves existing records, keeps browser roles revoked, bounds notes to 2,000 characters, records the last authorized operator and update time, and refreshes the Data API schema cache. These fields are available only through the authenticated admin route; the public receipt endpoint never returns them.
+
 An alert contains only the submission type, receipt reference, company Project Packet readiness count when applicable, revision reference when applicable, and the protected admin link when configured. It excludes names, email addresses, company problems, student profiles, and other private answers.
 
 ## Where submissions can be viewed now

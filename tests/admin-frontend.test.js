@@ -27,9 +27,14 @@ test('operator inbox has passwordless sign-in and a complete review surface', ()
   assert.match(script, /No matching submission/);
   assert.match(script, /rows\.find\(item => item\.reference === selectedReference\)/);
   assert.match(script, /loadInbox\(\{ announce:true \}\)/);
+  assert.match(script, /Operator workspace/);
+  assert.match(script, /internal_note/);
+  assert.match(script, /follow_up_at/);
+  assert.match(script, /Save operator update/);
   assert.match(styles, /\.admin-main/);
   assert.match(styles, /\.admin-detail/);
   assert.match(styles, /\.admin-summary/);
+  assert.match(styles, /\.detail-workflow/);
 });
 
 test('operator UI stays code-native and contains no server credentials', () => {
