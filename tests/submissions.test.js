@@ -212,6 +212,37 @@ test('submissionRow maps a private intake into queryable database fields', () =>
   assert.equal(row.details.project.systemAccess, 'none');
 });
 
+test('submissionRow maps a university roster into queryable database fields', () => {
+  const details = universityRecord({
+    type: 'university_partner',
+    contact: { name: 'Dana Advisor', email: 'dana@school.edu', company: 'Example University' },
+    organizationType: 'Career center',
+    roster: [
+      { name: 'Jordan Lee', email: 'jordan@school.edu', interest: 'Research' },
+      { name: 'Priya Shah', email: 'priya@school.edu', interest: 'Operations' },
+    ],
+  });
+  const reference = 'UNI-ABC123';
+  assert.match(reference, /^UNI-[A-Z0-9]{6,20}$/);
+  const row = submissionRow({
+    schemaVersion: 6,
+    reference,
+    type: 'university_partner',
+    source: 'covenda-web',
+    createdAt: '2026-07-21T12:00:00.000Z',
+    status: 'received',
+    consent: true,
+    details,
+  });
+  assert.equal(row.submission_type, 'university_partner');
+  assert.equal(row.submitter_email, 'dana@school.edu');
+  assert.equal(row.organization_name, 'Example University');
+  assert.equal(row.consent, true);
+  assert.equal(row.details.roster.length, 2);
+  assert.equal(row.details.roster[0].email, 'jordan@school.edu');
+  assert.match(row.summary, /2 students/);
+});
+
 test('Supabase configuration accepts Vercel integration variable names', () => {
   assert.deepEqual(supabaseConfiguration({
     NEXT_PUBLIC_SUPABASE_URL: 'https://integration.supabase.co',

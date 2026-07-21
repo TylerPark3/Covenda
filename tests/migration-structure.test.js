@@ -10,6 +10,10 @@ const accessRepair = readFileSync(
   new URL('../supabase/migrations/20260721054507_repair_submission_inbox_access.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const universityMigration = readFileSync(
+  new URL('../supabase/migrations/20260721060000_allow_university_partner.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -36,4 +40,20 @@ test('submission access repair is repeatable and refreshes the Data API schema',
   assert.match(accessRepair, /grant select, insert, update on table public\.submissions to service_role/);
   assert.match(accessRepair, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(accessRepair, /grant delete/);
+});
+
+test('university migration idempotently allows university_partner and the UNI- reference', () => {
+  // idempotent drop-then-add so it is safe to re-run on the live table
+  assert.match(universityMigration, /drop constraint if exists submissions_type_allowed/);
+  assert.match(universityMigration, /drop constraint if exists submissions_reference_format/);
+  // all four audiences remain valid
+  for (const type of ['employer_intake', 'student_interest', 'call_request', 'university_partner']) {
+    assert.match(universityMigration, new RegExp(type));
+  }
+  // reference format now accepts the UNI- prefix
+  assert.match(universityMigration, /\^\(emp\|stu\|call\|uni\)-\[a-z0-9\]\{6,20\}\$/);
+  // refreshes the Data API and never loosens access
+  assert.match(universityMigration, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(universityMigration, /grant delete/);
+  assert.doesNotMatch(universityMigration, /anon|authenticated/);
 });

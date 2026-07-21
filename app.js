@@ -1564,7 +1564,14 @@ $('#rosterList')?.addEventListener('click', event => {
   saveRosterDraft();
 });
 
-$$('[data-audience-option]').forEach(button => button.addEventListener('click', () => setAudience(button.dataset.audienceOption)));
+$$('[data-audience-option]').forEach(button => button.addEventListener('click', () => {
+  setAudience(button.dataset.audienceOption);
+  // The core-story demo only belongs to the opening/default home view.
+  document.body.dataset.audienceSwitched = 'true';
+  // Land on the new audience's hero, not mid-page in its content.
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: 0, behavior: reduceMotion ? 'instant' : 'smooth' });
+}));
 $$('[data-workspace-tab]').forEach(button => button.addEventListener('click', () => setWorkspaceTab(button.dataset.workspaceTab)));
 $$('[data-work-type]').forEach(button => button.addEventListener('click', () => {
   selectWorkType(button.dataset.workType);
@@ -1627,8 +1634,42 @@ $$('[data-prompt]').forEach(button => button.addEventListener('click', () => {
   const textarea = $('#companyProblemSeed');
   if (!textarea.value.trim()) textarea.value = button.dataset.prompt;
   else if (!textarea.value.includes(button.dataset.prompt)) textarea.value = textarea.value.trim() + '\n' + button.dataset.prompt;
+  textarea.dispatchEvent(new Event('input'));
   textarea.focus();
 }));
+
+// Live project-fit signal for the company hero. Mirrors the #projectFit table so
+// the composer visibly does something as the visitor types — and teaches the
+// safety boundary before they invest effort. Same text also prefills the demo.
+const FIT_BLOCKERS = [
+  /production\b/i, /client (records|data|files)/i, /customer (records|data)/i,
+  /patient/i, /\bpii\b/i, /\bssn\b/i, /social security/i, /health record/i,
+  /medical record/i, /regulated/i, /restricted/i, /proprietary/i, /confidential/i,
+  /credential|password|api key|secret/i, /financial account/i, /bank account/i,
+];
+const FIT_REDESIGN = [
+  /supervis/i, /real[- ]?time/i, /on[- ]?call/i, /\basap\b/i, /urgent/i,
+  /live (access|support)/i, /shadow/i,
+];
+function classifyProblemFit(text) {
+  const clean = text.trim();
+  if (clean.length < 12) return { state: 'empty', label: 'Start typing — we’ll show project fit' };
+  if (FIT_BLOCKERS.some(re => re.test(clean))) return { state: 'blocked', label: 'Not eligible — involves restricted access or records' };
+  if (clean.length < 45 || FIT_REDESIGN.some(re => re.test(clean))) return { state: 'redesign', label: 'Needs redesign — add a clear, safe deliverable' };
+  return { state: 'good', label: 'Good first fit — safe to scope' };
+}
+(() => {
+  const seed = $('#companyProblemSeed');
+  const chip = $('#companyFitChip');
+  if (!seed || !chip) return;
+  const update = () => {
+    const { state, label } = classifyProblemFit(seed.value);
+    chip.dataset.fit = state;
+    chip.textContent = label;
+  };
+  seed.addEventListener('input', update);
+  update();
+})();
 
 $('#submissionHistory').addEventListener('click', event => {
   const button = event.target.closest('[data-receipt-action]');

@@ -436,6 +436,46 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 }
 .company-composer textarea::placeholder { color: #898984; }
 .company-composer .gold-button { min-width: 168px; min-height: 66px; }
+.composer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  margin: 14px 6px 0;
+}
+.composer-fit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: #6c6c67;
+  transition: color .25s ease, background .25s ease, border-color .25s ease;
+}
+.composer-fit::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .7;
+}
+.composer-fit[data-fit="good"] { color: var(--gold-deep); border-color: var(--gold-light); background: var(--gold-pale); }
+.composer-fit[data-fit="redesign"] { color: #9a6a12; border-color: #e6d6a6; background: #fdf6e6; }
+.composer-fit[data-fit="blocked"] { color: #b4322a; border-color: #f0cdc9; background: #fdf1ef; }
+.composer-hint {
+  flex: 1 1 240px;
+  min-width: 220px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #6c6c67;
+}
 .prompt-links { display: flex; justify-content: center; gap: 50px; margin-top: 34px; }
 .prompt-links button { display: inline-flex; align-items: center; gap: 5px; }
 .prompt-links button:hover { color: var(--gold-deep); }
@@ -459,7 +499,8 @@ body[data-audience="university"] .audience-content[data-for-audience="university
   padding: clamp(78px, 10vw, 150px) var(--page-gutter);
   border-top: 1px solid var(--line);
 }
-.how-section { background: #fff; }
+/* Tighter lead-in above the core story; even rhythm into the first module. */
+.how-section { background: #fff; padding-top: clamp(60px, 7vw, 104px); }
 .how-section > div, .why-section > div { width: min(100%, var(--content)); margin: 0 auto; }
 .section-heading {
   display: grid;
@@ -1144,16 +1185,14 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12px; font-weight: 650;
 /* ---- Demo 2 · Problem -> Packet -> Proof --------------------------- */
 .flow-demo {
   width: min(100%, var(--content));
-  margin: 0 auto clamp(56px, 7vw, 96px);
-  padding: clamp(30px, 4vw, 46px) clamp(22px, 3.4vw, 44px);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background:
-    linear-gradient(160deg, #fff, #fdfbf6 60%, #fff),
-    var(--white);
-  box-shadow: var(--shadow);
+  margin: 0 auto clamp(52px, 7vw, 92px);
+  padding: 0;
 }
-.flow-demo-head { max-width: 640px; margin: 0 0 26px; }
+/* Core story is the opening/default home view only — not repeated per audience. */
+body[data-audience="company"] #flowDemo,
+body[data-audience="university"] #flowDemo,
+body[data-audience-switched] #flowDemo { display: none; }
+.flow-demo-head { max-width: 640px; margin: 0 0 clamp(22px, 2.6vw, 34px); }
 .flow-demo-kicker {
   margin: 0 0 8px;
   font-size: 12px;
@@ -1404,4 +1443,88 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12px; font-weight: 650;
   .roster-add-row { grid-template-columns: 1fr; }
   .roster-add-row .gold-button { justify-self: start; }
   .roster-submit { justify-self: stretch; }
+}
+
+/* ---- University rail: full-width, no duplicate proof panel ---------- */
+.proof-rail-wide { max-width: 1080px; }
+
+/* ---- Litmus-style feature band: gold->cream aurora + column guides -- */
+.feature-band {
+  position: relative;
+  padding: clamp(66px, 8vw, 120px) var(--page-gutter);
+  border-top: 1px solid var(--line);
+  background: #fff;
+}
+.feature-band-inner {
+  position: relative;
+  width: min(100%, var(--content));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(30px, 5vw, 52px);
+  align-items: center;
+}
+.feature-copy { max-width: 640px; }
+.feature-kicker {
+  margin: 0 0 14px;
+  font-size: 12px;
+  font-weight: 640;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+.feature-copy h2 {
+  margin: 0 0 18px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(34px, 4vw, 56px);
+  line-height: 1.03;
+  letter-spacing: -.05em;
+}
+.feature-copy p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.7; }
+
+.feature-panel {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 6;            /* mobile / narrow: wide short banner */
+  border-radius: 26px;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 130% at 18% 18%, #FDF9F0 0%, rgba(253,249,240,0) 55%),
+    radial-gradient(110% 120% at 82% 22%, #C9A24B 0%, rgba(201,162,75,0) 58%),
+    radial-gradient(130% 130% at 78% 88%, #A9822F 0%, rgba(169,130,47,0) 55%),
+    radial-gradient(120% 130% at 22% 92%, #FBF6EC 0%, rgba(251,246,236,0) 58%),
+    linear-gradient(135deg, #FDF9F0 0%, #FBF6EC 58%, #F3E7CC 100%);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.6), 0 18px 48px rgba(169,130,47,.14);
+}
+.feature-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 140px 140px;
+  opacity: .5;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+@media (min-width: 900px) {
+  .feature-band-inner {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 440px);
+    gap: clamp(56px, 6vw, 96px);
+  }
+  .feature-panel { aspect-ratio: 1 / 1; }   /* desktop / wide: square on the right */
+  /* faint vertical column-guide hairlines framing the content columns */
+  .feature-band-inner::before,
+  .feature-band-inner::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--line);
+    opacity: .85;
+  }
+  .feature-band-inner::before { left: -1px; }
+  .feature-band-inner::after { right: -1px; }
 }
