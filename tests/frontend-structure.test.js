@@ -84,8 +84,8 @@ test('employer product loop preserves the full boomerang order and ownership', (
     'decision'
   ]);
   assert.match(html, /AI-assisted, founder-reviewed project design\./);
-  assert.match(html, /The employer—not ProofPath—chooses\./);
-  assert.match(html, /Completed work returns to ProofPath first\./);
+  assert.match(html, /The employer—not Covenda—chooses\./);
+  assert.match(html, /Completed work returns to Covenda first\./);
 });
 
 test('product loop states launch, memo, payment, and scoring boundaries', () => {
