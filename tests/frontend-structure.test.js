@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const script = await readFile(new URL('../app.js', import.meta.url), 'utf8');
+const styles = await readFile(new URL('../styles.css', import.meta.url), 'utf8');
 
-test('inline JavaScript parses', () => {
-  const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(match => match[1]);
-  assert.equal(scripts.length, 1);
-  assert.doesNotThrow(() => new Function(scripts[0]));
+test('frontend JavaScript parses', () => {
+  assert.doesNotThrow(() => new Function(script));
 });
 
 test('HTML ids remain unique', () => {
@@ -16,113 +16,97 @@ test('HTML ids remain unique', () => {
   assert.deepEqual([...new Set(duplicates)], []);
 });
 
-test('both live intake paths have five progressive steps and a receipt', () => {
-  assert.equal((html.match(/data-employer-step=/g) || []).length, 5);
-  assert.equal((html.match(/data-student-step=/g) || []).length, 5);
-  for (const id of ['employerReceipt', 'studentReceipt', 'employerReviewSummary', 'studentReviewSummary']) {
-    assert.match(html, new RegExp(`id="${id}"`));
+test('student-first hero offers five work paths and a scroll continuation', () => {
+  const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
+  assert.match(hero, /What kind of work do you want to prove\?/);
+  assert.equal((hero.match(/class="work-option/g) || []).length, 5);
+  assert.match(hero, /Find my path/);
+  assert.match(hero, /See how Covenda works/);
+  assert.match(hero, /href="#how"/);
+});
+
+test('audience switch supports student and company site states', () => {
+  assert.match(html, /data-audience-option="student"/);
+  assert.match(html, /data-audience-option="company"/);
+  assert.match(html, /What work keeps getting pushed\?/);
+  assert.match(script, /document\.body\.dataset\.audience = audience/);
+  assert.match(styles, /body\[data-audience="company"\] \.hero-student/);
+});
+
+test('company story preserves the managed Project Packet workflow and risk boundary', () => {
+  assert.match(html, /From messy work to an/);
+  for (const phrase of ['Company problem', 'Covenda scopes', 'You approve', 'Student works', 'Covenda reviews']) {
+    assert.match(html, new RegExp(phrase));
   }
+  assert.match(html, /No production access or restricted records/);
+  assert.match(html, /Illustrative Project Packet/);
 });
 
-test('intro types once per browser, stays skippable, and respects reduced motion', () => {
-  assert.match(html, /id="introSkip"/);
-  assert.match(html, /data-intro-type="Students get paid\."/);
-  assert.match(html, /data-intro-type="Employers get work done\."/);
-  assert.match(html, /localStorage\.getItem\(introStorageKey\)/);
-  assert.match(html, /localStorage\.setItem\(introStorageKey,'1'\)/);
-  assert.doesNotMatch(html, /sessionStorage/);
-  assert.match(html, /const typeIntro=/);
-  assert.match(html, /prefers-reduced-motion:reduce/);
+test('workspace includes honest student and company pilot states', () => {
+  assert.match(html, /id="workspaceShell"/);
+  assert.match(html, /Build proof one project at a time/);
+  assert.match(html, /No universal score/);
+  assert.match(html, /Turn one delayed problem into a bounded project/);
+  assert.match(html, /Payment and publication are not active in this pilot workspace/);
+  assert.match(html, /Pilot workspace/);
 });
 
-test('homepage avoids fake logo and traction treatments', () => {
-  assert.doesNotMatch(html, /upload\.wikimedia\.org/);
-  assert.doesNotMatch(html, /id="networkTally"/);
-  assert.doesNotMatch(html, /<button[^>]+data-view="ops"/);
+test('both live submission paths have progressive forms and consent', () => {
+  assert.equal((html.match(/data-student-step=/g) || []).length, 4);
+  assert.equal((html.match(/data-company-step=/g) || []).length, 4);
+  assert.match(html, /id="studentForm"/);
+  assert.match(html, /id="companyForm"/);
+  assert.match(html, /name="studentConsent"/);
+  assert.match(html, /name="companyConsent"/);
+  assert.match(script, /fetch\('\/api\/submissions'/);
+  assert.match(script, /type: 'student_interest'/);
+  assert.match(script, /type: 'employer_intake'/);
 });
 
-test('How it works shows the managed boomerang in the operating order', () => {
-  const stages = [...html.matchAll(/data-boomerang-stage="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(stages, [
-    'company-problem',
-    'proofpath-scope',
-    'student-work',
-    'proofpath-review',
-    'company-decision'
-  ]);
-  assert.match(html, /company-ready presentation/);
-  assert.match(html, /No raw handoff\./);
+test('drafts persist locally and feed review and workspace summaries', () => {
+  assert.match(script, /covendaStudentInterestDraft/);
+  assert.match(script, /covendaCompanyProblemDraft/);
+  assert.match(script, /function serializeDraft\(form\)/);
+  assert.match(script, /function restoreDraft\(form\)/);
+  assert.match(script, /function renderReview\(form\)/);
+  assert.match(script, /function renderWorkspaceDrafts\(\)/);
+  assert.match(html, /id="studentReviewSummary"/);
+  assert.match(html, /id="companyReviewSummary"/);
+  assert.match(html, /id="studentDraftBanner"/);
+  assert.match(html, /id="companyDraftBanner"/);
+  assert.match(html, /data-clear-draft/);
 });
 
-test('overview is concise, restores honest tickers, and keeps display typography consistent', () => {
-  assert.match(html, /<section class="view" id="processView">/);
-  assert.match(html, /<button data-view="process">How it works<\/button>/);
-  assert.equal((html.match(/class="campus-ticker /g) || []).length, 2);
-  assert.match(html, /<b>Companies<\/b>/);
-  assert.match(html, /<b>Talent<\/b>/);
-  assert.match(html, /No company or university partnership claimed/);
-  assert.doesNotMatch(html, /class="foundation-section"/);
-  assert.doesNotMatch(html, /class="current-stage reveal"/);
-  assert.match(html, /<p class="marketing-subhead">We shape the safe work unit\.<\/p>/);
-  assert.match(html, /<button class="secondary" data-schedule>Discuss a real problem<\/button>/);
-  assert.match(html, /\.audience-panel \.marketing-subhead\{[^}]*var\(--serif\)/);
+test('company review calculates the net time case without promising launch', () => {
+  assert.match(script, /function companyTimeCase\(form\)/);
+  assert.match(script, /net: avoided - reviewHours/);
+  assert.match(script, /Covenda still validates this estimate/);
+  assert.match(script, /would redesign or stop this project/);
+  assert.match(html, /No payment, publication, or student assignment occurs from this submission/);
 });
 
-test('employer product loop preserves the full boomerang order and ownership', () => {
-  const stages = [...html.matchAll(/data-product-loop-tab="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(stages, [
-    'problem',
-    'scope',
-    'approval',
-    'sourcing',
-    'applications',
-    'review',
-    'shortlist',
-    'selection',
-    'work',
-    'qa',
-    'decision'
-  ]);
-  assert.match(html, /AI-assisted, founder-reviewed project design\./);
-  assert.match(html, /The employer—not Covenda—chooses\./);
-  assert.match(html, /Completed work returns to Covenda first\./);
+test('forms preserve backend safety and evidence requirements', () => {
+  for (const name of ['companyProblem', 'companyDecision', 'companyDeliverable', 'companyReviewer', 'companyAcceptance', 'companyContext']) {
+    assert.match(html, new RegExp('name="' + name + '"'));
+  }
+  assert.match(script, /clientRecords:/);
+  assert.match(script, /restrictedJudgment:/);
+  assert.match(script, /Remove production access, restricted records, and regulated decisions/);
+  assert.match(html, /This is an interest profile, not a job application or guarantee/);
 });
 
-test('product loop states launch, memo, payment, and scoring boundaries', () => {
-  const loop = html.match(/<section class="system-section product-loop"[\s\S]*?<section id="intake">/i)?.[0] || '';
-  assert.match(loop, /Payment setup pending · illustrative control/);
-  assert.match(loop, /150–450 words/);
-  assert.match(loop, /45-minute cap/);
-  assert.match(loop, /3\+ public sources/);
-  assert.match(loop, /Fictional composites · not applicants/);
-  assert.match(loop, /No raw handoff/);
-  assert.match(loop, /Not a universal employability score/);
-  assert.match(loop, /No automatic match\. No employment guarantee\./);
-  const weights = [...loop.matchAll(/data-composite-weight="(\d+)"/g)].map(match => Number(match[1]));
-  assert.equal(weights.reduce((sum, weight) => sum + weight, 0), 100);
+test('design system stays true white and supports responsive and reduced-motion states', () => {
+  assert.match(styles, /--white: #fff/);
+  assert.match(styles, /--gold: #b47b20/);
+  assert.match(styles, /backdrop-filter: blur/);
+  assert.match(styles, /@media \(max-width: 560px\)/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test('overview keeps market context compact and beside each audience', () => {
-  const proofs = [...html.matchAll(/data-overview-proof="([^"]+)"/g)].map(match => match[1]);
-  assert.deepEqual(proofs, [
-    'company-capacity',
-    'company-low-value-work',
-    'student-skills-hiring',
-    'student-intern-conversion'
-  ]);
-  assert.match(html, /Context, not traction/);
-  assert.doesNotMatch(html, /class="evidence-quotes"/);
-  assert.doesNotMatch(html, /class="evidence-quote-list"/);
-});
-
-test('Calendly is the configured booking outcome with the call-request form as fallback', () => {
-  assert.match(html, /name="proofpath-calendly-url" content=""/);
-  assert.match(html, /url\.hostname==='calendly\.com'\|\|url\.hostname\.endsWith\('\.calendly\.com'\)/);
-  assert.match(html, /if\(calendlyUrl\).*window\.open\(calendlyUrl,'_blank','noopener,noreferrer'\)/s);
-  assert.match(html, /resetSchedule\(\);scheduleDialog\.showModal\(\)/);
-});
-
-test('project packet renders submitted facts without assigning raw input to innerHTML', () => {
-  assert.doesNotMatch(html, /\$\('#packetFacts'\)\.innerHTML/);
-  assert.match(html, /safeList\(\$\('#packetFacts'\)/);
+test('page avoids unsupported marketplace claims and legacy branding', () => {
+  assert.doesNotMatch(html, /ProofPath/i);
+  assert.doesNotMatch(html, /Sign in/i);
+  assert.doesNotMatch(html, /customer logos/i);
+  assert.doesNotMatch(html, /success rate/i);
+  assert.doesNotMatch(html, /Student score:/i);
 });
