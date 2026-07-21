@@ -35,6 +35,7 @@ Before using real submissions, add these server-only environment variables to th
 | `NEXT_PUBLIC_SUPABASE_URL` | Accepted URL fallback when it is supplied automatically by the Vercel Supabase integration. The URL is public configuration; the secret key is not. |
 | `SUPABASE_SECRET_KEY` | Preferred server-only Supabase secret key. Never add it to client-side code or use a `NEXT_PUBLIC_`/`VITE_` prefix. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Legacy fallback only if the project has not issued a new secret key. |
+| `SUPABASE_PUBLISHABLE_KEY` | Preferred key for requesting Supabase Magic Links. The Vercel integration may provide this automatically. `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are accepted fallbacks. |
 | `POSTGRES_URL` | Server-only pooled database connection supplied by the Vercel Supabase integration. This is the independent ingestion fallback when the Data API is unavailable. |
 | `BLOB_READ_WRITE_TOKEN` | Existing private Blob fallback. Keep it while Supabase is being introduced and during the MVP. |
 
@@ -69,7 +70,19 @@ The first operator inbox is available at `/admin.html`. It uses Supabase passwor
 4. Set `COVENDA_ADMIN_URL=https://YOUR_DOMAIN/admin.html` so notification emails can link to the inbox.
 5. Redeploy, request a link from `/admin.html`, and verify that an unlisted Supabase user receives no inbox access.
 
+Admin API failures include a safe diagnostic code and an actionable message. The most common codes are:
+
+- `ADMIN_ALLOWLIST_MISSING`: `COVENDA_ADMIN_EMAILS` is blank in this deployment, or the deployment predates the variable change.
+- `ADMIN_SUPABASE_PUBLISHABLE_KEY_MISSING`: add or reconnect the Vercel Supabase integration so a publishable/anon key is available, then redeploy.
+- `ADMIN_SUPABASE_SECRET_MISSING`: the server-only Supabase secret is absent from the selected Vercel environment.
+- `ADMIN_MAGIC_LINK_FAILED`: create/confirm the operator in Supabase Authentication → Users, enable Email sign-in, and check the exact `/admin.html` redirect URL.
+- `ADMIN_SUBMISSIONS_UNAVAILABLE`: the login worked but the configured Supabase project cannot read `public.submissions`; run the inbox repair migration and verify the project reference.
+
+Vercel environment changes never update an already-built deployment. After changing any admin or Supabase variable, redeploy the `Dylan` preview before testing it again. The admin API logs a structured error with the same diagnostic code under Vercel Runtime Logs → `/api/admin` without logging access tokens or form data.
+
 The endpoint never creates a user from a sign-in attempt (`shouldCreateUser: false`). An authentic Supabase account is necessary but not sufficient: its normalized email must also appear in `COVENDA_ADMIN_EMAILS`. Keep the Supabase JWT expiry short for this operator surface; signing out clears the token from the current browser session, while already-issued access tokens remain valid until expiry.
+
+The operator inbox also stores a private internal note and optional follow-up date on each submission. Apply `supabase/migrations/20260721225331_add_operator_follow_up_fields.sql` before using those controls in production. The migration preserves existing records, keeps browser roles revoked, bounds notes to 2,000 characters, records the last authorized operator and update time, and refreshes the Data API schema cache. These fields are available only through the authenticated admin route; the public receipt endpoint never returns them.
 
 An alert contains only the submission type, receipt reference, company Project Packet readiness count when applicable, revision reference when applicable, and the protected admin link when configured. It excludes names, email addresses, company problems, student profiles, and other private answers.
 

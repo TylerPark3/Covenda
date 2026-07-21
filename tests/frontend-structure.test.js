@@ -70,6 +70,14 @@ test('company story preserves the managed Project Packet workflow and risk bound
   assert.match(html, /Illustrative Project Packet/);
 });
 
+test('company hero problem composer remains focusable above decorative effects', () => {
+  assert.match(html, /id="companyProblemSeed"/);
+  assert.match(styles, /\.selector-orbit::after[\s\S]*pointer-events: none/);
+  assert.match(styles, /\.company-composer[\s\S]*z-index: 2/);
+  assert.match(styles, /\.company-composer textarea[\s\S]*pointer-events: auto/);
+  assert.match(script, /seed\.addEventListener\('input', update\)/);
+});
+
 test('workspace includes honest student and company pilot states', () => {
   assert.match(html, /id="workspaceShell"/);
   assert.match(html, /Build proof one project at a time/);

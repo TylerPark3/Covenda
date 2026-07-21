@@ -22,6 +22,7 @@
     <symbol id="a-university" viewBox="0 0 24 24"><path d="m3 9 9-5 9 5M5 10h14M6 19V11m4 8v-8m4 8v-8m4 8v-8M3 21h18"/></symbol>
     <symbol id="a-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></symbol>
     <symbol id="a-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="a-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8.5A7 7 0 0 1 18.7 7L20 12M4 12l1.3 5A7 7 0 0 0 17.9 15.5"/></symbol>
     <symbol id="a-exit" viewBox="0 0 24 24"><path d="M10 4H4v16h6m5-4 4-4-4-4m4 4H8"/></symbol>
     <symbol id="a-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
   </defs></svg>
@@ -44,23 +45,38 @@
     <aside class="admin-nav">
       <a class="admin-brand" href="/"><span aria-hidden="true"><i></i><i></i></span>Covenda</a>
       <nav aria-label="Submission audiences">
-        <button class="is-active" type="button" data-admin-type="all"><svg><use href="#a-inbox"/></svg>Inbox</button>
-        <button type="button" data-admin-type="student_interest"><svg><use href="#a-user"/></svg>Students</button>
-        <button type="button" data-admin-type="employer_intake"><svg><use href="#a-company"/></svg>Companies</button>
-        <button type="button" data-admin-type="university_partner"><svg><use href="#a-university"/></svg>Universities</button>
+        <button class="is-active" type="button" data-admin-type="all"><svg><use href="#a-inbox"/></svg><span>Inbox</span><b data-admin-count="all">0</b></button>
+        <button type="button" data-admin-type="student_interest"><svg><use href="#a-user"/></svg><span>Students</span><b data-admin-count="student_interest">0</b></button>
+        <button type="button" data-admin-type="employer_intake"><svg><use href="#a-company"/></svg><span>Companies</span><b data-admin-count="employer_intake">0</b></button>
+        <button type="button" data-admin-type="university_partner"><svg><use href="#a-university"/></svg><span>Universities</span><b data-admin-count="university_partner">0</b></button>
       </nav>
       <button class="admin-signout" id="adminSignout" type="button"><svg><use href="#a-exit"/></svg>Sign out</button>
     </aside>
 
-    <header class="admin-header"><span id="operatorEmail">Operator</span></header>
+    <header class="admin-header">
+      <span id="operatorEmail">Operator</span>
+      <span class="admin-sync-status" id="adminSyncStatus" aria-live="polite">Not synced</span>
+      <button class="admin-refresh" id="adminRefresh" type="button"><svg><use href="#a-refresh"/></svg>Refresh inbox</button>
+    </header>
     <main class="admin-main">
       <section class="admin-queue">
-        <h1>Submission inbox</h1>
+        <div class="admin-queue-heading">
+          <div><h1>Submission inbox</h1><p>Review new intake, find blocked records, and keep every lead moving.</p></div>
+          <strong id="adminQueueTotal">0 records</strong>
+        </div>
+        <div class="admin-summary" aria-label="Submission queue summary">
+          <button type="button" data-summary-status="received"><span>New</span><strong id="adminMetricReceived">0</strong><small>Awaiting first review</small></button>
+          <button type="button" data-summary-status="reviewing"><span>In review</span><strong id="adminMetricReviewing">0</strong><small>Being scoped now</small></button>
+          <button type="button" data-summary-status="needs_information"><span>Needs information</span><strong id="adminMetricNeedsInfo">0</strong><small>Waiting on follow-up</small></button>
+          <button type="button" data-summary-status="approved"><span>Approved</span><strong id="adminMetricApproved">0</strong><small>Ready for next step</small></button>
+        </div>
         <div class="admin-controls">
           <select id="adminTypeFilter" aria-label="Submission type"><option value="all">All submissions</option><option value="student_interest">Students</option><option value="employer_intake">Companies</option><option value="university_partner">Universities</option><option value="call_request">Call requests</option></select>
           <select id="adminStatusFilter" aria-label="Submission status"><option value="all">All statuses</option><option value="received">Received</option><option value="reviewing">In human review</option><option value="needs_information">Needs information</option><option value="packet_proposed">Packet proposed</option><option value="approval_pending">Approval pending</option><option value="approved">Approved</option><option value="declined">Closed</option><option value="archived">Archived</option></select>
+          <select id="adminSort" aria-label="Sort submissions"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="attention">Needs attention first</option></select>
           <label class="admin-search"><svg><use href="#a-search"/></svg><input id="adminSearch" type="search" placeholder="Search reference or name" aria-label="Search submissions"></label>
         </div>
+        <div class="admin-results-bar"><p id="adminResultsCount" aria-live="polite">0 submissions</p><button id="adminClearFilters" type="button" hidden>Clear filters</button></div>
         <div class="admin-table-wrap">
           <table><thead><tr><th>Reference</th><th>Submitter</th><th>Type</th><th>Status</th><th>Received</th></tr></thead><tbody id="adminRows"></tbody></table>
           <div class="admin-empty" id="adminEmpty" hidden><strong>No submissions found</strong><span>Try a different audience, status, or search.</span></div>
