@@ -131,6 +131,15 @@ function draftValue(draft, name, fallback = '') {
   return value || fallback;
 }
 
+function applyFormValues(form, values = {}) {
+  for (const field of $$('[name]', form)) {
+    if (!(field.name in values)) continue;
+    const value = values[field.name];
+    if (field.type === 'checkbox') field.checked = Array.isArray(value) && value.includes(field.value);
+    else field.value = value;
+  }
+}
+
 function serializeDraft(form) {
   const values = {};
   for (const field of $$('[name]', form)) {
@@ -146,6 +155,7 @@ function serializeDraft(form) {
     values,
     step: Number(form.dataset.step || 0),
     updatedAt: new Date().toISOString(),
+    ...(form.id === 'companyForm' && form.dataset.revisionOf ? { revisionOf: form.dataset.revisionOf } : {}),
   };
 }
 
@@ -160,11 +170,11 @@ function hasMeaningfulDraft(draft) {
 function restoreDraft(form) {
   const draft = readStorage(draftKeys[form.id], null);
   if (!hasMeaningfulDraft(draft)) return 0;
-  for (const field of $$('[name]', form)) {
-    if (!(field.name in draft.values)) continue;
-    const value = draft.values[field.name];
-    if (field.type === 'checkbox') field.checked = Array.isArray(value) && value.includes(field.value);
-    else field.value = value;
+  applyFormValues(form, draft.values);
+  if (form.id === 'companyForm') {
+    if (draft.revisionOf) form.dataset.revisionOf = draft.revisionOf;
+    else delete form.dataset.revisionOf;
+    renderRevisionContext();
   }
   const status = $('[data-draft-status]', form);
   if (status) status.textContent = 'Draft restored from this device';
@@ -182,6 +192,10 @@ function saveDraft(form) {
 
 function discardDraft(form, { reset = true } = {}) {
   removeStorage(draftKeys[form.id]);
+  if (form.id === 'companyForm') {
+    delete form.dataset.revisionOf;
+    renderRevisionContext();
+  }
   if (reset) {
     form.reset();
     setFormStep(form, 0);
@@ -190,6 +204,19 @@ function discardDraft(form, { reset = true } = {}) {
   const status = $('[data-draft-status]', form);
   if (status) status.textContent = 'Draft saves on this device';
   renderWorkspaceDrafts();
+}
+
+function renderRevisionContext() {
+  const form = $('#companyForm');
+  const context = $('#companyRevisionContext');
+  if (!form || !context) return;
+  const reference = form.dataset.revisionOf || '';
+  context.hidden = !reference;
+  $('#companyRevisionReference').textContent = reference
+    ? 'Revision of ' + reference + ' · the original submission remains unchanged.'
+    : 'The original submission remains unchanged.';
+  const submit = $('[data-form-submit]', form);
+  if (submit) submit.innerHTML = (reference ? 'Send revised company problem ' : 'Send company problem ') + iconUse('icon-arrow-right');
 }
 
 function renderDefinitionList(root, rows) {
@@ -625,6 +652,79 @@ function receiptSummary(item) {
     : 'A student interest profile was received for pilot-fit review.';
 }
 
+function companyPacketSnapshot(form, readiness) {
+  return {
+    schemaVersion: 1,
+    values: serializeDraft(form).values,
+    readiness: {
+      readyCount: readiness.readyCount,
+      total: readiness.total,
+      checks: readiness.checks.map(({ key, label, detail, ready }) => ({ key, label, detail, ready })),
+    },
+  };
+}
+
+function companySnapshotRows(snapshot) {
+  const input = companyReadinessInputFromDraft(snapshot);
+  const netTime = input.internalHoursAvoided - (input.reviewMinutes / 60);
+  const boundary = input.systemAccess === 'none' && !input.clientRecords && !input.restrictedJudgment
+    ? 'Approved copies only · no production access or restricted records'
+    : 'Requires boundary review';
+  return [
+    ['Delayed work', draftValue(snapshot, 'companyProblem')],
+    ['Useful finish', input.decision],
+    ['Deliverable', input.deliverable],
+    ['Reviewer', input.reviewer],
+    ['Acceptance criteria', input.acceptance],
+    ['Approved context', input.approvedContext],
+    ['Information boundary', boundary],
+    ['Working terms', [input.studentHours, input.deadline, input.budget > 0 ? '$' + input.budget + ' possible budget' : ''].filter(Boolean).join(' · ')],
+    ['Estimated time case', Number.isFinite(netTime) ? netTime.toFixed(1) + ' net internal hours before Covenda validation' : 'Not calculated'],
+  ];
+}
+
+function renderReceiptPacket(item) {
+  const section = document.createElement('section');
+  const header = document.createElement('header');
+  const heading = document.createElement('div');
+  const label = document.createElement('small');
+  const title = document.createElement('h3');
+  const note = document.createElement('p');
+  const summary = document.createElement('dl');
+  const readiness = document.createElement('ul');
+  section.className = 'receipt-packet';
+  section.id = 'packet-' + item.reference.replace(/[^a-z0-9-]/gi, '');
+  section.hidden = true;
+  label.textContent = 'Private local snapshot';
+  title.textContent = 'Working packet as submitted';
+  note.textContent = 'This is the intake version Covenda received. It remains unapproved until human scoping is complete.';
+  heading.append(label, title);
+  header.append(heading, note);
+  summary.className = 'receipt-packet-summary';
+  renderDefinitionList(summary, companySnapshotRows(item.packetSnapshot));
+  readiness.className = 'receipt-packet-checks';
+  const checks = item.packetSnapshot.readiness?.checks || [];
+  checks.forEach(check => {
+    const entry = document.createElement('li');
+    const copy = document.createElement('div');
+    const strong = document.createElement('strong');
+    const detail = document.createElement('span');
+    entry.className = check.ready ? 'is-ready' : 'needs-input';
+    entry.append(check.ready ? createIcon('icon-check') : createIcon('icon-clock'));
+    strong.textContent = check.label;
+    detail.textContent = check.detail;
+    copy.append(strong, detail);
+    entry.append(copy);
+    readiness.append(entry);
+  });
+  section.append(header, summary, readiness);
+  return section;
+}
+
+function newerRevisionFor(reference) {
+  return savedSubmissions().find(item => item.revisionOf === reference);
+}
+
 function appendMeta(list, term, detail) {
   const row = document.createElement('div');
   const dt = document.createElement('dt');
@@ -645,7 +745,7 @@ function renderReceipt(item) {
   const category = document.createElement('small');
   const title = document.createElement('h2');
   const status = document.createElement('span');
-  category.textContent = submissionLabel(item);
+  category.textContent = item.revisionOf ? 'Company problem revision' : submissionLabel(item);
   title.textContent = item.title || submissionLabel(item);
   status.className = 'receipt-status';
   status.append(createIcon('icon-check'), document.createTextNode('Received'));
@@ -655,6 +755,16 @@ function renderReceipt(item) {
   const summary = document.createElement('p');
   summary.className = 'receipt-summary';
   summary.textContent = receiptSummary(item);
+
+  const lineage = document.createElement('p');
+  const newerRevision = item.type === 'employer_intake' ? newerRevisionFor(item.reference) : null;
+  if (item.revisionOf || newerRevision) {
+    lineage.className = 'receipt-lineage';
+    lineage.append(createIcon('icon-file'));
+    lineage.append(document.createTextNode(item.revisionOf
+      ? 'Revision of ' + item.revisionOf + ' · the earlier receipt remains unchanged.'
+      : 'A newer revision was received as ' + newerRevision.reference + '.'));
+  }
 
   const readiness = item.type === 'employer_intake' && item.packetReadiness;
   const readinessNote = document.createElement('p');
@@ -694,19 +804,30 @@ function renderReceipt(item) {
     ? 'This receipt does not publish, fund, or assign the project. Covenda reviews it first.'
     : 'This receipt is not a job application, match, or work guarantee. Covenda reviews pilot fit first.';
   actions.className = 'receipt-actions';
-  for (const [action, label, icon] of [['copy', 'Copy reference', 'icon-copy'], ['download', 'Download receipt', 'icon-download']]) {
+  const receiptActions = [['copy', 'Copy reference', 'icon-copy'], ['download', 'Download receipt', 'icon-download']];
+  if (item.type === 'employer_intake' && item.packetSnapshot) {
+    receiptActions.unshift(['packet', 'View packet', 'icon-file'], ['revise', 'Revise packet', 'icon-arrow-right']);
+  }
+  for (const [action, label, icon] of receiptActions) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'receipt-action';
     button.dataset.receiptAction = action;
     button.dataset.reference = item.reference;
+    if (action === 'packet') {
+      button.setAttribute('aria-expanded', 'false');
+      button.setAttribute('aria-controls', 'packet-' + item.reference.replace(/[^a-z0-9-]/gi, ''));
+    }
     button.append(createIcon(icon), document.createTextNode(label));
     actions.append(button);
   }
   footer.append(boundary, actions);
   article.append(header, summary);
+  if (item.revisionOf || newerRevision) article.append(lineage);
   if (readiness) article.append(readinessNote);
-  article.append(meta, progress, footer);
+  article.append(meta);
+  if (item.packetSnapshot) article.append(renderReceiptPacket(item));
+  article.append(progress, footer);
   return article;
 }
 
@@ -741,6 +862,30 @@ function submissionForReference(reference) {
   return savedSubmissions().find(item => item.reference === reference);
 }
 
+function toggleReceiptPacket(button, item) {
+  const packet = $('#packet-' + item.reference.replace(/[^a-z0-9-]/gi, ''));
+  if (!packet) return;
+  const expanding = packet.hidden;
+  packet.hidden = !expanding;
+  button.setAttribute('aria-expanded', String(expanding));
+  button.replaceChildren(createIcon('icon-file'), document.createTextNode(expanding ? 'Hide packet' : 'View packet'));
+}
+
+function startPacketRevision(item) {
+  if (!item.packetSnapshot?.values) {
+    showToast('This older receipt does not include a revisable local packet.');
+    return;
+  }
+  companyForm.reset();
+  applyFormValues(companyForm, item.packetSnapshot.values);
+  companyForm.dataset.revisionOf = item.reference;
+  companyForm.dataset.step = '0';
+  saveDraft(companyForm);
+  renderRevisionContext();
+  openDialog(companyDialog, companyForm);
+  showToast('Revision started. Review every field before sending.');
+}
+
 async function copyReceiptReference(reference) {
   try {
     await navigator.clipboard.writeText(reference);
@@ -758,6 +903,7 @@ function downloadReceipt(item) {
     receivedAt: item.createdAt,
     title: item.title || submissionLabel(item),
     summary: receiptSummary(item),
+    ...(item.revisionOf ? { revisionOf: item.revisionOf } : {}),
     ...(item.packetReadiness ? { scopingInputs: item.packetReadiness } : {}),
     boundary: item.type === 'employer_intake'
       ? 'Human scoping is required before publication, funding, or assignment.'
@@ -839,6 +985,7 @@ function studentPayload(form) {
 function companyPayload(form) {
   return {
     type: 'employer_intake',
+    ...(form.dataset.revisionOf ? { revisionOf: form.dataset.revisionOf } : {}),
     startedAt: Number(form.dataset.startedAt),
     website: formValue(form, 'website'),
     consent: $('[name="companyConsent"]', form).checked,
@@ -951,9 +1098,12 @@ companyForm.addEventListener('submit', async event => {
   message.textContent = '';
   try {
     const localReadiness = companyPacketReadiness(companyReadinessInputFromForm(companyForm));
-    const result = await sendSubmission(companyPayload(companyForm));
+    const packetSnapshot = companyPacketSnapshot(companyForm, localReadiness);
+    const payload = companyPayload(companyForm);
+    const revisionOf = payload.revisionOf || '';
+    const result = await sendSubmission(payload);
     message.classList.add('is-success');
-    message.textContent = 'Company problem received. Reference ' + result.reference + '.';
+    message.textContent = (revisionOf ? 'Revised company problem received. Reference ' : 'Company problem received. Reference ') + result.reference + '.';
     discardDraft(companyForm, { reset: false });
     saveSubmission({
       type: 'employer_intake',
@@ -963,10 +1113,14 @@ companyForm.addEventListener('submit', async event => {
       title: formValue(companyForm, 'companyName') + ' · company problem',
       summary: [formValue(companyForm, 'companyDeliverable'), formValue(companyForm, 'companyDeadline')].filter(Boolean).join(' · '),
       packetReadiness: result.readiness || { readyCount: localReadiness.readyCount, total: localReadiness.total },
+      packetSnapshot,
+      ...(result.revisionOf || revisionOf ? { revisionOf: result.revisionOf || revisionOf } : {}),
     });
-    showToast('Your company problem was received for scoping.');
+    showToast(revisionOf ? 'Your revision was received as a new packet.' : 'Your company problem was received for scoping.');
     window.setTimeout(() => {
       companyDialog.close();
+      companyForm.reset();
+      setFormStep(companyForm, 0);
       setAudience('company');
       setSurface('workspace');
       setWorkspaceTab('submissions');
@@ -976,7 +1130,7 @@ companyForm.addEventListener('submit', async event => {
     message.textContent = error.message;
   } finally {
     submit.disabled = false;
-    submit.innerHTML = 'Send company problem ' + iconUse('icon-arrow-right');
+    renderRevisionContext();
   }
 });
 
@@ -1041,6 +1195,8 @@ $('#submissionHistory').addEventListener('click', event => {
   }
   if (action === 'copy') copyReceiptReference(item.reference);
   if (action === 'download') downloadReceipt(item);
+  if (action === 'packet') toggleReceiptPacket(button, item);
+  if (action === 'revise') startPacketRevision(item);
 });
 
 $('#introEnter').addEventListener('click', () => dismissIntro());

@@ -136,6 +136,19 @@ test('company review exposes a six-part Project Packet readiness model', () => {
   assert.match(styles, /\.packet-readiness/);
 });
 
+test('company receipts preserve packet snapshots and immutable revision lineage', () => {
+  assert.match(html, /id="companyRevisionContext"/);
+  assert.match(script, /function companyPacketSnapshot\(form, readiness\)/);
+  assert.match(script, /function renderReceiptPacket\(item\)/);
+  assert.match(script, /function startPacketRevision\(item\)/);
+  assert.match(script, /revisionOf: form\.dataset\.revisionOf/);
+  assert.match(script, /the original submission remains unchanged/i);
+  assert.match(script, /\['packet', 'View packet'/);
+  assert.match(script, /\['revise', 'Revise packet'/);
+  assert.match(styles, /\.receipt-packet/);
+  assert.match(styles, /\.receipt-lineage/);
+});
+
 test('forms preserve backend safety and evidence requirements', () => {
   for (const name of ['companyProblem', 'companyDecision', 'companyDeliverable', 'companyReviewer', 'companyAcceptance', 'companyContext']) {
     assert.match(html, new RegExp('name="' + name + '"'));

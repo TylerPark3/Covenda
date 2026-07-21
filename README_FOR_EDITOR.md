@@ -1,4 +1,4 @@
-# ProofPath prototype — editor handoff
+# Covenda prototype — editor handoff
 
 Updated: July 18, 2026
 
@@ -27,13 +27,13 @@ The launch is functional when a visitor can understand the offer, complete the a
 
 ## Live lead capture
 
-Three forms send JSON to `POST /api/submissions` and store one private JSON blob per submission:
+Three forms send JSON to `POST /api/submissions`. When Supabase is connected, each submission becomes one structured row in the private `public.submissions` table. The existing private Vercel Blob store remains an automatic fallback during setup or a temporary database failure:
 
 1. **Employer intake** — contact details plus the bounded problem, expected output, reviewer, acceptance rule, budget, and safety choices.
 2. **Student interest** — education context, work and industry interests, honest self-reported skill levels, optional evidence links, working terms, priorities, and an 18-or-older confirmation. No résumé or file upload.
 3. **Call request fallback** — name, work email, company, topic, preferred date/time, and browser timezone. It remains available only until the real Calendly event is connected or as an explicit backup path.
 
-Each successful submission returns a reference beginning with `EMP-`, `STU-`, or `CALL-`. Records are stored under `submissions/<type>/YYYY/MM/DD/` in the private Vercel Blob store. Retrieve them from the Vercel project’s Storage tab. Do not expose `BLOB_READ_WRITE_TOKEN`, private blob URLs, or the stored JSON through a public endpoint.
+Each successful submission returns a reference beginning with `EMP-`, `STU-`, or `CALL-`. View primary records in Supabase Table Editor under `public.submissions`. Fallback records are stored under `submissions/<type>/YYYY/MM/DD/` in the private Vercel Blob store and can be retrieved from the Vercel project’s Storage tab. Optional Resend alerts contain only a reference and safe operational metadata—not the private form answers. Setup instructions are in `OPERATIONS.md`. Do not expose database secrets, `BLOB_READ_WRITE_TOKEN`, private blob URLs, or stored answers through a public endpoint.
 
 The endpoint rejects cross-origin browser posts, oversized payloads, a filled honeypot, implausibly fast posts, missing consent, malformed email addresses, invalid links, production access, client records, and regulated decisions. A best-effort in-memory request limit slows obvious bursts but resets with serverless instances. The endpoint stores no uploaded files and does not persist IP addresses. This is basic MVP abuse resistance, not a substitute for production authentication, durable rate limiting, idempotency, retention controls, or a formal privacy program.
 
@@ -41,7 +41,7 @@ The simple overview leads into three connected role views:
 
 1. **Employer** — a five-step live intake for company context, the last real problem, proposed output, information boundary, and review; the existing Project Packet and workflow remain clearly illustrative.
 2. **Student** — a five-step live interest profile for basics, interests, skills, evidence links, availability, compensation preferences, and review. Project examples, evidence progression, Proof Profile controls, agreement gate, and workspace remain local demonstrations.
-3. **ProofPath operations** — a local demonstration only, no longer presented in public navigation. It is not authenticated, protected, or connected to a production operator database.
+3. **Covenda operations** — a local demonstration only, no longer presented in public navigation. It is not authenticated or protected. The intake database is now prepared for a future authenticated operator dashboard, but no public admin page exists yet.
 
 ## Qualification and verified-evidence demo
 
@@ -100,8 +100,10 @@ For inspection, the local records are exposed at `window.PROOFPATH_DEMO_MODEL`. 
 ## Files
 
 - `index.html` — complete static prototype with embedded CSS and JavaScript.
-- `api/submissions.js` — validated Vercel Function that writes minimal lead records to private Blob storage.
-- `package.json` — Vercel Blob SDK dependency plus `test` and `check` scripts.
+- `api/submissions.js` — validated Vercel Function that writes structured records to Supabase with private Blob fallback and optional minimal email alerts.
+- `supabase/migrations/20260721051450_create_submission_inbox.sql` — secured private submission-inbox schema.
+- `OPERATIONS.md` — plain-language setup and operator instructions.
+- `package.json` — server integration dependencies plus `test` and `check` scripts.
 - `tests/submissions.test.js` — server-validation coverage for employer, student, and call-request records.
 - `assets/talent-composite-strip.png` — original four-panel fictional-composite portrait artwork used in the employer talent-depth section.
 - `assets/work-over-resume-figure.png` — preserved founder-supplied source artwork for the “No posting. No guessing. See the work.” statement.
@@ -125,7 +127,7 @@ python -m http.server 8765 --bind 127.0.0.1
 
 Then open `http://127.0.0.1:8765/proofpath-prototype/`.
 
-The static preview cannot submit forms because it does not run the Vercel Function. For end-to-end local testing, install dependencies and use Vercel’s local development command from `proofpath-prototype`, with a private Blob store token in `.env.local`. Production deploys run the function automatically. There is still no account system, file upload, outbound email, connected Calendly event, or payment processing. Prototype project, qualification, workspace, and payment interactions remain front-end simulations and reset when the page reloads.
+The static preview cannot submit forms because it does not run the Vercel Function. For end-to-end local testing, install dependencies and use Vercel’s local development command with the private server variables described in `OPERATIONS.md`. Production deploys run the function automatically. There is still no account system, file upload, connected Calendly event, authenticated admin dashboard, or payment processing. Email alerts are available only when configured. Prototype project, qualification, workspace, and payment interactions remain front-end simulations and reset when the page reloads.
 
 ## Current product rules
 

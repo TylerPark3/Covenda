@@ -1,4 +1,6 @@
 import { put } from '@vercel/blob';
+import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
 
 const TYPES = new Set(['employer_intake', 'student_interest', 'call_request']);
 const MAX_BODY_BYTES = 24_000;
@@ -37,6 +39,13 @@ function textArray(value, { maxItems = 10, maxLength = 120 } = {}) {
 function number(value, min, max) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= min && parsed <= max ? parsed : null;
+}
+
+export function employerRevisionReference(value) {
+  const clean = text(value, 40).toUpperCase();
+  if (!clean) return '';
+  if (!/^EMP-[A-Z0-9]{6,20}$/.test(clean)) throw new Error('Please provide a valid company submission reference for this revision.');
+  return clean;
 }
 
 function sameOrigin(req) {
@@ -229,6 +238,146 @@ function referenceFor(type) {
   return `${prefix}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
 }
 
+function submissionSummary(record) {
+  if (record.type === 'employer_intake') {
+    return record.details.project.deliverable || 'Company problem submitted for scoping.';
+  }
+  if (record.type === 'student_interest') {
+    return record.details.interests.workTypes.join(', ') || 'Student interest profile submitted.';
+  }
+  return record.details.topic || 'Call requested.';
+}
+
+export function submissionRow(record) {
+  const contactDetails = record.details.contact;
+  return {
+    reference: record.reference,
+    submission_type: record.type,
+    status: record.status,
+    source: record.source,
+    revision_of: record.revisionOf || null,
+    submitter_name: contactDetails.name,
+    submitter_email: contactDetails.email,
+    organization_name: contactDetails.company || record.details.school || null,
+    summary: submissionSummary(record),
+    ready_count: record.readiness?.readyCount ?? null,
+    readiness_total: record.readiness?.total ?? null,
+    details: record.details,
+    readiness: record.readiness || null,
+    consent: record.consent,
+    created_at: record.createdAt,
+    updated_at: record.createdAt,
+  };
+}
+
+function supabaseConfiguration(env) {
+  const url = env.SUPABASE_URL;
+  const secret = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+  return url && secret ? { url, secret } : null;
+}
+
+function submissionBlobPath(record) {
+  const day = record.createdAt.slice(0, 10).replaceAll('-', '/');
+  const stamp = record.createdAt.replace(/[-:.]/g, '').replace('Z', 'Z');
+  return `submissions/${record.type}/${day}/${stamp}-${record.reference}.json`;
+}
+
+export async function persistSubmission(record, {
+  env = process.env,
+  createSupabaseClient = createClient,
+  putBlob = put,
+  logger = console,
+} = {}) {
+  const configuration = supabaseConfiguration(env);
+  if (configuration) {
+    try {
+      const supabase = createSupabaseClient(configuration.url, configuration.secret, {
+        auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+      });
+      const { error } = await supabase.from('submissions').insert(submissionRow(record));
+      if (!error) return { backend: 'supabase' };
+      logger.error('Supabase submission storage failed; using the configured Blob fallback.', error);
+    } catch (error) {
+      logger.error('Supabase submission storage threw an error; using the configured Blob fallback.', error);
+    }
+  }
+
+  await putBlob(submissionBlobPath(record), JSON.stringify(record, null, 2), {
+    access: 'private',
+    addRandomSuffix: true,
+    contentType: 'application/json',
+    cacheControlMaxAge: 60,
+  });
+  return { backend: 'blob' };
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function submissionLabel(type) {
+  return {
+    employer_intake: 'company submission',
+    student_interest: 'student submission',
+    call_request: 'call request',
+  }[type] || 'submission';
+}
+
+export function operatorNotification(record, { to, from, adminUrl = '' } = {}) {
+  const label = submissionLabel(record.type);
+  const readinessLine = record.readiness
+    ? `\nProject Packet readiness: ${record.readiness.readyCount}/${record.readiness.total}`
+    : '';
+  const revisionLine = record.revisionOf ? `\nRevision of: ${record.revisionOf}` : '';
+  const adminLine = adminUrl ? `\nReview securely: ${adminUrl}` : '';
+  const textBody = `A new Covenda ${label} is ready for review.\n\nReference: ${record.reference}${readinessLine}${revisionLine}${adminLine}\n\nPrivate form answers are intentionally excluded from this email.`;
+  const safeAdminUrl = escapeHtml(adminUrl);
+  const readinessHtml = record.readiness
+    ? `<li><strong>Project Packet readiness:</strong> ${record.readiness.readyCount}/${record.readiness.total}</li>`
+    : '';
+  const revisionHtml = record.revisionOf
+    ? `<li><strong>Revision of:</strong> ${escapeHtml(record.revisionOf)}</li>`
+    : '';
+  const reviewHtml = adminUrl
+    ? `<p><a href="${safeAdminUrl}">Review this submission securely</a></p>`
+    : '';
+
+  return {
+    from,
+    to: [to],
+    subject: `New Covenda ${label} · ${record.reference}`,
+    text: textBody,
+    html: `<p>A new Covenda ${label} is ready for review.</p><ul><li><strong>Reference:</strong> ${escapeHtml(record.reference)}</li>${readinessHtml}${revisionHtml}</ul>${reviewHtml}<p><small>Private form answers are intentionally excluded from this email.</small></p>`,
+    tags: [
+      { name: 'submission_type', value: record.type },
+      { name: 'source', value: 'covenda' },
+    ],
+  };
+}
+
+export async function notifyOperator(record, {
+  env = process.env,
+  createResendClient = apiKey => new Resend(apiKey),
+} = {}) {
+  const apiKey = env.RESEND_API_KEY;
+  const to = env.COVENDA_NOTIFICATION_EMAIL;
+  const from = env.COVENDA_NOTIFICATION_FROM;
+  if (!apiKey || !to || !from) return { sent: false, reason: 'not-configured' };
+
+  const resend = createResendClient(apiKey);
+  const { error } = await resend.emails.send(
+    operatorNotification(record, { to, from, adminUrl: env.COVENDA_ADMIN_URL }),
+    { idempotencyKey: `covenda-submission-${record.reference.toLowerCase()}` },
+  );
+  if (error) throw new Error(`Operator notification failed: ${error.message || 'unknown email error'}`);
+  return { sent: true };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -254,11 +403,12 @@ export default async function handler(req, res) {
     if (isRateLimited(req)) return res.status(429).json({ ok: false, error: 'Too many requests. Please try again later.' });
 
     const details = submissionDetails(body);
+    const revisionOf = body.type === 'employer_intake' ? employerRevisionReference(body.revisionOf) : '';
     const readiness = body.type === 'employer_intake' ? employerReadiness(details) : null;
     const createdAt = new Date().toISOString();
     const reference = referenceFor(body.type);
     const record = {
-      schemaVersion: 4,
+      schemaVersion: 6,
       reference,
       type: body.type,
       source: 'covenda-web',
@@ -267,16 +417,22 @@ export default async function handler(req, res) {
       consent: true,
       details,
       ...(readiness ? { readiness } : {}),
+      ...(revisionOf ? { revisionOf } : {}),
     };
-    const day = createdAt.slice(0, 10).replaceAll('-', '/');
-    const stamp = createdAt.replace(/[-:.]/g, '').replace('Z', 'Z');
-    await put(`submissions/${body.type}/${day}/${stamp}-${reference}.json`, JSON.stringify(record, null, 2), {
-      access: 'private',
-      addRandomSuffix: true,
-      contentType: 'application/json',
-      cacheControlMaxAge: 60,
+    await persistSubmission(record);
+    try {
+      await notifyOperator(record);
+    } catch (notificationError) {
+      console.error(`Operator notification failed for ${reference}`, notificationError);
+    }
+    return res.status(201).json({
+      ok: true,
+      reference,
+      createdAt,
+      status: 'received',
+      ...(readiness ? { readiness: { readyCount: readiness.readyCount, total: readiness.total } } : {}),
+      ...(revisionOf ? { revisionOf } : {}),
     });
-    return res.status(201).json({ ok: true, reference, createdAt, status: 'received', ...(readiness ? { readiness: { readyCount: readiness.readyCount, total: readiness.total } } : {}) });
   } catch (error) {
     const expected = error instanceof SyntaxError || (error instanceof Error && error.message.startsWith('Please'));
     if (!expected) console.error('Submission storage failed', error);

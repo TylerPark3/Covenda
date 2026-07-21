@@ -8,6 +8,8 @@
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {
-    "@vercel/blob": "^2.6.1"
+    "@supabase/supabase-js": "2.110.7",
+    "@vercel/blob": "^2.6.1",
+    "resend": "6.17.2"
   }
 }

@@ -1,7 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import handler, { callRecord, employerReadiness, employerRecord, studentRecord, submissionDetails } from '../api/submissions.js';
+import handler, {
+  callRecord,
+  employerReadiness,
+  employerRecord,
+  employerRevisionReference,
+  notifyOperator,
+  operatorNotification,
+  persistSubmission,
+  studentRecord,
+  submissionDetails,
+  submissionRow,
+} from '../api/submissions.js';
 
 function responseRecorder() {
   return {
@@ -73,6 +84,21 @@ const validStudent = {
   age18: true,
 };
 
+function employerSubmissionRecord() {
+  const details = employerRecord(validEmployer);
+  return {
+    schemaVersion: 6,
+    reference: 'EMP-QA2026',
+    type: 'employer_intake',
+    source: 'covenda-web',
+    createdAt: '2026-07-21T12:00:00.000Z',
+    status: 'received',
+    consent: true,
+    details,
+    readiness: employerReadiness(details),
+  };
+}
+
 test('employerRecord accepts a bounded company problem', () => {
   const record = employerRecord(validEmployer);
   assert.equal(record.organization.website, 'https://example.com/');
@@ -95,6 +121,13 @@ test('employer readiness reports scoping inputs without implying approval', () =
   assert.equal(incompleteReadiness.readyCount, 4);
   assert.equal(incompleteReadiness.checks.time, false);
   assert.equal(incompleteReadiness.checks.terms, false);
+});
+
+test('company revision lineage accepts only bounded employer references', () => {
+  assert.equal(employerRevisionReference('emp-qa2026'), 'EMP-QA2026');
+  assert.equal(employerRevisionReference(''), '');
+  assert.throws(() => employerRevisionReference('STU-QA2026'), /valid company submission reference/i);
+  assert.throws(() => employerRevisionReference('../EMP-QA2026'), /valid company submission reference/i);
 });
 
 test('employerRecord rejects unsafe access and records', () => {
@@ -136,6 +169,140 @@ test('callRecord requires a dated call request', () => {
 
 test('submissionDetails rejects unknown submission types', () => {
   assert.throws(() => submissionDetails({ type: 'admin_export' }), /valid submission type/i);
+});
+
+test('submissionRow maps a private intake into queryable database fields', () => {
+  const row = submissionRow(employerSubmissionRecord());
+  assert.equal(row.reference, 'EMP-QA2026');
+  assert.equal(row.submission_type, 'employer_intake');
+  assert.equal(row.submitter_email, 'avery@example.com');
+  assert.equal(row.organization_name, 'Example Accounting');
+  assert.equal(row.summary, 'Current-state map and checklist');
+  assert.equal(row.ready_count, 6);
+  assert.equal(row.readiness_total, 6);
+  assert.equal(row.details.project.systemAccess, 'none');
+});
+
+test('persistSubmission prefers Supabase when the server secret is configured', async () => {
+  let insertedTable = '';
+  let insertedRow;
+  let blobCalled = false;
+  const result = await persistSubmission(employerSubmissionRecord(), {
+    env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_test' },
+    createSupabaseClient(url, secret, options) {
+      assert.equal(url, 'https://project.supabase.co');
+      assert.equal(secret, 'sb_secret_test');
+      assert.equal(options.auth.persistSession, false);
+      return {
+        from(table) {
+          insertedTable = table;
+          return {
+            async insert(row) {
+              insertedRow = row;
+              return { error: null };
+            },
+          };
+        },
+      };
+    },
+    async putBlob() { blobCalled = true; },
+  });
+  assert.equal(result.backend, 'supabase');
+  assert.equal(insertedTable, 'submissions');
+  assert.equal(insertedRow.reference, 'EMP-QA2026');
+  assert.equal(blobCalled, false);
+});
+
+test('persistSubmission falls back to private Blob storage if Supabase is unavailable', async () => {
+  let blobPath = '';
+  let blobBody = '';
+  let blobOptions;
+  const result = await persistSubmission(employerSubmissionRecord(), {
+    env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_test' },
+    createSupabaseClient() {
+      return { from: () => ({ insert: async () => ({ error: { message: 'temporary outage' } }) }) };
+    },
+    async putBlob(path, body, options) {
+      blobPath = path;
+      blobBody = body;
+      blobOptions = options;
+    },
+    logger: { error() {} },
+  });
+  assert.equal(result.backend, 'blob');
+  assert.match(blobPath, /^submissions\/employer_intake\/2026\/07\/21\/.+EMP-QA2026\.json$/);
+  assert.equal(JSON.parse(blobBody).reference, 'EMP-QA2026');
+  assert.equal(blobOptions.access, 'private');
+});
+
+test('persistSubmission also falls back when the database client throws', async () => {
+  let stored = false;
+  const result = await persistSubmission(employerSubmissionRecord(), {
+    env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_test' },
+    createSupabaseClient() { throw new Error('network failure'); },
+    async putBlob() { stored = true; },
+    logger: { error() {} },
+  });
+  assert.equal(result.backend, 'blob');
+  assert.equal(stored, true);
+});
+
+test('persistSubmission keeps Blob as the default before Supabase is connected', async () => {
+  let stored = false;
+  const result = await persistSubmission(employerSubmissionRecord(), {
+    env: {},
+    createSupabaseClient() { throw new Error('Supabase should not be called'); },
+    async putBlob() { stored = true; },
+  });
+  assert.equal(result.backend, 'blob');
+  assert.equal(stored, true);
+});
+
+test('operator email includes a secure reference but excludes private form answers', () => {
+  const notification = operatorNotification(employerSubmissionRecord(), {
+    to: 'ops@covenda.example',
+    from: 'Covenda <submissions@covenda.example>',
+    adminUrl: 'https://admin.covenda.example/submissions',
+  });
+  assert.match(notification.subject, /EMP-QA2026/);
+  assert.match(notification.text, /Project Packet readiness: 6\/6/);
+  assert.match(notification.text, /https:\/\/admin\.covenda\.example\/submissions/);
+  assert.doesNotMatch(notification.text, /avery@example\.com/);
+  assert.doesNotMatch(notification.html, /recurring onboarding backlog/i);
+  assert.doesNotMatch(notification.html, /Current-state map and checklist/);
+});
+
+test('operator notification is optional and uses an idempotent send when enabled', async () => {
+  const unconfigured = await notifyOperator(employerSubmissionRecord(), {
+    env: {},
+    createResendClient() { throw new Error('Email should not be called'); },
+  });
+  assert.deepEqual(unconfigured, { sent: false, reason: 'not-configured' });
+
+  let sentPayload;
+  let sendOptions;
+  const configured = await notifyOperator(employerSubmissionRecord(), {
+    env: {
+      RESEND_API_KEY: 're_test',
+      COVENDA_NOTIFICATION_EMAIL: 'ops@covenda.example',
+      COVENDA_NOTIFICATION_FROM: 'Covenda <submissions@covenda.example>',
+    },
+    createResendClient(apiKey) {
+      assert.equal(apiKey, 're_test');
+      return {
+        emails: {
+          async send(payload, options) {
+            sentPayload = payload;
+            sendOptions = options;
+            return { data: { id: 'email_123' }, error: null };
+          },
+        },
+      };
+    },
+  });
+  assert.deepEqual(configured, { sent: true });
+  assert.equal(sentPayload.to[0], 'ops@covenda.example');
+  assert.equal(sendOptions.idempotencyKey, 'covenda-submission-emp-qa2026');
 });
 
 test('handler rejects non-POST and cross-origin requests before storage', async () => {
