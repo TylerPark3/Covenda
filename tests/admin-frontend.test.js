@@ -14,12 +14,22 @@ test('operator inbox has passwordless sign-in and a complete review surface', ()
   assert.match(html, /Students/);
   assert.match(html, /Companies/);
   assert.match(html, /Universities/);
+  assert.match(html, /id="adminMetricReceived"/);
+  assert.match(html, /id="adminRefresh"/);
+  assert.match(html, /id="adminSort"/);
+  assert.match(html, /id="adminResultsCount"/);
   assert.match(script, /sessionStorage/);
   assert.match(script, /Authorization: `Bearer/);
   assert.match(script, /renderDetail/);
   assert.match(script, /method:'PATCH'/);
+  assert.match(script, /updateQueueSummary/);
+  assert.match(script, /attentionOrder/);
+  assert.match(script, /No matching submission/);
+  assert.match(script, /rows\.find\(item => item\.reference === selectedReference\)/);
+  assert.match(script, /loadInbox\(\{ announce:true \}\)/);
   assert.match(styles, /\.admin-main/);
   assert.match(styles, /\.admin-detail/);
+  assert.match(styles, /\.admin-summary/);
 });
 
 test('operator UI stays code-native and contains no server credentials', () => {
