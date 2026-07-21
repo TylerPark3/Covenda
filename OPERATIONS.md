@@ -59,6 +59,18 @@ Email is optional and does not control whether a submission is saved. Configure:
 | `COVENDA_NOTIFICATION_FROM` | Verified sender, for example `Covenda <submissions@covenda.com>`. |
 | `COVENDA_ADMIN_URL` | Optional future link to the protected admin area. Leave blank until that area exists. |
 
+## Protected operator inbox
+
+The first operator inbox is available at `/admin.html`. It uses Supabase passwordless Magic Links and revalidates every access token against Supabase Auth on the server before returning private records or accepting a status update.
+
+1. In Supabase Dashboard → Authentication → Users, invite or create each operator account.
+2. In Authentication → URL Configuration, add the exact production URL `https://YOUR_DOMAIN/admin.html` and the relevant Vercel preview URL pattern. Supabase only redirects Magic Links to configured URLs.
+3. Add `COVENDA_ADMIN_EMAILS` to Vercel as a comma-separated allowlist, for example `founder@covenda.com,operations@covenda.com`.
+4. Set `COVENDA_ADMIN_URL=https://YOUR_DOMAIN/admin.html` so notification emails can link to the inbox.
+5. Redeploy, request a link from `/admin.html`, and verify that an unlisted Supabase user receives no inbox access.
+
+The endpoint never creates a user from a sign-in attempt (`shouldCreateUser: false`). An authentic Supabase account is necessary but not sufficient: its normalized email must also appear in `COVENDA_ADMIN_EMAILS`. Keep the Supabase JWT expiry short for this operator surface; signing out clears the token from the current browser session, while already-issued access tokens remain valid until expiry.
+
 An alert contains only the submission type, receipt reference, company Project Packet readiness count when applicable, revision reference when applicable, and the protected admin link when configured. It excludes names, email addresses, company problems, student profiles, and other private answers.
 
 ## Where submissions can be viewed now
@@ -66,6 +78,10 @@ An alert contains only the submission type, receipt reference, company Project P
 - Primary, after connection: Supabase Dashboard → Table Editor → `public.submissions`.
 - Fallback: Vercel Dashboard → the Covenda project → Storage → Blob → `submissions/`.
 - Email: a notification that a record exists, not a copy of the private record.
+
+The website workspace now shows the connected Supabase project reference and the exact table name under **Submissions → Private server destination**. The same safe diagnostic is available at `GET /api/submissions`; it returns only connection status, route, project reference, table name, and check time—never submission rows or secrets. Use the displayed project reference to confirm that you opened the same Supabase project that the live Vercel deployment is using.
+
+People can also recover a missing receipt from **Workspace → Submissions → Find receipt** by entering the receipt reference and the same email used on the original submission. `POST /api/receipts` performs the match using server-only credentials and returns only the reference, submission type, status, and timestamps. It never returns names, emails, summaries, form answers, roster entries, or Project Packet details. Lookup attempts are rate-limited, and cross-origin browser requests are rejected.
 
 ## Next operations milestone
 

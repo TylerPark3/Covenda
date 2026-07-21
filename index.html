@@ -518,7 +518,32 @@
           <div class="university-profile-view audience-content" data-for-audience="university"><h1>Your partner profile</h1><p>Your organization details and student roster are shared with the Covenda pilot team as a founder-led intake. No public partner listing or account is created.</p><article class="profile-summary glass-panel"><header><div><small>Roster intake</small><h2 id="universityWorkspaceSummaryTitle">No roster shared yet</h2></div><button class="outline-button compact" type="button" data-action="university-roster">Edit roster</button></header><dl id="universityWorkspaceSummary"><div><dt>Organization</dt><dd>Add your organization and type.</dd></div><div><dt>Students</dt><dd>Add students by interest area.</dd></div><div><dt>Last sent</dt><dd>Nothing sent yet.</dd></div></dl></article><button class="gold-button" type="button" data-action="university-roster">Open roster builder<svg><use href="#icon-arrow-right"/></svg></button></div>
         </section>
         <section class="workspace-view simple-workspace-view submission-workspace-view" data-workspace-view="submissions">
-          <div class="submission-heading"><div><h1>Submission receipts</h1><p>Track what Covenda received and what happens next. Receipts are stored on this device; review decisions arrive separately by email.</p></div><span id="deliveryStatusBadge"><svg><use href="#icon-lock"/></svg>Checking server delivery</span></div>
+          <div class="submission-heading"><div><h1>Submission receipts</h1><p>Track what Covenda received and what happens next. Receipts are cached on this device and can be recovered with your reference and submission email.</p></div><span id="deliveryStatusBadge"><svg><use href="#icon-lock"/></svg>Checking server delivery</span></div>
+          <aside class="delivery-details" id="deliveryDetails" data-status="checking" aria-live="polite">
+            <header>
+              <span class="delivery-details-icon"><svg><use href="#icon-data"/></svg></span>
+              <div><small>Private server destination</small><h2 id="deliveryDetailsTitle">Checking the primary inbox…</h2></div>
+              <button class="outline-button compact" id="deliveryRefresh" type="button" data-action="refresh-delivery">Check again</button>
+            </header>
+            <dl>
+              <div><dt>Connected project</dt><dd id="deliveryProjectRef">Checking…</dd></div>
+              <div><dt>Database table</dt><dd><code>public.submissions</code></dd></div>
+              <div><dt>Operator location</dt><dd>Supabase → Table Editor</dd></div>
+            </dl>
+            <p id="deliveryDetailsHelp">A server check is running. Your private answers are never returned by this status check.</p>
+          </aside>
+          <details class="receipt-recovery" id="receiptRecovery">
+            <summary>
+              <span><svg><use href="#icon-search"/></svg><span><strong>Receipt missing from this device?</strong><small>Recover a server-confirmed receipt without reopening your private answers.</small></span></span>
+              <span>Find receipt<svg><use href="#icon-chevron"/></svg></span>
+            </summary>
+            <form id="receiptRecoveryForm">
+              <label>Receipt reference<input name="receiptReference" placeholder="STU-AB12CD34" maxlength="40" autocomplete="off" spellcheck="false" required></label>
+              <label>Submission email<input name="receiptEmail" type="email" placeholder="you@example.com" autocomplete="email" required></label>
+              <button class="gold-button compact" type="submit">Recover receipt<svg><use href="#icon-arrow-right"/></svg></button>
+              <p id="receiptRecoveryMessage" class="receipt-recovery-message" aria-live="polite">Only receipt status and timestamps are returned. Form answers remain private.</p>
+            </form>
+          </details>
           <div class="submission-history" id="submissionHistory" aria-live="polite"></div>
         </section>
       </main>

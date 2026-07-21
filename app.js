@@ -748,17 +748,32 @@ async function sendSubmission(payload) {
   return result;
 }
 
+async function findServerReceipt(reference, email) {
+  const response = await fetch('/api/receipts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reference, email }),
+  });
+  const result = await response.json().catch(() => ({ ok: false, error: 'The server returned an unreadable response.' }));
+  if (!response.ok || !result.ok) throw new Error(result.error || 'We could not find that receipt right now.');
+  return result;
+}
+
 function submissionDeliveryMessage(result) {
   return result.syncStatus === 'synced' || result.storage === 'supabase'
     ? ' · synced to Covenda’s primary inbox.'
     : ' · saved securely; primary inbox sync is pending.';
 }
 
-function applyDeliveryHealth(primary) {
+function applyDeliveryHealth(primary, { checkedAt = '' } = {}) {
   const status = primary?.status || 'unavailable';
   const sidebar = $('#deliveryStatus');
   const sidebarCopy = $('small', sidebar);
   const badge = $('#deliveryStatusBadge');
+  const details = $('#deliveryDetails');
+  const detailsTitle = $('#deliveryDetailsTitle');
+  const detailsHelp = $('#deliveryDetailsHelp');
+  const projectRef = $('#deliveryProjectRef');
   const copy = {
     ready: 'Primary inbox connected',
     unavailable: 'Backup-only mode · primary inbox needs attention',
@@ -772,21 +787,62 @@ function applyDeliveryHealth(primary) {
     badge.classList.toggle('is-pending', status !== 'ready');
     badge.lastChild.textContent = status === 'ready' ? ' Primary inbox connected' : ' Primary sync needs attention';
   }
+  if (details) details.dataset.status = status;
+  if (detailsTitle) {
+    detailsTitle.textContent = status === 'ready'
+      ? 'Supabase inbox connected'
+      : status === 'checking'
+        ? 'Checking the primary inbox…'
+        : 'Primary inbox needs attention';
+  }
+  if (projectRef) projectRef.textContent = primary?.destination?.projectRef || (status === 'checking' ? 'Checking…' : 'Unavailable');
+  if (detailsHelp) {
+    const checkedCopy = checkedAt ? ' Last checked ' + receiptDate(checkedAt) + '.' : '';
+    detailsHelp.textContent = status === 'ready'
+      ? 'New server-confirmed receipts are written to this project and table.' + checkedCopy
+      : status === 'checking'
+        ? 'A server check is running. Your private answers are never returned by this status check.'
+        : 'New receipts may use private backup storage until the primary connection is repaired.' + checkedCopy;
+  }
 }
 
 function refreshDeliveryHealth({ force = false } = {}) {
-  if (deliveryHealthRequest && !force) return deliveryHealthRequest;
+  if (deliveryHealthRequest) return deliveryHealthRequest;
   applyDeliveryHealth({ status: 'checking' });
+  const refreshButton = $('#deliveryRefresh');
+  if (refreshButton) {
+    refreshButton.disabled = true;
+    refreshButton.textContent = 'Checking…';
+  }
   deliveryHealthRequest = fetch('/api/submissions', { headers: { Accept: 'application/json' } })
-    .then(response => response.json())
-    .then(result => applyDeliveryHealth(result.primary))
-    .catch(() => applyDeliveryHealth({ status: 'unavailable' }))
-    .finally(() => { deliveryHealthRequest = null; });
+    .then(response => {
+      if (!response.ok) throw new Error('Delivery check failed.');
+      return response.json();
+    })
+    .then(result => {
+      applyDeliveryHealth(result.primary, { checkedAt: result.checkedAt });
+      return result.primary;
+    })
+    .catch(() => {
+      applyDeliveryHealth({ status: 'unavailable' }, { checkedAt: new Date().toISOString() });
+      return { status: 'unavailable' };
+    })
+    .finally(() => {
+      deliveryHealthRequest = null;
+      if (refreshButton) {
+        refreshButton.disabled = false;
+        refreshButton.textContent = 'Check again';
+      }
+    });
   return deliveryHealthRequest;
 }
 
 function applySubmissionDelivery(result) {
-  applyDeliveryHealth({ status: result.storage === 'supabase' ? 'ready' : 'unavailable' });
+  applyDeliveryHealth({
+    status: result.storage === 'supabase' ? 'ready' : 'unavailable',
+    route: result.storageRoute,
+    destination: result.destination,
+  }, { checkedAt: result.createdAt });
 }
 
 function savedSubmissions() {
@@ -810,13 +866,28 @@ function saveSubmission(submission) {
 function submissionAudience(item) {
   if (item.type === 'employer_intake') return 'company';
   if (item.type === 'university_partner') return 'university';
+  if (item.type === 'call_request') return 'company';
   return 'student';
 }
 
 function submissionLabel(item) {
   if (item.type === 'employer_intake') return 'Company problem intake';
   if (item.type === 'university_partner') return 'Student roster';
+  if (item.type === 'call_request') return 'Call request';
   return 'Student interest profile';
+}
+
+function submissionStatusLabel(status) {
+  return {
+    received: 'Queued for human review',
+    reviewing: 'In human review',
+    needs_information: 'More information requested',
+    packet_proposed: 'Project Packet proposed',
+    approval_pending: 'Approval pending',
+    approved: 'Approved',
+    declined: 'Closed',
+    archived: 'Archived',
+  }[status] || 'Status available by email';
 }
 
 function submissionStorageLabel(item) {
@@ -855,6 +926,7 @@ function receiptDate(value) {
 
 function receiptSummary(item) {
   if (item.summary) return item.summary;
+  if (item.recovered) return 'This server-confirmed receipt was recovered on this device. Private form answers were not downloaded.';
   if (item.type === 'employer_intake') return 'A company problem was received for human scoping.';
   if (item.type === 'university_partner') return 'A student roster was received for pilot review.';
   return 'A student interest profile was received for pilot-fit review.';
@@ -960,7 +1032,7 @@ function renderReceipt(item) {
   if (primaryPending) status.classList.add('is-pending');
   status.append(
     createIcon(primaryPending ? 'icon-clock' : 'icon-check'),
-    document.createTextNode(primaryPending ? 'Primary sync pending' : 'Received'),
+    document.createTextNode(primaryPending ? 'Primary sync pending' : item.status === 'received' ? 'Received' : submissionStatusLabel(item.status)),
   );
   heading.append(category, title);
   header.append(heading, status);
@@ -992,7 +1064,7 @@ function renderReceipt(item) {
   appendMeta(meta, 'Reference', item.reference || 'Unavailable');
   appendMeta(meta, 'Received', receiptDate(item.createdAt));
   appendMeta(meta, 'Server record', submissionStorageLabel(item));
-  appendMeta(meta, 'Current state', 'Queued for human review');
+  appendMeta(meta, 'Current state', submissionStatusLabel(item.status));
 
   const progress = document.createElement('ol');
   progress.className = 'receipt-progress';
@@ -1020,7 +1092,7 @@ function renderReceipt(item) {
       ? 'This receipt does not create accounts or guarantee placement. Covenda reviews the roster first.'
       : 'This receipt is not a job application, match, or work guarantee. Covenda reviews pilot fit first.';
   actions.className = 'receipt-actions';
-  const receiptActions = [['copy', 'Copy reference', 'icon-copy'], ['download', 'Download receipt', 'icon-download']];
+  const receiptActions = [['verify', 'Refresh status', 'icon-search'], ['copy', 'Copy reference', 'icon-copy'], ['download', 'Download receipt', 'icon-download']];
   if (item.type === 'employer_intake' && item.packetSnapshot) {
     receiptActions.unshift(['packet', 'View packet', 'icon-file'], ['revise', 'Revise packet', 'icon-arrow-right']);
   }
@@ -1147,6 +1219,16 @@ function downloadReceipt(item) {
   anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
   showToast('Receipt downloaded.');
+}
+
+function openReceiptRecovery(item) {
+  const recovery = $('#receiptRecovery');
+  const reference = $('[name="receiptReference"]', recovery);
+  const email = $('[name="receiptEmail"]', recovery);
+  recovery.open = true;
+  reference.value = item.reference;
+  recovery.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  window.setTimeout(() => email.focus(), 260);
 }
 
 function renderLocalSubmissionState() {
@@ -1304,6 +1386,7 @@ studentForm.addEventListener('submit', async event => {
       storage: result.storage || 'confirmed',
       storageRoute: result.storageRoute || '',
       syncStatus: result.syncStatus || (result.storage === 'supabase' ? 'synced' : 'pending'),
+      destination: result.destination || null,
       createdAt: result.createdAt || new Date().toISOString(),
       title: formValue(studentForm, 'studentName') + ' · interest profile',
       summary: [checkedValues(studentForm, 'workType').join(', '), formValue(studentForm, 'studentAvailability')].filter(Boolean).join(' · '),
@@ -1358,6 +1441,7 @@ companyForm.addEventListener('submit', async event => {
       storage: result.storage || 'confirmed',
       storageRoute: result.storageRoute || '',
       syncStatus: result.syncStatus || (result.storage === 'supabase' ? 'synced' : 'pending'),
+      destination: result.destination || null,
       createdAt: result.createdAt || new Date().toISOString(),
       title: formValue(companyForm, 'companyName') + ' · company problem',
       summary: [formValue(companyForm, 'companyDeliverable'), formValue(companyForm, 'companyDeadline')].filter(Boolean).join(' · '),
@@ -1533,6 +1617,7 @@ async function submitRoster() {
       storage: result.storage || 'confirmed',
       storageRoute: result.storageRoute || '',
       syncStatus: result.syncStatus || (result.storage === 'supabase' ? 'synced' : 'pending'),
+      destination: result.destination || null,
       createdAt: result.createdAt || new Date().toISOString(),
       title: partner.orgName + ' · student roster',
       summary: universityRoster.length + (universityRoster.length === 1 ? ' student · ' : ' students · ') + partner.orgType,
@@ -1677,6 +1762,11 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     setAudience('student');
     setSurface('workspace');
     setWorkspaceTab('submissions');
+  }
+  if (action === 'refresh-delivery') {
+    refreshDeliveryHealth({ force: true }).then(primary => {
+      showToast(primary.status === 'ready' ? 'Primary inbox is connected.' : 'Primary inbox still needs attention.');
+    });
   }
   if (action === 'student-form') {
     selectWorkType(state.workType);
@@ -2126,8 +2216,61 @@ $('#submissionHistory').addEventListener('click', event => {
   }
   if (action === 'copy') copyReceiptReference(item.reference);
   if (action === 'download') downloadReceipt(item);
+  if (action === 'verify') openReceiptRecovery(item);
   if (action === 'packet') toggleReceiptPacket(button, item);
   if (action === 'revise') startPacketRevision(item);
+});
+
+const receiptRecoveryForm = $('#receiptRecoveryForm');
+const receiptReferenceInput = $('[name="receiptReference"]', receiptRecoveryForm);
+receiptReferenceInput.addEventListener('input', () => {
+  receiptReferenceInput.value = receiptReferenceInput.value.toUpperCase().replace(/\s/g, '');
+});
+receiptRecoveryForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!receiptRecoveryForm.reportValidity()) return;
+  const submit = $('button[type="submit"]', receiptRecoveryForm);
+  const message = $('#receiptRecoveryMessage');
+  submit.disabled = true;
+  submit.textContent = 'Looking up…';
+  message.className = 'receipt-recovery-message';
+  message.textContent = 'Checking Covenda’s private server inbox…';
+  try {
+    const result = await findServerReceipt(
+      formValue(receiptRecoveryForm, 'receiptReference'),
+      formValue(receiptRecoveryForm, 'receiptEmail'),
+    );
+    const receipt = result.receipt;
+    const existing = submissionForReference(receipt.reference);
+    setAudience(submissionAudience(receipt));
+    saveSubmission({
+      ...(existing || {}),
+      type: receipt.type,
+      reference: receipt.reference,
+      status: receipt.status,
+      storage: 'supabase',
+      storageRoute: result.route,
+      syncStatus: 'synced',
+      createdAt: receipt.createdAt,
+      updatedAt: receipt.updatedAt,
+      recovered: existing?.recovered || !existing,
+      title: existing?.title || submissionLabel(receipt) + ' · ' + receipt.reference,
+      summary: existing?.summary || '',
+    });
+    setSurface('workspace');
+    setWorkspaceTab('submissions');
+    message.classList.add('is-success');
+    message.textContent = 'Receipt recovered. Its current server status is “' + submissionStatusLabel(receipt.status) + '.”';
+    receiptRecoveryForm.reset();
+    showToast('Server receipt recovered on this device.');
+    window.setTimeout(() => $('[data-reference="' + receipt.reference + '"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+  } catch (error) {
+    message.classList.add('is-error');
+    message.textContent = error.message;
+  } finally {
+    submit.disabled = false;
+    submit.innerHTML = 'Recover receipt ' + iconUse('icon-arrow-right');
+  }
 });
 
 $('#introEnter').addEventListener('click', () => dismissIntro());
