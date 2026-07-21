@@ -110,6 +110,9 @@ test('server-confirmed submissions become durable review receipts', () => {
   assert.match(script, /Queued for human review/);
   assert.match(script, /Copy reference/);
   assert.match(script, /Download receipt/);
+  assert.match(script, /function submissionStorageLabel\(item\)/);
+  assert.match(script, /Primary inbox/);
+  assert.match(script, /Secure backup/);
   assert.match(script, /setWorkspaceTab\('submissions'\)/);
   assert.match(styles, /\.receipt-progress/);
   assert.match(styles, /\.receipt-action/);
@@ -155,8 +158,18 @@ test('forms preserve backend safety and evidence requirements', () => {
   }
   assert.match(script, /clientRecords:/);
   assert.match(script, /restrictedJudgment:/);
-  assert.match(script, /Remove production access, restricted records, and regulated decisions/);
+  assert.match(html, /id="companyBoundaryGuidance"/);
+  assert.match(script, /function companyBoundaryBlockers\(form\)/);
+  assert.match(script, /change System access from production\/client systems/);
+  assert.match(script, /setFormStep\(companyForm, 2\)/);
   assert.match(html, /This is an interest profile, not a job application or guarantee/);
+});
+
+test('homepage operations icon and navigation polish remain centered and usable', () => {
+  const operationsIcon = html.match(/<symbol id="icon-operations"[\s\S]*?<\/symbol>/)?.[0] || '';
+  assert.match(operationsIcon, /<circle cx="12" cy="12" r="3"/);
+  assert.match(styles, /\.site-header, \.workspace-header[\s\S]*position: sticky/);
+  assert.match(styles, /#how, #why \{ scroll-margin-top:/);
 });
 
 test('design system stays true white and supports responsive and reduced-motion states', () => {

@@ -270,10 +270,18 @@ export function submissionRow(record) {
   };
 }
 
-function supabaseConfiguration(env) {
-  const url = env.SUPABASE_URL;
+export function supabaseConfiguration(env) {
+  const url = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
   const secret = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
   return url && secret ? { url, secret } : null;
+}
+
+function storageErrorSummary(error) {
+  return {
+    code: error?.code || 'unknown',
+    message: error?.message || 'Unknown storage error',
+    hint: error?.hint || '',
+  };
 }
 
 function submissionBlobPath(record) {
@@ -296,10 +304,22 @@ export async function persistSubmission(record, {
       });
       const { error } = await supabase.from('submissions').insert(submissionRow(record));
       if (!error) return { backend: 'supabase' };
-      logger.error('Supabase submission storage failed; using the configured Blob fallback.', error);
+      logger.error('Supabase submission storage failed; using the configured Blob fallback.', {
+        reference: record.reference,
+        ...storageErrorSummary(error),
+      });
     } catch (error) {
-      logger.error('Supabase submission storage threw an error; using the configured Blob fallback.', error);
+      logger.error('Supabase submission storage threw an error; using the configured Blob fallback.', {
+        reference: record.reference,
+        ...storageErrorSummary(error),
+      });
     }
+  } else {
+    logger.warn?.('Supabase is not fully configured; using the configured Blob fallback.', {
+      reference: record.reference,
+      hasUrl: Boolean(env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL),
+      hasSecret: Boolean(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY),
+    });
   }
 
   await putBlob(submissionBlobPath(record), JSON.stringify(record, null, 2), {
@@ -308,7 +328,7 @@ export async function persistSubmission(record, {
     contentType: 'application/json',
     cacheControlMaxAge: 60,
   });
-  return { backend: 'blob' };
+  return { backend: 'blob', fallbackReason: configuration ? 'supabase-write-failed' : 'supabase-not-configured' };
 }
 
 function escapeHtml(value) {
@@ -419,7 +439,8 @@ export default async function handler(req, res) {
       ...(readiness ? { readiness } : {}),
       ...(revisionOf ? { revisionOf } : {}),
     };
-    await persistSubmission(record);
+    const persistence = await persistSubmission(record);
+    res.setHeader('X-Covenda-Storage', persistence.backend);
     try {
       await notifyOperator(record);
     } catch (notificationError) {
@@ -430,6 +451,7 @@ export default async function handler(req, res) {
       reference,
       createdAt,
       status: 'received',
+      storage: persistence.backend,
       ...(readiness ? { readiness: { readyCount: readiness.readyCount, total: readiness.total } } : {}),
       ...(revisionOf ? { revisionOf } : {}),
     });

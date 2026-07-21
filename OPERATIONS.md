@@ -27,11 +27,20 @@ Before using real submissions, add these server-only environment variables to th
 | Variable | Purpose |
 | --- | --- |
 | `SUPABASE_URL` | The project URL from Supabase. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Accepted URL fallback when it is supplied automatically by the Vercel Supabase integration. The URL is public configuration; the secret key is not. |
 | `SUPABASE_SECRET_KEY` | Preferred server-only Supabase secret key. Never add it to client-side code or use a `NEXT_PUBLIC_`/`VITE_` prefix. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Legacy fallback only if the project has not issued a new secret key. |
 | `BLOB_READ_WRITE_TOKEN` | Existing private Blob fallback. Keep it while Supabase is being introduced and during the MVP. |
 
 After adding variables, redeploy the Vercel project. Submit one clearly synthetic company form and one synthetic student form. Confirm both appear in Supabase Table Editor under `public.submissions` with `EMP-` and `STU-` references. Also confirm the website receipt shows the same reference.
+
+### If receipts appear on the website but not in Supabase
+
+The website keeps local receipts after the server accepts a submission. The server may have used private Blob backup storage if the Supabase URL, key, permission, or Data API schema was unavailable. New receipts now identify the server record as **Primary inbox** or **Secure backup**.
+
+Check that Vercel contains either `SUPABASE_URL` or `NEXT_PUBLIC_SUPABASE_URL`, plus `SUPABASE_SECRET_KEY`, and redeploy after any environment-variable change. Then run `supabase/migrations/20260721054507_repair_submission_inbox_access.sql` once in Supabase SQL Editor. The repair is safe to repeat: it restores server-only access and asks the Data API to refresh its schema cache without making submissions public.
+
+Existing Blob backup records do not automatically appear in Supabase. Keep their receipt references; they can be backfilled after the primary connection is verified.
 
 ## Turn on email alerts
 
