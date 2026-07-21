@@ -1665,17 +1665,16 @@ body[data-audience-switched] #flowDemo { display: none; }
     gap: clamp(56px, 6vw, 96px);
   }
   .feature-panel { aspect-ratio: 1 / 1; }   /* desktop / wide: square on the right */
-  /* faint vertical column-guide hairlines framing the content columns */
-  .feature-band-inner::before,
+  /* faint vertical column-guide hairline on the right edge only
+     (no left line by the "What Covenda is" heading — intentional) */
   .feature-band-inner::after {
     content: "";
     position: absolute;
     top: 0;
     bottom: 0;
+    right: -1px;
     width: 1px;
     background: var(--line);
     opacity: .85;
   }
-  .feature-band-inner::before { left: -1px; }
-  .feature-band-inner::after { right: -1px; }
 }
