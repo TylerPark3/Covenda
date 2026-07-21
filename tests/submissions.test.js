@@ -12,6 +12,7 @@ import handler, {
   studentRecord,
   submissionDetails,
   submissionRow,
+  supabaseConfiguration,
 } from '../api/submissions.js';
 
 function responseRecorder() {
@@ -183,6 +184,17 @@ test('submissionRow maps a private intake into queryable database fields', () =>
   assert.equal(row.details.project.systemAccess, 'none');
 });
 
+test('Supabase configuration accepts Vercel integration variable names', () => {
+  assert.deepEqual(supabaseConfiguration({
+    NEXT_PUBLIC_SUPABASE_URL: 'https://integration.supabase.co',
+    SUPABASE_SECRET_KEY: 'sb_secret_test',
+  }), {
+    url: 'https://integration.supabase.co',
+    secret: 'sb_secret_test',
+  });
+  assert.equal(supabaseConfiguration({ NEXT_PUBLIC_SUPABASE_URL: 'https://integration.supabase.co' }), null);
+});
+
 test('persistSubmission prefers Supabase when the server secret is configured', async () => {
   let insertedTable = '';
   let insertedRow;
@@ -230,6 +242,7 @@ test('persistSubmission falls back to private Blob storage if Supabase is unavai
     logger: { error() {} },
   });
   assert.equal(result.backend, 'blob');
+  assert.equal(result.fallbackReason, 'supabase-write-failed');
   assert.match(blobPath, /^submissions\/employer_intake\/2026\/07\/21\/.+EMP-QA2026\.json$/);
   assert.equal(JSON.parse(blobBody).reference, 'EMP-QA2026');
   assert.equal(blobOptions.access, 'private');
@@ -253,8 +266,10 @@ test('persistSubmission keeps Blob as the default before Supabase is connected',
     env: {},
     createSupabaseClient() { throw new Error('Supabase should not be called'); },
     async putBlob() { stored = true; },
+    logger: { warn() {} },
   });
   assert.equal(result.backend, 'blob');
+  assert.equal(result.fallbackReason, 'supabase-not-configured');
   assert.equal(stored, true);
 });
 

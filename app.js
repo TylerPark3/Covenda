@@ -200,6 +200,7 @@ function discardDraft(form, { reset = true } = {}) {
     form.reset();
     setFormStep(form, 0);
     if (form.id === 'studentForm') selectWorkType(state.workType);
+    if (form.id === 'companyForm') renderCompanyBoundaryGuidance(form);
   }
   const status = $('[data-draft-status]', form);
   if (status) status.textContent = 'Draft saves on this device';
@@ -461,6 +462,52 @@ function companyPacketReadiness(input) {
   return { checks, readyCount, total: checks.length, allReady: readyCount === checks.length };
 }
 
+function companyBoundaryBlockers(form) {
+  const blockers = [];
+  const access = $('[name="companyAccess"]', form);
+  const records = $('[name="companyClientRecords"]', form);
+  const restricted = $('[name="companyRestricted"]', form);
+  if (access.value === 'production') {
+    blockers.push({ field: access, message: 'change System access from production/client systems' });
+  }
+  if (records.checked) {
+    blockers.push({ field: records, message: 'uncheck client, patient, or customer records' });
+  }
+  if (restricted.checked) {
+    blockers.push({ field: restricted, message: 'uncheck regulated or licensed decisions' });
+  }
+  return blockers;
+}
+
+function renderCompanyBoundaryGuidance(form) {
+  const panel = $('#companyBoundaryGuidance');
+  const access = $('[name="companyAccess"]', form);
+  const blockers = companyBoundaryBlockers(form);
+  $$('[name="companyAccess"], [name="companyClientRecords"], [name="companyRestricted"]', form).forEach(field => {
+    field.removeAttribute('aria-invalid');
+    field.closest('label')?.classList.remove('is-blocked');
+  });
+  panel.classList.remove('is-warning', 'is-blocked');
+
+  if (blockers.length) {
+    blockers.forEach(({ field }) => {
+      field.setAttribute('aria-invalid', 'true');
+      field.closest('label')?.classList.add('is-blocked');
+    });
+    panel.classList.add('is-blocked');
+    $('strong', panel).textContent = 'Change ' + blockers.length + ' safety selection' + (blockers.length === 1 ? '' : 's') + ' before sending';
+    $('span', panel).textContent = blockers.map(({ message }) => message).join('; ') + '.';
+  } else if (access.value === 'temporary') {
+    panel.classList.add('is-warning');
+    $('strong', panel).textContent = 'This access plan needs redesign';
+    $('span', panel).textContent = 'You can send the inquiry, but Covenda must replace temporary access with approved copies before a project can proceed.';
+  } else {
+    $('strong', panel).textContent = 'Safe boundary selected';
+    $('span', panel).textContent = 'Approved copies and de-identified examples can be reviewed. Red “not eligible” choices must stay unselected.';
+  }
+  return blockers;
+}
+
 function renderCompanyReadiness(readiness) {
   const status = $('#companyReadinessStatus');
   const list = $('#companyReadinessChecks');
@@ -625,6 +672,12 @@ function submissionLabel(item) {
   return item.type === 'employer_intake' ? 'Company problem intake' : 'Student interest profile';
 }
 
+function submissionStorageLabel(item) {
+  if (item.storage === 'supabase') return 'Primary inbox';
+  if (item.storage === 'blob') return 'Secure backup';
+  return 'Server confirmed';
+}
+
 function submissionProgress(item) {
   return item.type === 'employer_intake'
     ? [
@@ -778,6 +831,7 @@ function renderReceipt(item) {
   meta.className = 'receipt-meta';
   appendMeta(meta, 'Reference', item.reference || 'Unavailable');
   appendMeta(meta, 'Received', receiptDate(item.createdAt));
+  appendMeta(meta, 'Server record', submissionStorageLabel(item));
   appendMeta(meta, 'Current state', 'Queued for human review');
 
   const progress = document.createElement('ol');
@@ -1044,6 +1098,10 @@ for (const form of [studentForm, companyForm]) {
   });
 }
 
+renderCompanyBoundaryGuidance(companyForm);
+companyForm.addEventListener('input', () => renderCompanyBoundaryGuidance(companyForm));
+companyForm.addEventListener('change', () => renderCompanyBoundaryGuidance(companyForm));
+
 studentForm.addEventListener('submit', async event => {
   event.preventDefault();
   if (!validateStep(studentForm)) return;
@@ -1055,12 +1113,13 @@ studentForm.addEventListener('submit', async event => {
   try {
     const result = await sendSubmission(studentPayload(studentForm));
     message.classList.add('is-success');
-    message.textContent = 'Interest profile received. Reference ' + result.reference + '.';
+    message.textContent = 'Interest profile received. Reference ' + result.reference + (result.storage === 'blob' ? ' · secure backup storage used.' : '.');
     discardDraft(studentForm, { reset: false });
     saveSubmission({
       type: 'student_interest',
       reference: result.reference,
       status: result.status || 'received',
+      storage: result.storage || 'confirmed',
       createdAt: result.createdAt || new Date().toISOString(),
       title: formValue(studentForm, 'studentName') + ' · interest profile',
       summary: [checkedValues(studentForm, 'workType').join(', '), formValue(studentForm, 'studentAvailability')].filter(Boolean).join(' · '),
@@ -1084,12 +1143,14 @@ studentForm.addEventListener('submit', async event => {
 companyForm.addEventListener('submit', async event => {
   event.preventDefault();
   if (!validateStep(companyForm)) return;
-  const unsafe = $('[name="companyAccess"]', companyForm).value === 'production'
-    || $('[name="companyClientRecords"]', companyForm).checked
-    || $('[name="companyRestricted"]', companyForm).checked;
   const message = $('#companyFormMessage');
-  if (unsafe) {
-    message.textContent = 'Remove production access, restricted records, and regulated decisions before sending.';
+  const blockers = renderCompanyBoundaryGuidance(companyForm);
+  if (blockers.length) {
+    message.classList.remove('is-success');
+    message.textContent = 'Before sending, ' + blockers.map(({ message: blockerMessage }) => blockerMessage).join('; ') + '.';
+    setFormStep(companyForm, 2);
+    renderCompanyBoundaryGuidance(companyForm);
+    blockers[0].field.focus();
     return;
   }
   const submit = $('[data-form-submit]', companyForm);
@@ -1103,12 +1164,13 @@ companyForm.addEventListener('submit', async event => {
     const revisionOf = payload.revisionOf || '';
     const result = await sendSubmission(payload);
     message.classList.add('is-success');
-    message.textContent = (revisionOf ? 'Revised company problem received. Reference ' : 'Company problem received. Reference ') + result.reference + '.';
+    message.textContent = (revisionOf ? 'Revised company problem received. Reference ' : 'Company problem received. Reference ') + result.reference + (result.storage === 'blob' ? ' · secure backup storage used.' : '.');
     discardDraft(companyForm, { reset: false });
     saveSubmission({
       type: 'employer_intake',
       reference: result.reference,
       status: result.status || 'received',
+      storage: result.storage || 'confirmed',
       createdAt: result.createdAt || new Date().toISOString(),
       title: formValue(companyForm, 'companyName') + ' · company problem',
       summary: [formValue(companyForm, 'companyDeliverable'), formValue(companyForm, 'companyDeadline')].filter(Boolean).join(' · '),
@@ -1120,6 +1182,7 @@ companyForm.addEventListener('submit', async event => {
     window.setTimeout(() => {
       companyDialog.close();
       companyForm.reset();
+      renderCompanyBoundaryGuidance(companyForm);
       setFormStep(companyForm, 0);
       setAudience('company');
       setSurface('workspace');
