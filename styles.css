@@ -633,9 +633,11 @@ body[data-audience="university"] .audience-content[data-for-audience="university
 body[data-audience="company"] #how,
 body[data-audience="company"] #why,
 body[data-audience="company"] .final-cta,
+body[data-audience="company"] .feature-band,
 body[data-audience="university"] #how,
 body[data-audience="university"] #why,
-body[data-audience="university"] .final-cta { display: none; }
+body[data-audience="university"] .final-cta,
+body[data-audience="university"] .feature-band { display: none; }
 /* Hide hero sub-links whose scroll targets live in the now-hidden sections. */
 body[data-audience="company"] .hero-company .scroll-cue,
 body[data-audience="company"] .hero-company [data-action="project-fit"],
