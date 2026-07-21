@@ -36,6 +36,7 @@
         <label>Operator email<input name="email" type="email" autocomplete="email" placeholder="operator@covenda.com" required></label>
         <button type="submit">Email me a sign-in link</button>
         <p id="adminLoginMessage" aria-live="polite"></p>
+        <p class="admin-login-help" id="adminLoginHelp">No email after two minutes? Confirm this exact address is in <code>COVENDA_ADMIN_EMAILS</code>, exists in Supabase Authentication → Users, and that custom SMTP is connected.</p>
       </form>
       <a class="back-site" href="/">Back to the website</a>
     </section>

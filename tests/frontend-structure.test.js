@@ -211,7 +211,8 @@ test('design system stays true white and supports responsive and reduced-motion 
 
 test('page avoids unsupported marketplace claims and legacy branding', () => {
   assert.doesNotMatch(html, /ProofPath/i);
-  assert.doesNotMatch(html, /Sign in/i);
+  assert.match(html, /href="\/portal\.html"/);
+  assert.match(html, /Member sign in/);
   assert.doesNotMatch(html, /customer logos/i);
   assert.doesNotMatch(html, /success rate/i);
   assert.doesNotMatch(html, /Student score:/i);

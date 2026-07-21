@@ -22,6 +22,10 @@ const operatorFollowUp = readFileSync(
   new URL('../supabase/migrations/20260721225331_add_operator_follow_up_fields.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const memberPortal = readFileSync(
+  new URL('../supabase/migrations/20260721231522_create_member_portal.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -88,4 +92,15 @@ test('operator follow-up migration adds private bounded workflow fields', () => 
   assert.match(operatorFollowUp, /grant select, insert, update on table public\.submissions to service_role/);
   assert.match(operatorFollowUp, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(operatorFollowUp, /grant delete|create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('member portal migration creates private role-aware projects and applications', () => {
+  assert.match(memberPortal, /create table public\.member_profiles/);
+  assert.match(memberPortal, /create table public\.member_projects/);
+  assert.match(memberPortal, /create table public\.project_applications/);
+  assert.match(memberPortal, /role in \('student', 'company', 'university'\)/);
+  assert.match(memberPortal, /alter table public\.member_profiles force row level security/);
+  assert.match(memberPortal, /alter table public\.member_projects force row level security/);
+  assert.match(memberPortal, /revoke all on table public\.project_applications from public, anon, authenticated/);
+  assert.match(memberPortal, /grant select, insert, update, delete on table public\.member_profiles to service_role/);
 });
