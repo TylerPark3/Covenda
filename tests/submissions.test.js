@@ -18,6 +18,7 @@ import handler, {
   submissionRow,
   SUBMISSION_TYPES,
   supabaseConfiguration,
+  supabaseDestination,
   universityRecord,
 } from '../api/submissions.js';
 
@@ -304,6 +305,19 @@ test('Supabase configuration accepts Vercel integration variable names', () => {
   assert.equal(supabaseConfiguration({ NEXT_PUBLIC_SUPABASE_URL: 'https://integration.supabase.co' }), null);
 });
 
+test('Supabase destination safely identifies the operator inbox', () => {
+  assert.deepEqual(supabaseDestination('https://covenda-project.supabase.co'), {
+    provider: 'supabase',
+    projectRef: 'covenda-project',
+    table: 'public.submissions',
+  });
+  assert.deepEqual(supabaseDestination('not a url'), {
+    provider: 'supabase',
+    projectRef: '',
+    table: 'public.submissions',
+  });
+});
+
 test('persistSubmission prefers Supabase when the server secret is configured', async () => {
   let insertedTable = '';
   let insertedRow;
@@ -378,7 +392,8 @@ test('primary storage health prefers the Data API without exposing submission da
           assert.equal(table, 'submissions');
           return {
             async select(column, options) {
-              assert.equal(column, 'reference');
+              assert.match(column, /^reference,submission_type,status,source,/);
+              assert.match(column, /details,readiness,consent,created_at,updated_at$/);
               assert.deepEqual(options, { head: true, count: 'exact' });
               return { error: null };
             },
@@ -387,7 +402,15 @@ test('primary storage health prefers the Data API without exposing submission da
       };
     },
   });
-  assert.deepEqual(health, { status: 'ready', route: 'data-api' });
+  assert.deepEqual(health, {
+    status: 'ready',
+    route: 'data-api',
+    destination: {
+      provider: 'supabase',
+      projectRef: 'project',
+      table: 'public.submissions',
+    },
+  });
 });
 
 test('persistSubmission falls back to private Blob storage if Supabase is unavailable', async () => {
@@ -491,6 +514,7 @@ test('handler exposes safe delivery health and rejects unsupported or cross-orig
   assert.equal(healthResponse.statusCode, 200);
   assert.equal(healthResponse.body.ok, true);
   assert.ok(['ready', 'unavailable', 'not-configured'].includes(healthResponse.body.primary.status));
+  assert.match(healthResponse.body.checkedAt, /^\d{4}-\d{2}-\d{2}T/);
 
   const methodResponse = responseRecorder();
   await handler({ method: 'PUT', headers: {} }, methodResponse);

@@ -120,6 +120,17 @@ test('server-confirmed submissions become durable review receipts', () => {
   assert.match(script, /Backup · sync pending/);
   assert.match(script, /function refreshDeliveryHealth/);
   assert.match(script, /Primary sync pending/);
+  assert.match(html, /id="deliveryDetails"/);
+  assert.match(html, /id="deliveryProjectRef"/);
+  assert.match(html, /Supabase → Table Editor/);
+  assert.match(script, /result\.destination/);
+  assert.match(styles, /\.delivery-details/);
+  assert.match(html, /id="receiptRecoveryForm"/);
+  assert.match(html, /Receipt missing from this device/);
+  assert.match(script, /function findServerReceipt/);
+  assert.match(script, /function openReceiptRecovery/);
+  assert.match(script, /Refresh status/);
+  assert.match(styles, /\.receipt-recovery/);
   assert.match(script, /setWorkspaceTab\('submissions'\)/);
   assert.match(styles, /\.receipt-progress/);
   assert.match(styles, /\.receipt-action/);
