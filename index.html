@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Covenda turns delayed company work into safe, paid projects and credible proof of student ability.">
+  <!-- Company demo booking. Paste your Calendly event URL (must be an https calendly.com link). -->
+  <meta name="covenda-calendly-url" content="[PASTE YOUR CALENDLY EVENT URL]">
   <title>Covenda · Real work becomes credible evidence</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
@@ -66,9 +68,10 @@
         <a href="#why">Why Covenda</a>
       </nav>
       <div class="header-actions">
-        <div class="audience-switch" aria-label="Choose audience">
+        <div class="audience-switch has-three" aria-label="Choose audience">
           <button type="button" data-audience-option="student" aria-pressed="true"><svg><use href="#icon-student"/></svg><span>Student</span></button>
           <button type="button" data-audience-option="company" aria-pressed="false"><svg><use href="#icon-company"/></svg><span>Company</span></button>
+          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-building"/></svg><span>University</span></button>
         </div>
         <button class="workspace-link" type="button" data-action="workspace"><svg><use href="#icon-user"/></svg><span>My workspace</span></button>
       </div>
@@ -104,8 +107,9 @@
             <svg class="composer-icon"><use href="#icon-file"/></svg>
             <label class="sr-only" for="companyProblemSeed">Describe the company problem</label>
             <textarea id="companyProblemSeed" rows="2" placeholder="Tell us what is not getting done, why it matters, and what a useful finish looks like…"></textarea>
-            <button class="gold-button" type="button" data-action="company-form">Start a project<svg><use href="#icon-arrow-right"/></svg></button>
+            <button class="gold-button" type="button" data-action="schedule-demo">Schedule a demo<svg><use href="#icon-arrow-right"/></svg></button>
           </div>
+          <button class="quiet-link company-secondary" type="button" data-action="company-form">Prefer to write it up? Start a Project Packet<svg><use href="#icon-chevron"/></svg></button>
         </div>
         <div class="prompt-links" aria-label="Questions to consider">
           <button type="button" data-prompt="What would the finished result let your team do?">What would finished unlock?<svg><use href="#icon-chevron"/></svg></button>
@@ -116,7 +120,121 @@
         <a class="scroll-cue" href="#how"><span>See how Covenda reduces oversight</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
+      <section class="hero hero-university" aria-labelledby="universityHeroTitle">
+        <div class="hero-copy">
+          <h1 id="universityHeroTitle">Bring your students real, reviewed work.</h1>
+          <p>Build a roster of students by interest area. Covenda routes safe, paid pilot projects and returns verifiable work records—no job board, no placement guarantee.</p>
+        </div>
+        <div class="selector-orbit university-orbit">
+          <div class="roster-builder glass-panel">
+            <div class="roster-section">
+              <p class="roster-eyebrow">Partner details</p>
+              <div class="roster-grid">
+                <label>Your name<input id="uniContactName" autocomplete="name"></label>
+                <label>Work email<input id="uniContactEmail" type="email" autocomplete="email"></label>
+                <label>Organization<input id="uniOrgName" autocomplete="organization"></label>
+                <label>Organization type<select id="uniOrgType">
+                  <option value="">Choose one</option>
+                  <option>University or department</option>
+                  <option>Career center</option>
+                  <option>Student club</option>
+                  <option>Student organization</option>
+                </select></label>
+              </div>
+            </div>
+            <div class="roster-section">
+              <p class="roster-eyebrow">Add students</p>
+              <form id="rosterAddForm" class="roster-add-row">
+                <label class="sr-only" for="rosterName">Student name</label>
+                <input id="rosterName" placeholder="Student name" autocomplete="off">
+                <label class="sr-only" for="rosterEmail">Student email</label>
+                <input id="rosterEmail" type="email" placeholder="student@school.edu" autocomplete="off">
+                <label class="sr-only" for="rosterInterest">Interest area</label>
+                <select id="rosterInterest">
+                  <option value="Research">Research</option>
+                  <option value="Data &amp; spreadsheets">Data &amp; spreadsheets</option>
+                  <option value="Operations">Operations</option>
+                  <option value="QA &amp; testing">QA &amp; testing</option>
+                  <option value="Writing &amp; documentation">Writing &amp; documentation</option>
+                </select>
+                <button class="gold-button compact" type="submit">Add<svg><use href="#icon-arrow-right"/></svg></button>
+              </form>
+              <details class="roster-paste">
+                <summary>Paste multiple students</summary>
+                <p>One per line as <code>Name, email</code> or <code>Name &lt;email&gt;</code>. New rows use the interest selected above.</p>
+                <textarea id="rosterPaste" rows="4" placeholder="Jordan Lee, jordan@school.edu&#10;Priya Shah &lt;priya@school.edu&gt;"></textarea>
+                <button class="outline-button compact" type="button" data-action="roster-paste">Add pasted students</button>
+              </details>
+            </div>
+            <div class="roster-section roster-list-section">
+              <div class="roster-list-head">
+                <span class="roster-eyebrow" id="rosterCount">0 students</span>
+                <button class="roster-clear" type="button" data-action="roster-clear" hidden>Clear all</button>
+              </div>
+              <ul class="roster-list" id="rosterList" aria-live="polite"></ul>
+              <p class="roster-empty" id="rosterEmpty">No students added yet. Add people above, then send the roster to Covenda.</p>
+            </div>
+            <label class="consent-row roster-consent"><input type="checkbox" id="uniConsent"><span>I can share these names and school emails with Covenda for a founder-led pilot. This is not an account system, and it does not guarantee placement.</span></label>
+            <div class="form-message" id="rosterMessage" role="status" aria-live="polite"></div>
+            <button class="gold-button roster-submit" type="button" data-action="roster-submit">Send roster to Covenda<svg><use href="#icon-arrow-right"/></svg></button>
+          </div>
+        </div>
+        <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
+      </section>
+
       <section class="how-section" id="how">
+        <div class="flow-demo" id="flowDemo" role="img" aria-label="Company problem becomes a scoped Project Packet and then a verified work record.">
+          <div class="flow-demo-head">
+            <p class="flow-demo-kicker">The core story</p>
+            <h2>Messy problem, approved packet, kept proof.</h2>
+            <p>A gold token travels the pipeline: raw company work becomes a scoped, reviewed project—then durable evidence of what a student proved.</p>
+          </div>
+          <div class="flow-demo-scroll">
+            <div class="flow-demo-track">
+              <div class="fd-stage fd-stage-a fd-anim">
+                <p class="fd-kicker fd-kicker-muted">01 · Company problem</p>
+                <div class="fd-card fd-card-problem">
+                  <span class="fd-tag fd-tag-backlog">Backlogged</span>
+                  <span class="fd-line" style="width:100%"></span>
+                  <span class="fd-line" style="width:82%"></span>
+                  <span class="fd-line" style="width:90%"></span>
+                  <span class="fd-line" style="width:60%"></span>
+                  <p class="fd-quote">“Customer research keeps slipping…”</p>
+                </div>
+              </div>
+              <div class="fd-connector fd-connector-1" aria-hidden="true">
+                <span class="fd-connector-label">Covenda<br>scopes</span>
+                <span class="fd-track"><span class="fd-fill fd-fill-1"></span><span class="fd-dot fd-dot-1"></span></span>
+              </div>
+              <div class="fd-stage fd-stage-b fd-anim">
+                <p class="fd-kicker">02 · Project Packet</p>
+                <div class="fd-card fd-card-packet">
+                  <span class="fd-badge fd-badge-approved">Approved</span>
+                  <div class="fd-field fd-field-1"><span class="fd-field-label">Deliverable</span><span class="fd-field-value">Public research summary</span></div>
+                  <div class="fd-field fd-field-2"><span class="fd-field-label">Approved inputs</span><span class="fd-field-value">Public sources only</span></div>
+                  <div class="fd-field fd-field-3"><span class="fd-field-label">Boundary</span><span class="fd-field-value">No internal or customer data</span></div>
+                  <div class="fd-field fd-field-4"><span class="fd-field-label">Acceptance · Pay</span><span class="fd-field-value">12+ sources · fixed, confirmed</span></div>
+                </div>
+              </div>
+              <div class="fd-connector fd-connector-2" aria-hidden="true">
+                <span class="fd-connector-label">reviewed<br>&amp; accepted</span>
+                <span class="fd-track"><span class="fd-fill fd-fill-2"></span><span class="fd-dot fd-dot-2"></span></span>
+              </div>
+              <div class="fd-stage fd-stage-c fd-anim">
+                <p class="fd-kicker">03 · Verified record</p>
+                <div class="fd-card fd-card-proof">
+                  <div class="fd-proof-head"><svg class="fd-seal" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.3l3 3 6-6.5"/></svg><span>Proven</span></div>
+                  <div class="fd-chips">
+                    <span class="fd-chip fd-chip-1">Source evaluation</span>
+                    <span class="fd-chip fd-chip-2">Research synthesis</span>
+                    <span class="fd-chip fd-chip-3">Written communication</span>
+                    <span class="fd-chip fd-chip-4">On-time delivery</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="student-story audience-content" data-for-audience="student">
           <div class="section-heading">
             <h2>Real work becomes<br>credible evidence.</h2>
@@ -168,6 +286,27 @@
             </article>
           </div>
         </div>
+        <div class="university-story audience-content" data-for-audience="university">
+          <div class="section-heading">
+            <h2>From a roster to<br>reviewed, paid work.</h2>
+            <p>You bring the students. Covenda brings safe, scoped projects and returns evidence you can point to.</p>
+          </div>
+          <div class="story-layout">
+            <ol class="proof-rail">
+              <li><span>1</span><svg><use href="#icon-building"/></svg><h3>Build your roster</h3><p>Add students by name, school email, and interest area—paste a whole list at once.</p></li>
+              <li><span>2</span><svg><use href="#icon-route"/></svg><h3>Covenda routes work</h3><p>We match interests to bounded, reviewed pilot projects as they open.</p></li>
+              <li><span>3</span><svg><use href="#icon-shield"/></svg><h3>Students keep the proof</h3><p>Accepted work becomes a capability record each student controls.</p></li>
+            </ol>
+            <article class="work-record glass-panel">
+              <header><div><small>Roster snapshot</small><h3>Interest coverage</h3></div><span class="record-state"><svg><use href="#icon-building"/></svg>Founder-led pilot</span></header>
+              <div class="record-preview">
+                <div class="document-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                <div><span>Shared with</span><strong>Covenda pilot team only</strong><span>Not created</span><strong>No account, ranking, or placement guarantee</strong></div>
+              </div>
+              <footer><span>Tagged by interest</span><div class="capability-list"><b>Research</b><b>Data &amp; spreadsheets</b><b>Operations</b><b>QA &amp; testing</b></div></footer>
+            </article>
+          </div>
+        </div>
       </section>
 
       <section class="why-section" id="why">
@@ -189,11 +328,20 @@
             <div><span>Not eligible</span><strong>Production access, client or patient records, regulated decisions, restricted information</strong></div>
           </div>
         </div>
+        <div class="university-why audience-content" data-for-audience="university">
+          <div class="why-copy"><h2>A pipeline of proof, not another job board.</h2><p>Students on your roster get bounded, reviewed, paid projects and keep evidence tied to real work. You stay in the loop without running a marketplace or managing accounts.</p><button class="outline-button" type="button" data-action="university-roster">Build your roster<svg><use href="#icon-arrow-right"/></svg></button></div>
+          <div class="fit-table" id="partnerFit">
+            <div><span>Good fit</span><strong>Career centers, departments, clubs, and student orgs sharing interested students</strong></div>
+            <div><span>How data is used</span><strong>Names and school emails go to the Covenda pilot team only—no public listing</strong></div>
+            <div><span>Not included</span><strong>Accounts, rankings, automatic placement, or a guarantee of paid work</strong></div>
+          </div>
+        </div>
       </section>
 
       <section class="final-cta">
         <div data-for-audience="student" class="audience-content"><h2>Start with the work you want to prove.</h2><p>Submit an interest profile. We’ll use it to shape the first pilot group—not to promise a job or automatic match.</p><button class="gold-button" type="button" data-action="student-form">Build my interest profile<svg><use href="#icon-arrow-right"/></svg></button></div>
-        <div data-for-audience="company" class="audience-content"><h2>Bring us the work that keeps slipping.</h2><p>Submit the problem. Covenda will assess whether it can become a safe project before asking you to fund or publish anything.</p><button class="gold-button" type="button" data-action="company-form">Start a Project Packet<svg><use href="#icon-arrow-right"/></svg></button></div>
+        <div data-for-audience="company" class="audience-content"><h2>Bring us the work that keeps slipping.</h2><p>Book a 20-minute demo to walk through a real problem, or write it up as a Project Packet. Covenda assesses whether it can become a safe project before asking you to fund or publish anything.</p><div class="cta-actions"><button class="gold-button" type="button" data-action="schedule-demo">Schedule a demo<svg><use href="#icon-arrow-right"/></svg></button><button class="outline-button" type="button" data-action="company-form">Start a Project Packet<svg><use href="#icon-arrow-right"/></svg></button></div></div>
+        <div data-for-audience="university" class="audience-content"><h2>Share your students with the pilot.</h2><p>Add a roster by interest area and Covenda will route safe, paid projects as they open. Founder-led, no accounts, no placement guarantee.</p><button class="gold-button" type="button" data-action="university-roster">Build your roster<svg><use href="#icon-arrow-right"/></svg></button></div>
       </section>
     </main>
 
@@ -205,9 +353,10 @@
       <button class="brand" type="button" data-action="site"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span>Covenda</span></button>
       <strong>Workspace</strong>
       <div class="header-actions">
-        <div class="audience-switch" aria-label="Choose workspace audience">
+        <div class="audience-switch has-three" aria-label="Choose workspace audience">
           <button type="button" data-audience-option="student" aria-pressed="true"><svg><use href="#icon-student"/></svg><span>Student</span></button>
           <button type="button" data-audience-option="company" aria-pressed="false"><svg><use href="#icon-company"/></svg><span>Company</span></button>
+          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-building"/></svg><span>University</span></button>
         </div>
         <button class="back-link" type="button" data-action="site">Back to site<svg><use href="#icon-arrow-right"/></svg></button>
       </div>
@@ -275,11 +424,33 @@
               </aside>
             </div>
           </div>
+
+          <div class="university-dashboard audience-content" data-for-audience="university">
+            <div class="workspace-title"><h1>Your student roster.</h1><p>Rosters are shared with the Covenda pilot team as a founder-led intake—there is no partner account or dashboard login yet.</p></div>
+            <div class="dashboard-grid">
+              <div>
+                <section class="path-panel glass-panel">
+                  <header><h2>Roster status</h2><button class="outline-button compact" type="button" data-action="university-roster">Edit roster</button></header>
+                  <div class="dashboard-paths">
+                    <div class="is-primary"><svg><use href="#icon-building"/></svg><span id="workspaceRosterCount">0 students on your roster</span></div>
+                    <div><svg><use href="#icon-route"/></svg><span id="workspaceRosterOrg">Add your organization details</span></div>
+                  </div>
+                </section>
+              </div>
+              <aside class="evidence-panel glass-panel">
+                <small>What Covenda receives</small>
+                <header><svg><use href="#icon-lock"/></svg><div><h2>A private roster</h2><p>Names and school emails, tagged by interest. Shared only with the pilot team.</p></div></header>
+                <div class="evidence-capabilities"><span>Last roster sent</span><div><b id="workspaceRosterReference">Nothing sent yet</b></div></div>
+                <footer><svg><use href="#icon-lock"/></svg><p><strong>No placement guarantee.</strong>Students still choose every project and keep their own evidence.</p></footer>
+              </aside>
+            </div>
+          </div>
         </section>
 
         <section class="workspace-view simple-workspace-view" data-workspace-view="profile">
           <div class="student-profile-view audience-content" data-for-audience="student"><h1>Your student profile</h1><p>Your interests and honest skill self-assessment help Covenda decide what pilot work may fit. This profile is private by default.</p><article class="profile-summary glass-panel"><header><div><small>Local profile preview</small><h2 id="studentWorkspaceSummaryTitle">No draft details yet</h2></div><button class="outline-button compact" type="button" data-action="student-form">Edit profile</button></header><dl id="studentWorkspaceSummary"><div><dt>Work paths</dt><dd>Choose the work you want to prove.</dd></div><div><dt>Strongest skill</dt><dd>Add an honest current level.</dd></div><div><dt>Availability</dt><dd>Set your preferred timing.</dd></div></dl></article><button class="gold-button" type="button" data-action="student-form">Open interest profile<svg><use href="#icon-arrow-right"/></svg></button></div>
           <div class="company-profile-view audience-content" data-for-audience="company"><h1>Your company profile</h1><p>Company details give Covenda enough context to follow up on a real problem. No public company listing is created by this form.</p><article class="profile-summary glass-panel"><header><div><small>Working Project Packet</small><h2 id="companyWorkspaceSummaryTitle">No company problem draft yet</h2></div><button class="outline-button compact" type="button" data-action="company-form">Edit packet</button></header><dl id="companyWorkspaceSummary"><div><dt>Deliverable</dt><dd>Describe a useful finish.</dd></div><div><dt>Information boundary</dt><dd>Identify safe approved inputs.</dd></div><div><dt>Time-saving case</dt><dd>Estimate employee time avoided.</dd></div></dl></article><button class="gold-button" type="button" data-action="company-form">Open company intake<svg><use href="#icon-arrow-right"/></svg></button></div>
+          <div class="university-profile-view audience-content" data-for-audience="university"><h1>Your partner profile</h1><p>Your organization details and student roster are shared with the Covenda pilot team as a founder-led intake. No public partner listing or account is created.</p><article class="profile-summary glass-panel"><header><div><small>Roster intake</small><h2 id="universityWorkspaceSummaryTitle">No roster shared yet</h2></div><button class="outline-button compact" type="button" data-action="university-roster">Edit roster</button></header><dl id="universityWorkspaceSummary"><div><dt>Organization</dt><dd>Add your organization and type.</dd></div><div><dt>Students</dt><dd>Add students by interest area.</dd></div><div><dt>Last sent</dt><dd>Nothing sent yet.</dd></div></dl></article><button class="gold-button" type="button" data-action="university-roster">Open roster builder<svg><use href="#icon-arrow-right"/></svg></button></div>
         </section>
         <section class="workspace-view simple-workspace-view submission-workspace-view" data-workspace-view="submissions">
           <div class="submission-heading"><div><h1>Submission receipts</h1><p>Track what Covenda received and what happens next. Receipts are stored on this device; review decisions arrive separately by email.</p></div><span><svg><use href="#icon-lock"/></svg>Private local record</span></div>

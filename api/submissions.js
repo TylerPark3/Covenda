@@ -2,7 +2,7 @@ import { put } from '@vercel/blob';
 import { createClient } from '@supabase/supabase-js';
 import { Resend } from 'resend';
 
-const TYPES = new Set(['employer_intake', 'student_interest', 'call_request']);
+const TYPES = new Set(['employer_intake', 'student_interest', 'call_request', 'university_partner']);
 const MAX_BODY_BYTES = 24_000;
 const MIN_FORM_TIME_MS = 1_500;
 const RATE_WINDOW_MS = 10 * 60 * 1_000;
@@ -204,6 +204,31 @@ export function studentRecord(body) {
   return record;
 }
 
+export function universityRecord(body) {
+  const roster = Array.isArray(body.roster)
+    ? body.roster
+        .slice(0, 200)
+        .map(entry => ({
+          name: text(entry?.name, 100),
+          email: email(entry?.email),
+          interest: text(entry?.interest, 60),
+        }))
+        .filter(entry => entry.name && entry.email)
+    : [];
+  const record = {
+    contact: contact(body.contact, { companyRequired: true }),
+    organizationType: text(body.organizationType, 80),
+    roster,
+  };
+  if (!record.organizationType) {
+    throw new Error('Please choose an organization type.');
+  }
+  if (!record.roster.length) {
+    throw new Error('Please add at least one student with a name and a valid email.');
+  }
+  return record;
+}
+
 export function callRecord(body) {
   const record = {
     contact: contact(body.contact, { companyRequired: true }),
@@ -220,11 +245,10 @@ export function callRecord(body) {
 
 export function submissionDetails(body) {
   if (!TYPES.has(body.type)) throw new Error('Please choose a valid submission type.');
-  return body.type === 'employer_intake'
-    ? employerRecord(body)
-    : body.type === 'student_interest'
-      ? studentRecord(body)
-      : callRecord(body);
+  if (body.type === 'employer_intake') return employerRecord(body);
+  if (body.type === 'student_interest') return studentRecord(body);
+  if (body.type === 'university_partner') return universityRecord(body);
+  return callRecord(body);
 }
 
 function parseBody(req) {
@@ -234,7 +258,7 @@ function parseBody(req) {
 }
 
 function referenceFor(type) {
-  const prefix = { employer_intake: 'EMP', student_interest: 'STU', call_request: 'CALL' }[type];
+  const prefix = { employer_intake: 'EMP', student_interest: 'STU', call_request: 'CALL', university_partner: 'UNI' }[type];
   return `${prefix}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
 }
 
@@ -244,6 +268,10 @@ function submissionSummary(record) {
   }
   if (record.type === 'student_interest') {
     return record.details.interests.workTypes.join(', ') || 'Student interest profile submitted.';
+  }
+  if (record.type === 'university_partner') {
+    const count = record.details.roster.length;
+    return `${count} student${count === 1 ? '' : 's'} shared for pilot matching.`;
   }
   return record.details.topic || 'Call requested.';
 }
@@ -345,6 +373,7 @@ function submissionLabel(type) {
     employer_intake: 'company submission',
     student_interest: 'student submission',
     call_request: 'call request',
+    university_partner: 'university roster',
   }[type] || 'submission';
 }
 

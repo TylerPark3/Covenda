@@ -8,6 +8,77 @@ const state = {
   toastTimer: null,
 };
 
+// Single config spot for the "Schedule a demo" flow. Set the event URL in the
+// <meta name="covenda-calendly-url"> tag in index.html. Must be an https
+// calendly.com link; anything else disables the popup and falls back to intake.
+function calendlyUrl() {
+  const raw = document.querySelector('meta[name="covenda-calendly-url"]')?.content?.trim() || '';
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol === 'https:' && /(^|\.)calendly\.com$/.test(parsed.hostname)) return parsed.toString();
+  } catch {
+    // Unset placeholder or malformed value — treated as "not configured".
+  }
+  return '';
+}
+
+let calendlyAssetsLoading = null;
+function loadCalendlyAssets() {
+  if (window.Calendly) return Promise.resolve();
+  if (calendlyAssetsLoading) return calendlyAssetsLoading;
+  calendlyAssetsLoading = new Promise((resolve, reject) => {
+    if (!document.querySelector('link[data-calendly]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = 'https://assets.calendly.com/assets/external/widget.css';
+      link.dataset.calendly = 'true';
+      document.head.append(link);
+    }
+    const script = document.createElement('script');
+    script.src = 'https://assets.calendly.com/assets/external/widget.js';
+    script.async = true;
+    script.dataset.calendly = 'true';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Calendly could not load.'));
+    document.head.append(script);
+  });
+  return calendlyAssetsLoading;
+}
+
+function scheduleDemoPrefill() {
+  const draft = readStorage(draftKeys.companyForm, null);
+  const name = formValue(companyForm, 'companyContactName') || draftValue(draft, 'companyContactName');
+  const email = formValue(companyForm, 'companyContactEmail') || draftValue(draft, 'companyContactEmail');
+  const problem = ($('#companyProblemSeed')?.value.trim())
+    || formValue(companyForm, 'companyProblem')
+    || draftValue(draft, 'companyProblem');
+  const prefill = {};
+  if (name) prefill.name = name;
+  if (email) prefill.email = email;
+  if (problem) prefill.customAnswers = { a1: problem.slice(0, 800) };
+  return prefill;
+}
+
+async function scheduleDemo() {
+  const url = calendlyUrl();
+  if (!url) {
+    showToast('Demo booking isn’t connected yet — start a Project Packet and Covenda will reach out.');
+    openDialog(companyDialog, companyForm);
+    const seed = $('#companyProblemSeed')?.value.trim();
+    if (seed && !formValue(companyForm, 'companyProblem')) {
+      $('[name="companyProblem"]', companyForm).value = seed;
+      saveDraft(companyForm);
+    }
+    return;
+  }
+  try {
+    await loadCalendlyAssets();
+    window.Calendly.initPopupWidget({ url, prefill: scheduleDemoPrefill() });
+  } catch {
+    showToast('Could not open the scheduler. Please try again, or start a Project Packet.');
+  }
+}
+
 const storageKey = 'covendaPilotSubmissions';
 const introStorageKey = 'covendaIntroSeen';
 const audienceStorageKey = 'covendaAudience';
@@ -16,6 +87,7 @@ const draftKeys = {
   studentForm: 'covendaStudentInterestDraft',
   companyForm: 'covendaCompanyProblemDraft',
 };
+const universityDraftKey = 'covendaUniversityRosterDraft';
 
 function readStorage(key, fallback) {
   try {
@@ -254,8 +326,14 @@ function showToast(message) {
   state.toastTimer = window.setTimeout(() => toast.classList.remove('is-visible'), 3200);
 }
 
+const audienceTitles = {
+  student: 'Covenda · Real work becomes credible evidence',
+  company: 'Covenda for companies · Turn delayed work into a project',
+  university: 'Covenda for universities · Share your students with the pilot',
+};
+
 function setAudience(audience) {
-  if (!['student', 'company'].includes(audience)) return;
+  if (!['student', 'company', 'university'].includes(audience)) return;
   state.audience = audience;
   writeStorage(audienceStorageKey, audience);
   document.body.dataset.audience = audience;
@@ -265,9 +343,7 @@ function setAudience(audience) {
   $$('[data-student-label]').forEach(label => {
     label.textContent = audience === 'student' ? label.dataset.studentLabel : label.dataset.companyLabel;
   });
-  document.title = audience === 'student'
-    ? 'Covenda · Real work becomes credible evidence'
-    : 'Covenda for companies · Turn delayed work into a project';
+  document.title = audienceTitles[audience] || audienceTitles.student;
   renderSubmissionHistory();
 }
 
@@ -665,11 +741,15 @@ function saveSubmission(submission) {
 }
 
 function submissionAudience(item) {
-  return item.type === 'employer_intake' ? 'company' : 'student';
+  if (item.type === 'employer_intake') return 'company';
+  if (item.type === 'university_partner') return 'university';
+  return 'student';
 }
 
 function submissionLabel(item) {
-  return item.type === 'employer_intake' ? 'Company problem intake' : 'Student interest profile';
+  if (item.type === 'employer_intake') return 'Company problem intake';
+  if (item.type === 'university_partner') return 'Student roster';
+  return 'Student interest profile';
 }
 
 function submissionStorageLabel(item) {
@@ -679,17 +759,25 @@ function submissionStorageLabel(item) {
 }
 
 function submissionProgress(item) {
-  return item.type === 'employer_intake'
-    ? [
-        ['Received', 'Your problem and company context are saved.'],
-        ['Human scoping', 'Covenda checks value, boundaries, and review burden.'],
-        ['Packet decision', 'You receive questions or a proposed Project Packet.'],
-      ]
-    : [
-        ['Received', 'Your interests and working preferences are saved.'],
-        ['Pilot-fit review', 'Covenda reviews fit for the current pilot.'],
-        ['Follow-up', 'Covenda contacts you if a suitable next step exists.'],
-      ];
+  if (item.type === 'employer_intake') {
+    return [
+      ['Received', 'Your problem and company context are saved.'],
+      ['Human scoping', 'Covenda checks value, boundaries, and review burden.'],
+      ['Packet decision', 'You receive questions or a proposed Project Packet.'],
+    ];
+  }
+  if (item.type === 'university_partner') {
+    return [
+      ['Received', 'Your roster and organization details are saved.'],
+      ['Pilot review', 'Covenda reviews interest coverage for open pilot work.'],
+      ['Follow-up', 'Covenda contacts you as safe projects become available.'],
+    ];
+  }
+  return [
+    ['Received', 'Your interests and working preferences are saved.'],
+    ['Pilot-fit review', 'Covenda reviews fit for the current pilot.'],
+    ['Follow-up', 'Covenda contacts you if a suitable next step exists.'],
+  ];
 }
 
 function receiptDate(value) {
@@ -700,9 +788,9 @@ function receiptDate(value) {
 
 function receiptSummary(item) {
   if (item.summary) return item.summary;
-  return item.type === 'employer_intake'
-    ? 'A company problem was received for human scoping.'
-    : 'A student interest profile was received for pilot-fit review.';
+  if (item.type === 'employer_intake') return 'A company problem was received for human scoping.';
+  if (item.type === 'university_partner') return 'A student roster was received for pilot review.';
+  return 'A student interest profile was received for pilot-fit review.';
 }
 
 function companyPacketSnapshot(form, readiness) {
@@ -856,7 +944,9 @@ function renderReceipt(item) {
   const actions = document.createElement('div');
   boundary.textContent = item.type === 'employer_intake'
     ? 'This receipt does not publish, fund, or assign the project. Covenda reviews it first.'
-    : 'This receipt is not a job application, match, or work guarantee. Covenda reviews pilot fit first.';
+    : item.type === 'university_partner'
+      ? 'This receipt does not create accounts or guarantee placement. Covenda reviews the roster first.'
+      : 'This receipt is not a job application, match, or work guarantee. Covenda reviews pilot fit first.';
   actions.className = 'receipt-actions';
   const receiptActions = [['copy', 'Copy reference', 'icon-copy'], ['download', 'Download receipt', 'icon-download']];
   if (item.type === 'employer_intake' && item.packetSnapshot) {
@@ -900,14 +990,29 @@ function renderSubmissionHistory() {
   const detail = document.createElement('p');
   const action = document.createElement('button');
   empty.className = 'submission-empty';
-  heading.textContent = state.audience === 'student' ? 'No student receipt yet' : 'No company receipt yet';
-  detail.textContent = state.audience === 'student'
-    ? 'Complete an interest profile and its server-confirmed reference will appear here.'
-    : 'Submit a bounded company problem and its server-confirmed reference will appear here.';
+  const emptyCopy = {
+    student: {
+      heading: 'No student receipt yet',
+      detail: 'Complete an interest profile and its server-confirmed reference will appear here.',
+      action: 'Build interest profile',
+    },
+    company: {
+      heading: 'No company receipt yet',
+      detail: 'Submit a bounded company problem and its server-confirmed reference will appear here.',
+      action: 'Start company intake',
+    },
+    university: {
+      heading: 'No roster receipt yet',
+      detail: 'Send a student roster and its server-confirmed reference will appear here.',
+      action: 'Build your roster',
+    },
+  }[state.audience] || {};
+  heading.textContent = emptyCopy.heading;
+  detail.textContent = emptyCopy.detail;
   action.type = 'button';
   action.className = 'outline-button compact';
   action.dataset.receiptAction = 'start';
-  action.append(document.createTextNode(state.audience === 'student' ? 'Build interest profile' : 'Start company intake'), createIcon('icon-arrow-right'));
+  action.append(document.createTextNode(emptyCopy.action), createIcon('icon-arrow-right'));
   empty.append(createIcon('icon-file'), heading, detail, action);
   history.append(empty);
 }
@@ -988,6 +1093,7 @@ function renderLocalSubmissionState() {
   }
   renderSubmissionHistory();
   renderWorkspaceDrafts();
+  renderUniversityWorkspace();
 }
 
 function studentPayload(form) {
@@ -1197,6 +1303,267 @@ companyForm.addEventListener('submit', async event => {
   }
 });
 
+// ---- University / partner roster builder ---------------------------
+const universityInterests = ['Research', 'Data & spreadsheets', 'Operations', 'QA & testing', 'Writing & documentation'];
+let universityRoster = [];
+
+function isEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function partnerFieldValues() {
+  return {
+    contactName: $('#uniContactName')?.value.trim() || '',
+    contactEmail: $('#uniContactEmail')?.value.trim() || '',
+    orgName: $('#uniOrgName')?.value.trim() || '',
+    orgType: $('#uniOrgType')?.value || '',
+  };
+}
+
+function saveRosterDraft() {
+  writeStorage(universityDraftKey, { partner: partnerFieldValues(), roster: universityRoster, updatedAt: new Date().toISOString() });
+  renderUniversityWorkspace();
+}
+
+function clearRosterDraft() {
+  removeStorage(universityDraftKey);
+  renderUniversityWorkspace();
+}
+
+function addRosterEntry(name, email, interest) {
+  const cleanName = name.trim();
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanInterest = universityInterests.includes(interest) ? interest : universityInterests[0];
+  if (!cleanName || !isEmail(cleanEmail)) return false;
+  if (universityRoster.some(entry => entry.email === cleanEmail)) return false;
+  universityRoster.push({ name: cleanName, email: cleanEmail, interest: cleanInterest });
+  return true;
+}
+
+function parsePastedRoster(raw, interest) {
+  let added = 0;
+  let skipped = 0;
+  raw.split(/\r?\n/).map(line => line.trim()).filter(Boolean).forEach(line => {
+    const angle = line.match(/^(.*?)\s*<\s*([^>]+)\s*>$/);
+    let name = '';
+    let email = '';
+    if (angle) {
+      name = angle[1];
+      email = angle[2];
+    } else {
+      const parts = line.split(/[,;\t]+/).map(part => part.trim()).filter(Boolean);
+      const emailPart = parts.find(part => isEmail(part.toLowerCase()));
+      email = emailPart || '';
+      name = parts.filter(part => part !== emailPart).join(' ');
+      if (!name && email) name = email.split('@')[0].replace(/[._]+/g, ' ');
+    }
+    if (addRosterEntry(name, email, interest)) added += 1;
+    else skipped += 1;
+  });
+  return { added, skipped };
+}
+
+function removeRosterEntry(email) {
+  universityRoster = universityRoster.filter(entry => entry.email !== email);
+}
+
+function renderRoster() {
+  const list = $('#rosterList');
+  const empty = $('#rosterEmpty');
+  const count = $('#rosterCount');
+  const clear = $('#rosterClear') || $('[data-action="roster-clear"]');
+  if (!list) return;
+  list.replaceChildren();
+  universityRoster.forEach(entry => {
+    const row = document.createElement('li');
+    row.className = 'roster-row';
+    const main = document.createElement('div');
+    const name = document.createElement('span');
+    const email = document.createElement('span');
+    const tag = document.createElement('span');
+    const remove = document.createElement('button');
+    main.className = 'roster-row-main';
+    name.className = 'roster-row-name';
+    email.className = 'roster-row-email';
+    tag.className = 'roster-tag';
+    name.textContent = entry.name;
+    email.textContent = entry.email;
+    tag.textContent = entry.interest;
+    main.append(name, email);
+    remove.type = 'button';
+    remove.className = 'roster-remove';
+    remove.dataset.rosterRemove = entry.email;
+    remove.setAttribute('aria-label', 'Remove ' + entry.name);
+    remove.append(createIcon('icon-close'));
+    row.append(main, tag, remove);
+    list.append(row);
+  });
+  const total = universityRoster.length;
+  if (count) count.textContent = total + (total === 1 ? ' student' : ' students');
+  if (empty) empty.hidden = total > 0;
+  if (clear) clear.hidden = total === 0;
+}
+
+function universityPayload() {
+  const partner = partnerFieldValues();
+  return {
+    type: 'university_partner',
+    startedAt: Number($('#rosterAddForm')?.dataset.startedAt || Date.now() - 4000),
+    website: '',
+    consent: $('#uniConsent')?.checked === true,
+    contact: {
+      name: partner.contactName,
+      email: partner.contactEmail,
+      company: partner.orgName,
+    },
+    organizationType: partner.orgType,
+    roster: universityRoster.map(entry => ({ name: entry.name, email: entry.email, interest: entry.interest })),
+  };
+}
+
+async function submitRoster() {
+  const message = $('#rosterMessage');
+  const submit = $('[data-action="roster-submit"]');
+  const partner = partnerFieldValues();
+  message.classList.remove('is-success');
+  if (!partner.contactName || !isEmail(partner.contactEmail.toLowerCase()) || !partner.orgName || !partner.orgType) {
+    message.textContent = 'Add your name, a valid work email, your organization, and its type first.';
+    return;
+  }
+  if (!universityRoster.length) {
+    message.textContent = 'Add at least one student with a name and a valid email.';
+    return;
+  }
+  if (!$('#uniConsent')?.checked) {
+    message.textContent = 'Please confirm you can share these details with Covenda.';
+    return;
+  }
+  submit.disabled = true;
+  submit.textContent = 'Sending…';
+  try {
+    const result = await sendSubmission(universityPayload());
+    message.classList.add('is-success');
+    message.textContent = 'Roster received. Reference ' + result.reference + (result.storage === 'blob' ? ' · secure backup storage used.' : '.');
+    saveSubmission({
+      type: 'university_partner',
+      reference: result.reference,
+      status: result.status || 'received',
+      storage: result.storage || 'confirmed',
+      createdAt: result.createdAt || new Date().toISOString(),
+      title: partner.orgName + ' · student roster',
+      summary: universityRoster.length + (universityRoster.length === 1 ? ' student · ' : ' students · ') + partner.orgType,
+    });
+    universityRoster = [];
+    if ($('#uniConsent')) $('#uniConsent').checked = false;
+    renderRoster();
+    clearRosterDraft();
+    showToast('Your roster was received for pilot review.');
+    window.setTimeout(() => {
+      setAudience('university');
+      setSurface('workspace');
+      setWorkspaceTab('submissions');
+    }, 900);
+  } catch (error) {
+    message.classList.remove('is-success');
+    message.textContent = error.message;
+  } finally {
+    submit.disabled = false;
+    submit.innerHTML = 'Send roster to Covenda ' + iconUse('icon-arrow-right');
+  }
+}
+
+function openUniversityRoster() {
+  setSurface('site');
+  setAudience('university');
+  const builder = $('.roster-builder');
+  builder?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  window.setTimeout(() => $('#rosterName')?.focus(), 320);
+}
+
+function renderUniversityWorkspace() {
+  const partner = partnerFieldValues();
+  const draft = readStorage(universityDraftKey, null);
+  const rosterCount = universityRoster.length || (Array.isArray(draft?.roster) ? draft.roster.length : 0);
+  const orgName = partner.orgName || draft?.partner?.orgName || '';
+  const orgType = partner.orgType || draft?.partner?.orgType || '';
+  const lastSubmission = savedSubmissions().find(item => item.type === 'university_partner');
+
+  const workspaceCount = $('#workspaceRosterCount');
+  if (workspaceCount) workspaceCount.textContent = rosterCount + (rosterCount === 1 ? ' student on your roster' : ' students on your roster');
+  const workspaceOrg = $('#workspaceRosterOrg');
+  if (workspaceOrg) workspaceOrg.textContent = [orgName, orgType].filter(Boolean).join(' · ') || 'Add your organization details';
+  const workspaceReference = $('#workspaceRosterReference');
+  if (workspaceReference) workspaceReference.textContent = lastSubmission ? 'Received · ' + lastSubmission.reference : 'Nothing sent yet';
+
+  const summaryTitle = $('#universityWorkspaceSummaryTitle');
+  if (summaryTitle) summaryTitle.textContent = orgName || (rosterCount ? 'Roster in progress' : 'No roster shared yet');
+  const summary = $('#universityWorkspaceSummary');
+  if (summary) {
+    renderDefinitionList(summary, [
+      ['Organization', [orgName, orgType].filter(Boolean).join(' · ') || 'Add your organization and type.'],
+      ['Students', rosterCount ? rosterCount + (rosterCount === 1 ? ' student added' : ' students added') : 'Add students by interest area.'],
+      ['Last sent', lastSubmission ? lastSubmission.reference : 'Nothing sent yet.'],
+    ]);
+  }
+}
+
+function restoreRosterDraft() {
+  const draft = readStorage(universityDraftKey, null);
+  if (!draft) { renderRoster(); renderUniversityWorkspace(); return; }
+  if (draft.partner) {
+    if ($('#uniContactName')) $('#uniContactName').value = draft.partner.contactName || '';
+    if ($('#uniContactEmail')) $('#uniContactEmail').value = draft.partner.contactEmail || '';
+    if ($('#uniOrgName')) $('#uniOrgName').value = draft.partner.orgName || '';
+    if ($('#uniOrgType')) $('#uniOrgType').value = draft.partner.orgType || '';
+  }
+  if (Array.isArray(draft.roster)) {
+    universityRoster = draft.roster
+      .filter(entry => entry && entry.name && isEmail(String(entry.email || '').toLowerCase()))
+      .map(entry => ({ name: entry.name, email: String(entry.email).toLowerCase(), interest: universityInterests.includes(entry.interest) ? entry.interest : universityInterests[0] }));
+  }
+  renderRoster();
+  renderUniversityWorkspace();
+}
+
+const rosterAddForm = $('#rosterAddForm');
+if (rosterAddForm) {
+  rosterAddForm.dataset.startedAt = String(Date.now());
+  rosterAddForm.addEventListener('submit', event => {
+    event.preventDefault();
+    const nameField = $('#rosterName');
+    const emailField = $('#rosterEmail');
+    const interest = $('#rosterInterest')?.value || universityInterests[0];
+    const message = $('#rosterMessage');
+    message.classList.remove('is-success');
+    if (!nameField.value.trim() || !isEmail(emailField.value.trim().toLowerCase())) {
+      message.textContent = 'Add a student name and a valid email.';
+      return;
+    }
+    if (!addRosterEntry(nameField.value, emailField.value, interest)) {
+      message.textContent = 'That student is already on the roster.';
+      return;
+    }
+    message.textContent = '';
+    nameField.value = '';
+    emailField.value = '';
+    nameField.focus();
+    renderRoster();
+    saveRosterDraft();
+  });
+}
+
+for (const field of ['#uniContactName', '#uniContactEmail', '#uniOrgName', '#uniOrgType']) {
+  $(field)?.addEventListener('change', saveRosterDraft);
+}
+
+$('#rosterList')?.addEventListener('click', event => {
+  const button = event.target.closest('[data-roster-remove]');
+  if (!button) return;
+  removeRosterEntry(button.dataset.rosterRemove);
+  renderRoster();
+  saveRosterDraft();
+});
+
 $$('[data-audience-option]').forEach(button => button.addEventListener('click', () => setAudience(button.dataset.audienceOption)));
 $$('[data-workspace-tab]').forEach(button => button.addEventListener('click', () => setWorkspaceTab(button.dataset.workspaceTab)));
 $$('[data-work-type]').forEach(button => button.addEventListener('click', () => {
@@ -1227,6 +1594,27 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
       saveDraft(companyForm);
     }
   }
+  if (action === 'schedule-demo') scheduleDemo();
+  if (action === 'university-roster') openUniversityRoster();
+  if (action === 'roster-paste') {
+    const textarea = $('#rosterPaste');
+    const interest = $('#rosterInterest')?.value || universityInterests[0];
+    const message = $('#rosterMessage');
+    const result = parsePastedRoster(textarea.value, interest);
+    textarea.value = '';
+    renderRoster();
+    saveRosterDraft();
+    message.classList.remove('is-success');
+    message.textContent = result.added
+      ? 'Added ' + result.added + (result.added === 1 ? ' student' : ' students') + (result.skipped ? ' · ' + result.skipped + ' skipped (duplicate or invalid).' : '.')
+      : 'No students added. Use one per line as “Name, email”.';
+  }
+  if (action === 'roster-clear') {
+    universityRoster = [];
+    renderRoster();
+    saveRosterDraft();
+  }
+  if (action === 'roster-submit') submitRoster();
   if (action === 'explore-work') $('#workTypes').scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (action === 'project-fit') $('#projectFit').scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (action === 'replay-intro') {
@@ -1247,7 +1635,8 @@ $('#submissionHistory').addEventListener('click', event => {
   if (!button) return;
   const action = button.dataset.receiptAction;
   if (action === 'start') {
-    if (state.audience === 'student') openDialog(studentDialog, studentForm);
+    if (state.audience === 'university') openUniversityRoster();
+    else if (state.audience === 'student') openDialog(studentDialog, studentForm);
     else openDialog(companyDialog, companyForm);
     return;
   }
@@ -1270,12 +1659,53 @@ $('#introScreen').addEventListener('cancel', event => {
 });
 
 const restoredAudience = readStorage(audienceStorageKey, 'student');
-if (['student', 'company'].includes(restoredAudience)) state.audience = restoredAudience;
+if (['student', 'company', 'university'].includes(restoredAudience)) state.audience = restoredAudience;
 const restoredWorkTypes = checkedValues(studentForm, 'workType');
 const rememberedWorkType = readStorage(workTypeStorageKey, 'Research');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];
 else if (rememberedWorkType) state.workType = rememberedWorkType;
+// ---- Motion (adapted from design_handoff_covenda_motion/covenda-motion.js) ----
+// Vanilla helper: play anything marked [data-animate] once it scrolls into view.
+function initCovendaMotion(root = document) {
+  const els = $$('[data-animate]:not([data-play])', root);
+  if (!('IntersectionObserver' in window)) {
+    els.forEach(el => el.setAttribute('data-play', ''));
+    return;
+  }
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.setAttribute('data-play', '');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.25 });
+  els.forEach(el => observer.observe(el));
+}
+
+// Demo 2: coordinated Problem -> Packet -> Proof sequence. Armed only when
+// motion is allowed, so no-JS and reduced-motion visitors keep static content.
+function initFlowDemo() {
+  const demo = $('#flowDemo');
+  if (!demo) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduceMotion || !('IntersectionObserver' in window)) return;
+  demo.classList.add('is-armed');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        demo.classList.add('is-playing');
+        observer.disconnect();
+      }
+    });
+  }, { threshold: 0.3 });
+  observer.observe(demo);
+}
+
+restoreRosterDraft();
 renderLocalSubmissionState();
 selectWorkType(state.workType);
 setAudience(state.audience);
+initCovendaMotion();
+initFlowDemo();
 window.requestAnimationFrame(() => openIntro());

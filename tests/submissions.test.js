@@ -13,6 +13,7 @@ import handler, {
   submissionDetails,
   submissionRow,
   supabaseConfiguration,
+  universityRecord,
 } from '../api/submissions.js';
 
 function responseRecorder() {
@@ -170,6 +171,33 @@ test('callRecord requires a dated call request', () => {
 
 test('submissionDetails rejects unknown submission types', () => {
   assert.throws(() => submissionDetails({ type: 'admin_export' }), /valid submission type/i);
+});
+
+test('universityRecord keeps a validated student roster and drops invalid rows', () => {
+  const record = universityRecord({
+    type: 'university_partner',
+    contact: { name: 'Dana Advisor', email: 'dana@school.edu', company: 'Example University' },
+    organizationType: 'University / department',
+    roster: [
+      { name: 'Jordan Lee', email: 'jordan@school.edu', interest: 'Research' },
+      { name: 'No Email', email: 'not-an-email', interest: 'Operations' },
+      { name: '', email: 'blank@school.edu', interest: 'Research' },
+    ],
+  });
+  assert.equal(record.contact.company, 'Example University');
+  assert.equal(record.roster.length, 1);
+  assert.deepEqual(record.roster[0], { name: 'Jordan Lee', email: 'jordan@school.edu', interest: 'Research' });
+});
+
+test('universityRecord requires an organization type and at least one student', () => {
+  const base = {
+    type: 'university_partner',
+    contact: { name: 'Dana Advisor', email: 'dana@school.edu', company: 'Example University' },
+    organizationType: 'Career center',
+    roster: [{ name: 'Jordan Lee', email: 'jordan@school.edu', interest: 'Research' }],
+  };
+  assert.throws(() => universityRecord({ ...base, roster: [] }), /at least one student/i);
+  assert.throws(() => universityRecord({ ...base, organizationType: '' }), /organization type/i);
 });
 
 test('submissionRow maps a private intake into queryable database fields', () => {
