@@ -619,6 +619,7 @@ function renderReview(form) {
       ['Availability', [formValue(form, 'studentAvailability'), formValue(form, 'studentHours'), formValue(form, 'studentDuration')].filter(Boolean).join(' · ')],
       ['Project terms', [formValue(form, 'studentCompensation'), formValue(form, 'studentPriority')].filter(Boolean).join(' · ')],
       ['Video intro', videoIntroReviewLabel(formValue(form, 'studentVideoIntro'))],
+      ['Batch', formValue(form, 'studentBatch') || 'Not joined via a batch'],
     ]);
     return;
   }
@@ -1145,6 +1146,7 @@ function studentPayload(form) {
       videoIntro: formValue(form, 'studentVideoIntro'),
     },
     videoTranscript: formValue(form, 'studentVideoTranscript'),
+    batch: formValue(form, 'studentBatch'),
     availability: formValue(form, 'studentAvailability'),
     preferences: {
       hoursPerWeek: formValue(form, 'studentHours'),
@@ -1722,6 +1724,10 @@ function detectVideoHost(raw) {
   let u;
   try { u = new URL(clean); } catch { return null; }
   if (u.protocol !== 'https:') return null;
+  // A recording we stored (Vercel Blob) or a direct video file plays natively.
+  if (/\.blob\.vercel-storage\.com$/.test(u.hostname) || /\.(webm|mp4|mov|m4v)$/i.test(u.pathname)) {
+    return { name: 'Recording', native: true, src: u.toString() };
+  }
   for (const host of VIDEO_HOSTS) {
     if (host.test(u.hostname)) {
       const embed = host.embed(u);
@@ -1756,24 +1762,34 @@ function renderVideoIntroCard(container, rawUrl, opts = {}) {
   container.hidden = false;
   const card = document.createElement('div');
   card.className = 'video-intro-player';
-  const poster = document.createElement('div');
-  poster.className = 'video-poster';
-  poster.innerHTML =
-    '<button type="button" class="video-play" aria-label="Play video introduction">'
-    + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>'
-    + '<span class="video-duration">≈ 1 min</span>'
-    + '<span class="video-host">' + host.name + '</span>';
-  poster.querySelector('.video-play').addEventListener('click', () => {
-    const frame = document.createElement('iframe');
-    frame.src = host.embed;
-    frame.title = 'Video introduction';
-    frame.className = 'video-frame';
-    frame.loading = 'lazy';
-    frame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
-    frame.setAttribute('allowfullscreen', '');
-    poster.replaceWith(frame);
-  });
-  card.append(poster);
+  if (host.native) {
+    const vid = document.createElement('video');
+    vid.className = 'video-frame';
+    vid.src = host.src;
+    vid.controls = true;
+    vid.playsInline = true;
+    vid.preload = 'metadata';
+    card.append(vid);
+  } else {
+    const poster = document.createElement('div');
+    poster.className = 'video-poster';
+    poster.innerHTML =
+      '<button type="button" class="video-play" aria-label="Play video introduction">'
+      + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>'
+      + '<span class="video-duration">≈ 1 min</span>'
+      + '<span class="video-host">' + host.name + '</span>';
+    poster.querySelector('.video-play').addEventListener('click', () => {
+      const frame = document.createElement('iframe');
+      frame.src = host.embed;
+      frame.title = 'Video introduction';
+      frame.className = 'video-frame';
+      frame.loading = 'lazy';
+      frame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+      frame.setAttribute('allowfullscreen', '');
+      poster.replaceWith(frame);
+    });
+    card.append(poster);
+  }
   const actions = document.createElement('div');
   actions.className = 'video-actions';
   const replace = document.createElement('button');
@@ -1817,6 +1833,150 @@ function renderVideoIntroCard(container, rawUrl, opts = {}) {
   sync();
 })();
 
+// ---- In-browser video-intro recorder (full-screen overlay) ---------------
+// Opens a large, focused recorder as a modal <dialog> (so it stacks above the
+// intake form): big camera, a standard 3-2-1 pre-roll countdown, a clean mono
+// timer, then Retake / Use. Uploads to /api/video-upload and saves the returned
+// URL as the video intro. Degrades gracefully when recording/camera is unavailable.
+(() => {
+  const toggle = document.querySelector('[data-video-record-toggle]');
+  const input = document.querySelector('[data-video-intro-input]');
+  if (!toggle || !input) return;
+  const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && typeof MediaRecorder !== 'undefined';
+  if (!canRecord) { toggle.hidden = true; return; }
+
+  const MAX_SECONDS = 60;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fmt = s => '0:' + String(s).padStart(2, '0');
+  let overlay = null, body = null, stream = null, recorder = null, chunks = [], timer = null, seconds = 0, recordedBlob = null;
+
+  function teardown() {
+    if (timer) clearInterval(timer);
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = recorder = null;
+    if (overlay) overlay.remove();
+    overlay = body = null;
+  }
+  function closeRec() { if (overlay && overlay.open) overlay.close(); else teardown(); }
+
+  function ensureOverlay() {
+    overlay = document.createElement('dialog');
+    overlay.className = 'rec-overlay';
+    overlay.setAttribute('aria-label', 'Record a one-minute video intro');
+    const panel = document.createElement('div'); panel.className = 'rec-panel';
+    const head = document.createElement('div'); head.className = 'rec-head';
+    const heading = document.createElement('div');
+    heading.innerHTML = '<p class="rec-kicker">Video intro</p><h3 class="rec-title">Record a 1-minute intro</h3>';
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button'; closeBtn.className = 'rec-close'; closeBtn.setAttribute('aria-label', 'Close recorder'); closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', closeRec);
+    head.append(heading, closeBtn);
+    body = document.createElement('div'); body.className = 'rec-body';
+    panel.append(head, body);
+    overlay.append(panel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeRec(); });
+    overlay.addEventListener('close', teardown);
+    document.body.append(overlay);
+    overlay.showModal();
+  }
+  function status(cls, text) {
+    body.innerHTML = '';
+    const p = document.createElement('p'); p.className = cls; p.setAttribute('role', 'status'); p.textContent = text;
+    body.append(p);
+  }
+  async function open() {
+    if (!overlay) ensureOverlay();
+    status('rec-status', 'Requesting camera…');
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: true });
+    } catch {
+      body.innerHTML = '';
+      const p = document.createElement('p'); p.className = 'rec-error';
+      p.textContent = 'Camera access was blocked. Allow the camera in your browser, or close this and paste a video link instead.';
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'outline-button'; b.textContent = 'Close'; b.addEventListener('click', closeRec);
+      body.append(p, b);
+      return;
+    }
+    renderLive();
+  }
+  function renderLive() {
+    body.innerHTML = '';
+    const stage = document.createElement('div'); stage.className = 'rec-stage';
+    const preview = document.createElement('video'); preview.className = 'rec-video is-mirror'; preview.autoplay = true; preview.muted = true; preview.playsInline = true; preview.srcObject = stream;
+    const timerEl = document.createElement('div'); timerEl.className = 'rec-timer';
+    timerEl.innerHTML = '<span class="rec-dot"></span><span class="rec-time">0:00</span><span class="rec-max">/ 1:00</span>';
+    const count = document.createElement('div'); count.className = 'rec-count'; count.hidden = true;
+    stage.append(preview, timerEl, count);
+    const controls = document.createElement('div'); controls.className = 'rec-controls';
+    const recBtn = document.createElement('button'); recBtn.type = 'button'; recBtn.className = 'gold-button rec-record'; recBtn.textContent = 'Record';
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'quiet-link'; cancel.textContent = 'Cancel'; cancel.addEventListener('click', closeRec);
+    controls.append(recBtn, cancel);
+    body.append(stage, controls);
+    let recording = false;
+    recBtn.addEventListener('click', () => {
+      if (recording) { stop(); return; }
+      recording = true; recBtn.disabled = true;
+      countdown(count, () => { recBtn.disabled = false; recBtn.textContent = 'Stop'; recBtn.classList.add('is-recording'); startRec(timerEl); });
+    });
+  }
+  function countdown(el, done) {
+    if (reduce) { done(); return; }  // reduced motion: no animated pre-roll
+    let n = 3;
+    el.hidden = false; el.textContent = n; el.classList.add('pop');
+    const iv = setInterval(() => {
+      n -= 1;
+      if (n <= 0) { clearInterval(iv); el.hidden = true; done(); return; }
+      el.textContent = n; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+    }, 1000);
+  }
+  function startRec(timerEl) {
+    chunks = []; seconds = 0; recordedBlob = null;
+    timerEl.querySelector('.rec-dot').classList.add('is-live');
+    const time = timerEl.querySelector('.rec-time');
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
+      : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '';
+    recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => { recordedBlob = new Blob(chunks, { type: (recorder && recorder.mimeType) || 'video/webm' }); renderReview(); };
+    recorder.start();
+    timer = setInterval(() => { seconds += 1; time.textContent = fmt(seconds); if (seconds >= MAX_SECONDS) stop(); }, 1000);
+  }
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  }
+  function renderReview() {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    body.innerHTML = '';
+    const stage = document.createElement('div'); stage.className = 'rec-stage';
+    const vid = document.createElement('video'); vid.className = 'rec-video'; vid.src = URL.createObjectURL(recordedBlob); vid.controls = true; vid.playsInline = true;
+    stage.append(vid);
+    const controls = document.createElement('div'); controls.className = 'rec-controls';
+    const retake = document.createElement('button'); retake.type = 'button'; retake.className = 'outline-button'; retake.textContent = 'Retake'; retake.addEventListener('click', open);
+    const use = document.createElement('button'); use.type = 'button'; use.className = 'gold-button'; use.textContent = 'Use this intro';
+    const st = document.createElement('p'); st.className = 'rec-status'; st.setAttribute('role', 'status');
+    use.addEventListener('click', () => upload(st, use, retake));
+    controls.append(retake, use);
+    body.append(stage, controls, st);
+  }
+  async function upload(st, use, retake) {
+    use.disabled = true; retake.disabled = true; st.textContent = 'Saving your intro…';
+    try {
+      const res = await fetch('/api/video-upload', { method: 'POST', headers: { 'Content-Type': recordedBlob.type || 'video/webm' }, body: recordedBlob });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error || 'Could not save the recording.');
+      input.value = data.url; input.dispatchEvent(new Event('input', { bubbles: true }));
+      closeRec();
+      if (typeof showToast === 'function') showToast('Video intro saved.');
+    } catch (e) {
+      use.disabled = false; retake.disabled = false;
+      st.textContent = (e && e.message) ? e.message : 'Could not save. You can paste a link instead.';
+    }
+  }
+  toggle.addEventListener('click', open);
+})();
+
 // ---- University school-logo marquee --------------------------------------
 // The <li> logos in index.html are the single editable source (placeholder,
 // illustrative marks — real logos need trademark permission). Without JS the row
@@ -1835,6 +1995,44 @@ function renderVideoIntroCard(container, rawUrl, opts = {}) {
     track.append(clone);
   }
   track.dataset.mode = 'marquee';
+})();
+
+// ---- Student batches -----------------------------------------------------
+// Themed pilot cohorts by function. SINGLE editable source — add/remove/edit
+// entries here to control which batches appear. A batch is an interest signal and
+// a way to build a track record through completed reviewed work, NOT a placement,
+// job, ranking, or guarantee. NOTE: the batch a student joins is captured on the
+// student submission (details.batch) — this structured batch + outcome data is the
+// intended future training-data source for a per-function capability assessment
+// (see the Litmus/batches prompt, Part G — no model or scoring is built yet).
+const BATCHES = [
+  { id: 'acct-ops', function: 'Accounting Operations', title: 'Accounting Operations — pilot cohort', description: 'Reconciliations, cleanups, and workflow docs from real, de-identified finance work.', status: 'Pilot cohort · limited seats' },
+  { id: 'research', function: 'Research & Synthesis', title: 'Research & Synthesis', description: 'Public-source market maps, competitor scans, and customer synthesis briefs.', status: 'Pilot cohort · limited seats' },
+  { id: 'qa-testing', function: 'QA & Testing', title: 'QA & Testing', description: 'Manual test passes, reproducible bug reports, and structured test cases.', status: 'Forming' },
+  { id: 'data-spreadsheets', function: 'Data & Spreadsheets', title: 'Data & Spreadsheets', description: 'Cleanup, validation, and clear models on approved datasets.', status: 'Forming' },
+];
+function joinBatch(batch) {
+  const field = $('#studentBatch');
+  if (field) field.value = batch.id + ' · ' + batch.function;
+  openDialog(studentDialog, studentForm);
+  if (field) saveDraft(studentForm);
+}
+(() => {
+  const grid = document.querySelector('[data-batch-grid]');
+  if (!grid) return;
+  grid.textContent = '';
+  for (const batch of BATCHES) {
+    const card = document.createElement('article');
+    card.className = 'batch-card glass-panel';
+    const fn = document.createElement('p'); fn.className = 'batch-function'; fn.textContent = batch.function;
+    const title = document.createElement('h3'); title.className = 'batch-title'; title.textContent = batch.title;
+    const desc = document.createElement('p'); desc.className = 'batch-desc'; desc.textContent = batch.description;
+    const status = document.createElement('span'); status.className = 'batch-status'; status.textContent = batch.status;
+    const join = document.createElement('button'); join.type = 'button'; join.className = 'gold-button batch-join'; join.textContent = 'Join this batch';
+    join.addEventListener('click', () => joinBatch(batch));
+    card.append(fn, title, desc, status, join);
+    grid.append(card);
+  }
 })();
 
 $('#submissionHistory').addEventListener('click', event => {

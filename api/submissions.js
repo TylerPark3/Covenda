@@ -190,6 +190,10 @@ export function studentRecord(body) {
       videoIntro: webUrl(links.videoIntro),
     },
     videoTranscript: text(body.videoTranscript, 2_000),
+    // Batch the student joined via, if any. Structured (stored in details jsonb) so
+    // batch + outcome data can become training data for a future per-function
+    // capability assessment — no model or scoring exists yet (see prompt Part G).
+    batch: text(body.batch, 120),
     availability: text(body.availability, 80),
     preferences: {
       hoursPerWeek: text(preferences.hoursPerWeek, 80),

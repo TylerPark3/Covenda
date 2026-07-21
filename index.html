@@ -334,6 +334,23 @@
         </div>
       </section>
 
+      <section class="value-band">
+        <div class="value-band-inner">
+          <div class="value-col">
+            <p class="value-metric">Fixed pay</p>
+            <p class="value-line">Confirmed before any work starts. No spec work.</p>
+          </div>
+          <div class="value-col">
+            <p class="value-metric">Safe boundary</p>
+            <p class="value-line">Public or approved inputs only. Never restricted records.</p>
+          </div>
+          <div class="value-col">
+            <p class="value-metric">Kept proof</p>
+            <p class="value-line">Accepted work becomes a record the student controls.</p>
+          </div>
+        </div>
+      </section>
+
       <section class="why-section" id="why">
         <div class="student-why audience-content" data-for-audience="student">
           <div class="why-copy"><h2>One profile. Evidence tied to the work.</h2><p>Covenda does not reduce you to one universal score. Each project can show the specific capabilities, inputs, review, revisions, and outcome behind it.</p><button class="outline-button" type="button" data-action="workspace">Preview your workspace<svg><use href="#icon-arrow-right"/></svg></button></div>
@@ -361,6 +378,15 @@
             <div><span>Not included</span><strong>Accounts, rankings, automatic placement, or a guarantee of paid work</strong></div>
           </div>
         </div>
+      </section>
+
+      <section class="batches-section" id="batches">
+        <div class="section-heading">
+          <p class="feature-kicker">Build credibility</p>
+          <h2>Join a batch in your function.</h2>
+          <p>A batch is a small pilot cohort focused on one kind of work. You build a track record by completing bounded, reviewed projects—not by joining. A batch is an interest signal, not a placement or job guarantee.</p>
+        </div>
+        <div class="batch-grid" id="batchGrid" data-batch-grid></div>
       </section>
 
       <section class="final-cta">
@@ -487,6 +513,7 @@
 
   <dialog class="form-dialog" id="studentDialog" aria-labelledby="studentDialogTitle">
     <form id="studentForm">
+      <input type="hidden" name="studentBatch" id="studentBatch">
       <header class="dialog-header"><div><small>Student interest profile</small><h2 id="studentDialogTitle">Tell us what you want to prove.</h2></div><div class="dialog-tools"><span data-draft-status>Draft saves on this device</span><button type="button" class="draft-clear" data-clear-draft>Clear draft</button><button type="button" class="icon-button" data-close-dialog aria-label="Close student form"><svg><use href="#icon-close"/></svg></button></div></header>
       <div class="form-progress" aria-label="Student form progress"><span class="is-active">1. You</span><span>2. Work</span><span>3. Fit</span><span>4. Review</span></div>
       <section class="form-step is-active" data-student-step="1">
@@ -500,6 +527,10 @@
           <label>Timezone<select name="studentTimezone" required><option value="">Choose one</option><option>Eastern</option><option>Central</option><option>Mountain</option><option>Pacific</option><option>Outside the United States</option></select></label>
           <label>Portfolio or work sample URL <span>Optional</span><input name="studentPortfolio" type="url" placeholder="https://"></label>
           <label class="wide">One-minute video intro <span>Optional</span><input name="studentVideoIntro" type="url" inputmode="url" placeholder="https:// — Loom, YouTube, or Vimeo" data-video-intro-input aria-describedby="videoIntroHelp"><small class="field-help" id="videoIntroHelp">A short hello helps a reviewer put a face to the work — optional, private by default.</small></label>
+          <div class="video-record wide">
+            <button type="button" class="quiet-link" data-video-record-toggle>Or record a 1-minute intro right here<svg><use href="#icon-arrow-right"/></svg></button>
+            <div class="video-recorder" data-video-recorder hidden></div>
+          </div>
           <div class="video-intro-card wide" id="studentVideoIntroCard" data-video-card></div>
           <label class="wide video-transcript-field" data-video-transcript-field hidden>Video transcript or captions <span>Optional · improves accessibility</span><textarea name="studentVideoTranscript" rows="3" placeholder="Paste a short transcript so your intro is accessible to everyone…"></textarea></label>
         </div>
