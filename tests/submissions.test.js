@@ -161,6 +161,27 @@ test('studentRecord requires a real skill claim and project preferences', () => 
   assert.throws(() => studentRecord(incomplete), /at least one skill/i);
 });
 
+test('studentRecord keeps an optional video intro link and transcript', () => {
+  const withVideo = structuredClone(validStudent);
+  withVideo.links = { ...validStudent.links, videoIntro: 'https://www.loom.com/share/abc123def456' };
+  withVideo.videoTranscript = 'Hi, I am Jordan — a quick hello and what I want to prove.';
+  const record = studentRecord(withVideo);
+  assert.equal(record.links.videoIntro, 'https://www.loom.com/share/abc123def456');
+  assert.equal(record.videoTranscript, 'Hi, I am Jordan — a quick hello and what I want to prove.');
+});
+
+test('studentRecord stays valid with no video intro (optional)', () => {
+  const record = studentRecord(validStudent);
+  assert.equal(record.links.videoIntro, '');
+  assert.equal(record.videoTranscript, '');
+});
+
+test('studentRecord rejects a non-http video intro link', () => {
+  const badVideo = structuredClone(validStudent);
+  badVideo.links = { ...validStudent.links, videoIntro: 'ftp://sketchy.example/video' };
+  assert.throws(() => studentRecord(badVideo), /valid HTTP or HTTPS/i);
+});
+
 test('callRecord requires a dated call request', () => {
   const record = callRecord({
     contact: { name: 'Avery Owner', email: 'avery@example.com', company: 'Example Accounting' },

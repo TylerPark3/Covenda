@@ -476,6 +476,137 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   line-height: 1.5;
   color: #6c6c67;
 }
+
+/* Optional one-minute student video intro */
+.field-help { display: block; margin-top: 6px; font-size: 12.5px; line-height: 1.5; color: #6c6c67; }
+.video-intro-card { grid-column: 1 / -1; }
+.video-intro-card[hidden], .video-transcript-field[hidden] { display: none; }
+.video-intro-warn {
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #fdf6e6;
+  border: 1px solid #e6d6a6;
+  color: #9a6a12;
+  font-size: 13px;
+  font-weight: 600;
+}
+.video-intro-player { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+.video-poster, .video-frame {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 18px;
+  display: block;
+}
+.video-poster {
+  position: relative;
+  background:
+    radial-gradient(120% 120% at 28% 12%, rgba(231,198,121,.6), transparent 60%),
+    radial-gradient(120% 120% at 82% 92%, rgba(180,123,32,.34), transparent 55%),
+    var(--gold-pale);
+  border: 1px solid var(--gold-light);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+.video-play {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--gold);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(169,130,47,.28);
+  transition: transform .2s ease, background .2s ease;
+}
+.video-poster:hover .video-play { transform: scale(1.06); background: var(--gold-deep); }
+.video-play svg { width: 26px; height: 26px; fill: currentColor; margin-left: 3px; }
+.video-play:focus-visible { outline: 3px solid var(--gold-deep); outline-offset: 3px; }
+.video-duration, .video-host {
+  position: absolute;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  background: rgba(255,255,255,.92);
+  color: var(--ink);
+}
+.video-duration { left: 12px; bottom: 12px; }
+.video-host { right: 12px; top: 12px; color: var(--gold-deep); }
+.video-frame { background: #000; }
+.video-actions { display: flex; gap: 12px; align-items: center; }
+.video-remove { color: #b4322a; }
+.video-remove:hover { color: #8f231d; }
+.video-privacy { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12.5px; color: #6c6c67; }
+.video-privacy svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; flex-shrink: 0; }
+@media (prefers-reduced-motion: reduce) {
+  .video-play, .video-poster:hover .video-play { transition: none; transform: none; }
+}
+@media (max-width: 640px) {
+  .video-play { width: 54px; height: 54px; }
+}
+
+/* University school-logo strip (light social proof, university audience only) */
+.school-strip { margin: 26px auto 30px; max-width: 760px; }
+.school-strip-label {
+  margin: 0 0 14px;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #8a8a84;
+}
+.school-strip-viewport {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.school-strip-track {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px 46px;
+  margin: 0;
+  padding: 4px 8px;
+  list-style: none;
+}
+.school-strip-track[data-mode="marquee"] {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  width: max-content;
+  animation: school-scroll 38s linear infinite;
+}
+.school-strip-viewport:hover .school-strip-track[data-mode="marquee"],
+.school-strip-track[data-mode="marquee"]:focus-within { animation-play-state: paused; }
+.school-logo {
+  flex: 0 0 auto;
+  color: #3a3a36;
+  opacity: .46;
+  transition: opacity .25s ease;
+}
+.school-logo:hover { opacity: .9; }
+.school-logo svg { display: block; height: 26px; width: auto; }
+.school-logo a { display: block; }
+.school-logo a:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 3px; border-radius: 4px; }
+@keyframes school-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .school-strip-track[data-mode="marquee"] { animation: none; flex-wrap: wrap; width: auto; justify-content: center; }
+}
+@media (max-width: 640px) {
+  .school-strip-track { gap: 12px 30px; }
+  .school-logo svg { height: 22px; }
+}
 .prompt-links { display: flex; justify-content: center; gap: 50px; margin-top: 34px; }
 .prompt-links button { display: inline-flex; align-items: center; gap: 5px; }
 .prompt-links button:hover { color: var(--gold-deep); }
@@ -494,6 +625,21 @@ body[data-audience="university"] .hero-university { display: block; }
 body[data-audience="university"] .audience-content[data-for-audience="student"],
 body[data-audience="university"] .audience-content[data-for-audience="company"] { display: none; }
 body[data-audience="university"] .audience-content[data-for-audience="university"] { display: block; }
+
+/* Information architecture: company & university are lean, single-purpose surfaces
+   — only their hero + primary action. The full home page (core story, how-it-works,
+   proof, final CTA) is student-only, so the same content is not re-shown across all
+   three audiences. */
+body[data-audience="company"] #how,
+body[data-audience="company"] #why,
+body[data-audience="company"] .final-cta,
+body[data-audience="university"] #how,
+body[data-audience="university"] #why,
+body[data-audience="university"] .final-cta { display: none; }
+/* Hide hero sub-links whose scroll targets live in the now-hidden sections. */
+body[data-audience="company"] .hero-company .scroll-cue,
+body[data-audience="company"] .hero-company [data-action="project-fit"],
+body[data-audience="university"] .hero-university .scroll-cue { display: none; }
 
 .how-section, .why-section {
   padding: clamp(78px, 10vw, 150px) var(--page-gutter);
@@ -1185,13 +1331,16 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12px; font-weight: 650;
 /* ---- Demo 2 · Problem -> Packet -> Proof --------------------------- */
 .flow-demo {
   width: min(100%, var(--content));
-  margin: 0 auto clamp(52px, 7vw, 92px);
+  margin: 0 auto clamp(96px, 11vw, 168px);
   padding: 0;
 }
 /* Core story is the opening/default home view only — not repeated per audience. */
 body[data-audience="company"] #flowDemo,
 body[data-audience="university"] #flowDemo,
 body[data-audience-switched] #flowDemo { display: none; }
+/* Extra breathing room below the core story, before "Real work becomes credible
+   evidence". Uses #id so it beats `.how-section > div { margin: 0 auto }`. */
+#flowDemo { margin-bottom: clamp(96px, 11vw, 168px); }
 .flow-demo-head { max-width: 640px; margin: 0 0 clamp(22px, 2.6vw, 34px); }
 .flow-demo-kicker {
   margin: 0 0 8px;

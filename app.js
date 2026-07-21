@@ -381,6 +381,9 @@ function setWorkspaceTab(tabName) {
 function openDialog(dialog, form) {
   form.dataset.startedAt = String(Date.now());
   const savedStep = restoreDraft(form);
+  // Re-render the optional video-intro preview when a draft is restored
+  // (applyFormValues sets values without firing input events). No-op elsewhere.
+  form.querySelector('[data-video-intro-input]')?.dispatchEvent(new Event('input', { bubbles: true }));
   setFormStep(form, savedStep);
   $('.form-message', form).textContent = '';
   $('.form-message', form).classList.remove('is-success');
@@ -615,6 +618,7 @@ function renderReview(form) {
       ['Industry interest', formValue(form, 'studentIndustry')],
       ['Availability', [formValue(form, 'studentAvailability'), formValue(form, 'studentHours'), formValue(form, 'studentDuration')].filter(Boolean).join(' · ')],
       ['Project terms', [formValue(form, 'studentCompensation'), formValue(form, 'studentPriority')].filter(Boolean).join(' · ')],
+      ['Video intro', videoIntroReviewLabel(formValue(form, 'studentVideoIntro'))],
     ]);
     return;
   }
@@ -669,6 +673,15 @@ function renderWorkspaceDrafts() {
       ['Strongest skill', [draftValue(studentDraft, 'studentSkill'), draftValue(studentDraft, 'studentSkillLevel')].filter(Boolean).join(' · ')],
       ['Availability', [draftValue(studentDraft, 'studentAvailability'), draftValue(studentDraft, 'studentHours')].filter(Boolean).join(' · ')],
     ]);
+    renderVideoIntroCard($('#studentVideoIntroWorkspace'), draftValue(studentDraft, 'studentVideoIntro'), {
+      context: 'workspace',
+      onReplace: () => $('[data-action="student-form"]')?.click(),
+      onRemove: () => {
+        const draft = readStorage(draftKeys.studentForm, null);
+        if (draft?.values) { draft.values.studentVideoIntro = ''; writeStorage(draftKeys.studentForm, draft); }
+        renderWorkspaceDrafts();
+      },
+    });
   } else {
     $('#studentWorkspaceSummaryTitle').textContent = 'No draft details yet';
     renderDefinitionList($('#studentWorkspaceSummary'), [
@@ -676,6 +689,8 @@ function renderWorkspaceDrafts() {
       ['Strongest skill', 'Add an honest current level.'],
       ['Availability', 'Set your preferred timing.'],
     ]);
+    const workspaceCard = $('#studentVideoIntroWorkspace');
+    if (workspaceCard) workspaceCard.hidden = true;
   }
 
   if (hasCompanyDraft) {
@@ -1127,7 +1142,9 @@ function studentPayload(form) {
     links: {
       portfolio: formValue(form, 'studentPortfolio'),
       github: '',
+      videoIntro: formValue(form, 'studentVideoIntro'),
     },
+    videoTranscript: formValue(form, 'studentVideoTranscript'),
     availability: formValue(form, 'studentAvailability'),
     preferences: {
       hoursPerWeek: formValue(form, 'studentHours'),
@@ -1669,6 +1686,155 @@ function classifyProblemFit(text) {
   };
   seed.addEventListener('input', update);
   update();
+})();
+
+// ---- Optional one-minute student video intro -----------------------------
+// Link-based MVP: accept an already-hosted Loom / YouTube / Vimeo URL and show a
+// polished, click-to-load player. No third-party iframe/script loads until the
+// student clicks play — privacy-friendly, reduced-motion safe, and keeps the
+// page fast. The card renders in the intake dialog and the workspace profile.
+const VIDEO_HOSTS = [
+  {
+    name: 'Loom',
+    test: host => /(^|\.)loom\.com$/.test(host),
+    embed: u => { const id = u.pathname.split('/').filter(Boolean).pop(); return id ? 'https://www.loom.com/embed/' + encodeURIComponent(id) : null; },
+  },
+  {
+    name: 'YouTube',
+    test: host => /(^|\.)youtube\.com$/.test(host) || /(^|\.)youtu\.be$/.test(host),
+    embed: u => {
+      let id = '';
+      if (/youtu\.be$/.test(u.hostname)) id = u.pathname.split('/').filter(Boolean)[0] || '';
+      else if (u.pathname.startsWith('/embed/') || u.pathname.startsWith('/shorts/')) id = u.pathname.split('/').filter(Boolean)[1] || '';
+      else id = u.searchParams.get('v') || '';
+      return /^[\w-]{6,20}$/.test(id) ? 'https://www.youtube-nocookie.com/embed/' + id : null;
+    },
+  },
+  {
+    name: 'Vimeo',
+    test: host => /(^|\.)vimeo\.com$/.test(host),
+    embed: u => { const id = u.pathname.split('/').filter(Boolean).pop(); return /^\d+$/.test(id) ? 'https://player.vimeo.com/video/' + id : null; },
+  },
+];
+function detectVideoHost(raw) {
+  const clean = (raw || '').trim();
+  if (!clean) return null;
+  let u;
+  try { u = new URL(clean); } catch { return null; }
+  if (u.protocol !== 'https:') return null;
+  for (const host of VIDEO_HOSTS) {
+    if (host.test(u.hostname)) {
+      const embed = host.embed(u);
+      if (embed) return { name: host.name, embed, watch: u.toString() };
+    }
+  }
+  return null;
+}
+function videoIntroReviewLabel(raw) {
+  if (!(raw || '').trim()) return 'Not added';
+  const host = detectVideoHost(raw);
+  return host ? host.name + ' intro added' : 'Link needs a valid Loom, YouTube, or Vimeo URL';
+}
+function renderVideoIntroCard(container, rawUrl, opts = {}) {
+  if (!container) return;
+  const host = detectVideoHost(rawUrl);
+  const hasText = Boolean((rawUrl || '').trim());
+  container.textContent = '';
+  container.dataset.state = host ? 'added' : (hasText ? 'invalid' : 'empty');
+  if (!host) {
+    // In the workspace there is no input, so hide entirely when nothing valid.
+    if (opts.context === 'workspace') { container.hidden = true; return; }
+    if (!hasText) { container.hidden = true; return; }
+    container.hidden = false;
+    const warn = document.createElement('p');
+    warn.className = 'video-intro-warn';
+    warn.setAttribute('role', 'status');
+    warn.textContent = 'That link isn’t a Loom, YouTube, or Vimeo video yet.';
+    container.append(warn);
+    return;
+  }
+  container.hidden = false;
+  const card = document.createElement('div');
+  card.className = 'video-intro-player';
+  const poster = document.createElement('div');
+  poster.className = 'video-poster';
+  poster.innerHTML =
+    '<button type="button" class="video-play" aria-label="Play video introduction">'
+    + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>'
+    + '<span class="video-duration">≈ 1 min</span>'
+    + '<span class="video-host">' + host.name + '</span>';
+  poster.querySelector('.video-play').addEventListener('click', () => {
+    const frame = document.createElement('iframe');
+    frame.src = host.embed;
+    frame.title = 'Video introduction';
+    frame.className = 'video-frame';
+    frame.loading = 'lazy';
+    frame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+    frame.setAttribute('allowfullscreen', '');
+    poster.replaceWith(frame);
+  });
+  card.append(poster);
+  const actions = document.createElement('div');
+  actions.className = 'video-actions';
+  const replace = document.createElement('button');
+  replace.type = 'button';
+  replace.className = 'outline-button';
+  replace.textContent = 'Replace';
+  replace.addEventListener('click', () => opts.onReplace && opts.onReplace());
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'quiet-link video-remove';
+  remove.textContent = 'Remove';
+  remove.addEventListener('click', () => opts.onRemove && opts.onRemove());
+  actions.append(replace, remove);
+  card.append(actions);
+  const privacy = document.createElement('p');
+  privacy.className = 'video-privacy';
+  privacy.innerHTML =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 10V8a6 6 0 0 1 12 0v2m-13 0h14v10H5z"/></svg>'
+    + 'Shared only with Covenda’s pilot team unless you choose otherwise.';
+  card.append(privacy);
+  container.append(card);
+}
+(() => {
+  const input = document.querySelector('[data-video-intro-input]');
+  const card = document.querySelector('#studentVideoIntroCard');
+  const transcriptField = document.querySelector('[data-video-transcript-field]');
+  if (!input || !card) return;
+  const sync = () => {
+    const host = detectVideoHost(input.value);
+    renderVideoIntroCard(card, input.value, {
+      onReplace: () => { input.focus(); input.select(); },
+      onRemove: () => {
+        input.value = '';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.focus();
+      },
+    });
+    if (transcriptField) transcriptField.hidden = !host;
+  };
+  input.addEventListener('input', sync);
+  sync();
+})();
+
+// ---- University school-logo marquee --------------------------------------
+// The <li> logos in index.html are the single editable source (placeholder,
+// illustrative marks — real logos need trademark permission). Without JS the row
+// renders statically; with reduced-motion it stays static; otherwise we clone the
+// row once (aria-hidden) so translateX(-50%) loops seamlessly.
+(() => {
+  const track = document.querySelector('[data-school-track]');
+  if (!track) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    track.dataset.mode = 'static';
+    return;
+  }
+  for (const item of [...track.children]) {
+    const clone = item.cloneNode(true);
+    clone.setAttribute('aria-hidden', 'true');
+    track.append(clone);
+  }
+  track.dataset.mode = 'marquee';
 })();
 
 $('#submissionHistory').addEventListener('click', event => {

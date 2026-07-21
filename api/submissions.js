@@ -187,7 +187,9 @@ export function studentRecord(body) {
     links: {
       portfolio: webUrl(links.portfolio),
       github: webUrl(links.github),
+      videoIntro: webUrl(links.videoIntro),
     },
+    videoTranscript: text(body.videoTranscript, 2_000),
     availability: text(body.availability, 80),
     preferences: {
       hoursPerWeek: text(preferences.hoursPerWeek, 80),
