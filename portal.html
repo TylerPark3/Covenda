@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https:; base-uri 'none'; form-action 'self'">
+  <title>Covenda · Member portal</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="portal.css">
+  <script src="portal.js" defer></script>
+</head>
+<body>
+  <svg class="portal-icon-library" aria-hidden="true"><defs>
+    <symbol id="p-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9H3z"/><path d="M9 20v-6h6v6"/></symbol>
+    <symbol id="p-project" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 5V3h8v2M8 10h8m-8 5h5"/></symbol>
+    <symbol id="p-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></symbol>
+    <symbol id="p-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+    <symbol id="p-message" viewBox="0 0 24 24"><path d="M4 4h16v13H8l-4 4z"/><path d="M8 9h8m-8 4h5"/></symbol>
+    <symbol id="p-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.6-2-3.4-2.5 1a8 8 0 0 0-1.7-1L14.3 3h-4.6l-.4 3a8 8 0 0 0-1.7 1L5.1 6 3 9.4 5.1 11a7 7 0 0 0 0 2L3 14.6 5.1 18l2.5-1a8 8 0 0 0 1.7 1l.4 3h4.6l.4-3a8 8 0 0 0 1.7-1l2.5 1 2.1-3.4-2.1-1.6a7 7 0 0 0 .1-1Z"/></symbol>
+    <symbol id="p-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></symbol>
+    <symbol id="p-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="p-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="p-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="p-exit" viewBox="0 0 24 24"><path d="M10 4H4v16h6m5-4 4-4-4-4m4 4H8"/></symbol>
+    <symbol id="p-close" viewBox="0 0 24 24"><path d="m5 5 14 14M19 5 5 19"/></symbol>
+    <symbol id="p-google" viewBox="0 0 24 24"><path d="M20.6 12.2c0-.7-.1-1.4-.2-2H12v3.6h4.8a4.1 4.1 0 0 1-1.8 2.7v2.3h3c1.7-1.6 2.6-3.9 2.6-6.6Z"/><path d="M12 21c2.4 0 4.4-.8 6-2.2l-3-2.3c-.8.6-1.9.9-3 .9-2.3 0-4.3-1.6-5-3.7H4v2.4A9 9 0 0 0 12 21Z"/><path d="M7 13.7a5.4 5.4 0 0 1 0-3.4V7.9H4a9 9 0 0 0 0 8.2z"/><path d="M12 6.6c1.3 0 2.5.5 3.4 1.3L18 5.4A8.7 8.7 0 0 0 4 7.9l3 2.4c.7-2.1 2.7-3.7 5-3.7Z"/></symbol>
+  </defs></svg>
+
+  <main class="portal-auth" id="portalAuth">
+    <section class="auth-story">
+      <a class="portal-brand" href="/"><span aria-hidden="true"><i></i><i></i></span>Covenda</a>
+      <div><p class="eyebrow">Member workspace</p><h1>Your work has a place to go.</h1><p>Track live projects, discover reviewed opportunities, and build a portfolio from evidence—not claims.</p></div>
+      <ol><li><span>01</span>One private account</li><li><span>02</span>Role-aware workspace</li><li><span>03</span>Every project in one timeline</li></ol>
+    </section>
+    <section class="auth-panel">
+      <div class="auth-panel-inner">
+        <p class="eyebrow">Welcome to Covenda</p><h2>Sign in or create your account.</h2><p>Students, companies, and university partners start in the same secure place.</p>
+        <button class="google-button" id="googleLogin" type="button"><svg><use href="#p-google"/></svg>Continue with Google</button>
+        <div class="auth-divider"><span>or use email</span></div>
+        <form id="memberEmailForm">
+          <label>Email address<input name="email" type="email" autocomplete="email" placeholder="you@example.com" required></label>
+          <button class="portal-primary" type="submit">Email me a sign-in link<svg><use href="#p-arrow"/></svg></button>
+          <p id="memberLoginMessage" aria-live="polite"></p>
+        </form>
+        <small>By continuing, you agree to use Covenda only for approved project work. Email delivery requires the project’s custom SMTP connection.</small>
+        <a class="auth-back" href="/">← Back to the website</a>
+      </div>
+    </section>
+  </main>
+
+  <div class="portal-loading" id="portalLoading" hidden><span class="portal-spinner"></span><p>Opening your workspace…</p></div>
+
+  <div class="member-shell" id="memberShell" hidden>
+    <aside class="member-nav">
+      <a class="portal-brand" href="/"><span aria-hidden="true"><i></i><i></i></span>Covenda</a>
+      <nav aria-label="Member workspace">
+        <button class="is-active" type="button" data-view="overview"><svg><use href="#p-home"/></svg><span>Overview</span></button>
+        <button type="button" data-view="projects"><svg><use href="#p-project"/></svg><span>My projects</span><b id="projectCount">0</b></button>
+        <button type="button" data-view="discover" data-student-only><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
+        <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
+        <button type="button" data-view="messages"><svg><use href="#p-message"/></svg><span>Messages</span><i>Soon</i></button>
+      </nav>
+      <div class="member-identity"><span id="memberInitial">C</span><div><strong id="memberNavName">Member</strong><small id="memberNavRole">Covenda</small></div></div>
+      <button class="member-signout" id="memberSignout" type="button"><svg><use href="#p-exit"/></svg>Sign out</button>
+    </aside>
+
+    <header class="member-header">
+      <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Open navigation"><span></span><span></span></button>
+      <div><small id="memberBreadcrumb">Workspace / Overview</small><strong id="memberHeaderStatus">Private member account</strong></div>
+      <button class="header-profile" type="button" data-view="portfolio"><span id="headerInitial">C</span><span id="headerName">Member</span></button>
+    </header>
+
+    <main class="member-main">
+      <section class="portal-view is-active" data-portal-view="overview">
+        <div class="overview-grid">
+          <div class="overview-main">
+            <div class="welcome-row"><div><p class="eyebrow" id="welcomeDate">Your workspace</p><h1 id="welcomeTitle">Good afternoon.</h1><p id="welcomeCopy">Here is what is moving across your Covenda work.</p></div><button class="portal-primary" id="primaryAction" type="button"><svg><use href="#p-plus"/></svg><span>Complete profile</span></button></div>
+            <section class="focus-section"><div class="section-heading"><div><p class="eyebrow">Current work</p><h2 id="focusTitle">Your project tracker</h2></div><button type="button" data-view="projects">View all</button></div><div id="focusProject"></div></section>
+            <section class="plain-section"><div class="section-heading"><div><p class="eyebrow">At a glance</p><h2>Your activity</h2></div></div><div class="metrics-row" id="memberMetrics"></div></section>
+          </div>
+          <aside class="overview-rail">
+            <section class="profile-progress"><div class="progress-ring" id="profileRing"><strong>0%</strong></div><div><p class="eyebrow">Profile strength</p><h2 id="profileProgressTitle">Make a strong first impression</h2><p id="profileProgressCopy">A complete profile helps Covenda route the right work.</p><button type="button" data-view="portfolio">Edit profile <svg><use href="#p-arrow"/></svg></button></div></section>
+            <section class="rail-list"><div class="section-heading"><div><p class="eyebrow">Next up</p><h2>Actions</h2></div></div><ul id="nextActions"></ul></section>
+          </aside>
+        </div>
+      </section>
+
+      <section class="portal-view" data-portal-view="projects">
+        <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every active and completed project in one place.</p></div><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Post a project</button></div>
+        <div class="project-list" id="projectList"></div>
+      </section>
+
+      <section class="portal-view" data-portal-view="discover">
+        <div class="page-heading"><div><p class="eyebrow">Reviewed opportunities</p><h1>Discover projects</h1><p>Projects appear here only after a company or university makes them available to members.</p></div></div>
+        <div class="filter-line"><span id="discoverCount">0 open projects</span><label>Search<input id="discoverSearch" type="search" placeholder="Skill, deliverable, or company"></label></div>
+        <div class="opportunity-list" id="opportunityList"></div>
+      </section>
+
+      <section class="portal-view" data-portal-view="portfolio">
+        <div class="page-heading"><div><p class="eyebrow" id="portfolioEyebrow">Your evidence</p><h1 id="portfolioTitle">Portfolio</h1><p id="portfolioIntro">Shape how other Covenda members understand your work.</p></div><button class="portal-secondary" id="editProfile" type="button"><svg><use href="#p-settings"/></svg>Edit profile</button></div>
+        <div id="portfolioContent"></div>
+      </section>
+
+      <section class="portal-view" data-portal-view="messages">
+        <div class="coming-soon"><span><svg><use href="#p-message"/></svg></span><p class="eyebrow">In development</p><h1>Project messages will live here.</h1><p>Covenda is building a private thread for scope questions, review notes, and project milestones. Until then, operators will continue follow-up by email.</p><button class="portal-secondary" type="button" data-view="overview">Return to overview</button></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog class="member-dialog" id="profileDialog">
+    <form method="dialog" id="profileForm">
+      <header><div><p class="eyebrow">Member setup</p><h2>Make Covenda yours.</h2><p>Your role controls the projects and tools in your workspace.</p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="dialog-body">
+        <fieldset class="role-choice"><legend>I am joining as…</legend><label><input type="radio" name="role" value="student" required><span><svg><use href="#p-user"/></svg><b>Student</b><small>Find projects and build proof.</small></span></label><label><input type="radio" name="role" value="company"><span><svg><use href="#p-project"/></svg><b>Company</b><small>Post work and discover talent.</small></span></label><label><input type="radio" name="role" value="university"><span><svg><use href="#p-compass"/></svg><b>University</b><small>Support students and projects.</small></span></label></fieldset>
+        <div class="form-grid"><label>Full name<input name="displayName" autocomplete="name" required></label><label data-profile-field="organization">Organization<input name="organizationName" autocomplete="organization"></label><label data-profile-field="school">School or university<input name="schoolName" autocomplete="organization"></label><label data-profile-field="graduation">Graduation year<input name="graduationYear" type="number" min="2020" max="2100" inputmode="numeric"></label></div>
+        <label>Headline<input name="headline" maxlength="180" placeholder="Researcher who turns messy questions into clear decisions"></label>
+        <label>About<textarea name="bio" rows="4" maxlength="2000" placeholder="Share what you are learning, building, or looking for next."></textarea></label>
+        <label>Skills <small>Separate with commas</small><input name="skills" placeholder="Market research, Excel, operations"></label>
+        <label class="visibility-row" data-student-profile><input name="portfolioVisibility" type="checkbox" value="members" checked><span>Let signed-in company members discover my portfolio.</span></label>
+        <p class="dialog-message" id="profileMessage" aria-live="polite"></p>
+      </div>
+      <footer><button class="portal-primary" type="submit">Save my workspace<svg><use href="#p-arrow"/></svg></button></footer>
+    </form>
+  </dialog>
+
+  <dialog class="member-dialog compact-dialog" id="projectDialog">
+    <form method="dialog" id="projectForm"><header><div><p class="eyebrow">New project</p><h2>Start with a useful outcome.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>Project title<input name="title" maxlength="160" required placeholder="Customer research synthesis"></label><label>What needs to get done?<textarea name="summary" rows="5" minlength="10" maxlength="5000" required></textarea></label><label>Useful deliverable<input name="deliverable" maxlength="2000" placeholder="A cited summary with clear recommendations"></label><label>Desired skills <small>Separate with commas</small><input name="desiredSkills" placeholder="Research, spreadsheets, writing"></label><div class="form-grid"><label>Target date<input name="targetDate" type="date"></label><label>Visibility<select name="visibility"><option value="private">Private draft</option><option value="members">Covenda members</option><option value="open">Open opportunity</option></select></label></div><p class="dialog-message" id="projectMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Create project<svg><use href="#p-arrow"/></svg></button></footer></form>
+  </dialog>
+
+  <dialog class="member-dialog compact-dialog" id="applyDialog">
+    <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="5" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
+  </dialog>
+</body>
+</html>

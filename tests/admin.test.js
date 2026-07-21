@@ -54,7 +54,7 @@ test('unlisted email receives a generic success without sending a link', async (
     env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'secret', COVENDA_ADMIN_EMAILS: 'operator@covenda.com' },
     createSupabaseClient() { called = true; },
   });
-  assert.deepEqual(result, { sent: true });
+  assert.deepEqual(result, { accepted: true, delivery: 'suppressed' });
   assert.equal(called, false);
 });
 
@@ -88,6 +88,23 @@ test('admin endpoint returns an actionable allowlist diagnostic', async () => {
   assert.equal(response.statusCode, 503);
   assert.equal(response.payload.code, 'ADMIN_ALLOWLIST_MISSING');
   assert.match(response.payload.error, /COVENDA_ADMIN_EMAILS/);
+});
+
+test('admin endpoint returns a traceable generic success without exposing allowlist state', async () => {
+  const response = {
+    headers: {}, statusCode: 0, payload: null,
+    setHeader(name, value) { this.headers[name] = value; },
+    status(value) { this.statusCode = value; return this; },
+    json(value) { this.payload = value; return this; },
+  };
+  await adminHandler({
+    method: 'POST',
+    headers: { host: 'proof-path.vercel.app', 'x-forwarded-for': '203.0.113.14', 'x-vercel-id': 'iad1::trace-123' },
+    body: { action: 'request-link', email: 'outsider@example.com' },
+  }, response, { env: { COVENDA_ADMIN_EMAILS: 'operator@covenda.com' } });
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.payload.requestId, 'trace-123');
+  assert.doesNotMatch(JSON.stringify(response.payload), /suppressed|outsider/i);
 });
 
 test('admin list is bounded and status update accepts only lifecycle states', async () => {

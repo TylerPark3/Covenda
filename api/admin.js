@@ -144,7 +144,7 @@ export async function requestAdminLink(address, req, {
       'Admin access is not configured for this deployment. Add a non-empty COVENDA_ADMIN_EMAILS value in Vercel, then redeploy.',
     );
   }
-  if (!allowlist.has(cleanEmail)) return { sent: true };
+  if (!allowlist.has(cleanEmail)) return { accepted: true, delivery: 'suppressed' };
   const supabase = passwordlessClient(env, createSupabaseClient);
   const { error } = await supabase.auth.signInWithOtp({
     email: cleanEmail,
@@ -157,7 +157,25 @@ export async function requestAdminLink(address, req, {
       error,
     );
   }
-  return { sent: true };
+  return { accepted: true, delivery: 'requested' };
+}
+
+function adminRequestId(req) {
+  const vercelId = text(req.headers['x-vercel-id'], 200);
+  if (vercelId) return vercelId.split('::').at(-1).slice(0, 80);
+  return `local-${Date.now().toString(36)}`;
+}
+
+function logAdminLinkRequest(req, result, requestId, startedAt) {
+  console.info(JSON.stringify({
+    level: 'info',
+    message: 'Admin sign-in request handled',
+    route: '/api/admin',
+    method: req.method,
+    requestId,
+    code: result.delivery === 'requested' ? 'ADMIN_LINK_REQUESTED' : 'ADMIN_LINK_SUPPRESSED',
+    durationMs: Date.now() - startedAt,
+  }));
 }
 
 export async function listAdminSubmissions(supabase) {
@@ -253,8 +271,14 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST') {
       const input = body(req);
       if (input.action !== 'request-link') return res.status(400).json({ ok: false, error: 'Unknown action.' });
-      await requestAdminLink(input.email, req, dependencies);
-      return res.status(200).json({ ok: true, message: 'If this address is authorized, a sign-in link is on its way.' });
+      const result = await requestAdminLink(input.email, req, dependencies);
+      const requestId = adminRequestId(req);
+      logAdminLinkRequest(req, result, requestId, startedAt);
+      return res.status(200).json({
+        ok: true,
+        requestId,
+        message: 'If this address is authorized, a sign-in link is on its way.',
+      });
     }
 
     if (!['GET', 'PATCH'].includes(req.method)) {

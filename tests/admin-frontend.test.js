@@ -9,6 +9,8 @@ const styles = readFileSync(new URL('../admin.css', import.meta.url), 'utf8');
 test('operator inbox has passwordless sign-in and a complete review surface', () => {
   assert.match(html, /Private operator inbox/);
   assert.match(html, /id="adminLoginForm"/);
+  assert.match(html, /COVENDA_ADMIN_EMAILS/);
+  assert.match(html, /custom SMTP/);
   assert.match(html, /id="adminRows"/);
   assert.match(html, /id="adminDetail"/);
   assert.match(html, /Students/);
@@ -19,6 +21,7 @@ test('operator inbox has passwordless sign-in and a complete review surface', ()
   assert.match(html, /id="adminSort"/);
   assert.match(html, /id="adminResultsCount"/);
   assert.match(script, /sessionStorage/);
+  assert.match(script, /result\.requestId/);
   assert.match(script, /Authorization: `Bearer/);
   assert.match(script, /renderDetail/);
   assert.match(script, /method:'PATCH'/);

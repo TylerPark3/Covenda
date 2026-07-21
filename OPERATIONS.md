@@ -8,7 +8,7 @@ This project now has one submission path for company forms, student forms, unive
 4. Only if both database routes fail does it write the record to private Vercel Blob backup and mark the receipt **Primary sync pending**.
 5. If email notifications are configured, Covenda receives a short alert with the submission reference. Private form answers are deliberately left out of email.
 
-The public website never receives a Supabase secret. There is not yet a public or unprotected admin page.
+The public website never receives a Supabase secret. Both the operator inbox and member portal validate Supabase access tokens on the server before reading private data.
 
 ## Connect Supabase
 
@@ -70,6 +70,10 @@ The first operator inbox is available at `/admin.html`. It uses Supabase passwor
 4. Set `COVENDA_ADMIN_URL=https://YOUR_DOMAIN/admin.html` so notification emails can link to the inbox.
 5. Redeploy, request a link from `/admin.html`, and verify that an unlisted Supabase user receives no inbox access.
 
+The green request message is intentionally generic and does **not** prove that Supabase sent an email. A request from an address outside `COVENDA_ADMIN_EMAILS` receives the same public response but is suppressed before Supabase is called. The page now displays a request reference; find that reference in Vercel Runtime Logs for `/api/admin`. `ADMIN_LINK_REQUESTED` means Supabase accepted the request, while `ADMIN_LINK_SUPPRESSED` means the address did not match the deployed allowlist. Neither log includes the email address or token.
+
+For dependable email delivery, connect custom SMTP under Supabase Authentication → Email. Supabase's shared SMTP provider is not intended for sending production login emails to arbitrary end users. Until custom SMTP is connected, add the operator as a member of the Supabase organization or use Google login for member accounts.
+
 Admin API failures include a safe diagnostic code and an actionable message. The most common codes are:
 
 - `ADMIN_ALLOWLIST_MISSING`: `COVENDA_ADMIN_EMAILS` is blank in this deployment, or the deployment predates the variable change.
@@ -83,6 +87,24 @@ Vercel environment changes never update an already-built deployment. After chang
 The endpoint never creates a user from a sign-in attempt (`shouldCreateUser: false`). An authentic Supabase account is necessary but not sufficient: its normalized email must also appear in `COVENDA_ADMIN_EMAILS`. Keep the Supabase JWT expiry short for this operator surface; signing out clears the token from the current browser session, while already-issued access tokens remain valid until expiry.
 
 The operator inbox also stores a private internal note and optional follow-up date on each submission. Apply `supabase/migrations/20260721225331_add_operator_follow_up_fields.sql` before using those controls in production. The migration preserves existing records, keeps browser roles revoked, bounds notes to 2,000 characters, records the last authorized operator and update time, and refreshes the Data API schema cache. These fields are available only through the authenticated admin route; the public receipt endpoint never returns them.
+
+## Member portal
+
+The first authenticated member workspace is available at `/portal.html`. It supports one Supabase account system for students, companies, and universities:
+
+- students can complete a private profile, view assigned projects, browse open member projects, and send an application;
+- companies can create projects, track their project list and applications, and view student profiles that opted into member discovery;
+- universities can maintain their partner profile and create or track projects.
+
+Before deploying it:
+
+1. Apply `supabase/migrations/20260721231522_create_member_portal.sql`. It creates `member_profiles`, `member_projects`, and `project_applications`, forces RLS, revokes browser-role access, and grants access only to the server role.
+2. In Supabase Authentication → URL Configuration, add `https://YOUR_DOMAIN/portal.html` and the exact Vercel preview URLs you will test.
+3. In Authentication → Providers → Google, enable Google and enter the Google OAuth client ID and client secret. Add the Supabase callback URL shown on that page to the Google Cloud OAuth client.
+4. For email sign-in, configure custom SMTP in Supabase. Google sign-in is the recommended first production path while SMTP is being configured.
+5. Confirm Vercel has the same Supabase URL, publishable key, and server-only secret used by the project where the migration was applied. Redeploy after every variable change.
+
+Google and email callbacks return to `/portal.html`; the browser stores the short-lived session only in the current tab's session storage. The API revalidates the access token with Supabase on every protected request and refreshes expired sessions with the Supabase refresh token. Member tables have no anonymous or direct authenticated-browser grants.
 
 An alert contains only the submission type, receipt reference, company Project Packet readiness count when applicable, revision reference when applicable, and the protected admin link when configured. It excludes names, email addresses, company problems, student profiles, and other private answers.
 
@@ -98,7 +120,7 @@ People can also recover a missing receipt from **Workspace → Submissions → F
 
 ## Next operations milestone
 
-Build `admin.covenda…` only after authentication is connected. The first protected dashboard should query Supabase on the server, list company and student submissions separately, support status changes, and open a single record by reference. It must not use the Supabase secret in browser code or add a public read policy to the submissions table.
+Connect a verified Covenda SMTP sender, enable the Google provider, and apply the member portal migration to the same Supabase project used by Vercel. After real accounts can sign in, the next product milestone is operator-controlled project matching, milestone updates, and private project messages.
 
 ## Safety checks before production use
 
