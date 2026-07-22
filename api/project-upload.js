@@ -36,9 +36,12 @@ const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 // Two upload kinds share this endpoint because auth, validation, and the Blob write are
 // identical — only the accepted types, size ceiling, and key prefix differ.
 export function uploadPolicy(kind) {
+  // Project files are stored PRIVATE — the AI intake reads them server-side, and the
+  // owner/assigned student get a short-lived signed URL, so a company's documents are
+  // never publicly reachable. Avatars stay public because they render in an <img>.
   return kind === 'avatar'
-    ? { allowed: AVATAR_TYPES, maxBytes: AVATAR_MAX_BYTES, prefix: 'avatars', basename: 'avatar' }
-    : { allowed: ALLOWED, maxBytes: MAX_BYTES, prefix: 'project-files', basename: 'attachment' };
+    ? { allowed: AVATAR_TYPES, maxBytes: AVATAR_MAX_BYTES, prefix: 'avatars', basename: 'avatar', access: 'public' }
+    : { allowed: ALLOWED, maxBytes: MAX_BYTES, prefix: 'project-files', basename: 'attachment', access: 'private' };
 }
 
 export function validateUpload(contentType, size, kind = 'project') {
@@ -107,7 +110,7 @@ export default async function handler(req, res, dependencies = {}) {
   try {
     const ext = EXTENSIONS[contentType] || 'bin';
     const blob = await put(`${policy.prefix}/${member.user.id}/${policy.basename}.${ext}`, body, {
-      access: 'public',
+      access: policy.access,
       contentType,
       addRandomSuffix: true,
     });

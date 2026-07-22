@@ -1,3 +1,5 @@
+import { get } from '@vercel/blob';
+
 import { authorizeMember, VERTICALS, WORK_TYPES } from './portal.js';
 
 // AI-assisted project intake. One Anthropic Messages API call reads the company's
@@ -70,7 +72,29 @@ export function normalizeBrief(input) {
   };
 }
 
-export async function generateProjectBrief({ problemText, attachments = [], env = process.env, fetchImpl = fetch }) {
+// Read a private blob's bytes server-side and base64-encode them. Sending the file
+// content inline means the attachment never needs to be publicly reachable — Anthropic
+// never fetches a URL, so private storage works and the company's files stay private.
+const AI_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+async function defaultLoadBlob(attachment, env) {
+  const token = env.BLOB_READ_WRITE_TOKEN;
+  if (!token || !attachment?.blobUrl) return null;
+  const result = await get(attachment.blobUrl, { access: 'private', token });
+  if (!result || result.statusCode !== 200 || !result.stream) return null;
+  const chunks = [];
+  const reader = result.stream.getReader();
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > 16 * 1024 * 1024) return null; // guard against an unexpectedly huge file
+    chunks.push(Buffer.from(value));
+  }
+  return Buffer.concat(chunks).toString('base64');
+}
+
+export async function generateProjectBrief({ problemText, attachments = [], env = process.env, fetchImpl = fetch, loadBlob = defaultLoadBlob }) {
   const text = typeof problemText === 'string' ? problemText.trim() : '';
   if (text.length < 10) throw new Error('Describe the problem in a bit more detail first.');
   const key = env.ANTHROPIC_API_KEY;
@@ -78,8 +102,15 @@ export async function generateProjectBrief({ problemText, attachments = [], env 
   const content = [{ type: 'text', text: buildUserPrompt(text) }];
   for (const attachment of (Array.isArray(attachments) ? attachments : []).slice(0, 6)) {
     if (!attachment || !attachment.blobUrl) continue;
-    if (attachment.contentType === 'application/pdf') content.push({ type: 'document', source: { type: 'url', url: attachment.blobUrl } });
-    else if (/^image\//.test(attachment.contentType || '')) content.push({ type: 'image', source: { type: 'url', url: attachment.blobUrl } });
+    const isPdf = attachment.contentType === 'application/pdf';
+    const isImage = AI_IMAGE_TYPES.has(attachment.contentType || '');
+    if (!isPdf && !isImage) continue; // Claude reads PDFs + images; other docs are stored but not analysed
+    let base64;
+    try { base64 = await loadBlob(attachment, env); } catch { base64 = null; }
+    if (!base64) continue; // a file we can't read must not sink the whole brief — process the text
+    content.push(isPdf
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
+      : { type: 'image', source: { type: 'base64', media_type: attachment.contentType, data: base64 } });
   }
   const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
     method: 'POST',
