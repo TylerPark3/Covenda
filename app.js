@@ -3751,9 +3751,115 @@ if (incomingReferral) {
   state.audience = 'student';
 }
 
+// ---- Vertical-first narrowing -----------------------------------------------
+// Industry → focus area → the specific work. Each round is derived from the previous
+// pick, so a student lands on "Month-end close · reconciliation cleanup" instead of
+// declaring "I can do research". Every leaf maps to one of the five work types, which
+// is what the rest of the app already understands, so nothing downstream changes.
+const NARROW_TREE = {
+  'Accounting & finance': {
+    'Month-end close': [['Reconciliation cleanup', 'Data & spreadsheets'], ['Exception write-ups', 'Writing & documentation'], ['Close checklist mapping', 'Operations']],
+    'Revenue & billing': [['Invoice accuracy audit', 'Data & spreadsheets'], ['Pricing benchmark', 'Research'], ['Billing workflow map', 'Operations']],
+    'Financial research': [['Competitor cost scan', 'Research'], ['Market sizing', 'Research'], ['Findings memo', 'Writing & documentation']],
+  },
+  'Software & AI': {
+    'Quality & testing': [['Structured test passes', 'QA & testing'], ['Bug reproduction', 'QA & testing'], ['Test case authoring', 'QA & testing']],
+    'Product research': [['Competitor teardown', 'Research'], ['User feedback synthesis', 'Research'], ['Positioning brief', 'Writing & documentation']],
+    'Docs & enablement': [['API documentation', 'Writing & documentation'], ['Onboarding guides', 'Writing & documentation'], ['Release notes upkeep', 'Operations']],
+  },
+  'Healthcare operations': {
+    'Process & workflow': [['Intake workflow map', 'Operations'], ['Scheduling analysis', 'Data & spreadsheets'], ['SOP authoring', 'Writing & documentation']],
+    'Public-source research': [['Vendor comparison', 'Research'], ['Policy scan', 'Research'], ['Briefing memo', 'Writing & documentation']],
+  },
+  'Consumer & retail': {
+    'Customer insight': [['Review mining', 'Research'], ['Survey synthesis', 'Research'], ['Segment brief', 'Writing & documentation']],
+    'Merchandising & ops': [['Catalog cleanup', 'Data & spreadsheets'], ['Returns analysis', 'Data & spreadsheets'], ['Store process map', 'Operations']],
+  },
+  'Professional services': {
+    'Client delivery': [['Deliverable QA', 'QA & testing'], ['Template build', 'Writing & documentation'], ['Process documentation', 'Operations']],
+    'Business development': [['Prospect research', 'Research'], ['Proposal support', 'Writing & documentation'], ['CRM hygiene', 'Operations']],
+  },
+};
+const NARROW_ANY = 'Not sure yet — show me everything';
+const narrowStorageKey = 'covendaNarrowPath';
+
+function narrowRound(label, options, selected, onPick) {
+  const round = document.createElement('div');
+  round.className = 'narrow-round';
+  const heading = document.createElement('p');
+  heading.className = 'narrow-label';
+  heading.textContent = label;
+  const grid = document.createElement('div');
+  grid.className = 'narrow-options';
+  options.forEach(option => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'narrow-option' + (option === selected ? ' is-selected' : '');
+    button.setAttribute('aria-pressed', option === selected ? 'true' : 'false');
+    button.textContent = option;
+    button.addEventListener('click', () => onPick(option));
+    grid.append(button);
+  });
+  round.append(heading, grid);
+  return round;
+}
+
+function narrowResult(path) {
+  const box = document.createElement('div');
+  box.className = 'narrow-result';
+  const trail = document.createElement('p');
+  trail.className = 'narrow-trail';
+  trail.textContent = [path.vertical, path.focus, path.specific].filter(Boolean).join('  ·  ');
+  const note = document.createElement('p');
+  note.className = 'narrow-note';
+  note.textContent = 'Covenda will show you paid projects that look like this. You can change it any time.';
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'narrow-reset';
+  reset.textContent = 'Start over';
+  reset.addEventListener('click', () => { state.narrowPath = {}; writeStorage(narrowStorageKey, {}); renderNarrowFlow(); });
+  box.append(trail, note, reset);
+  return box;
+}
+
+function renderNarrowFlow() {
+  const root = document.querySelector('[data-narrow-flow]');
+  if (!root) return;
+  const path = state.narrowPath || {};
+  root.textContent = '';
+  const verticals = Object.keys(NARROW_TREE).concat([NARROW_ANY]);
+  root.append(narrowRound('Start with your industry', verticals, path.vertical, value => {
+    state.narrowPath = { vertical: value };
+    writeStorage(narrowStorageKey, state.narrowPath);
+    renderNarrowFlow();
+    if (value === NARROW_ANY) document.getElementById('narrowFallback')?.setAttribute('open', '');
+  }));
+  if (!path.vertical || !NARROW_TREE[path.vertical]) return;
+
+  const focuses = Object.keys(NARROW_TREE[path.vertical]);
+  root.append(narrowRound('Where in ' + path.vertical.toLowerCase() + '?', focuses, path.focus, value => {
+    state.narrowPath = { vertical: path.vertical, focus: value };
+    writeStorage(narrowStorageKey, state.narrowPath);
+    renderNarrowFlow();
+  }));
+  if (!path.focus) return;
+
+  const leaves = NARROW_TREE[path.vertical][path.focus] || [];
+  root.append(narrowRound('What would you want to own?', leaves.map(leaf => leaf[0]), path.specific, value => {
+    const leaf = leaves.find(item => item[0] === value);
+    state.narrowPath = { vertical: path.vertical, focus: path.focus, specific: value, workType: leaf ? leaf[1] : '' };
+    writeStorage(narrowStorageKey, state.narrowPath);
+    renderNarrowFlow();
+    if (leaf) selectWorkType(leaf[1]);
+  }));
+  if (path.specific) root.append(narrowResult(path));
+}
+
 restoreRosterDraft();
 renderLocalSubmissionState();
-selectWorkType(state.workType);
+state.narrowPath = readStorage(narrowStorageKey, {}) || {};
+renderNarrowFlow();
+selectWorkType(state.narrowPath.workType || state.workType);
 setAudience(state.audience);
 renderReferralBanner();
 renderReferralLink();

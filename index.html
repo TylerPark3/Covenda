@@ -118,6 +118,14 @@
             <i class="selector-fx-glow selector-fx-glow-a"></i>
             <i class="selector-fx-glow selector-fx-glow-b"></i>
           </div>
+          <!-- Vertical-first narrowing: industry → focus area → the specific work. Each
+               round is derived from the previous pick, so a student ends on something
+               concrete ("Month-end close · reconciliation cleanup") rather than a generic
+               skill. The final pick still calls selectWorkType(), so everything
+               downstream (detail panel, profile, submissions) is unchanged. -->
+          <div class="narrow-flow" id="narrowFlow" data-narrow-flow></div>
+          <details class="narrow-fallback" id="narrowFallback">
+            <summary>Or pick a work type directly</summary>
           <div class="work-selector glass-panel">
             <button class="work-option is-selected" type="button" data-work-type="Research" aria-pressed="true"><svg><use href="#icon-search"/></svg><span>Research</span></button>
             <button class="work-option" type="button" data-work-type="Data & spreadsheets" aria-pressed="false"><svg><use href="#icon-data"/></svg><span>Data &amp;<br>spreadsheets</span></button>
@@ -125,6 +133,7 @@
             <button class="work-option" type="button" data-work-type="QA & testing" aria-pressed="false"><svg><use href="#icon-shield"/></svg><span>QA &amp; testing</span></button>
             <button class="work-option" type="button" data-work-type="Writing & documentation" aria-pressed="false"><svg><use href="#icon-write"/></svg><span>Writing &amp;<br>documentation</span></button>
           </div>
+          </details>
           <div class="work-detail glass-panel" id="workDetail" hidden aria-live="polite">
             <div class="work-detail-top">
               <span class="work-detail-tag" id="workDetailTag"><svg><use href="#icon-search"/></svg><b>Research</b></span>
