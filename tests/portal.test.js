@@ -1,7 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, saveMemberProfile, sendProjectMessage } from '../api/portal.js';
+import { acceptApplication, authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+
+// A queued Supabase double: each from() call consumes the next step in order. A step
+// resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
+// insert payload — enough to assert the close-the-loop state transitions.
+function queuedSupabase(steps) {
+  let index = 0;
+  return {
+    from() {
+      const step = steps[index++] || { result: null };
+      const query = {};
+      const same = () => query;
+      for (const method of ['select', 'eq', 'neq', 'in', 'order', 'limit']) query[method] = same;
+      query.update = value => { step.capture?.(value); return query; };
+      query.insert = value => { step.capture?.(value); return query; };
+      query.maybeSingle = () => Promise.resolve({ data: step.result, error: null });
+      query.single = () => Promise.resolve({ data: step.result, error: null });
+      query.then = (onFulfilled, onRejected) => Promise.resolve({ data: step.result, error: null }).then(onFulfilled, onRejected);
+      return query;
+    },
+  };
+}
+const PROJECT_UUID = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+const APPLICATION_UUID = 'a1b2c3d4-7607-4c38-a1e1-095c34ad4f11';
 
 const authEnv = { SUPABASE_URL:'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY:'publishable', SUPABASE_SECRET_KEY:'secret' };
 
@@ -78,4 +101,95 @@ test('project messages require project membership and store only bounded text', 
   const message=await sendProjectMessage({user:{id:'student-1'},supabase},{projectId:'f65be0ad-7607-4c38-a1e1-095c34ad4f11',message:'  The first milestone is ready.  '});
   assert.equal(message.body,'The first milestone is ready.');
   assert.equal(message.author_user_id,'student-1');
+});
+
+test('accepting an application assigns the student, moves the project in progress, and declines siblings', async () => {
+  let acceptPayload, assignPayload, declinePayload;
+  const supabase = queuedSupabase([
+    { result: { id: APPLICATION_UUID, project_id: PROJECT_UUID, student_user_id: 'student-9', status: 'submitted' } },
+    { result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'open' } },
+    { result: { id: APPLICATION_UUID, status: 'accepted' }, capture: value => { acceptPayload = value; } },
+    { result: { id: PROJECT_UUID }, capture: value => { assignPayload = value; } },
+    { result: [], capture: value => { declinePayload = value; } },
+  ]);
+  const accepted = await acceptApplication({ user: { id: 'owner-1' }, supabase }, { applicationId: APPLICATION_UUID });
+  assert.equal(accepted.status, 'accepted');
+  assert.equal(acceptPayload.status, 'accepted');
+  assert.equal(assignPayload.assigned_student_user_id, 'student-9');
+  assert.equal(assignPayload.status, 'in_progress');
+  assert.equal(declinePayload.status, 'declined');
+});
+
+test('only the project owner can accept an applicant', async () => {
+  const supabase = queuedSupabase([
+    { result: { id: APPLICATION_UUID, project_id: PROJECT_UUID, student_user_id: 'student-9', status: 'submitted' } },
+    { result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'open' } },
+  ]);
+  await assert.rejects(
+    acceptApplication({ user: { id: 'intruder' }, supabase }, { applicationId: APPLICATION_UUID }),
+    /Only the project owner/,
+  );
+});
+
+test('the assigned student submits a deliverable, folding links in and moving to review', async () => {
+  let updatePayload;
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, assigned_student_user_id: 'student-9', status: 'in_progress' } },
+    { result: { id: PROJECT_UUID, status: 'review' }, capture: value => { updatePayload = value; } },
+  ]);
+  await submitDeliverable({ user: { id: 'student-9' }, supabase }, {
+    projectId: PROJECT_UUID,
+    deliverable: 'Reconciled the month-end close and documented every exception.',
+    deliverableLinks: ['https://docs.example.com/close', 'not-a-link', 'https://sheets.example.com/recon'],
+  });
+  assert.equal(updatePayload.status, 'review');
+  assert.match(updatePayload.deliverable, /Links:\n- https:\/\/docs\.example\.com\/close\n- https:\/\/sheets\.example\.com\/recon/);
+  assert.equal(updatePayload.review_note, null);
+  assert.ok(updatePayload.deliverable_submitted_at);
+});
+
+test('a non-assigned user cannot submit a deliverable', async () => {
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, assigned_student_user_id: 'student-9', status: 'in_progress' } },
+  ]);
+  await assert.rejects(
+    submitDeliverable({ user: { id: 'someone-else' }, supabase }, { projectId: PROJECT_UUID, deliverable: 'I would like to submit this work.' }),
+    /Only the assigned student/,
+  );
+});
+
+test('the owner accepts a deliverable, completing the project with a timestamp', async () => {
+  let patch;
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'review' } },
+    { result: { id: PROJECT_UUID, status: 'complete' }, capture: value => { patch = value; } },
+  ]);
+  await reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' });
+  assert.equal(patch.status, 'complete');
+  assert.ok(patch.completed_at);
+});
+
+test('requesting changes sends the project back to in_progress with a required note', async () => {
+  let patch;
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'review' } },
+    { result: { id: PROJECT_UUID, status: 'in_progress' }, capture: value => { patch = value; } },
+  ]);
+  await reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'revise', note: 'Please add the source citations.' });
+  assert.equal(patch.status, 'in_progress');
+  assert.equal(patch.review_note, 'Please add the source citations.');
+  await assert.rejects(
+    reviewDeliverable({ user: { id: 'owner-1' }, supabase: queuedSupabase([{ result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'review' } }]) }, { projectId: PROJECT_UUID, decision: 'revise' }),
+    /Add a note/,
+  );
+});
+
+test('a deliverable can only be reviewed while the project is in review', async () => {
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'in_progress' } },
+  ]);
+  await assert.rejects(
+    reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' }),
+    /no submitted deliverable/,
+  );
 });

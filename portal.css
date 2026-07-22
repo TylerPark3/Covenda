@@ -295,4 +295,42 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
   .message-compose .portal-primary { width:100%; }
   .member-dialog header,.dialog-body,.member-dialog footer { padding-left:20px; padding-right:20px; }
 }
+/* ---- Close-the-loop UI (accept → submit → review → verified) ---- */
+.status-pill[data-status="review"] { border-color:rgba(180,123,32,.3); background:var(--gold-pale); color:var(--gold-deep); }
+.status-pill[data-status="complete"],.status-pill[data-status="accepted"] { border-color:rgba(36,117,58,.25); background:#f4faf5; color:var(--success); }
+.status-pill[data-status="declined"] { border-color:rgba(164,49,36,.22); background:#fbf4f3; color:var(--danger); }
+
+.rung-badge { display:flex; align-items:center; gap:11px; margin-bottom:20px; padding:13px 15px; border:1px solid var(--line); border-radius:13px; background:linear-gradient(100deg,var(--gold-pale),#fff); }
+.rung-badge.is-verified { border-color:rgba(36,117,58,.28); background:linear-gradient(100deg,#f4faf5,#fff); }
+.rung-badge svg { width:18px; height:18px; flex:0 0 auto; color:var(--gold-deep); }
+.rung-badge.is-verified svg { color:var(--success); }
+.rung-badge strong { display:block; font-size:12px; letter-spacing:-.01em; }
+.rung-badge span { display:block; margin-top:2px; color:var(--soft); font-size:9px; line-height:1.5; }
+
+.project-actions { margin-top:16px; display:grid; gap:12px; justify-items:start; }
+.portal-primary.compact { min-height:40px; padding:9px 15px; font-size:10px; }
+.loop-note { display:flex; align-items:flex-start; gap:10px; padding:12px 13px; border:1px solid var(--line); border-radius:11px; background:var(--gold-pale); }
+.loop-note svg { width:16px; height:16px; flex:0 0 auto; color:var(--gold-deep); }
+.loop-note strong { display:block; font-size:11px; }
+.loop-note small { display:block; margin-top:2px; color:var(--soft); font-size:9px; line-height:1.5; }
+.revise-note { display:flex; align-items:flex-start; gap:9px; margin:0; padding:11px 13px; border:1px solid rgba(180,123,32,.3); border-radius:11px; background:var(--gold-pale); color:var(--gold-deep); font-size:10px; line-height:1.55; }
+.revise-note svg { width:15px; height:15px; flex:0 0 auto; }
+.verified-record { padding:16px 17px; border:1px solid rgba(36,117,58,.28); border-radius:14px; background:linear-gradient(160deg,#f4faf5,#fff); }
+.verified-head { display:flex; align-items:center; gap:8px; }
+.verified-head svg { width:16px; height:16px; color:var(--success); }
+.verified-head span { color:var(--success); font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+.verified-record h3 { margin:9px 0 4px; font-size:15px; letter-spacing:-.02em; }
+.verified-record p { margin:0; color:var(--muted); font-size:10px; line-height:1.55; }
+.verified-record .verified-summary { margin:0 0 7px; color:var(--muted); font-size:10px; }
+.project-list .verified-record { margin-bottom:14px; }
+
+.row-action { margin-top:12px; min-height:34px; padding:8px 13px; border:1px solid var(--gold-deep); border-radius:9px; background:linear-gradient(#d8a541,#ab6d09); color:#fff; font-size:9px; font-weight:700; cursor:pointer; }
+.row-action:hover { box-shadow:0 8px 18px rgba(180,123,32,.22); }
+.row-action:disabled { opacity:.6; cursor:wait; }
+
+.review-submitted { margin:0 0 10px; color:var(--soft); font-size:9px; }
+.review-deliverable { max-height:230px; overflow:auto; padding:13px 14px; border:1px solid var(--line); border-radius:11px; background:var(--gold-pale); white-space:pre-wrap; overflow-wrap:anywhere; font-size:11px; line-height:1.65; color:var(--ink); }
+.review-actions { display:flex; gap:10px; justify-content:flex-end; }
+.review-actions .portal-primary,.review-actions .portal-secondary { min-width:0; }
+
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; } }

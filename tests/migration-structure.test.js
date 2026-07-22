@@ -30,6 +30,10 @@ const projectMessages = readFileSync(
   new URL('../supabase/migrations/20260722003808_create_project_messages.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const projectReview = readFileSync(
+  new URL('../supabase/migrations/20260724000000_add_project_review_fields.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -119,4 +123,14 @@ test('project message migration keeps conversations server-only and indexed', ()
   assert.match(projectMessages, /revoke all on table public\.project_messages from public, anon, authenticated/);
   assert.match(projectMessages, /grant select, insert on table public\.project_messages to service_role/);
   assert.doesNotMatch(projectMessages, /create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('project review migration adds close-the-loop fields idempotently without loosening access', () => {
+  for (const column of ['deliverable_submitted_at timestamptz', 'review_note text', 'completed_at timestamptz']) {
+    assert.match(projectReview, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(projectReview, /char_length\(review_note\) <= 2000/);
+  assert.match(projectReview, /create index if not exists member_projects_review_idx/);
+  assert.match(projectReview, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(projectReview, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
 });

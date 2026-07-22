@@ -176,7 +176,7 @@ export async function loadMemberDashboard(member) {
     checked(supabase.from('member_profiles').select('*').eq('user_id', user.id).maybeSingle(), null),
     loadMemberIntakes(member),
   ]);
-  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [] };
+  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [], verifiedCount: 0 };
 
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
@@ -188,7 +188,8 @@ export async function loadMemberDashboard(member) {
     const messages = projectIds.length
       ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
       : [];
-    return { user, profile, projects, opportunities, applications, studentDirectory: [], intakes, messages };
+    const verifiedCount = projects.filter(project => project.status === 'complete').length;
+    return { user, profile, projects, opportunities, applications, studentDirectory: [], intakes, messages, verifiedCount };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -202,7 +203,8 @@ export async function loadMemberDashboard(member) {
   const messages = projectIds.length
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
     : [];
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages };
+  const verifiedCount = projects.filter(project => project.status === 'complete').length;
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -287,6 +289,86 @@ export async function sendProjectMessage(member, input) {
   return checked(member.supabase.from('project_messages').insert(row).select('*').single(), null);
 }
 
+const PROJECT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
+
+// Close-the-loop transitions. Every one re-reads the project and verifies the caller
+// is the owner (company/university) or the assigned student before writing, and
+// enforces the status state-machine server-side so no step can be skipped or replayed.
+
+export async function acceptApplication(member, input) {
+  const applicationId = cleanText(input.applicationId, 50);
+  if (!PROJECT_ID_PATTERN.test(applicationId)) throw new Error('Choose a valid application.');
+  const application = await checked(
+    member.supabase.from('project_applications').select('id,project_id,student_user_id,status').eq('id', applicationId).maybeSingle(),
+    null,
+  );
+  if (!application) throw new Error('This application is no longer available.');
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', application.project_id).maybeSingle(),
+    null,
+  );
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can accept an applicant.');
+  if (!['open', 'matched'].includes(project.status)) throw new Error('This project is not open for accepting an applicant.');
+  const now = new Date().toISOString();
+  const accepted = await checked(
+    member.supabase.from('project_applications').update({ status: 'accepted', updated_at: now }).eq('id', applicationId).select('*').single(),
+    null,
+  );
+  // Assign the student and move the project into progress.
+  await checked(
+    member.supabase.from('member_projects').update({ assigned_student_user_id: application.student_user_id, status: 'in_progress', updated_at: now }).eq('id', project.id).select('id').single(),
+    null,
+  );
+  // Decline the remaining live applications so the pipeline is unambiguous (leave withdrawn ones as-is).
+  await checked(
+    member.supabase.from('project_applications').update({ status: 'declined', updated_at: now }).eq('project_id', project.id).neq('id', applicationId).neq('status', 'withdrawn').select('id'),
+    [],
+  );
+  return accepted;
+}
+
+export async function submitDeliverable(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const summary = cleanText(input.deliverable, 4_000);
+  if (summary.length < 10) throw new Error('Describe your work in at least 10 characters.');
+  const rawLinks = Array.isArray(input.deliverableLinks) ? input.deliverableLinks : cleanText(input.deliverableLinks, 2_000).split(/[\n,]/);
+  const links = [...new Set(rawLinks.map(link => cleanText(link, 500)).filter(link => /^https?:\/\//i.test(link)))].slice(0, 10);
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,assigned_student_user_id,status').eq('id', projectId).maybeSingle(),
+    null,
+  );
+  if (!project || project.assigned_student_user_id !== member.user.id) throw new Error('Only the assigned student can submit work for this project.');
+  if (!['in_progress', 'review'].includes(project.status)) throw new Error('This project is not ready for a deliverable yet.');
+  const body = links.length ? `${summary}\n\nLinks:\n${links.map(link => `- ${link}`).join('\n')}` : summary;
+  const now = new Date().toISOString();
+  // Clear any prior revision note so a stale "changes requested" message does not linger after resubmission.
+  return checked(
+    member.supabase.from('member_projects').update({ deliverable: body, status: 'review', deliverable_submitted_at: now, review_note: null, updated_at: now }).eq('id', projectId).select('*').single(),
+    null,
+  );
+}
+
+export async function reviewDeliverable(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const decision = input.decision === 'accept' ? 'accept' : input.decision === 'revise' ? 'revise' : '';
+  if (!decision) throw new Error('Choose accept or request changes.');
+  const note = cleanText(input.note, 2_000);
+  if (decision === 'revise' && !note) throw new Error('Add a note so the student knows what to revise.');
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', projectId).maybeSingle(),
+    null,
+  );
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can review a deliverable.');
+  if (project.status !== 'review') throw new Error('This project has no submitted deliverable to review.');
+  const now = new Date().toISOString();
+  const patch = decision === 'accept'
+    ? { status: 'complete', completed_at: now, review_note: note || null, updated_at: now }
+    : { status: 'in_progress', review_note: note, updated_at: now };
+  return checked(member.supabase.from('member_projects').update(patch).eq('id', projectId).select('*').single(), null);
+}
+
 function portalFailure(error) {
   if (error instanceof PortalOperationalError) return { status: 503, code: error.code, message: error.publicMessage };
   const message = cleanText(error?.message, 2_000);
@@ -327,9 +409,12 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
+    if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
+    if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
+    if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
     return res.status(400).json({ ok: false, error: 'Unknown portal action.' });
   } catch (error) {
-    const expected = error instanceof SyntaxError || /^(Enter|Choose|Only|Account|This|Please|A refresh)/.test(error?.message || '');
+    const expected = error instanceof SyntaxError || /^(Enter|Choose|Only|Account|This|Please|Add|Describe|A refresh)/.test(error?.message || '');
     if (expected) return res.status(400).json({ ok: false, code: 'PORTAL_INPUT_INVALID', error: error.message });
     const failure = portalFailure(error);
     console.error(JSON.stringify({ level: 'error', message: 'Portal API failed', route: '/api/portal', method: req.method, requestId: cleanText(req.headers['x-vercel-id'], 200) || null, code: failure.code, error: cleanText(error?.cause?.message || error?.message || error, 2_000), durationMs: Date.now() - startedAt }));
