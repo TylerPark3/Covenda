@@ -13,6 +13,7 @@ export const REFERENCE_PREFIXES = {
   call_request: 'CALL',
   university_partner: 'UNI',
   student_quick: 'SQ',
+  referrer_endorsement: 'REF',
 };
 export const SUBMISSION_TYPES = Object.keys(REFERENCE_PREFIXES);
 const TYPES = new Set(SUBMISSION_TYPES);
@@ -282,12 +283,43 @@ export function studentQuickRecord(body) {
   return record;
 }
 
+export function referrerRecord(body) {
+  // A professor / club officer / career center endorsing specific students by
+  // name + school email + function, with an optional note. Reuses the roster
+  // shape; each endorsement is a real, referrer-consented vouch (not a match).
+  const endorsements = Array.isArray(body.endorsements)
+    ? body.endorsements
+        .slice(0, 200)
+        .map(entry => ({
+          name: text(entry?.name, 100),
+          email: email(entry?.email),
+          function: text(entry?.function, 80),
+          note: text(entry?.note, 500),
+        }))
+        .filter(entry => entry.name && entry.email)
+    : [];
+  const record = {
+    contact: contact(body.contact, { companyRequired: true }), // company = institution
+    referrerType: text(body.referrerType, 80),
+    attributionCode: text(body.attributionCode, 40),
+    endorsements,
+  };
+  if (!record.referrerType) {
+    throw new Error('Please choose your role (professor, club, or career center).');
+  }
+  if (!record.endorsements.length) {
+    throw new Error('Please endorse at least one student with a name and a valid email.');
+  }
+  return record;
+}
+
 export function submissionDetails(body) {
   if (!TYPES.has(body.type)) throw new Error('Please choose a valid submission type.');
   if (body.type === 'employer_intake') return employerRecord(body);
   if (body.type === 'student_interest') return studentRecord(body);
   if (body.type === 'university_partner') return universityRecord(body);
   if (body.type === 'student_quick') return studentQuickRecord(body);
+  if (body.type === 'referrer_endorsement') return referrerRecord(body);
   return callRecord(body);
 }
 
@@ -317,6 +349,10 @@ function submissionSummary(record) {
     return record.details.interest
       ? `Quick join · interested in ${record.details.interest}`
       : 'Quick join — full profile pending.';
+  }
+  if (record.type === 'referrer_endorsement') {
+    const count = record.details.endorsements.length;
+    return `${count} student endorsement${count === 1 ? '' : 's'} from ${record.details.referrerType || 'a referrer'}.`;
   }
   return record.details.topic || 'Call requested.';
 }
