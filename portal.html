@@ -127,7 +127,7 @@
       </section>
 
       <section class="portal-view" data-portal-view="portfolio">
-        <div class="page-heading"><div><p class="eyebrow" id="portfolioEyebrow">Your evidence</p><h1 id="portfolioTitle">Portfolio</h1><p id="portfolioIntro">Shape how other Covenda members understand your work.</p></div><button class="portal-secondary" id="editProfile" type="button"><svg><use href="#p-settings"/></svg>Edit profile</button></div>
+        <div class="page-heading"><div><p class="eyebrow" id="portfolioEyebrow">Your evidence</p><h1 id="portfolioTitle">Portfolio</h1><p id="portfolioIntro">Shape how other Covenda members understand your work.</p></div><div class="page-heading-actions"><div id="portfolioContextAction"></div><button class="portal-secondary" id="editProfile" type="button"><svg><use href="#p-settings"/></svg>Edit profile</button></div></div>
         <div id="portfolioContent"></div>
       </section>
 
@@ -253,6 +253,14 @@
 
   <dialog class="member-dialog compact-dialog" id="reviewDialog">
     <form method="dialog" id="reviewForm"><header><div><p class="eyebrow">Review deliverable</p><h2 id="reviewTitle">Review</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p class="review-submitted" id="reviewSubmittedAt"></p><div class="review-deliverable" id="reviewDeliverable"></div><label>Note to the student <small>Required to request changes</small><textarea name="note" rows="3" maxlength="2000" placeholder="What is strong, and what to change."></textarea></label><p class="dialog-message" id="reviewMessage" aria-live="polite"></p></div><footer class="review-actions"><button class="portal-secondary" type="button" data-decision="revise">Request changes</button><button class="portal-primary" type="button" data-decision="accept">Accept deliverable<svg><use href="#p-check"/></svg></button></footer></form>
+  </dialog>
+
+  <dialog class="member-dialog compact-dialog" id="networkAccessDialog">
+    <form method="dialog" id="networkAccessForm"><header><div><p class="eyebrow">Trusted Talent</p><h2>Request company access.</h2><p>Covenda reviews every request before student identities and referral evidence become available.</p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>What talent are you trying to find?<textarea name="reason" rows="4" minlength="10" maxlength="1000" required placeholder="We need students who can support robotics testing and document fast-changing requirements."></textarea></label><label>Roles or skills <small>Separate with commas</small><input name="rolesNeeded" maxlength="1000" placeholder="Robotics, QA testing, CAD, technical writing"></label><label>When might you need someone?<select name="hiringTimeline"><option value="Exploring now">Exploring now</option><option value="Within one month">Within one month</option><option value="Within three months">Within three months</option><option value="Ongoing needs">Ongoing needs</option></select></label><p class="network-privacy-note"><svg><use href="#p-shield"/></svg>Access is human-approved. Students control whether their profile appears, and referral evidence is never a hiring guarantee.</p><p class="dialog-message" id="networkAccessMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send access request<svg><use href="#p-arrow"/></svg></button></footer></form>
+  </dialog>
+
+  <dialog class="member-dialog talent-profile-dialog" id="talentProfileDialog">
+    <div class="talent-profile-shell"><header><div><p class="eyebrow">Trusted Talent profile</p><h2 id="talentProfileName">Student profile</h2><p id="talentProfileMeta"></p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body" id="talentProfileContent"></div><footer><p>Referral and work records are evidence for human review—not automatic approval.</p><button class="portal-secondary" type="button" data-close-dialog>Close</button></footer></div>
   </dialog>
 </body>
 </html>

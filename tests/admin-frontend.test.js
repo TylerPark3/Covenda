@@ -16,6 +16,8 @@ test('operator inbox has passwordless sign-in and a complete review surface', ()
   assert.match(html, /Students/);
   assert.match(html, /Companies/);
   assert.match(html, /Universities/);
+  assert.match(html, /Referral endorsements/);
+  assert.match(html, /Trusted Talent access/);
   assert.match(html, /id="adminMetricReceived"/);
   assert.match(html, /id="adminRefresh"/);
   assert.match(html, /id="adminSort"/);
@@ -34,6 +36,8 @@ test('operator inbox has passwordless sign-in and a complete review surface', ()
   assert.match(script, /internal_note/);
   assert.match(script, /follow_up_at/);
   assert.match(script, /Save operator update/);
+  assert.match(script, /Referral source/);
+  assert.match(script, /Roles or skills/);
   assert.match(styles, /\.admin-main/);
   assert.match(styles, /\.admin-detail/);
   assert.match(styles, /\.admin-summary/);

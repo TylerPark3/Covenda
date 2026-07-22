@@ -93,7 +93,7 @@ The operator inbox also stores a private internal note and optional follow-up da
 The first authenticated member workspace is available at `/portal.html`. It supports one Supabase account system for students, companies, and universities:
 
 - students can complete a private profile, view assigned projects, browse open member projects, and send an application;
-- companies can create projects, track their project list and applications, and view student profiles that opted into member discovery;
+- companies can create projects, track their project list and applications, and request human-approved access to the Trusted Talent network;
 - universities can maintain their partner profile and create or track projects.
 
 Before deploying it:
@@ -103,8 +103,18 @@ Before deploying it:
 3. In Authentication → Providers → Google, enable Google and enter the Google OAuth client ID and client secret. Add the Supabase callback URL shown on that page to the Google Cloud OAuth client.
 4. For email sign-in, configure custom SMTP in Supabase. Google sign-in is the recommended first production path while SMTP is being configured.
 5. Confirm Vercel has the same Supabase URL, publishable key, and server-only secret used by the project where the migration was applied. Redeploy after every variable change.
+6. Apply the later portal migrations in timestamp order, including `20260726000000_trusted_talent_network.sql`. This adds the access-request type, a server-only normalized referral table, and the member-email bridge used to attach approved endorsements to opted-in profiles.
 
 Google and email callbacks return to `/portal.html`; the browser stores the short-lived session only in the current tab's session storage. The API revalidates the access token with Supabase on every protected request and refreshes expired sessions with the Supabase refresh token. Member tables have no anonymous or direct authenticated-browser grants.
+
+### Trusted Talent approval flow
+
+1. A company member opens **Student network** and sends an access request. It appears in `public.submissions` with a `NET-` reference and in `/admin.html` under **Trusted Talent access**.
+2. An operator reviews the company, intended roles, and hiring timeline, then changes the request to **Approved** in the private inbox.
+3. The company reloads the member portal. Only then does the API return students whose profile visibility is set to members, their operator-verified referral paths, and accepted Covenda project records.
+4. Professor, lab, club, and career-center referrals arrive as referral endorsements. Changing that source submission to **Approved** normalizes its students into `public.student_endorsements`; declining or archiving the source revokes the evidence.
+
+Student and referrer email addresses never appear in the company response. The browser cannot query `student_endorsements` directly, and referral records are evidence for human review—not an automated ranking or hiring guarantee.
 
 An alert contains only the submission type, receipt reference, company Project Packet readiness count when applicable, revision reference when applicable, and the protected admin link when configured. It excludes names, email addresses, company problems, student profiles, and other private answers.
 
@@ -120,7 +130,7 @@ People can also recover a missing receipt from **Workspace → Submissions → F
 
 ## Next operations milestone
 
-Connect a verified Covenda SMTP sender, enable the Google provider, and apply the member portal migration to the same Supabase project used by Vercel. After real accounts can sign in, the next product milestone is operator-controlled project matching, milestone updates, and private project messages.
+Connect a verified Covenda SMTP sender, keep the Google provider enabled, and apply every portal migration to the same Supabase project used by Vercel. After real accounts can sign in, the next product milestone is company-to-student introductions, student-controlled availability, and paid network access without weakening the human approval boundary.
 
 ## Safety checks before production use
 

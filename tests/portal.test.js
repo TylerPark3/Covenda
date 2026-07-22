@@ -1,7 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, authorizeMember, buyCredits, cancelProject, createMemberProject, creditBalance, fulfilPayout, loadMemberIntakes, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+import {
+  acceptApplication,
+  authorizeMember,
+  buyCredits,
+  cancelProject,
+  createMemberProject,
+  creditBalance,
+  fulfilPayout,
+  loadMemberIntakes,
+  looksLikeAccountNumber,
+  memberAuthReadiness,
+  projectCreditCost,
+  rankOpportunities,
+  requestGoogleLogin,
+  requestMemberLink,
+  requestPayout,
+  requestTalentNetworkAccess,
+  reviewDeliverable,
+  saveMemberProfile,
+  sendProjectMessage,
+  submitDeliverable,
+  summarizeTalentNetwork,
+} from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
@@ -414,4 +436,63 @@ test('a deliverable can only be reviewed while the project is in review', async 
     reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' }),
     /no submitted deliverable/,
   );
+});
+
+test('Trusted Talent stays gated until approval and never exposes contact or referrer emails', () => {
+  const profiles = [{
+    user_id: 'student-1',
+    display_name: 'Jordan Lee',
+    school_name: 'Columbia University',
+    headline: 'Robotics researcher',
+    bio: 'Builds hardware test systems.',
+    skills: ['Robotics', 'Python'],
+    verticals: ['Industrial & Manufacturing'],
+    work_types: ['Engineering & Prototyping'],
+    graduation_year: 2027,
+    contact_email: 'JORDAN@EXAMPLE.EDU',
+  }];
+  const endorsements = [{
+    student_email: 'jordan@example.edu',
+    referrer_name: 'Dr. Rivera',
+    referrer_email: 'private@school.edu',
+    referrer_type: 'Professor',
+    referrer_organization: 'Columbia Robotics Lab',
+    endorsed_function: 'Robotics',
+    endorsement_note: 'Strong at ambiguous prototyping work.',
+    status: 'verified',
+    updated_at: '2026-07-22T12:00:00.000Z',
+  }];
+  const projects = [{ assigned_student_user_id: 'student-1', title: 'Hardware QA map', status: 'complete', completed_at: '2026-07-20T12:00:00.000Z' }];
+
+  const locked = summarizeTalentNetwork(profiles, endorsements, projects, false);
+  assert.deepEqual(locked.stats, { visibleStudents: 1, verifiedReferrals: 1, schoolsRepresented: 1 });
+  assert.deepEqual(locked.directory, []);
+
+  const approved = summarizeTalentNetwork(profiles, endorsements, projects, true);
+  assert.equal(approved.directory[0].endorsements[0].referrerOrganization, 'Columbia Robotics Lab');
+  assert.equal(approved.directory[0].verified_project_count, 1);
+  const serialized = JSON.stringify(approved);
+  assert.doesNotMatch(serialized, /jordan@example\.edu|private@school\.edu/i);
+  assert.doesNotMatch(serialized, /contact_email|referrer_email/i);
+});
+
+test('a company can request human-reviewed network access using its authenticated identity', async () => {
+  let inserted;
+  const supabase = queuedSupabase([
+    { result: { role: 'company', display_name: 'Avery Owner', organization_name: 'Strength Robotics' } },
+    { result: null },
+    { result: { reference: 'NET-ABC12345', status: 'received' }, capture: value => { inserted = value; } },
+  ]);
+  const request = await requestTalentNetworkAccess({ user: { id: 'company-1', email: 'avery@strengthrobotics.com' }, supabase }, {
+    reason: 'We need professor-referred students who can test robotics workflows under changing specifications.',
+    rolesNeeded: 'Robotics, QA testing, technical writing',
+    hiringTimeline: 'Within one month',
+    email: 'attacker@example.com',
+  });
+  assert.equal(request.status, 'received');
+  assert.match(inserted.reference, /^NET-[A-Z0-9]{8}$/);
+  assert.equal(inserted.submitter_email, 'avery@strengthrobotics.com');
+  assert.equal(inserted.organization_name, 'Strength Robotics');
+  assert.deepEqual(inserted.details.rolesNeeded, ['Robotics', 'QA testing', 'technical writing']);
+  assert.equal(inserted.consent, true);
 });
