@@ -30,6 +30,10 @@ const projectMessages = readFileSync(
   new URL('../supabase/migrations/20260722003808_create_project_messages.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const applicationReview = readFileSync(
+  new URL('../supabase/migrations/20260722014120_review_project_applications.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -119,4 +123,17 @@ test('project message migration keeps conversations server-only and indexed', ()
   assert.match(projectMessages, /revoke all on table public\.project_messages from public, anon, authenticated/);
   assert.match(projectMessages, /grant select, insert on table public\.project_messages to service_role/);
   assert.doesNotMatch(projectMessages, /create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('application review migration creates an atomic server-only matching operation', () => {
+  assert.match(applicationReview, /create or replace function public\.review_project_application/);
+  assert.match(applicationReview, /security invoker/);
+  assert.match(applicationReview, /set search_path = ''/);
+  assert.match(applicationReview, /for update/);
+  assert.match(applicationReview, /assigned_student_user_id = v_application\.student_user_id/);
+  assert.match(applicationReview, /status = 'matched'/);
+  assert.match(applicationReview, /status = 'declined'/);
+  assert.match(applicationReview, /revoke all on function public\.review_project_application\(uuid, uuid, text\) from public, anon, authenticated/);
+  assert.match(applicationReview, /grant execute on function public\.review_project_application\(uuid, uuid, text\) to service_role/);
+  assert.doesNotMatch(applicationReview, /security definer|grant [^;]* to (anon|authenticated)/);
 });

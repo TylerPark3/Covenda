@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, saveMemberProfile, sendProjectMessage } from '../api/portal.js';
+import { authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, reviewProjectApplication, saveMemberProfile, sendProjectMessage } from '../api/portal.js';
 
 const authEnv = { SUPABASE_URL:'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY:'publishable', SUPABASE_SECRET_KEY:'secret' };
 
@@ -70,6 +70,25 @@ test('only organization roles can create projects', async () => {
   assert.equal(project.status,'open');
   assert.equal(project.owner_user_id,'company-1');
   assert.deepEqual(project.desired_skills,['Research','Writing']);
+});
+
+test('organization owners review applications through the atomic matching function', async () => {
+  let rpcCall;
+  const applicationId='aa013d65-b83a-48b7-a3f2-077dcfa502d8';
+  const expected={id:applicationId,project_id:'project-1',student_user_id:'student-1',status:'accepted'};
+  const supabase={
+    from(table){assert.equal(table,'member_profiles');return {select(){return this;},eq(column,value){assert.equal(column,'user_id');assert.equal(value,'company-1');return this;},async maybeSingle(){return {data:{role:'company'},error:null};}};},
+    async rpc(name,params){rpcCall={name,params};return {data:expected,error:null};},
+  };
+  const result=await reviewProjectApplication({user:{id:'company-1'},supabase},{applicationId,status:'accepted'});
+  assert.deepEqual(rpcCall,{name:'review_project_application',params:{p_owner_user_id:'company-1',p_application_id:applicationId,p_status:'accepted'}});
+  assert.deepEqual(result,expected);
+});
+
+test('students cannot review project applications', async () => {
+  const applicationId='aa013d65-b83a-48b7-a3f2-077dcfa502d8';
+  const supabase={from(){return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{role:'student'},error:null};}};}};
+  await assert.rejects(()=>reviewProjectApplication({user:{id:'student-1'},supabase},{applicationId,status:'shortlisted'}),/Only company and university accounts/);
 });
 
 test('project messages require project membership and store only bounded text', async () => {

@@ -4,6 +4,7 @@ import { supabaseConfiguration } from './submissions.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
+const APPLICATION_REVIEW_STATUSES = new Set(['reviewing', 'shortlisted', 'accepted', 'declined']);
 const emailBuckets = new Map();
 
 export class PortalOperationalError extends Error {
@@ -176,7 +177,7 @@ export async function loadMemberDashboard(member) {
     checked(supabase.from('member_profiles').select('*').eq('user_id', user.id).maybeSingle(), null),
     loadMemberIntakes(member),
   ]);
-  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [] };
+  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], applicantProfiles: [], studentDirectory: [], intakes, messages: [] };
 
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
@@ -188,7 +189,7 @@ export async function loadMemberDashboard(member) {
     const messages = projectIds.length
       ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
       : [];
-    return { user, profile, projects, opportunities, applications, studentDirectory: [], intakes, messages };
+    return { user, profile, projects, opportunities, applications, applicantProfiles: [], studentDirectory: [], intakes, messages };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -196,13 +197,17 @@ export async function loadMemberDashboard(member) {
   const applications = projectIds.length
     ? await checked(supabase.from('project_applications').select('*').in('project_id', projectIds).order('updated_at', { ascending: false }).limit(200))
     : [];
+  const applicantUserIds = [...new Set(applications.map(application => application.student_user_id).filter(Boolean))];
+  const applicantProfiles = applicantUserIds.length
+    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,portfolio_visibility,updated_at').in('user_id', applicantUserIds).limit(200))
+    : [];
   const studentDirectory = profile.role === 'company'
     ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
     : [];
   const messages = projectIds.length
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
     : [];
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages };
+  return { user, profile, projects, opportunities: [], applications, applicantProfiles, studentDirectory, intakes, messages };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -272,6 +277,31 @@ export async function applyToProject(member, input) {
   return checked(member.supabase.from('project_applications').insert(row).select('*').single(), null);
 }
 
+export async function reviewProjectApplication(member, input) {
+  const applicationId = cleanText(input.applicationId, 50);
+  const status = cleanText(input.status, 20);
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(applicationId)) throw new Error('Choose a valid student application.');
+  if (!APPLICATION_REVIEW_STATUSES.has(status)) throw new Error('Choose a valid application status.');
+
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (!profile || !['company', 'university'].includes(profile.role)) throw new Error('Only company and university accounts can review applications.');
+
+  const { data, error } = await member.supabase.rpc('review_project_application', {
+    p_owner_user_id: member.user.id,
+    p_application_id: applicationId,
+    p_status: status,
+  });
+  if (error) {
+    const message = cleanText(error.message, 1_000);
+    if (/not found|not owned/i.test(message)) throw new Error('This application is no longer available to review.');
+    if (/already has a matched student/i.test(message)) throw new Error('This project already has a matched student. Refresh the workspace to see the current match.');
+    if (/not ready for matching/i.test(message)) throw new Error('This project must be open before a student can be accepted.');
+    if (/accepted matches/i.test(message)) throw new Error('Accepted matches cannot be changed from the portal.');
+    throw error;
+  }
+  return data ?? null;
+}
+
 export async function sendProjectMessage(member, input) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project conversation.');
@@ -290,7 +320,7 @@ export async function sendProjectMessage(member, input) {
 function portalFailure(error) {
   if (error instanceof PortalOperationalError) return { status: 503, code: error.code, message: error.publicMessage };
   const message = cleanText(error?.message, 2_000);
-  if (/member_profiles|member_projects|project_applications|project_messages|submissions|schema cache|relation .* does not exist/i.test(message)) {
+  if (/member_profiles|member_projects|project_applications|project_messages|review_project_application|submissions|schema cache|relation .* does not exist/i.test(message)) {
     return { status: 503, code: 'PORTAL_SCHEMA_MISSING', message: 'Member sign-in worked, but the portal tables are not available. Apply the newest Supabase migration to the same project used by Vercel.' };
   }
   return { status: 503, code: 'PORTAL_UNAVAILABLE', message: 'The member portal is temporarily unavailable. Check the newest /api/portal entry in Vercel Runtime Logs.' };
@@ -326,6 +356,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input) });
+    if (req.method === 'POST' && input.action === 'review-application') return res.status(200).json({ ok: true, application: await reviewProjectApplication(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
     return res.status(400).json({ ok: false, error: 'Unknown portal action.' });
   } catch (error) {

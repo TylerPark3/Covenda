@@ -23,7 +23,11 @@ test('member portal exposes login, onboarding, role-aware navigation, and projec
   assert.match(script,/action:'save-profile'/);
   assert.match(script,/action:'create-project'/);
   assert.match(script,/action:'apply'/);
+  assert.match(script,/action:'review-application'/);
   assert.match(script,/action:'send-message'/);
+  assert.match(script,/Accept & match/);
+  assert.match(script,/Open project messages/);
+  assert.match(styles,/\.review-action\.is-primary/);
 });
 
 test('member portal is responsive, reduced-motion safe, and contains no server secret',()=>{
