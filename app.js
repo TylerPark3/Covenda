@@ -866,7 +866,7 @@ function saveSubmission(submission) {
 
 function submissionAudience(item) {
   if (item.type === 'employer_intake') return 'company';
-  if (item.type === 'university_partner') return 'university';
+  if (item.type === 'university_partner' || item.type === 'referrer_endorsement') return 'university';
   if (item.type === 'call_request') return 'company';
   return 'student';
 }
@@ -874,6 +874,7 @@ function submissionAudience(item) {
 function submissionLabel(item) {
   if (item.type === 'employer_intake') return 'Company problem intake';
   if (item.type === 'university_partner') return 'Student roster';
+  if (item.type === 'referrer_endorsement') return 'Student endorsements';
   if (item.type === 'call_request') return 'Call request';
   return 'Student interest profile';
 }
@@ -912,6 +913,13 @@ function submissionProgress(item) {
       ['Follow-up', 'Covenda contacts you as safe projects become available.'],
     ];
   }
+  if (item.type === 'referrer_endorsement') {
+    return [
+      ['Received', 'Your endorsements and role are saved.'],
+      ['Credibility applied', 'Endorsed students carry your vouch into the pilot.'],
+      ['Follow-up', 'Covenda contacts you as safe projects become available.'],
+    ];
+  }
   return [
     ['Received', 'Your interests and working preferences are saved.'],
     ['Pilot-fit review', 'Covenda reviews fit for the current pilot.'],
@@ -930,6 +938,7 @@ function receiptSummary(item) {
   if (item.recovered) return 'This server-confirmed receipt was recovered on this device. Private form answers were not downloaded.';
   if (item.type === 'employer_intake') return 'A company problem was received for human scoping.';
   if (item.type === 'university_partner') return 'A student roster was received for pilot review.';
+  if (item.type === 'referrer_endorsement') return 'Your student endorsements were received for pilot review.';
   return 'A student interest profile was received for pilot-fit review.';
 }
 
@@ -1747,6 +1756,77 @@ async function submitRoster() {
   }
 }
 
+function endorsementPayload() {
+  const partner = partnerFieldValues();
+  const note = $('#endorsementNote')?.value.trim() || '';
+  return {
+    type: 'referrer_endorsement',
+    startedAt: Number($('#rosterAddForm')?.dataset.startedAt || Date.now() - 4000),
+    website: '',
+    consent: $('#uniConsent')?.checked === true,
+    contact: { name: partner.contactName, email: partner.contactEmail, company: partner.orgName },
+    referrerType: partner.orgType,
+    attributionCode: '',
+    endorsements: universityRoster.map(entry => ({ name: entry.name, email: entry.email, function: entry.interest, note })),
+  };
+}
+
+async function submitEndorsement() {
+  const message = $('#rosterMessage');
+  const submit = $('[data-action="roster-endorse"]');
+  const partner = partnerFieldValues();
+  message.classList.remove('is-success');
+  if (!partner.contactName || !isEmail(partner.contactEmail.toLowerCase()) || !partner.orgName || !partner.orgType) {
+    message.textContent = 'Add your name, a valid work email, your organization, and your role first.';
+    return;
+  }
+  if (!universityRoster.length) {
+    message.textContent = 'Add at least one student to endorse.';
+    return;
+  }
+  if (!$('#uniConsent')?.checked) {
+    message.textContent = 'Please confirm you can share these details with Covenda.';
+    return;
+  }
+  submit.disabled = true;
+  submit.textContent = 'Sending…';
+  try {
+    const result = await sendSubmission(endorsementPayload());
+    applySubmissionDelivery(result);
+    message.classList.add('is-success');
+    message.textContent = 'Endorsements received. Reference ' + result.reference + submissionDeliveryMessage(result);
+    saveSubmission({
+      type: 'referrer_endorsement',
+      reference: result.reference,
+      status: result.status || 'received',
+      storage: result.storage || 'confirmed',
+      storageRoute: result.storageRoute || '',
+      syncStatus: result.syncStatus || (result.storage === 'supabase' ? 'synced' : 'pending'),
+      destination: result.destination || null,
+      createdAt: result.createdAt || new Date().toISOString(),
+      title: partner.orgName + ' · student endorsements',
+      summary: universityRoster.length + (universityRoster.length === 1 ? ' student endorsed · ' : ' students endorsed · ') + partner.orgType,
+    });
+    universityRoster = [];
+    if ($('#uniConsent')) $('#uniConsent').checked = false;
+    if ($('#endorsementNote')) $('#endorsementNote').value = '';
+    renderRoster();
+    clearRosterDraft();
+    showToast('Your endorsements were received for pilot review.');
+    window.setTimeout(() => {
+      setAudience('university');
+      setSurface('workspace');
+      setWorkspaceTab('submissions');
+    }, 900);
+  } catch (error) {
+    message.classList.remove('is-success');
+    message.textContent = error.message;
+  } finally {
+    submit.disabled = false;
+    submit.innerHTML = 'Endorse these students ' + iconUse('icon-shield');
+  }
+}
+
 function openUniversityRoster() {
   setSurface('site');
   setAudience('university');
@@ -1998,6 +2078,7 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     saveRosterDraft();
   }
   if (action === 'roster-submit') submitRoster();
+  if (action === 'roster-endorse') submitEndorsement();
   if (action === 'focus-pathfinder') {
     $('#studentPathfinder').scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => $('.work-option.is-selected')?.focus(), 420);

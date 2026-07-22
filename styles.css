@@ -2165,3 +2165,14 @@ body[data-audience="student"] .feature-band { display: none; }
 @media (max-width: 760px) {
   .home-paths { grid-template-columns: 1fr; width: min(100%, 460px); }
 }
+
+/* ---- Feeder builder: roster + endorsement actions ---- */
+.roster-endorse-note { display: grid; gap: 7px; color: #31312e; font-size: 12px; font-weight: 650; }
+.roster-endorse-note span { color: var(--soft); font-weight: 500; }
+.roster-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.roster-actions .roster-submit,
+.roster-actions .roster-endorse { min-height: 52px; margin-top: 0; }
+.roster-actions .roster-endorse svg { width: 17px; height: 17px; }
+@media (max-width: 560px) {
+  .roster-actions { display: grid; }
+}

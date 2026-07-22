@@ -249,9 +249,15 @@
               <ul class="roster-list" id="rosterList" aria-live="polite"></ul>
               <p class="roster-empty" id="rosterEmpty">No students added yet. Add people above, then send the roster to Covenda.</p>
             </div>
+            <div class="roster-section">
+              <label class="roster-endorse-note">Add an endorsement <span>Optional · turns a shared roster into a vouch</span><textarea id="endorsementNote" rows="2" placeholder="Why you vouch for these students — applies to all (e.g. “Top of my Robotics lab; reliable, ships real work.”)"></textarea></label>
+            </div>
             <label class="consent-row roster-consent"><input type="checkbox" id="uniConsent"><span>I can share these names and school emails with Covenda for a founder-led pilot. This is not an account system, and it does not guarantee placement.</span></label>
             <div class="form-message" id="rosterMessage" role="status" aria-live="polite"></div>
-            <button class="gold-button roster-submit" type="button" data-action="roster-submit">Send roster to Covenda<svg><use href="#icon-arrow-right"/></svg></button>
+            <div class="roster-actions">
+              <button class="gold-button roster-submit" type="button" data-action="roster-submit">Send roster to Covenda<svg><use href="#icon-arrow-right"/></svg></button>
+              <button class="outline-button roster-endorse" type="button" data-action="roster-endorse">Endorse these students<svg><use href="#icon-shield"/></svg></button>
+            </div>
           </div>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
