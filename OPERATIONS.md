@@ -38,8 +38,24 @@ Before using real submissions, add these server-only environment variables to th
 | `SUPABASE_PUBLISHABLE_KEY` | Preferred key for requesting Supabase Magic Links. The Vercel integration may provide this automatically. `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are accepted fallbacks. |
 | `POSTGRES_URL` | Server-only pooled database connection supplied by the Vercel Supabase integration. This is the independent ingestion fallback when the Data API is unavailable. |
 | `BLOB_READ_WRITE_TOKEN` | Existing private Blob fallback. Keep it while Supabase is being introduced and during the MVP. |
+| `COVENDA_APP_URL` | Canonical deployed website origin, for example `https://covenda.com`. Member email and Google callbacks return to this origin’s `/portal.html`. Use a branch URL in Preview and the production domain in Production. |
 
 After adding variables, redeploy the Vercel project. Submit one clearly synthetic company form, one synthetic student form, and one synthetic university roster. Confirm all three appear in Supabase Table Editor under `public.submissions` with `EMP-`, `STU-`, and `UNI-` references. Also confirm the website receipt shows the same reference.
+
+### Turn on member file uploads
+
+In Vercel, open the Covenda project → Storage → Create Database → Blob. Connect the Blob store to the project and accept the generated `BLOB_READ_WRITE_TOKEN`. Confirm the variable is enabled for both Preview and Production, then redeploy each environment. Do not copy this token into browser code or give it a `NEXT_PUBLIC_` prefix.
+
+Avatar photos are resized in the browser to at most 512 × 512 pixels and encoded as WebP before upload. HEIC/HEIF photos must first be exported as JPEG, PNG, or WebP. Project attachments are intentionally limited to 4 MB each while uploads pass through a Vercel Function; larger-file direct uploads can be introduced when the pilot requires them.
+
+### Configure member auth callbacks
+
+1. Add `COVENDA_APP_URL` in Vercel with the site origin only (for example `https://covenda.com`, without a page path). Give Preview deployments their Preview origin and Production the production origin. This controls both member and operator callbacks; an explicit `COVENDA_ADMIN_URL` remains supported as the admin override.
+2. In Supabase → Authentication → URL Configuration, add both exact callback URLs, such as `https://covenda.com/portal.html` and `https://covenda.com/admin.html`, to Redirect URLs. Keep each active Vercel Preview callback there while testing that branch.
+3. In Supabase → Authentication → Sign In / Providers, keep Email enabled and configure Google with the same Supabase project used by the Vercel deployment.
+4. Redeploy after changing Vercel variables. Existing deployments do not receive environment changes retroactively.
+
+The application falls back to the current request origin only when `COVENDA_APP_URL` is absent, which keeps local and one-off Preview testing possible. Production should always set it.
 
 ### If receipts appear on the website but not in Supabase
 

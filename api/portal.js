@@ -51,7 +51,18 @@ function sameOrigin(req) {
   try { return new URL(origin).host === host; } catch { return false; }
 }
 
-function portalRedirectUrl(req) {
+export function portalRedirectUrl(req, env = process.env) {
+  const configured = cleanText(env.COVENDA_APP_URL || env.COVENDA_SITE_URL, 500);
+  if (configured) {
+    let url;
+    try { url = new URL(configured); } catch { throw new PortalOperationalError('PORTAL_APP_URL_INVALID', 'COVENDA_APP_URL must be a complete https:// URL.'); }
+    const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    if ((url.protocol !== 'https:' && !local) || url.username || url.password) {
+      throw new PortalOperationalError('PORTAL_APP_URL_INVALID', 'COVENDA_APP_URL must be a complete https:// URL.');
+    }
+    url.pathname = '/portal.html'; url.search = ''; url.hash = '';
+    return url.toString();
+  }
   const host = cleanText(req.headers['x-forwarded-host'] || req.headers.host, 300);
   const protocol = cleanText(req.headers['x-forwarded-proto'], 10) || (host.startsWith('localhost') ? 'http' : 'https');
   if (!host || !/^[a-z0-9.:[\]-]+$/i.test(host)) throw new Error('Invalid redirect host.');
@@ -109,7 +120,7 @@ export async function requestMemberLink(address, req, { env = process.env, creat
   const supabase = publicClient(env, createSupabaseClient);
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true, emailRedirectTo: portalRedirectUrl(req) },
+    options: { shouldCreateUser: true, emailRedirectTo: portalRedirectUrl(req, env) },
   });
   if (error) throw new PortalOperationalError('PORTAL_EMAIL_FAILED', 'Supabase could not send the sign-in link. Check the Auth logs and custom SMTP configuration.', error);
   return { accepted: true };
@@ -119,7 +130,7 @@ export async function requestGoogleLogin(req, { env = process.env, createSupabas
   const supabase = publicClient(env, createSupabaseClient);
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: portalRedirectUrl(req), skipBrowserRedirect: true },
+    options: { redirectTo: portalRedirectUrl(req, env), skipBrowserRedirect: true },
   });
   if (error || !data?.url) throw new PortalOperationalError('PORTAL_GOOGLE_FAILED', 'Google sign-in could not start. Confirm the Google provider and redirect URLs in Supabase Auth.', error);
   return { url: data.url };

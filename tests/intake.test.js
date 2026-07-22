@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { Readable } from 'node:stream';
 
 import { generateProjectBrief, IntakeConfigError, normalizeBrief } from '../api/project-intake.js';
-import { uploadPolicy, validateUpload } from '../api/project-upload.js';
+import { readUploadBody, uploadPolicy, validateUpload } from '../api/project-upload.js';
 
 function anthropicResponse(object) {
   return { ok: true, async json() { return { content: [{ type: 'text', text: JSON.stringify(object) }] }; } };
@@ -58,16 +59,30 @@ test('generateProjectBrief requires an Anthropic key and a real description', as
 
 test('upload validation rejects unsupported types and oversized files', () => {
   assert.equal(validateUpload('application/x-msdownload', 100).ok, false);
-  assert.equal(validateUpload('application/pdf', 20 * 1024 * 1024).status, 413);
+  assert.equal(validateUpload('application/pdf', 5 * 1024 * 1024).status, 413);
   assert.equal(validateUpload('application/pdf', 0).status, 400);
   assert.equal(validateUpload('application/pdf', 1000).ok, true);
 });
 
-test('avatar uploads are image-only, capped at 5MB, and stored under their own prefix', () => {
+test('avatar and project uploads are capped at 4MB and use separate prefixes', () => {
   assert.equal(validateUpload('image/png', 1000, 'avatar').ok, true);
   assert.equal(validateUpload('application/pdf', 1000, 'avatar').status, 415); // a PDF is fine as an attachment, never as an avatar
-  assert.equal(validateUpload('image/png', 6 * 1024 * 1024, 'avatar').status, 413);
-  assert.equal(validateUpload('image/png', 6 * 1024 * 1024).ok, true); // same size is fine for a project attachment
+  assert.equal(validateUpload('image/png', 5 * 1024 * 1024, 'avatar').status, 413);
+  assert.equal(validateUpload('image/png', 5 * 1024 * 1024).status, 413);
   assert.equal(uploadPolicy('avatar').prefix, 'avatars');
   assert.equal(uploadPolicy('project').prefix, 'project-files');
+});
+
+test('upload body reader accepts both a pre-buffered runtime body and a raw stream', async () => {
+  const buffered = await readUploadBody({ body: Buffer.from('buffered'), headers: {} }, 100);
+  assert.equal(buffered.toString(), 'buffered');
+  const stream = Readable.from([Buffer.from('raw '), Buffer.from('stream')]);
+  stream.headers = {};
+  const streamed = await readUploadBody(stream, 100);
+  assert.equal(streamed.toString(), 'raw stream');
+});
+
+test('upload body reader identifies a consumed stream and enforces the ceiling', async () => {
+  await assert.rejects(readUploadBody({ body: null, readableEnded: true, headers: { 'content-length': '12' } }, 100), error => error.code === 'UPLOAD_STREAM_CONSUMED');
+  await assert.rejects(readUploadBody({ body: Buffer.alloc(101), headers: {} }, 100), error => error.code === 'UPLOAD_TOO_LARGE');
 });

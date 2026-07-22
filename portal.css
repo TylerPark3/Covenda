@@ -14,9 +14,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .portal-icon-library { position: absolute; width: 0; height: 0; overflow: hidden; }
 .eyebrow { margin: 0 0 9px; color: var(--gold-deep); font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
 .portal-brand { display: inline-flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; letter-spacing: -.045em; }
-.portal-brand > span { position: relative; width: 29px; height: 29px; }
-.portal-brand i { position: absolute; inset: 1px; border: 6px solid var(--gold); border-right-color: transparent; border-radius: 50%; }
-.portal-brand i:last-child { inset: 8px 0 8px 18px; border-width: 3px; }
+.portal-brand .covenda-mark { display:block; width:29px; height:29px; flex:0 0 auto; }
 
 .portal-auth { display: grid; min-height: 100vh; grid-template-columns: minmax(360px, .9fr) minmax(500px, 1.1fr); }
 .auth-story { position: relative; display: flex; min-height: 100vh; padding: clamp(36px, 5vw, 72px); overflow: hidden; background: #12110e; color: #fff; flex-direction: column; justify-content: space-between; }
@@ -498,6 +496,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .onboard-avatar-upload:hover { border-color:var(--gold); }
 .onboard-avatar-upload svg { width:14px; height:14px; }
 .onboard-avatar-note { margin:10px 0 22px; text-align:center; color:var(--soft); font-size:11px; }
+.onboard-avatar-note.is-error { color:#a33225; font-weight:700; }
 /* Segmentation cards carry a small gold line icon beside the label. */
 .onboard-chip svg { width:18px; height:18px; flex:0 0 auto; color:var(--gold-deep); }
 /* An uploaded profile image replaces the initial in the nav, header, and portfolio. */

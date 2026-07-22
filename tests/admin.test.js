@@ -46,6 +46,17 @@ test('admin magic link never creates users and uses the current admin URL', asyn
   });
 });
 
+test('admin magic link uses the configured deployed URL over the request host', async () => {
+  let credentials;
+  await requestAdminLink('configured-operator@covenda.com', {
+    headers: { host: 'untrusted-preview.example', 'x-forwarded-proto': 'https', 'x-forwarded-for': '203.0.113.12' },
+  }, {
+    env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'secret', SUPABASE_PUBLISHABLE_KEY: 'publishable', COVENDA_ADMIN_EMAILS: 'configured-operator@covenda.com', COVENDA_APP_URL: 'https://app.covenda.com' },
+    createSupabaseClient() { return { auth: { async signInWithOtp(input) { credentials = input; return { error: null }; } } }; },
+  });
+  assert.equal(credentials.options.emailRedirectTo, 'https://app.covenda.com/admin.html');
+});
+
 test('unlisted email receives a generic success without sending a link', async () => {
   let called = false;
   const result = await requestAdminLink('outsider@example.com', {

@@ -8,9 +8,7 @@ button, a { -webkit-tap-highlight-color: transparent; }
 svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 [hidden] { display: none!important; }
 .admin-brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); font-size: 22px; font-weight: 700; letter-spacing: -.04em; text-decoration: none; }
-.admin-brand > span { position: relative; display: block; width: 28px; height: 28px; }
-.admin-brand i { position: absolute; inset: 1px; border: 6px solid var(--gold); border-right-color: transparent; border-radius: 50%; }
-.admin-brand i:last-child { inset: 8px 0 8px 17px; border-width: 3px; }
+.admin-brand .covenda-mark { display:block; width:28px; height:28px; flex:0 0 auto; }
 .admin-login { display: grid; min-height: 100vh; place-items: center; padding: 24px; background: radial-gradient(circle at 50% 42%, rgba(251,247,237,.74), transparent 32%), #fff; }
 .admin-login > section { width: min(430px, 100%); padding: 36px; border: 1px solid var(--line-strong); border-radius: 24px; background: rgba(255,255,255,.94); box-shadow: 0 28px 70px rgba(40,34,23,.08); }
 .admin-login h1 { margin: 54px 0 14px; font-size: clamp(38px, 6vw, 54px); line-height: .98; letter-spacing: -.065em; }

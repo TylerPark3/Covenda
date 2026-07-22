@@ -85,7 +85,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   font-weight: 600;
   letter-spacing: -.045em;
 }
-.intro-brand .brand-mark { width: 46px; height: 46px; }
+.intro-brand .covenda-mark { width: 46px; height: 46px; }
 .intro-statement {
   display: grid;
   gap: 0;
@@ -179,18 +179,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   letter-spacing: -.045em;
   cursor: pointer;
 }
-.brand-mark { position: relative; width: 36px; height: 36px; transform: rotate(-6deg); }
-.brand-mark::before, .brand-mark::after, .brand-mark i {
-  content: "";
-  position: absolute;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #efd88f 0%, #9f650a 46%, #f1d889 100%);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,.7);
-}
-.brand-mark::before { inset: 4px 4px 4px 6px; }
-.brand-mark::after { inset: 10px 0 10px 15px; background: var(--white); box-shadow: -1px 0 1px rgba(113,73,9,.18); }
-.brand-mark i:first-child { width: 13px; height: 7px; right: 0; top: 5px; transform: rotate(-18deg); }
-.brand-mark i:last-child { width: 12px; height: 7px; right: 1px; bottom: 4px; transform: rotate(18deg); }
+.covenda-mark { display:block; width:36px; height:36px; flex:0 0 auto; }
 
 .site-nav { display: flex; align-items: center; gap: 38px; }
 .site-nav a { font-size: 14px; font-weight: 600; letter-spacing: -.015em; }
@@ -1460,7 +1449,7 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12px; font-weight: 650;
   :root { --header-height: 72px; }
   .site-header, .workspace-header { padding: 0 18px; }
   .brand { font-size: 21px; }
-  .brand-mark { width: 31px; height: 31px; }
+  .covenda-mark { width: 31px; height: 31px; }
   .workspace-link span, .back-link { display: none; }
   .workspace-link { width: 42px; min-height: 42px; padding: 9px; justify-content: center; }
   .member-login-link { width:42px; min-height:42px; justify-content:center; padding:9px; border:1px solid var(--line); border-radius:50%; }
@@ -1514,7 +1503,7 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12px; font-weight: 650;
 
 @media (max-width: 560px) {
   .brand { gap: 7px; font-size: 19px; }
-  .brand-mark { display: block; width: 28px; height: 28px; }
+  .covenda-mark { display: block; width: 28px; height: 28px; }
   .header-actions { gap: 7px; }
   .audience-switch button { width: 36px; min-width: 36px; padding: 7px; }
   .audience-switch button svg { display: block; width: 17px; height: 17px; }
@@ -1547,7 +1536,7 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12px; font-weight: 650;
   .intro-screen { padding: 28px 22px; }
   .intro-shell { width: 100%; }
   .intro-brand { margin-bottom: 64px; font-size: 24px; }
-  .intro-brand .brand-mark { display: block; width: 38px; height: 38px; }
+  .intro-brand .covenda-mark { display: block; width: 38px; height: 38px; }
   .intro-statement { font-size: clamp(51px, 15vw, 70px); line-height: .94; }
   .intro-actions { align-items: stretch; flex-direction: column; gap: 14px; margin-top: 48px; }
   .intro-enter { width: 100%; min-width: 0; }

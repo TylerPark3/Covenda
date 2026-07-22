@@ -8,7 +8,7 @@
   <meta name="covenda-calendly-url" content="https://calendly.com/thp2117-columbia/30min">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https:; base-uri 'none'; form-action 'self'">
   <title>Covenda · Member portal</title>
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/covenda-mark.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
@@ -47,7 +47,7 @@
 
   <main class="portal-auth" id="portalAuth">
     <section class="auth-story">
-      <a class="portal-brand" href="/"><span aria-hidden="true"><i></i><i></i></span>Covenda</a>
+      <a class="portal-brand" href="/"><img class="covenda-mark" src="/assets/covenda-mark.svg" alt="">Covenda</a>
       <div><p class="eyebrow">Member workspace</p><h1>Your work has a place to go.</h1><p>Track live projects, discover reviewed opportunities, and build a portfolio from evidence—not claims.</p></div>
       <ol><li><span>01</span>One private account</li><li><span>02</span>Role-aware workspace</li><li><span>03</span>Every project in one timeline</li></ol>
     </section>
@@ -72,7 +72,7 @@
 
   <div class="member-shell" id="memberShell" hidden>
     <aside class="member-nav">
-      <a class="portal-brand" href="/"><span aria-hidden="true"><i></i><i></i></span>Covenda</a>
+      <a class="portal-brand" href="/"><img class="covenda-mark" src="/assets/covenda-mark.svg" alt="">Covenda</a>
       <nav aria-label="Member workspace">
         <button class="is-active" type="button" data-view="overview"><svg><use href="#p-home"/></svg><span>Overview</span></button>
         <button type="button" data-view="projects"><svg><use href="#p-project"/></svg><span>My projects</span><b id="projectCount">0</b></button>
@@ -216,7 +216,7 @@
           <p class="intake-hint">Describe the work in plain words. The AI drafts a structured brief on the next step — you can edit everything before posting.</p>
         </section>
         <section class="intake-step" data-intake-step="2">
-          <div class="intake-files"><label class="intake-file-btn"><svg><use href="#p-inbox"/></svg>Attach files (PDF, docs, images)<input type="file" id="intakeFileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*" hidden></label><div class="intake-chips" id="intakeChips"></div></div>
+          <div class="intake-files"><label class="intake-file-btn"><svg><use href="#p-inbox"/></svg>Attach files · 4 MB each<input type="file" id="intakeFileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.webp,.gif" hidden></label><div class="intake-chips" id="intakeChips"></div></div>
           <button class="portal-secondary" type="button" id="intakeUnderstand"><svg><use href="#p-compass"/></svg>Understand with AI</button>
           <div class="intake-brief" id="intakeBrief" hidden></div>
           <p class="dialog-message" id="intakeStepMessage" aria-live="polite"></p>

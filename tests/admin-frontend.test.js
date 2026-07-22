@@ -57,3 +57,9 @@ test('admin HTML ids are unique and mobile layout is explicit', () => {
   assert.match(styles, /@media \(max-width: 720px\)/);
   assert.match(styles, /tbody tr/);
 });
+
+test('admin shares the canonical Covenda mark', () => {
+  assert.match(html, /href="\/assets\/covenda-mark\.svg"/);
+  assert.ok((html.match(/src="\/assets\/covenda-mark\.svg"/g) || []).length >= 2);
+  assert.doesNotMatch(styles, /\.admin-brand i/);
+});

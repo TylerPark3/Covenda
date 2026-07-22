@@ -479,10 +479,35 @@ const ONBOARD_ICONS={
   Research:'p-search','Data & spreadsheets':'p-grid',Operations:'p-flow','QA & testing':'p-shield','Writing & documentation':'p-write',
 };
 function avatarImage(url){const img=document.createElement('img');img.className='onboard-avatar-img';img.src=url;img.alt='';return img;}
+const IMAGE_MIME_BY_EXTENSION={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',heic:'image/heic',heif:'image/heif'};
+const FILE_MIME_BY_EXTENSION={...IMAGE_MIME_BY_EXTENSION,pdf:'application/pdf',txt:'text/plain',csv:'text/csv',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xls:'application/vnd.ms-excel',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};
+function fileExtension(file){return String(file?.name||'').split('.').pop().toLowerCase();}
+function fileMime(file,types=FILE_MIME_BY_EXTENSION){return String(file?.type||'').split(';')[0].trim().toLowerCase()||types[fileExtension(file)]||'';}
+async function downscaleAvatar(file){
+  const type=fileMime(file,IMAGE_MIME_BY_EXTENSION);
+  if(type==='image/heic'||type==='image/heif')throw new Error('HEIC photos are not supported yet. In Photos, export this image as JPEG, PNG, or WebP and try again.');
+  if(!['image/jpeg','image/png','image/webp','image/gif'].includes(type))throw new Error('Choose a JPEG, PNG, WebP, or GIF image.');
+  if(file.size>20*1024*1024)throw new Error('That photo is too large to prepare safely. Choose one under 20 MB.');
+  if(type==='image/gif'){
+    if(file.size>4*1024*1024)throw new Error('Animated GIFs cannot be resized here. Choose one under 4 MB.');
+    return {file,type};
+  }
+  let source;let objectUrl='';
+  try{
+    if('createImageBitmap' in window)source=await createImageBitmap(file);
+    else{objectUrl=URL.createObjectURL(file);source=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('This image could not be opened. Try exporting it as JPEG or PNG.'));image.src=objectUrl;});}
+    const width=source.width||source.naturalWidth;const height=source.height||source.naturalHeight;if(!width||!height)throw new Error('This image has no readable dimensions.');
+    const scale=Math.min(1,512/Math.max(width,height));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(width*scale));canvas.height=Math.max(1,Math.round(height*scale));
+    const context=canvas.getContext('2d',{alpha:true});if(!context)throw new Error('Your browser could not prepare this image.');context.drawImage(source,0,0,canvas.width,canvas.height);
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',.85));if(!blob)throw new Error('Your browser could not compress this image. Try JPEG or PNG.');
+    const base=String(file.name||'avatar').replace(/\.[^.]+$/,'').replace(/[^\w.-]+/g,'-').slice(0,80)||'avatar';const prepared=new File([blob],`${base}.webp`,{type:'image/webp',lastModified:Date.now()});
+    if(prepared.size>4*1024*1024)throw new Error('The prepared image is still over 4 MB. Choose a simpler photo.');
+    return scale<1||prepared.size<file.size||file.size>4*1024*1024?{file:prepared,type:'image/webp'}:{file,type};
+  }finally{source?.close?.();if(objectUrl)URL.revokeObjectURL(objectUrl);}
+}
 async function uploadAvatar(file){
-  if(!/^image\//.test(file.type||''))throw new Error('Choose an image file.');
-  if(file.size>5*1024*1024)throw new Error('Image is over 5 MB.');
-  const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':file.type,'x-file-name':file.name,'x-upload-kind':'avatar'},body:file});
+  const prepared=await downscaleAvatar(file);
+  const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':prepared.type,'x-file-name':prepared.file.name,'x-upload-kind':'avatar'},body:prepared.file});
   const data=await res.json().catch(()=>({}));
   if(!res.ok)throw new Error(data.error||'Upload failed.');
   return data.blobUrl;
@@ -502,12 +527,12 @@ function renderOnboardProfileScreen({values,controls,body,msg}){
   paint();
   const upload=document.createElement('label');upload.className='onboard-avatar-upload';upload.append(icon('p-plus'));
   const uploadLabel=document.createElement('span');uploadLabel.textContent='Add a profile image';
-  const file=document.createElement('input');file.type='file';file.accept='image/*';file.hidden=true;
+  const file=document.createElement('input');file.type='file';file.accept='.jpg,.jpeg,.png,.webp,.gif,image/jpeg,image/png,image/webp,image/gif';file.hidden=true;
   upload.append(uploadLabel,file);
-  const caption=document.createElement('p');caption.className='onboard-avatar-note';
-  const restCaption=()=>{caption.textContent=onboardState.values.avatarUrl?'Profile image set — optional, and you can change it later.':'Optional — we generate one from your name until you add a photo.';};
+  const caption=document.createElement('p');caption.className='onboard-avatar-note';caption.setAttribute('aria-live','assertive');
+  const restCaption=()=>{caption.classList.remove('is-error');caption.textContent=onboardState.values.avatarUrl?'Profile image set — optional, and you can change it later.':'Optional — photos are resized to 512 px on this device before upload.';};
   restCaption();
-  file.addEventListener('change',async()=>{const chosen=file.files[0];file.value='';if(!chosen)return;caption.textContent='Uploading your image…';try{const url=await uploadAvatar(chosen);onboardState.values.avatarUrl=url;persistOnboard();paint();restCaption();}catch(error){caption.textContent=error.message;}});
+  file.addEventListener('change',async()=>{const chosen=file.files[0];file.value='';if(!chosen)return;caption.classList.remove('is-error');caption.textContent='Preparing and uploading your image…';try{const url=await uploadAvatar(chosen);onboardState.values.avatarUrl=url;persistOnboard();paint();restCaption();}catch(error){caption.classList.add('is-error');caption.textContent=error.message;}});
   const label=document.createElement('label');label.className='onboard-field';const span=document.createElement('span');span.textContent='Display name';const input=document.createElement('input');input.type='text';input.autocomplete='name';input.placeholder='Your name';input.value=values.displayName||'';label.append(span,input);
   const cta=onboardCta('Continue',()=>{if(input.value.trim())onboardNext();},{disabled:!(values.displayName||'').trim()});
   input.addEventListener('input',()=>{onboardState.values.displayName=input.value;persistOnboard();cta.disabled=!input.value.trim();if(!onboardState.values.avatarUrl)paint();});
@@ -597,7 +622,7 @@ function intakeToggle(list,option,button){const i=list.indexOf(option);if(i>=0)l
 function renderIntakeTargets(){const vRoot=$('#intakeVerticals');vRoot.replaceChildren();ONBOARD_VERTICALS.forEach(opt=>{const on=intakeState.verticals.includes(opt);const b=document.createElement('button');b.type='button';b.className='intake-toggle'+(on?' is-selected':'');b.setAttribute('aria-pressed',on?'true':'false');b.textContent=opt;b.addEventListener('click',()=>intakeToggle(intakeState.verticals,opt,b));vRoot.append(b);});const wRoot=$('#intakeWorkTypes');wRoot.replaceChildren();ONBOARD_WORK_TYPES.forEach(opt=>{const on=intakeState.workTypes.includes(opt);const b=document.createElement('button');b.type='button';b.className='intake-toggle'+(on?' is-selected':'');b.setAttribute('aria-pressed',on?'true':'false');b.textContent=opt;b.addEventListener('click',()=>intakeToggle(intakeState.workTypes,opt,b));wRoot.append(b);});}
 function renderIntakeReview(){const root=$('#intakeReview');root.replaceChildren();const form=$('#intakeForm');const title=$('[name="title"]',form).value.trim()||'Untitled project';const rows=[['Title',title],['Verticals',intakeState.verticals.join(', ')||'—'],['Work types',intakeState.workTypes.join(', ')||'—'],['Files',intakeState.attachments.length?`${intakeState.attachments.length} attached`:'None'],['20-min consult',intakeState.consultBooked?'Booked':'Not yet — you can book later']];const dl=document.createElement('dl');dl.className='intake-review-list';rows.forEach(([k,v])=>{const wrap=document.createElement('div');const dt=document.createElement('dt');dt.textContent=k;const dd=document.createElement('dd');dd.textContent=v;wrap.append(dt,dd);dl.append(wrap);});root.append(dl);}
 function addIntakeChip(name,status){const chip=document.createElement('div');chip.className='intake-chip';const b=document.createElement('strong');b.textContent=name;const s=document.createElement('small');s.textContent=status;chip.append(b,s);$('#intakeChips').append(chip);return chip;}
-async function uploadIntakeFile(file){if(file.size>15*1024*1024){setDialogMessage('#intakeStepMessage',`${file.name} is over 15 MB.`,true);return;}const chip=addIntakeChip(file.name,'Uploading…');try{const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':file.type||'application/octet-stream','x-file-name':file.name},body:file});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Upload failed.');intakeState.attachments.push(data);$('small',chip).textContent='Attached';}catch(error){$('small',chip).textContent=error.message;chip.classList.add('is-error');}}
+async function uploadIntakeFile(file){const type=fileMime(file);if(file.size>4*1024*1024){setDialogMessage('#intakeStepMessage',`${file.name} is over 4 MB. Choose a smaller file.`,true);return;}if(!type){setDialogMessage('#intakeStepMessage',`${file.name} has an unknown file type. Use a PDF, document, spreadsheet, text file, or common image.`,true);return;}const chip=addIntakeChip(file.name,'Uploading…');setDialogMessage('#intakeStepMessage',`Uploading ${file.name}…`);try{const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':type,'x-file-name':file.name},body:file});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Upload failed.');intakeState.attachments.push(data);$('small',chip).textContent='Attached';setDialogMessage('#intakeStepMessage',`${file.name} is attached.`);}catch(error){$('small',chip).textContent=error.message;chip.classList.add('is-error');setDialogMessage('#intakeStepMessage',`${file.name}: ${error.message}`,true);}}
 function renderIntakeBrief(){const brief=intakeState.brief;const root=$('#intakeBrief');root.replaceChildren();root.hidden=false;
   if(brief.safeToPost===false){const warn=document.createElement('div');warn.className='intake-warn';warn.append(icon('p-close'));const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent='Outside Covenda’s safe boundary';const ul=document.createElement('ul');(brief.safetyFlags||[]).forEach(f=>{const li=document.createElement('li');li.textContent=f;ul.append(li);});const p=document.createElement('p');p.textContent='Covenda can’t post this as-is. Book the 20-minute consult and we’ll find a safe, useful version.';box.append(strong,ul,p);warn.append(box);root.append(warn);return;}
   const label=document.createElement('p');label.className='intake-brief-label';label.textContent='AI draft understanding — edit before you post';root.append(label);

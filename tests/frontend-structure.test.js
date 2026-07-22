@@ -217,3 +217,10 @@ test('page avoids unsupported marketplace claims and legacy branding', () => {
   assert.doesNotMatch(html, /success rate/i);
   assert.doesNotMatch(html, /Student score:/i);
 });
+
+test('marketing uses the shared canonical Covenda mark without a CSS-drawn duplicate', () => {
+  assert.match(html, /href="\/assets\/covenda-mark\.svg"/);
+  assert.ok((html.match(/src="\/assets\/covenda-mark\.svg"/g) || []).length >= 3);
+  assert.doesNotMatch(html, /class="brand-mark"/);
+  assert.doesNotMatch(styles, /\.brand-mark::/);
+});

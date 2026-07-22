@@ -36,6 +36,15 @@ test('member portal is responsive, reduced-motion safe, and contains no server s
   assert.equal(new Set(ids).size,ids.length);
 });
 
+test('portal shares the canonical mark and prepares avatar photos before upload',()=>{
+  assert.ok((html.match(/src="\/assets\/covenda-mark\.svg"/g)||[]).length>=2);
+  assert.match(script,/function downscaleAvatar\(file\)/);
+  assert.match(script,/512\/Math\.max\(width,height\)/);
+  assert.match(script,/canvas\.toBlob\(resolve,'image\/webp',\.85\)/);
+  assert.match(script,/HEIC photos are not supported yet/);
+  assert.match(html,/Attach files · 4 MB each/);
+});
+
 test('company portal includes a gated, filterable Trusted Talent marketplace',()=>{
   assert.match(html,/id="networkAccessDialog"/);
   assert.match(html,/id="talentProfileDialog"/);

@@ -80,6 +80,15 @@ test('Google member login returns a Supabase OAuth URL without a browser-side se
   assert.deepEqual(input,{provider:'google',options:{redirectTo:'https://covenda.vercel.app/portal.html',skipBrowserRedirect:true}});
 });
 
+test('member auth uses the configured deployed app URL instead of the request host', async () => {
+  let input;
+  await requestMemberLink('configured@example.com', { headers:{ host:'untrusted-preview.example','x-forwarded-proto':'https','x-forwarded-for':'203.0.113.81' } }, {
+    env:{...authEnv,COVENDA_APP_URL:'https://app.covenda.com/some-path?ignored=yes'},
+    createSupabaseClient(){return {auth:{async signInWithOtp(value){input=value;return {error:null};}}};},
+  });
+  assert.equal(input.options.emailRedirectTo,'https://app.covenda.com/portal.html');
+});
+
 test('auth readiness reports whether Google is enabled in the connected Supabase project', async () => {
   let requestedUrl;
   const result=await memberAuthReadiness({env:authEnv,async fetchImpl(url,options){requestedUrl=url;assert.equal(options.headers.apikey,'publishable');return {ok:true,async json(){return {external:{google:true}};}};}});

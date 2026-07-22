@@ -93,7 +93,18 @@ function sameOrigin(req) {
   }
 }
 
-function redirectUrl(req) {
+export function adminRedirectUrl(req, env = process.env) {
+  const configured = text(env.COVENDA_ADMIN_URL || env.COVENDA_APP_URL || env.COVENDA_SITE_URL, 500);
+  if (configured) {
+    let url;
+    try { url = new URL(configured); } catch { throw new AdminOperationalError('ADMIN_REDIRECT_URL_INVALID', 'COVENDA_APP_URL and COVENDA_ADMIN_URL must be complete https:// URLs.'); }
+    const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    if ((url.protocol !== 'https:' && !local) || url.username || url.password) {
+      throw new AdminOperationalError('ADMIN_REDIRECT_URL_INVALID', 'COVENDA_APP_URL and COVENDA_ADMIN_URL must be complete https:// URLs.');
+    }
+    url.pathname = '/admin.html'; url.search = ''; url.hash = '';
+    return url.toString();
+  }
   const host = text(req.headers['x-forwarded-host'] || req.headers.host, 300);
   const protocol = text(req.headers['x-forwarded-proto'], 10) || (host.startsWith('localhost') ? 'http' : 'https');
   if (!host || !/^[a-z0-9.:[\]-]+$/i.test(host)) throw new Error('Invalid redirect host.');
@@ -185,7 +196,7 @@ export async function requestAdminLink(address, req, {
   const supabase = passwordlessClient(env, createSupabaseClient);
   const { error } = await supabase.auth.signInWithOtp({
     email: cleanEmail,
-    options: { shouldCreateUser: false, emailRedirectTo: redirectUrl(req) },
+    options: { shouldCreateUser: false, emailRedirectTo: adminRedirectUrl(req, env) },
   });
   if (error) {
     throw magicLinkOperationalError(error);
