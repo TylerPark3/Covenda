@@ -563,7 +563,7 @@
 
       <section class="why-section" id="why">
         <div class="student-why audience-content" data-for-audience="student">
-          <div class="why-copy"><h2>One profile. Evidence tied to the work.</h2><p>Covenda does not reduce you to one universal score. Each project can show the specific capabilities, inputs, review, revisions, and outcome behind it.</p><button class="outline-button" type="button" data-action="workspace">Preview your workspace<svg><use href="#icon-arrow-right"/></svg></button></div>
+          <div class="why-copy"><h2>One profile. Evidence tied to the work.</h2><p>Covenda does not reduce you to one universal score. Each project can show the specific capabilities, inputs, review, revisions, and outcome behind it.</p><button class="outline-button" type="button" data-action="workspace">Preview what you would build<svg><use href="#icon-arrow-right"/></svg></button></div>
           <div class="work-types" id="workTypes">
             <button type="button" data-work-type="Research"><svg><use href="#icon-search"/></svg><span><strong>Research</strong><small>Source review, market maps, customer synthesis</small></span></button>
             <button type="button" data-work-type="Data & spreadsheets"><svg><use href="#icon-data"/></svg><span><strong>Data &amp; spreadsheets</strong><small>Cleanup, validation, analysis, clear models</small></span></button>
@@ -690,7 +690,7 @@
   <div class="workspace-shell" id="workspaceShell" hidden>
     <header class="workspace-header">
       <button class="brand" type="button" data-action="site"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span>Covenda</span></button>
-      <strong>Workspace</strong>
+      <strong>Local preview</strong>
       <div class="header-actions">
         <div class="audience-switch has-three" aria-label="Choose workspace audience">
           <button type="button" data-audience-option="student" aria-pressed="true"><svg><use href="#icon-student"/></svg><span>Student</span></button>
@@ -700,9 +700,20 @@
         <button class="back-link" type="button" data-action="site">Back to site<svg><use href="#icon-arrow-right"/></svg></button>
       </div>
     </header>
+    <!-- This surface is a device-local preview of drafts and receipts, NOT an account.
+         The real workspace (projects, messages, payouts, verified records) is the
+         authenticated portal — say so plainly so the two are never confused. -->
+    <div class="preview-banner">
+      <svg aria-hidden="true"><use href="#icon-lock"/></svg>
+      <div>
+        <strong>This is a preview on this device — not an account.</strong>
+        <span>Drafts and receipts here are saved in this browser only. Your real workspace — projects, messages, and verified work records — lives in the member portal.</span>
+      </div>
+      <a class="gold-button compact" href="/portal.html">Open the member portal<svg><use href="#icon-arrow-right"/></svg></a>
+    </div>
     <div class="workspace-layout">
       <aside class="workspace-sidebar">
-        <nav aria-label="Workspace navigation">
+        <nav aria-label="Local preview navigation">
           <button class="is-active" type="button" data-workspace-tab="overview"><svg><use href="#icon-grid"/></svg>Overview</button>
           <button type="button" data-workspace-tab="profile"><svg><use href="#icon-user"/></svg><span data-student-label="My profile" data-company-label="Company profile">My profile</span></button>
           <button type="button" data-workspace-tab="submissions"><svg><use href="#icon-file"/></svg>Submissions</button>
