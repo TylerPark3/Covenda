@@ -200,6 +200,7 @@ $('#adminStatusFilter').addEventListener('change',renderRows); $('#adminSearch')
 $('#adminSort').addEventListener('change',renderRows);
 $('#adminRefresh').addEventListener('click',()=>loadInbox({ announce:true }).catch(error=>{ $('#adminSyncStatus').textContent='Refresh failed'; alert(error.message); }));
 $('#adminClearFilters').addEventListener('click',()=>{ activeType='all'; $('#adminTypeFilter').value='all'; $('#adminStatusFilter').value='all'; $('#adminSort').value='newest'; $('#adminSearch').value=''; $$('[data-admin-type]').forEach(button=>button.classList.toggle('is-active',button.dataset.adminType==='all')); renderRows(); });
+$('#adminEmptyReset').addEventListener('click',()=>$('#adminClearFilters').click());
 $$('[data-summary-status]').forEach(button=>button.addEventListener('click',()=>{ $('#adminStatusFilter').value=button.dataset.summaryStatus; renderRows(); $('#adminRows').closest('.admin-table-wrap').scrollIntoView({ behavior:'smooth', block:'start' }); }));
 $('#adminSignout').addEventListener('click',()=>{ sessionStorage.removeItem(TOKEN_KEY); selectedReference=''; selectedProjectRequest=''; submissions=[]; projectRequests=[]; showLogin('Signed out of this browser.'); });
 

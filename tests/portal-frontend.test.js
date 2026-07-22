@@ -48,6 +48,20 @@ test('member portal is responsive, reduced-motion safe, and contains no server s
   assert.equal(new Set(ids).size,ids.length);
 });
 
+test('member workspace uses the institutional control system and actionable empty states',()=>{
+  assert.match(html,/class="profile-meter"/);
+  assert.match(html,/aria-label="Profile completion"/);
+  assert.match(script,/Browse open projects/);
+  assert.match(script,/className='empty-action'/);
+  assert.match(script,/label:'Open profile'/);
+  assert.match(script,/label:'Reset filters'/);
+  assert.match(script,/profileNeedsWork\?'Complete profile'/);
+  assert.match(styles,/\.profile-meter/);
+  assert.match(styles,/\.empty-action/);
+  assert.match(styles,/\.portal-primary \{[^}]*background:var\(--gold\)/);
+  assert.doesNotMatch(styles,/\.progress-ring/);
+});
+
 test('portal shares the canonical mark and prepares avatar photos before upload',()=>{
   assert.ok((html.match(/src="\/assets\/covenda-mark\.svg"/g)||[]).length>=2);
   assert.match(script,/function downscaleAvatar\(file\)/);

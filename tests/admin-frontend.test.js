@@ -69,3 +69,12 @@ test('admin shares the canonical Covenda mark', () => {
   assert.ok((html.match(/src="\/assets\/covenda-mark\.svg"/g) || []).length >= 2);
   assert.doesNotMatch(styles, /\.admin-brand i/);
 });
+
+test('operator queue has flat controls and a recoverable filtered empty state', () => {
+  assert.match(html, /id="adminEmptyReset"/);
+  assert.match(html, /Reset the filters to return to the full operator queue/);
+  assert.match(script, /adminEmptyReset/);
+  assert.match(styles, /\.admin-status::before \{ display:none; \}/);
+  assert.match(styles, /\.admin-empty button/);
+  assert.match(styles, /\.workflow-actions button \{[^}]*background:var\(--gold\)/);
+});
