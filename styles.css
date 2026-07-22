@@ -2332,3 +2332,13 @@ body[data-audience="student"] .feature-band { display: none; }
   .proof-record-head { flex-wrap: wrap; }
   .proof-record-foot { flex-direction: column; }
 }
+
+/* Feature 1 — student profile credibility panel */
+.profile-credibility { margin-top: 18px; }
+.profile-cred-kicker { margin: 0 0 8px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-deep); }
+.profile-cred-card { padding: 16px 18px; border-radius: 14px; border: 1px solid var(--line); background: #fff; }
+.profile-cred-card.is-endorsed { border-color: var(--gold-light); background: var(--gold-pale); }
+.profile-cred-card > * { margin: 0; }
+.profile-cred-card > * + * { margin-top: 8px; }
+.profile-cred-who { font-size: 15px; color: var(--ink); }
+.profile-cred-note { font-size: 12.5px; line-height: 1.5; color: var(--muted); }

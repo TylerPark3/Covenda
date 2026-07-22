@@ -665,6 +665,46 @@ function renderReview(form) {
   }
 }
 
+// Feature 1 — make credibility legible on the student profile: show WHO endorsed you
+// (from the ?ref= partner referral), or an honest "earn it through work" state. Reuses
+// the existing referral data — no new model.
+function renderProfileCredibility() {
+  const host = $('#profileCredibility');
+  if (!host) return;
+  host.innerHTML = '';
+  const ref = activeReferral();
+  const kicker = document.createElement('p');
+  kicker.className = 'profile-cred-kicker';
+  kicker.textContent = 'Credibility';
+  host.append(kicker);
+  const card = document.createElement('div');
+  card.className = 'profile-cred-card' + (ref && ref.via ? ' is-endorsed' : ' is-open');
+  if (ref && ref.via) {
+    const tag = document.createElement('span');
+    tag.className = 'cred-tag cred-tag-endorsed';
+    tag.innerHTML = '<svg><use href="#icon-shield"/></svg>Endorsed';
+    const who = document.createElement('p');
+    who.className = 'profile-cred-who';
+    who.append(document.createTextNode('Endorsed by '));
+    const b = document.createElement('b');
+    b.textContent = ref.via;
+    who.append(b);
+    const note = document.createElement('p');
+    note.className = 'profile-cred-note';
+    note.textContent = 'A trust head-start, not a placement. Reviewed work earns the verified rungs.';
+    card.append(tag, who, note);
+  } else {
+    const who = document.createElement('p');
+    who.className = 'profile-cred-who';
+    who.textContent = 'No endorsement yet — everyone can still earn credibility.';
+    const note = document.createElement('p');
+    note.className = 'profile-cred-note';
+    note.textContent = 'Ask a professor, club, or career center to vouch for you — or build proof through reviewed work.';
+    card.append(who, note);
+  }
+  host.append(card);
+}
+
 function renderWorkspaceDrafts() {
   const studentDraft = readStorage(draftKeys.studentForm, null);
   const companyDraft = readStorage(draftKeys.companyForm, null);
@@ -704,6 +744,7 @@ function renderWorkspaceDrafts() {
     const workspaceCard = $('#studentVideoIntroWorkspace');
     if (workspaceCard) workspaceCard.hidden = true;
   }
+  renderProfileCredibility();
 
   if (hasCompanyDraft) {
     const deliverable = draftValue(companyDraft, 'companyDeliverable', 'Working Project Packet');
@@ -2041,6 +2082,18 @@ $$('.form-dialog').forEach(dialog => dialog.addEventListener('click', event => {
   const bounds = dialog.getBoundingClientRect();
   const outside = event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
   if (outside) dialog.close();
+}));
+
+// Top-nav links work from EVERY audience: switch to the audience where the target
+// section lives (home for the brand story), then smooth-scroll to it. Fixes the dead
+// "How it works" / "Why Covenda" links on the company/university tabs.
+$$('.site-nav [data-nav-target]').forEach(link => link.addEventListener('click', event => {
+  event.preventDefault();
+  if (link.dataset.navAudience) setAudience(link.dataset.navAudience);
+  setSurface('site');
+  const target = document.getElementById(link.dataset.navTarget);
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.setTimeout(() => target?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' }), 60);
 }));
 
 $$('[data-action]').forEach(button => button.addEventListener('click', () => {
