@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, saveMemberProfile } from '../api/portal.js';
+import { authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, saveMemberProfile, sendProjectMessage } from '../api/portal.js';
 
 const authEnv = { SUPABASE_URL:'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY:'publishable', SUPABASE_SECRET_KEY:'secret' };
 
@@ -70,4 +70,12 @@ test('only organization roles can create projects', async () => {
   assert.equal(project.status,'open');
   assert.equal(project.owner_user_id,'company-1');
   assert.deepEqual(project.desired_skills,['Research','Writing']);
+});
+
+test('project messages require project membership and store only bounded text', async () => {
+  let inserted;
+  const supabase={from(table){if(table==='member_projects')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{id:'f65be0ad-7607-4c38-a1e1-095c34ad4f11',owner_user_id:'company-1',assigned_student_user_id:'student-1'},error:null};}};assert.equal(table,'project_messages');return {insert(value){inserted=value;return this;},select(){return this;},async single(){return {data:{id:'message-1',created_at:'2026-07-22T00:00:00Z',...inserted},error:null};}};}};
+  const message=await sendProjectMessage({user:{id:'student-1'},supabase},{projectId:'f65be0ad-7607-4c38-a1e1-095c34ad4f11',message:'  The first milestone is ready.  '});
+  assert.equal(message.body,'The first milestone is ready.');
+  assert.equal(message.author_user_id,'student-1');
 });

@@ -4,7 +4,7 @@ const ACCESS_KEY = 'covendaMemberAccessToken';
 const REFRESH_KEY = 'covendaMemberRefreshToken';
 const EXPIRY_KEY = 'covendaMemberExpiry';
 
-const state = { dashboard: null, view: 'overview', applyProject: null };
+const state = { dashboard: null, view: 'overview', applyProject: null, messageProjectId: null };
 const roleLabels = { student: 'Student', company: 'Company', university: 'University partner' };
 const statusLabels = { draft:'Draft', scoping:'In scoping', open:'Open', matched:'Matched', in_progress:'In progress', review:'In review', complete:'Complete', archived:'Archived' };
 const intakeStatusLabels = { received:'Received', reviewing:'In review', needs_information:'Needs information', packet_proposed:'Packet proposed', approval_pending:'Approval pending', approved:'Approved', declined:'Declined', archived:'Archived' };
@@ -117,13 +117,14 @@ function renderIdentity(profile) {
 }
 
 function renderDashboard() {
-  const { profile,projects,opportunities,applications,intakes=[] }=state.dashboard;
+  const { profile,projects,opportunities,applications,intakes=[],messages=[] }=state.dashboard;
   renderIdentity(profile);
   const role=profile?.role;
   $$('[data-student-only]').forEach(el=>el.hidden=role!=='student');
   $('#portfolioNavLabel').textContent=role==='company'?'Student portfolios':'Portfolio';
   $('#projectCount').textContent=projects.length;
   $('#intakeCount').textContent=intakes.length;
+  $('#messageCount').textContent=messages.length;
   $('#opportunityCount').textContent=opportunities.length;
   $('#newProject').hidden=!['company','university'].includes(role);
   const now=new Date(); $('#welcomeDate').textContent=now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
@@ -131,7 +132,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderActivity(); renderDiscover(); renderPortfolio();
+  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderActivity(); renderDiscover(); renderPortfolio(); renderMessages();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -170,6 +171,21 @@ function renderActivity(){
   for(const application of applications){const project=knownProjects.find(item=>item.id===application.project_id);const row=document.createElement('article');row.className='activity-row';const marker=document.createElement('span');marker.className='activity-marker';marker.append(icon('p-project'));const main=document.createElement('div');const meta=document.createElement('div');meta.className='activity-meta';meta.append(pill(applicationStatusLabels[application.status]||titleCase(application.status),'status-pill',application.status));const h=document.createElement('h3');h.textContent=project?.title||'Covenda project application';const details=document.createElement('p');details.textContent=`Updated ${dateLabel(application.updated_at||application.created_at)}`;main.append(meta,h,details);row.append(marker,main);applicationRoot.append(row);}
 }
 
+function selectMessageProject(projectId){state.messageProjectId=projectId;renderMessages();}
+
+function renderMessages(){
+  const d=state.dashboard;const projects=d.projects||[];const messages=d.messages||[];const projectRoot=$('#messageProjects');const thread=$('#messageThread');const form=$('#messageForm');
+  projectRoot.replaceChildren();
+  if(!projects.length){state.messageProjectId=null;$('#messageProjectTitle').textContent='No project conversations yet';$('#messageProjectStatus').textContent='';form.hidden=true;emptyList(thread,'p-message','Messages begin with a project.','Once a project is posted or assigned, its private thread will appear here.');return;}
+  if(!projects.some(project=>project.id===state.messageProjectId))state.messageProjectId=projects[0].id;
+  for(const project of projects){const projectMessages=messages.filter(message=>message.project_id===project.id);const button=document.createElement('button');button.type='button';button.className=project.id===state.messageProjectId?'is-active':'';const title=document.createElement('strong');title.textContent=project.title;const meta=document.createElement('span');meta.textContent=`${statusLabels[project.status]||titleCase(project.status)} · ${projectMessages.length} ${projectMessages.length===1?'message':'messages'}`;button.append(title,meta);button.addEventListener('click',()=>selectMessageProject(project.id));projectRoot.append(button);}
+  const project=projects.find(item=>item.id===state.messageProjectId);$('#messageProjectTitle').textContent=project.title;$('#messageProjectStatus').textContent=statusLabels[project.status]||titleCase(project.status);form.hidden=false;thread.replaceChildren();
+  const projectMessages=messages.filter(message=>message.project_id===project.id);
+  if(!projectMessages.length){emptyList(thread,'p-message','Start the project thread.','Share a scope question, milestone, or review note. It will remain attached to this project.');return;}
+  for(const message of projectMessages){const own=message.author_user_id===d.user.id;const article=document.createElement('article');article.className=`message-bubble${own?' is-own':''}`;const author=document.createElement('strong');author.textContent=own?'You':'Project participant';const body=document.createElement('p');body.textContent=message.body;const time=document.createElement('time');time.dateTime=message.created_at;time.textContent=new Date(message.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});article.append(author,body,time);thread.append(article);}
+  thread.scrollTop=thread.scrollHeight;
+}
+
 function renderDiscover(){const root=$('#opportunityList');const query=$('#discoverSearch').value.trim().toLowerCase();const items=state.dashboard.opportunities.filter(project=>[project.title,project.summary,...(project.desired_skills||[])].join(' ').toLowerCase().includes(query));$('#discoverCount').textContent=`${items.length} open ${items.length===1?'project':'projects'}`;root.replaceChildren();if(!items.length){emptyList(root,'p-compass',query?'No projects match that search.':'No open projects right now.','Covenda will place reviewed opportunities here as companies and universities make them available.');return;}for(const project of items){const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const skills=cell('Skills',(project.desired_skills||[]).join(', ')||'Open fit');const due=cell('Target',project.target_date?dateLabel(project.target_date):'Flexible');const applied=state.dashboard.applications.some(app=>app.project_id===project.id);const button=document.createElement('button');button.type='button';button.textContent=applied?'Interest sent':'View & apply';button.disabled=applied;button.addEventListener('click',()=>openApply(project));row.append(main,skills,due,button);root.append(row);}}
 
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){$('#portfolioEyebrow').textContent='Member talent';$('#portfolioTitle').textContent='Student portfolios';$('#portfolioIntro').textContent='Discover students who chose to share their profile with signed-in company members.';$('#editProfile').hidden=false;if(!studentDirectory.length){emptyList(root,'p-user','No visible student portfolios yet.','Students will appear here after they finish onboarding and opt into member discovery.');return;}const list=document.createElement('div');list.className='talent-list';for(const student of studentDirectory){const row=document.createElement('article');row.className='talent-row';const h=document.createElement('h3');h.textContent=student.display_name;const p=document.createElement('p');p.textContent=[student.headline,student.school_name,student.graduation_year&&`Class of ${student.graduation_year}`].filter(Boolean).join(' · ')||'Student member';const skills=document.createElement('div');skills.className='skills';(student.skills||[]).forEach(skill=>skills.append(pill(skill)));row.append(h,p,skills);list.append(row);}root.append(list);return;}
@@ -188,6 +204,8 @@ $('#profileForm').addEventListener('submit',async event=>{event.preventDefault()
 $('#projectForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#projectMessage','Creating project…');const payload={action:'create-project',title:form.elements.title.value,summary:form.elements.summary.value,deliverable:form.elements.deliverable.value,desiredSkills:form.elements.desiredSkills.value,targetDate:form.elements.targetDate.value,visibility:form.elements.visibility.value};try{await portalRequest({method:'POST',body:JSON.stringify(payload)});$('#projectDialog').close();await loadDashboard();setView('projects');}catch(error){setDialogMessage('#projectMessage',error.message,true);}finally{button.disabled=false;}});
 
 $('#applyForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#applyMessage','Sending your interest…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'apply',projectId:form.elements.projectId.value,note:form.elements.note.value})});$('#applyDialog').close();await loadDashboard();setView('discover');}catch(error){setDialogMessage('#applyMessage',error.message,true);}finally{button.disabled=false;}});
+
+$('#messageForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const status=$('#messageFormStatus');button.disabled=true;status.textContent='Sending…';status.classList.remove('is-error');try{const result=await portalRequest({method:'POST',body:JSON.stringify({action:'send-message',projectId:state.messageProjectId,message:form.elements.message.value})});state.dashboard.messages.push(result.message);form.reset();status.textContent='Sent securely.';renderMessages();}catch(error){status.textContent=error.message;status.classList.add('is-error');}finally{button.disabled=false;}});
 
 $$('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));
 $$('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>{const dialog=button.closest('dialog');if(dialog.id==='profileDialog'&&$('#profileForm').dataset.required==='true')return;dialog.close();}));

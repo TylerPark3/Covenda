@@ -66,7 +66,7 @@
         <button type="button" data-view="activity"><svg><use href="#p-inbox"/></svg><span>Submissions</span><b id="intakeCount">0</b></button>
         <button type="button" data-view="discover" data-student-only><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
         <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
-        <button type="button" data-view="messages"><svg><use href="#p-message"/></svg><span>Messages</span><i>Soon</i></button>
+        <button type="button" data-view="messages"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
       </nav>
       <div class="member-identity"><span id="memberInitial">C</span><div><strong id="memberNavName">Member</strong><small id="memberNavRole">Covenda</small></div></div>
       <button class="member-signout" id="memberSignout" type="button"><svg><use href="#p-exit"/></svg>Sign out</button>
@@ -118,7 +118,19 @@
       </section>
 
       <section class="portal-view" data-portal-view="messages">
-        <div class="coming-soon"><span><svg><use href="#p-message"/></svg></span><p class="eyebrow">In development</p><h1>Project messages will live here.</h1><p>Covenda is building a private thread for scope questions, review notes, and project milestones. Until then, operators will continue follow-up by email.</p><button class="portal-secondary" type="button" data-view="overview">Return to overview</button></div>
+        <div class="page-heading"><div><p class="eyebrow">Project communication</p><h1>Messages</h1><p>Keep scope questions, review notes, and milestones attached to the project they belong to.</p></div></div>
+        <div class="message-workspace">
+          <aside class="message-projects" id="messageProjects" aria-label="Project conversations"></aside>
+          <section class="message-conversation">
+            <header><div><p class="eyebrow">Private thread</p><h2 id="messageProjectTitle">Choose a project</h2></div><span id="messageProjectStatus"></span></header>
+            <div class="message-thread" id="messageThread" aria-live="polite"></div>
+            <form class="message-compose" id="messageForm">
+              <label for="messageBody">Message</label>
+              <textarea id="messageBody" name="message" rows="3" maxlength="4000" placeholder="Write a project update…" required></textarea>
+              <div><p id="messageFormStatus" aria-live="polite"></p><button class="portal-primary" type="submit">Send message<svg><use href="#p-arrow"/></svg></button></div>
+            </form>
+          </section>
+        </div>
       </section>
     </main>
   </div>
