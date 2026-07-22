@@ -49,7 +49,7 @@ function portalRedirectUrl(req) {
   return `${protocol}://${host}/portal.html`;
 }
 
-function publicClient(env, createSupabaseClient) {
+function publicConfiguration(env) {
   const url = env.SUPABASE_URL || env.NEXT_PUBLIC_SUPABASE_URL;
   const key = env.SUPABASE_PUBLISHABLE_KEY || env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
@@ -58,6 +58,11 @@ function publicClient(env, createSupabaseClient) {
       'Member sign-in is not configured for this deployment. Confirm the Supabase URL and publishable key in Vercel, then redeploy.',
     );
   }
+  return { url, key };
+}
+
+function publicClient(env, createSupabaseClient) {
+  const { url, key } = publicConfiguration(env);
   return createSupabaseClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
 }
 
@@ -111,6 +116,20 @@ export async function requestGoogleLogin(req, { env = process.env, createSupabas
   return { url: data.url };
 }
 
+export async function memberAuthReadiness({ env = process.env, fetchImpl = fetch } = {}) {
+  const { url, key } = publicConfiguration(env);
+  try {
+    const response = await fetchImpl(`${url.replace(/\/$/, '')}/auth/v1/settings`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!response.ok) return { googleConfigured: null };
+    const settings = await response.json();
+    return { googleConfigured: settings?.external?.google === true };
+  } catch {
+    return { googleConfigured: null };
+  }
+}
+
 async function refreshSession(refreshToken, { env = process.env, createSupabaseClient = createClient } = {}) {
   const token = cleanText(refreshToken, 8_000);
   if (!token) throw new Error('A refresh token is required.');
@@ -139,10 +158,25 @@ async function checked(query, fallback = []) {
   return data ?? fallback;
 }
 
+export async function loadMemberIntakes(member) {
+  if (!member.user.email) return [];
+  return checked(
+    member.supabase
+      .from('submissions')
+      .select('reference,submission_type,status,summary,organization_name,created_at,updated_at')
+      .eq('submitter_email', member.user.email)
+      .order('created_at', { ascending: false })
+      .limit(100),
+  );
+}
+
 export async function loadMemberDashboard(member) {
   const { user, supabase } = member;
-  const profile = await checked(supabase.from('member_profiles').select('*').eq('user_id', user.id).maybeSingle(), null);
-  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [] };
+  const [profile, intakes] = await Promise.all([
+    checked(supabase.from('member_profiles').select('*').eq('user_id', user.id).maybeSingle(), null),
+    loadMemberIntakes(member),
+  ]);
+  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes };
 
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
@@ -150,7 +184,7 @@ export async function loadMemberDashboard(member) {
       checked(supabase.from('member_projects').select('*').eq('status', 'open').in('visibility', ['members', 'open']).order('created_at', { ascending: false }).limit(50)),
       checked(supabase.from('project_applications').select('*').eq('student_user_id', user.id).order('updated_at', { ascending: false }).limit(100)),
     ]);
-    return { user, profile, projects, opportunities, applications, studentDirectory: [] };
+    return { user, profile, projects, opportunities, applications, studentDirectory: [], intakes };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -161,7 +195,7 @@ export async function loadMemberDashboard(member) {
   const studentDirectory = profile.role === 'company'
     ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
     : [];
-  return { user, profile, projects, opportunities: [], applications, studentDirectory };
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -234,7 +268,7 @@ export async function applyToProject(member, input) {
 function portalFailure(error) {
   if (error instanceof PortalOperationalError) return { status: 503, code: error.code, message: error.publicMessage };
   const message = cleanText(error?.message, 2_000);
-  if (/member_profiles|member_projects|project_applications|schema cache|relation .* does not exist/i.test(message)) {
+  if (/member_profiles|member_projects|project_applications|submissions|schema cache|relation .* does not exist/i.test(message)) {
     return { status: 503, code: 'PORTAL_SCHEMA_MISSING', message: 'Member sign-in worked, but the portal tables are not available. Apply the newest Supabase migration to the same project used by Vercel.' };
   }
   return { status: 503, code: 'PORTAL_UNAVAILABLE', message: 'The member portal is temporarily unavailable. Check the newest /api/portal entry in Vercel Runtime Logs.' };
@@ -253,6 +287,7 @@ export default async function handler(req, res, dependencies = {}) {
         await requestMemberLink(input.email, req, dependencies);
         return res.status(200).json({ ok: true, message: 'Check your inbox for a secure Covenda sign-in link.' });
       }
+      if (input.action === 'auth-readiness') return res.status(200).json({ ok: true, ...(await memberAuthReadiness(dependencies)) });
       if (input.action === 'google-login') return res.status(200).json({ ok: true, ...(await requestGoogleLogin(req, dependencies)) });
       if (input.action === 'refresh-session') return res.status(200).json({ ok: true, ...(await refreshSession(input.refreshToken, dependencies)) });
     }

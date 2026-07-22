@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { authorizeMember, createMemberProject, requestGoogleLogin, requestMemberLink, saveMemberProfile } from '../api/portal.js';
+import { authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, saveMemberProfile } from '../api/portal.js';
 
 const authEnv = { SUPABASE_URL:'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY:'publishable', SUPABASE_SECRET_KEY:'secret' };
 
@@ -27,6 +27,13 @@ test('Google member login returns a Supabase OAuth URL without a browser-side se
   assert.deepEqual(input,{provider:'google',options:{redirectTo:'https://covenda.vercel.app/portal.html',skipBrowserRedirect:true}});
 });
 
+test('auth readiness reports whether Google is enabled in the connected Supabase project', async () => {
+  let requestedUrl;
+  const result=await memberAuthReadiness({env:authEnv,async fetchImpl(url,options){requestedUrl=url;assert.equal(options.headers.apikey,'publishable');return {ok:true,async json(){return {external:{google:true}};}};}});
+  assert.equal(requestedUrl,'https://project.supabase.co/auth/v1/settings');
+  assert.equal(result.googleConfigured,true);
+});
+
 test('member authorization validates the bearer token with the server-side Supabase client', async () => {
   const result=await authorizeMember({headers:{authorization:'Bearer valid.jwt'}},{
     env:authEnv,
@@ -34,6 +41,13 @@ test('member authorization validates the bearer token with the server-side Supab
   });
   assert.equal(result.user.email,'member@example.com');
   assert.equal(result.user.metadata.full_name,'Member');
+});
+
+test('member intake receipts are loaded only for the authenticated email', async () => {
+  const expected=[{reference:'STU-ABC12345',submission_type:'student_interest',status:'received'}];
+  const supabase={from(table){assert.equal(table,'submissions');return {select(columns){assert.match(columns,/reference,submission_type,status/);return this;},eq(column,value){assert.equal(column,'submitter_email');assert.equal(value,'student@example.com');return this;},order(column,options){assert.equal(column,'created_at');assert.equal(options.ascending,false);return this;},async limit(value){assert.equal(value,100);return {data:expected,error:null};}};}};
+  const intakes=await loadMemberIntakes({user:{email:'student@example.com'},supabase});
+  assert.deepEqual(intakes,expected);
 });
 
 test('profile onboarding persists a fixed role and sanitized member fields', async () => {

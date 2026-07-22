@@ -7,6 +7,9 @@ const EXPIRY_KEY = 'covendaMemberExpiry';
 const state = { dashboard: null, view: 'overview', applyProject: null };
 const roleLabels = { student: 'Student', company: 'Company', university: 'University partner' };
 const statusLabels = { draft:'Draft', scoping:'In scoping', open:'Open', matched:'Matched', in_progress:'In progress', review:'In review', complete:'Complete', archived:'Archived' };
+const intakeStatusLabels = { received:'Received', reviewing:'In review', needs_information:'Needs information', packet_proposed:'Packet proposed', approval_pending:'Approval pending', approved:'Approved', declined:'Declined', archived:'Archived' };
+const intakeTypeLabels = { student_interest:'Student interest', employer_intake:'Company problem', university_partner:'University roster', call_request:'Call request' };
+const applicationStatusLabels = { submitted:'Interest sent', reviewing:'In review', shortlisted:'Shortlisted', accepted:'Accepted', declined:'Not selected', withdrawn:'Withdrawn' };
 const statusProgress = { draft:8, scoping:20, open:30, matched:42, in_progress:65, review:86, complete:100, archived:100 };
 
 function icon(id) {
@@ -24,15 +27,37 @@ function clearSession() { sessionStorage.removeItem(ACCESS_KEY); sessionStorage.
 function setLoginMessage(message, error=false) { const root=$('#memberLoginMessage'); root.textContent=message; root.classList.toggle('is-error',error); }
 function setDialogMessage(id,message,error=false) { const root=$(id); root.textContent=message; root.classList.toggle('is-error',error); }
 
+function friendlyAuthError(code, description) {
+  const detail=text(description).replaceAll('+',' ');
+  if (/provider.*(disabled|not enabled)|unsupported provider/i.test(`${code} ${detail}`)) return 'Google sign-in is not connected in the Covenda Supabase project yet. You can use email while an owner finishes the Google provider setup.';
+  if (/redirect|not allowed/i.test(`${code} ${detail}`)) return 'Supabase rejected the return address. Confirm covenda.app/portal.html is in Authentication → URL Configuration.';
+  if (/access_denied|cancel/i.test(`${code} ${detail}`)) return 'Google sign-in was cancelled. No account changes were made.';
+  return detail || 'Sign-in could not be completed. Please try again.';
+}
+
 function captureAuthRedirect() {
-  const params = new URLSearchParams(location.hash.slice(1));
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const query = new URLSearchParams(location.search);
+  const params = hash.has('access_token') || hash.has('error') || hash.has('error_description') ? hash : query;
   const accessToken = params.get('access_token');
   const refreshToken = params.get('refresh_token');
   const expiresAt = params.get('expires_at');
-  const error = params.get('error_description');
+  const errorCode = params.get('error_code') || params.get('error');
+  const error = params.get('error_description') || params.get('error_message');
   if (accessToken) saveSession({ accessToken, refreshToken, expiresAt });
-  if (location.hash) history.replaceState({},document.title,location.pathname);
-  return error;
+  if (accessToken || errorCode || error) history.replaceState({},document.title,location.pathname);
+  return errorCode || error ? friendlyAuthError(errorCode,error) : '';
+}
+
+async function checkAuthReadiness() {
+  const button=$('#googleLogin');
+  const note=$('#googleReadiness');
+  try {
+    const response=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'auth-readiness'})});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok||!result.ok||result.googleConfigured===null)return;
+    if(result.googleConfigured===false){button.disabled=true;$('span',button).textContent='Google sign-in setup pending';note.textContent='Email sign-in is available now. A Covenda owner still needs to enable Google in the connected Supabase project.';note.hidden=false;}
+  } catch { /* Keep both sign-in options visible when readiness cannot be checked. */ }
 }
 
 async function refreshMemberSession() {
@@ -74,7 +99,7 @@ function profileCompletion(profile) {
 }
 
 function setView(view) {
-  const allowed=['overview','projects','discover','portfolio','messages'];
+  const allowed=['overview','projects','activity','discover','portfolio','messages'];
   state.view=allowed.includes(view)?view:'overview';
   $$('[data-portal-view]').forEach(section=>section.classList.toggle('is-active',section.dataset.portalView===state.view));
   $$('[data-view]').forEach(button=>button.classList.toggle('is-active',button.closest('.member-nav')&&button.dataset.view===state.view));
@@ -92,12 +117,13 @@ function renderIdentity(profile) {
 }
 
 function renderDashboard() {
-  const { profile,projects,opportunities,applications }=state.dashboard;
+  const { profile,projects,opportunities,applications,intakes=[] }=state.dashboard;
   renderIdentity(profile);
   const role=profile?.role;
   $$('[data-student-only]').forEach(el=>el.hidden=role!=='student');
   $('#portfolioNavLabel').textContent=role==='company'?'Student portfolios':'Portfolio';
   $('#projectCount').textContent=projects.length;
+  $('#intakeCount').textContent=intakes.length;
   $('#opportunityCount').textContent=opportunities.length;
   $('#newProject').hidden=!['company','university'].includes(role);
   const now=new Date(); $('#welcomeDate').textContent=now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
@@ -105,7 +131,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderDiscover(); renderPortfolio();
+  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderActivity(); renderDiscover(); renderPortfolio();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -119,7 +145,7 @@ function renderFocus(){
 }
 function pill(label,className='skill-pill',status=''){const span=document.createElement('span');span.className=className;span.textContent=label;if(status)span.dataset.status=status;return span;}
 
-function renderMetrics(){const root=$('#memberMetrics');root.replaceChildren();const d=state.dashboard;const role=d.profile?.role;const values=role==='student'?[[d.projects.length,'Current projects'],[d.applications.length,'Applications'],[d.opportunities.length,'Open opportunities']]:[[d.projects.length,'Posted projects'],[d.projects.filter(p=>p.status==='open').length,'Open now'],[d.applications.length,'Student applications']];for(const [value,label] of values){const item=document.createElement('div');item.className='metric';const strong=document.createElement('strong');strong.textContent=value;const span=document.createElement('span');span.textContent=label;item.append(strong,span);root.append(item);}}
+function renderMetrics(){const root=$('#memberMetrics');root.replaceChildren();const d=state.dashboard;const role=d.profile?.role;const values=role==='student'?[[d.projects.length,'Current projects'],[d.applications.length,'Applications'],[(d.intakes||[]).length,'Form submissions']]:[[d.projects.length,'Posted projects'],[d.applications.length,'Student applications'],[(d.intakes||[]).length,'Form submissions']];for(const [value,label] of values){const item=document.createElement('div');item.className='metric';const strong=document.createElement('strong');strong.textContent=value;const span=document.createElement('span');span.textContent=label;item.append(strong,span);root.append(item);}}
 
 function renderProgress(){const profile=state.dashboard.profile;const score=profileCompletion(profile);$('#profileRing').style.setProperty('--progress',`${score*3.6}deg`);$('strong',$('#profileRing')).textContent=`${score}%`;$('#profileProgressTitle').textContent=score===100?'Your profile is ready':score>=60?'Add the finishing details':'Make a strong first impression';$('#profileProgressCopy').textContent=profile?.role==='student'?'Companies see only portfolios you choose to share.':'A complete organization profile adds context to every project.';}
 
@@ -129,6 +155,20 @@ function emptyList(root,iconId,title,copy){root.replaceChildren();const box=docu
 
 function renderProjects(){const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();if(!items.length){emptyList(root,'p-project','No projects in this workspace yet.',state.dashboard.profile?.role==='student'?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.');return;}for(const project of items){const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');const visibility=cell('Visibility',titleCase(project.visibility));row.append(main,status,due,visibility);root.append(row);}}
 function cell(label,value){const div=document.createElement('div');div.className='list-cell';const small=document.createElement('small');small.textContent=label;const strong=document.createElement('strong');strong.textContent=value;div.append(small,strong);return div;}
+
+function renderActivity(){
+  const d=state.dashboard;const intakes=d.intakes||[];const applications=d.applications||[];const intakeRoot=$('#intakeList');const applicationRoot=$('#applicationList');
+  $('#intakeSummary').textContent=`${intakes.length} ${intakes.length===1?'submission':'submissions'}`;
+  $('#applicationSummary').textContent=`${applications.length} ${applications.length===1?'application':'applications'}`;
+  $('#applicationTitle').textContent=d.profile?.role==='student'?'Your project interest':'Student applications';
+  intakeRoot.replaceChildren();
+  if(!intakes.length){emptyList(intakeRoot,'p-inbox','No linked form submissions yet.','Use the same email on a Covenda website form and in this portal account. The receipt will appear here after it reaches Supabase.');}
+  else for(const intake of intakes){const row=document.createElement('article');row.className='activity-row';const marker=document.createElement('span');marker.className='activity-marker';marker.append(icon('p-check'));const main=document.createElement('div');const meta=document.createElement('div');meta.className='activity-meta';meta.append(pill(intakeTypeLabels[intake.submission_type]||titleCase(intake.submission_type)),pill(intakeStatusLabels[intake.status]||titleCase(intake.status),'status-pill',intake.status));const h=document.createElement('h3');h.textContent=intake.summary;const details=document.createElement('p');details.textContent=`Receipt ${intake.reference} · Submitted ${dateLabel(intake.created_at)}`;main.append(meta,h,details);row.append(marker,main);intakeRoot.append(row);}
+  applicationRoot.replaceChildren();
+  if(!applications.length){emptyList(applicationRoot,'p-compass',d.profile?.role==='student'?'No project applications yet.':'No student applications yet.',d.profile?.role==='student'?'When you send interest in a project, its review status will appear here.':'Applications will appear after students express interest in your open projects.');return;}
+  const knownProjects=[...(d.projects||[]),...(d.opportunities||[])];
+  for(const application of applications){const project=knownProjects.find(item=>item.id===application.project_id);const row=document.createElement('article');row.className='activity-row';const marker=document.createElement('span');marker.className='activity-marker';marker.append(icon('p-project'));const main=document.createElement('div');const meta=document.createElement('div');meta.className='activity-meta';meta.append(pill(applicationStatusLabels[application.status]||titleCase(application.status),'status-pill',application.status));const h=document.createElement('h3');h.textContent=project?.title||'Covenda project application';const details=document.createElement('p');details.textContent=`Updated ${dateLabel(application.updated_at||application.created_at)}`;main.append(meta,h,details);row.append(marker,main);applicationRoot.append(row);}
+}
 
 function renderDiscover(){const root=$('#opportunityList');const query=$('#discoverSearch').value.trim().toLowerCase();const items=state.dashboard.opportunities.filter(project=>[project.title,project.summary,...(project.desired_skills||[])].join(' ').toLowerCase().includes(query));$('#discoverCount').textContent=`${items.length} open ${items.length===1?'project':'projects'}`;root.replaceChildren();if(!items.length){emptyList(root,'p-compass',query?'No projects match that search.':'No open projects right now.','Covenda will place reviewed opportunities here as companies and universities make them available.');return;}for(const project of items){const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const skills=cell('Skills',(project.desired_skills||[]).join(', ')||'Open fit');const due=cell('Target',project.target_date?dateLabel(project.target_date):'Flexible');const applied=state.dashboard.applications.some(app=>app.project_id===project.id);const button=document.createElement('button');button.type='button';button.textContent=applied?'Interest sent':'View & apply';button.disabled=applied;button.addEventListener('click',()=>openApply(project));row.append(main,skills,due,button);root.append(row);}}
 
@@ -159,4 +199,5 @@ $('#memberSignout').addEventListener('click',()=>{clearSession();state.dashboard
 $('#mobileMenu').addEventListener('click',()=>$('.member-nav').classList.toggle('is-open'));
 
 const authError=captureAuthRedirect();
+checkAuthReadiness();
 if(authError)showAuth(authError,true);else if(session().accessToken)loadDashboard();else showAuth();
