@@ -2694,6 +2694,30 @@ function initIcosahedron() {
     if (dx * dx + dy * dy + dz * dz < minD2 * 1.05) edges.push([i, j]);
   }
 
+  // Adjacency for path-following light "signals" that travel student -> student.
+  const adj = verts.map(() => []);
+  edges.forEach(([a, b]) => { adj[a].push(b); adj[b].push(a); });
+  function newTraveler(from) {
+    const f = from ?? Math.floor(Math.random() * verts.length);
+    const to = adj[f][Math.floor(Math.random() * adj[f].length)];
+    return { from: f, to, t: Math.random(), speed: 0.005 + Math.random() * 0.004 };
+  }
+  const travelers = [newTraveler(), newTraveler(), newTraveler(), newTraveler()];
+  function updateTravelers() {
+    travelers.forEach(tr => {
+      tr.t += tr.speed;
+      if (tr.t >= 1) {
+        const prev = tr.from;
+        tr.from = tr.to;
+        let choices = adj[tr.from].filter(n => n !== prev);
+        if (!choices.length) choices = adj[tr.from];
+        tr.to = choices[Math.floor(Math.random() * choices.length)];
+        tr.t = 0;
+        tr.speed = 0.005 + Math.random() * 0.004;
+      }
+    });
+  }
+
   let w = 0, h = 0;
   function resize() {
     const r = canvas.getBoundingClientRect();
@@ -2752,6 +2776,26 @@ function initIcosahedron() {
       ctx.fillStyle = `rgba(255,250,238,${(0.45 * depth).toFixed(3)})`;
       ctx.fill();
     });
+    // traveling "signal" lights routing student -> student (globe-flight feel)
+    ctx.lineCap = 'round';
+    travelers.forEach(tr => {
+      const a = pts[tr.from], b = pts[tr.to];
+      const dim = 0.3 + (((a.z + b.z) / 2 + 1) / 2) * 0.7;
+      const hx = a.sx + (b.sx - a.sx) * tr.t, hy = a.sy + (b.sy - a.sy) * tr.t;
+      const tailT = Math.max(0, tr.t - 0.32);
+      const tx = a.sx + (b.sx - a.sx) * tailT, ty = a.sy + (b.sy - a.sy) * tailT;
+      const grad = ctx.createLinearGradient(tx, ty, hx, hy);
+      grad.addColorStop(0, 'rgba(233,198,121,0)');
+      grad.addColorStop(1, `rgba(255,241,205,${(0.9 * dim).toFixed(3)})`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.beginPath(); ctx.arc(hx, hy, 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(231,198,121,${(0.22 * dim).toFixed(3)})`; ctx.fill();
+      ctx.beginPath(); ctx.arc(hx, hy, 2.6, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,248,230,${(0.95 * dim).toFixed(3)})`; ctx.fill();
+    });
+    ctx.lineCap = 'butt';
   }
   function frame() {
     if (!dragging) {
@@ -2759,6 +2803,7 @@ function initIcosahedron() {
       velX += (autoX - velX) * 0.03;
       velY += (autoY - velY) * 0.03;
     }
+    updateTravelers();
     draw(performance.now());
     raf = requestAnimationFrame(frame);
   }
