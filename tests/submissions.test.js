@@ -13,6 +13,7 @@ import handler, {
   postgresConfiguration,
   primaryStorageHealth,
   REFERENCE_PREFIXES,
+  referrerRecord,
   studentRecord,
   submissionDetails,
   submissionRow,
@@ -203,8 +204,9 @@ test('submissionDetails rejects unknown submission types', () => {
 test('API accepted types + reference prefixes stay in sync with the DB migration', () => {
   // Guardrail for the Point-1 bug class: the API must never accept a type (or
   // mint a reference prefix) that the database's constraints would reject.
+  // Read the most recent migration that (re)defines the full allowed set.
   const migration = readFileSync(
-    new URL('../supabase/migrations/20260721060000_allow_university_partner.sql', import.meta.url),
+    new URL('../supabase/migrations/20260722120000_allow_referrer_endorsement.sql', import.meta.url),
     'utf8',
   );
 
@@ -222,6 +224,35 @@ test('API accepted types + reference prefixes stay in sync with the DB migration
       `migration reference format is missing prefix ${REFERENCE_PREFIXES[type]} (for ${type})`,
     );
   }
+});
+
+test('referrerRecord keeps validated endorsements and requires a referrer role', () => {
+  const record = referrerRecord({
+    type: 'referrer_endorsement',
+    contact: { name: 'Dr. Rivera', email: 'rivera@school.edu', company: 'Example University' },
+    referrerType: 'Professor',
+    attributionCode: 'ROBOTICS-PILOT',
+    endorsements: [
+      { name: 'Jordan Lee', email: 'jordan@school.edu', function: 'Robotics', note: 'Top of my lab.' },
+      { name: 'No Email', email: 'not-an-email', function: 'Ops' },
+    ],
+  });
+  assert.equal(record.contact.company, 'Example University');
+  assert.equal(record.referrerType, 'Professor');
+  assert.equal(record.attributionCode, 'ROBOTICS-PILOT');
+  assert.equal(record.endorsements.length, 1);
+  assert.deepEqual(record.endorsements[0], { name: 'Jordan Lee', email: 'jordan@school.edu', function: 'Robotics', note: 'Top of my lab.' });
+});
+
+test('referrerRecord requires a role and at least one valid endorsement', () => {
+  const base = {
+    type: 'referrer_endorsement',
+    contact: { name: 'Dr. Rivera', email: 'rivera@school.edu', company: 'Example University' },
+    referrerType: 'Professor',
+    endorsements: [{ name: 'Jordan Lee', email: 'jordan@school.edu', function: 'Robotics' }],
+  };
+  assert.throws(() => referrerRecord({ ...base, referrerType: '' }), /professor, club, or career center/i);
+  assert.throws(() => referrerRecord({ ...base, endorsements: [] }), /at least one student/i);
 });
 
 test('universityRecord keeps a validated student roster and drops invalid rows', () => {

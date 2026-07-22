@@ -18,9 +18,9 @@ test('HTML ids remain unique', () => {
 
 test('student-first hero offers five work paths and a scroll continuation', () => {
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
-  assert.match(hero, /What kind of work do you want to prove\?/);
+  assert.match(hero, /What kind of work do you want to <span class="word-gold">prove<\/span>\?/);
   assert.equal((hero.match(/class="work-option/g) || []).length, 5);
-  assert.match(hero, /Find my path/);
+  assert.match(hero, /Join the pilot list/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
 });

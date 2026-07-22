@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
-<body data-audience="student" data-surface="site">
+<body data-audience="home" data-surface="site">
   <svg class="svg-library" aria-hidden="true">
     <defs>
       <symbol id="icon-student" viewBox="0 0 24 24"><path d="m3 9 9-5 9 5-9 5-9-5Z"/><path d="M7 12.2V17c2.8 2 7.2 2 10 0v-4.8M21 9v6"/></symbol>
@@ -75,7 +75,7 @@
         <div class="audience-switch has-three" aria-label="Choose audience">
           <button type="button" data-audience-option="student" aria-pressed="true"><svg><use href="#icon-student"/></svg><span>Student</span></button>
           <button type="button" data-audience-option="company" aria-pressed="false"><svg><use href="#icon-company"/></svg><span>Company</span></button>
-          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-building"/></svg><span>University</span></button>
+          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-building"/></svg><span>Educators</span></button>
         </div>
         <a class="member-login-link" href="/portal.html"><svg><use href="#icon-lock"/></svg><span>Member sign in</span></a>
         <button class="workspace-link" type="button" data-action="workspace"><svg><use href="#icon-user"/></svg><span>My receipts</span></button>
@@ -83,9 +83,23 @@
     </header>
 
     <main>
+      <section class="hero hero-home" aria-labelledby="homeHeroTitle">
+        <div class="hero-copy">
+          <p class="home-kicker">Rethinking internships</p>
+          <h1 id="homeHeroTitle">Real work becomes<br>credible <span class="word-gold">proof</span>.</h1>
+          <p>Covenda turns a company’s delayed, low-risk work into a safe, paid project—and durable evidence of what a student can do. No posting. No guessing. See the work.</p>
+        </div>
+        <div class="home-paths" role="group" aria-label="Choose your path">
+          <button type="button" class="home-path glass-panel" data-audience-option="student"><svg class="home-path-icon"><use href="#icon-student"/></svg><span><strong>I’m a student</strong><small>Build proof through paid, reviewed work</small></span></button>
+          <button type="button" class="home-path glass-panel" data-audience-option="company"><svg class="home-path-icon"><use href="#icon-company"/></svg><span><strong>I’m a company</strong><small>Turn delayed work into a safe project</small></span></button>
+          <button type="button" class="home-path glass-panel" data-audience-option="university"><svg class="home-path-icon"><use href="#icon-building"/></svg><span><strong>I bring students</strong><small>Educators, clubs & career centers</small></span></button>
+        </div>
+        <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
+      </section>
+
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
-          <h1 id="studentHeroTitle">What kind of work do you want to prove?</h1>
+          <h1 id="studentHeroTitle">What kind of work do you want to <span class="word-gold">prove</span>?</h1>
           <p>Choose a path. We’ll show you paid projects built to produce real evidence—not résumé filler.</p>
         </div>
         <div class="selector-orbit" aria-label="Choose a work path">
@@ -101,7 +115,29 @@
             <button class="work-option" type="button" data-work-type="QA & testing" aria-pressed="false"><svg><use href="#icon-shield"/></svg><span>QA &amp; testing</span></button>
             <button class="work-option" type="button" data-work-type="Writing & documentation" aria-pressed="false"><svg><use href="#icon-write"/></svg><span>Writing &amp;<br>documentation</span></button>
           </div>
-          <button class="gold-button selector-submit" type="button" data-action="student-form">Find my path<svg><use href="#icon-arrow-right"/></svg></button>
+          <div class="work-detail glass-panel" id="workDetail" hidden aria-live="polite">
+            <div class="work-detail-top">
+              <span class="work-detail-tag" id="workDetailTag"><svg><use href="#icon-search"/></svg><b>Research</b></span>
+              <button class="work-detail-back" type="button" data-action="explore-back"><svg class="flip"><use href="#icon-chevron"/></svg>See all paths</button>
+            </div>
+            <p class="work-detail-desc" id="workDetailDesc"></p>
+            <div class="work-detail-roles">
+              <span class="work-detail-label">Sample roles</span>
+              <ul id="workDetailRoles"></ul>
+            </div>
+            <div class="work-detail-flow">
+              <div class="work-detail-flow-head"><span class="work-detail-label">Workflow preview</span><span class="work-detail-step" id="workDetailStep">Step 1 of 3</span></div>
+              <div class="work-flow-frame" id="workFlowFrame"></div>
+              <div class="work-flow-nav">
+                <button type="button" class="work-flow-prev" data-action="flow-prev" aria-label="Previous step"><svg class="flip"><use href="#icon-chevron"/></svg></button>
+                <div class="work-flow-dots" id="workFlowDots"></div>
+                <button type="button" class="work-flow-next" data-action="flow-next" aria-label="Next step"><svg><use href="#icon-chevron"/></svg></button>
+              </div>
+            </div>
+            <button class="gold-button work-detail-cta" type="button" data-action="student-quick">This fits me → join<svg><use href="#icon-arrow-right"/></svg></button>
+          </div>
+          <button class="gold-button selector-submit" type="button" data-action="student-quick">Join the pilot list<svg><use href="#icon-arrow-right"/></svg></button>
+          <button class="quiet-link selector-secondary" type="button" data-action="student-form">Or complete your full profile now<svg><use href="#icon-chevron"/></svg></button>
           <nav class="student-journey" aria-label="Student journey">
             <button type="button" data-action="focus-pathfinder"><i>1</i><span><b>Explore</b><small>Choose a work path</small></span></button>
             <button type="button" data-action="student-form"><i>2</i><span><b>Profile</b><small>Tell us what fits</small></span></button>
@@ -142,7 +178,7 @@
       <section class="hero hero-university" aria-labelledby="universityHeroTitle">
         <div class="hero-copy">
           <h1 id="universityHeroTitle">Bring your students real, reviewed work.</h1>
-          <p>Build a roster of students by interest area. Covenda routes safe, paid pilot projects and returns verifiable work records—no job board, no placement guarantee.</p>
+          <p>For professors, departments, career centers, clubs, and student orgs—anyone who brings students. Build a roster by interest area and Covenda routes safe, paid pilot projects that return verifiable work records. No job board, no placement guarantee.</p>
         </div>
         <!-- School-logo strip (university audience only, inside .hero-university).
              The marks below are PLACEHOLDER, clearly-illustrative wordmarks — NOT real
@@ -213,9 +249,15 @@
               <ul class="roster-list" id="rosterList" aria-live="polite"></ul>
               <p class="roster-empty" id="rosterEmpty">No students added yet. Add people above, then send the roster to Covenda.</p>
             </div>
+            <div class="roster-section">
+              <label class="roster-endorse-note">Add an endorsement <span>Optional · turns a shared roster into a vouch</span><textarea id="endorsementNote" rows="2" placeholder="Why you vouch for these students — applies to all (e.g. “Top of my Robotics lab; reliable, ships real work.”)"></textarea></label>
+            </div>
             <label class="consent-row roster-consent"><input type="checkbox" id="uniConsent"><span>I can share these names and school emails with Covenda for a founder-led pilot. This is not an account system, and it does not guarantee placement.</span></label>
             <div class="form-message" id="rosterMessage" role="status" aria-live="polite"></div>
-            <button class="gold-button roster-submit" type="button" data-action="roster-submit">Send roster to Covenda<svg><use href="#icon-arrow-right"/></svg></button>
+            <div class="roster-actions">
+              <button class="gold-button roster-submit" type="button" data-action="roster-submit">Send roster to Covenda<svg><use href="#icon-arrow-right"/></svg></button>
+              <button class="outline-button roster-endorse" type="button" data-action="roster-endorse">Endorse these students<svg><use href="#icon-shield"/></svg></button>
+            </div>
           </div>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
@@ -345,7 +387,10 @@
             <h2>Proof of real work,<br>not another résumé line.</h2>
             <p>Covenda turns a company’s delayed, low-risk work into a scoped, reviewed project—so students earn paid experience and keep evidence employers can trust.</p>
           </div>
-          <div class="feature-panel" aria-hidden="true"></div>
+          <div class="feature-panel" aria-hidden="true">
+            <span class="ico-kicker">Rethinking Internships</span>
+            <canvas class="ico-canvas" id="icoCanvas"></canvas>
+          </div>
         </div>
       </section>
 
@@ -377,6 +422,38 @@
             <button type="button" data-work-type="Writing & documentation"><svg><use href="#icon-write"/></svg><span><strong>Writing &amp; documentation</strong><small>Knowledge bases, playbooks, structured briefs</small></span></button>
           </div>
         </div>
+        <div class="credibility-ladder audience-content" data-for-audience="student">
+          <div class="section-heading">
+            <h2>Two ways to earn<br>credibility.</h2>
+            <p>No dead ends. A professor’s endorsement is a trust head-start; anyone can also earn the same proof through reviewed work.</p>
+          </div>
+          <div class="cred-doors">
+            <div class="cred-door glass-panel">
+              <span class="cred-tag cred-tag-endorsed"><svg><use href="#icon-shield"/></svg>Endorsed</span>
+              <p>A professor, club, or career center vouches for you by name — a credible head-start.</p>
+              <div class="cred-marker">
+                <svg><use href="#icon-check"/></svg>
+                <span>Endorsed by <b>Prof. R. Chen</b> · Columbia Robotics</span>
+                <small>Illustrative example</small>
+              </div>
+            </div>
+            <div class="cred-door glass-panel">
+              <span class="cred-tag cred-tag-building">Building proof</span>
+              <p>Sign up on your own and build a track record through completed, reviewed work.</p>
+              <div class="cred-marker cred-marker-plain">
+                <svg><use href="#icon-route"/></svg>
+                <span>Open path · everyone can reach credibility</span>
+              </div>
+            </div>
+          </div>
+          <ol class="cred-rungs">
+            <li><span>1</span><div><strong>Endorsed / Building proof</strong><small>Your starting point</small></div></li>
+            <li><span>2</span><div><strong>Role-Qualified</strong><small>A reviewed work sample in your function</small></div></li>
+            <li><span>3</span><div><strong>Employer-Verified</strong><small>Accepted, paid project work</small></div></li>
+            <li><span>4</span><div><strong>Proven</strong><small>A stronger outcome — interview, referral, or offer</small></div></li>
+          </ol>
+          <p class="cred-note"><svg><use href="#icon-lock"/></svg>An endorsement is a trust head-start, not a placement. The verified rungs are earned through reviewed work — never a black-box score.</p>
+        </div>
         <div class="company-why audience-content" data-for-audience="company">
           <div class="why-copy"><h2>The best first project is useful without being risky.</h2><p>Start where context can be made portable, the finish can be reviewed, and the student does not need access to critical production systems.</p><button class="outline-button" type="button" data-action="company-form">Describe a real problem<svg><use href="#icon-arrow-right"/></svg></button></div>
           <div class="fit-table" id="projectFit">
@@ -398,14 +475,14 @@
       <section class="batches-section" id="batches">
         <div class="section-heading">
           <p class="feature-kicker">Build credibility</p>
-          <h2>Join a batch in your function.</h2>
-          <p>A batch is a small pilot cohort focused on one kind of work. You build a track record by completing bounded, reviewed projects—not by joining. A batch is an interest signal, not a placement or job guarantee.</p>
+          <h2>Join a batch in your industry.</h2>
+          <p>Anyone can run a test or clean a spreadsheet — credibility is industry-specific. A batch is a small pilot cohort in one industry where you build a real track record by completing bounded, reviewed projects. Like a professor’s endorsement, it’s an industry credibility signal — not a placement or job guarantee.</p>
         </div>
         <div class="batch-grid" id="batchGrid" data-batch-grid></div>
       </section>
 
       <section class="final-cta">
-        <div data-for-audience="student" class="audience-content"><h2>Start with the work you want to prove.</h2><p>Submit an interest profile. We’ll use it to shape the first pilot group—not to promise a job or automatic match.</p><button class="gold-button" type="button" data-action="student-form">Build my interest profile<svg><use href="#icon-arrow-right"/></svg></button></div>
+        <div data-for-audience="student" class="audience-content"><h2>Start with the work you want to <span class="word-gold">prove</span>.</h2><p>Submit an interest profile. We’ll use it to shape the first pilot group—not to promise a job or automatic match.</p><button class="gold-button" type="button" data-action="student-form">Build my interest profile<svg><use href="#icon-arrow-right"/></svg></button></div>
         <div data-for-audience="company" class="audience-content"><h2>Bring us the work that keeps slipping.</h2><p>Book a 20-minute demo to walk through a real problem, or write it up as a Project Packet. Covenda assesses whether it can become a safe project before asking you to fund or publish anything.</p><div class="cta-actions"><button class="gold-button" type="button" data-action="schedule-demo">Schedule a demo<svg><use href="#icon-arrow-right"/></svg></button><button class="outline-button" type="button" data-action="company-form">Start a Project Packet<svg><use href="#icon-arrow-right"/></svg></button></div></div>
         <div data-for-audience="university" class="audience-content"><h2>Share your students with the pilot.</h2><p>Add a roster by interest area and Covenda will route safe, paid projects as they open. Founder-led, no accounts, no placement guarantee.</p><button class="gold-button" type="button" data-action="university-roster">Build your roster<svg><use href="#icon-arrow-right"/></svg></button></div>
       </section>
@@ -422,7 +499,7 @@
         <div class="audience-switch has-three" aria-label="Choose workspace audience">
           <button type="button" data-audience-option="student" aria-pressed="true"><svg><use href="#icon-student"/></svg><span>Student</span></button>
           <button type="button" data-audience-option="company" aria-pressed="false"><svg><use href="#icon-company"/></svg><span>Company</span></button>
-          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-building"/></svg><span>University</span></button>
+          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-building"/></svg><span>Educators</span></button>
         </div>
         <button class="back-link" type="button" data-action="site">Back to site<svg><use href="#icon-arrow-right"/></svg></button>
       </div>
@@ -554,7 +631,7 @@
   <dialog class="form-dialog" id="studentDialog" aria-labelledby="studentDialogTitle">
     <form id="studentForm">
       <input type="hidden" name="studentBatch" id="studentBatch">
-      <header class="dialog-header"><div><small>Student interest profile</small><h2 id="studentDialogTitle">Tell us what you want to prove.</h2></div><div class="dialog-tools"><span data-draft-status>Draft saves on this device</span><button type="button" class="draft-clear" data-clear-draft>Clear draft</button><button type="button" class="icon-button" data-close-dialog aria-label="Close student form"><svg><use href="#icon-close"/></svg></button></div></header>
+      <header class="dialog-header"><div><small>Student interest profile</small><h2 id="studentDialogTitle">Tell us what you want to <span class="word-gold">prove</span>.</h2></div><div class="dialog-tools"><span data-draft-status>Draft saves on this device</span><button type="button" class="draft-clear" data-clear-draft>Clear draft</button><button type="button" class="icon-button" data-close-dialog aria-label="Close student form"><svg><use href="#icon-close"/></svg></button></div></header>
       <div class="form-progress" aria-label="Student form progress"><span class="is-active">1. You</span><span>2. Work</span><span>3. Fit</span><span>4. Review</span></div>
       <section class="form-step is-active" data-student-step="1">
         <div class="field-grid">
@@ -607,6 +684,23 @@
       <div class="form-message" id="studentFormMessage" role="status" aria-live="polite"></div>
       <footer class="dialog-footer"><button class="outline-button" type="button" data-form-back hidden>Back</button><button class="gold-button" type="button" data-form-next>Continue<svg><use href="#icon-arrow-right"/></svg></button><button class="gold-button" type="submit" data-form-submit hidden>Send interest profile<svg><use href="#icon-arrow-right"/></svg></button></footer>
     </form>
+  </dialog>
+
+  <dialog class="form-dialog quick-join-dialog" id="quickJoinDialog" aria-labelledby="quickJoinTitle">
+    <form id="quickJoinForm" novalidate>
+      <header class="dialog-header"><div><small>Join the pilot list</small><h2 id="quickJoinTitle">Get on the list in seconds.</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
+      <p class="dialog-copy">Covenda turns real company work into short, paid projects that give you proof of skill. Add your name and email to join the pilot list—no long form, no commitment. You can complete your full profile whenever you're ready.</p>
+      <div class="field-grid">
+        <label>Full name<input name="quickName" autocomplete="name" required></label>
+        <label>Email<input name="quickEmail" type="email" autocomplete="email" required></label>
+        <label class="wide">School <span>Optional</span><input name="quickSchool" autocomplete="organization"></label>
+      </div>
+      <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+      <label class="consent-row"><input name="quickConsent" type="checkbox" required><span>Covenda may email me about the pilot. This is an interest signal, not a job offer or guarantee.</span></label>
+      <div class="form-message" id="quickJoinMessage" role="status" aria-live="polite"></div>
+      <div class="quick-join-actions"><button class="gold-button" type="submit">Join the list<svg><use href="#icon-arrow-right"/></svg></button></div>
+    </form>
+    <div class="quick-join-done" id="quickJoinDone" hidden></div>
   </dialog>
 
   <dialog class="form-dialog" id="companyDialog" aria-labelledby="companyDialogTitle">

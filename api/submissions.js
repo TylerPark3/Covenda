@@ -12,6 +12,8 @@ export const REFERENCE_PREFIXES = {
   student_interest: 'STU',
   call_request: 'CALL',
   university_partner: 'UNI',
+  student_quick: 'SQ',
+  referrer_endorsement: 'REF',
 };
 export const SUBMISSION_TYPES = Object.keys(REFERENCE_PREFIXES);
 const TYPES = new Set(SUBMISSION_TYPES);
@@ -195,6 +197,10 @@ export function studentRecord(body) {
     // batch + outcome data can become training data for a future per-function
     // capability assessment — no model or scoring exists yet (see prompt Part G).
     batch: text(body.batch, 120),
+    // Quick-join linkage: a completed full profile carries its stage + the SQ- ref of
+    // the earlier quick join, so records match on email and completion is trackable.
+    stage: text(body.stage, 40) || 'profile_completed',
+    linkedQuickRef: text(body.linkedQuickRef, 40),
     availability: text(body.availability, 80),
     preferences: {
       hoursPerWeek: text(preferences.hoursPerWeek, 80),
@@ -261,11 +267,59 @@ export function callRecord(body) {
   return record;
 }
 
+// Low-friction "quick join": just name + email (+ optional school). Adds a student
+// to the pilot list in seconds, no full profile required. Their full interest
+// profile can be completed later and is matched back on email (details.contact.email).
+export function studentQuickRecord(body) {
+  const record = {
+    contact: contact(body.contact),
+    school: text(body.school, 160),
+    interest: text(body.interest, 240),   // optional selected work path, if any
+    stage: 'quick_added',
+  };
+  if (!record.contact.name || !record.contact.email) {
+    throw new Error('Please add your name and a valid email.');
+  }
+  return record;
+}
+
+export function referrerRecord(body) {
+  // A professor / club officer / career center endorsing specific students by
+  // name + school email + function, with an optional note. Reuses the roster
+  // shape; each endorsement is a real, referrer-consented vouch (not a match).
+  const endorsements = Array.isArray(body.endorsements)
+    ? body.endorsements
+        .slice(0, 200)
+        .map(entry => ({
+          name: text(entry?.name, 100),
+          email: email(entry?.email),
+          function: text(entry?.function, 80),
+          note: text(entry?.note, 500),
+        }))
+        .filter(entry => entry.name && entry.email)
+    : [];
+  const record = {
+    contact: contact(body.contact, { companyRequired: true }), // company = institution
+    referrerType: text(body.referrerType, 80),
+    attributionCode: text(body.attributionCode, 40),
+    endorsements,
+  };
+  if (!record.referrerType) {
+    throw new Error('Please choose your role (professor, club, or career center).');
+  }
+  if (!record.endorsements.length) {
+    throw new Error('Please endorse at least one student with a name and a valid email.');
+  }
+  return record;
+}
+
 export function submissionDetails(body) {
   if (!TYPES.has(body.type)) throw new Error('Please choose a valid submission type.');
   if (body.type === 'employer_intake') return employerRecord(body);
   if (body.type === 'student_interest') return studentRecord(body);
   if (body.type === 'university_partner') return universityRecord(body);
+  if (body.type === 'student_quick') return studentQuickRecord(body);
+  if (body.type === 'referrer_endorsement') return referrerRecord(body);
   return callRecord(body);
 }
 
@@ -290,6 +344,15 @@ function submissionSummary(record) {
   if (record.type === 'university_partner') {
     const count = record.details.roster.length;
     return `${count} student${count === 1 ? '' : 's'} shared for pilot matching.`;
+  }
+  if (record.type === 'student_quick') {
+    return record.details.interest
+      ? `Quick join · interested in ${record.details.interest}`
+      : 'Quick join — full profile pending.';
+  }
+  if (record.type === 'referrer_endorsement') {
+    const count = record.details.endorsements.length;
+    return `${count} student endorsement${count === 1 ? '' : 's'} from ${record.details.referrerType || 'a referrer'}.`;
   }
   return record.details.topic || 'Call requested.';
 }

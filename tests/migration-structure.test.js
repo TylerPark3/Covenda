@@ -62,12 +62,12 @@ test('university migration idempotently allows university_partner and the UNI- r
   // idempotent drop-then-add so it is safe to re-run on the live table
   assert.match(universityMigration, /drop constraint if exists submissions_type_allowed/);
   assert.match(universityMigration, /drop constraint if exists submissions_reference_format/);
-  // all four audiences remain valid
-  for (const type of ['employer_intake', 'student_interest', 'call_request', 'university_partner']) {
+  // all valid intake types remain allowed
+  for (const type of ['employer_intake', 'student_interest', 'call_request', 'university_partner', 'student_quick']) {
     assert.match(universityMigration, new RegExp(type));
   }
-  // reference format now accepts the UNI- prefix
-  assert.match(universityMigration, /\^\(emp\|stu\|call\|uni\)-\[a-z0-9\]\{6,20\}\$/);
+  // reference format accepts the UNI- and SQ- prefixes
+  assert.match(universityMigration, /\^\(emp\|stu\|call\|uni\|sq\)-\[a-z0-9\]\{6,20\}\$/);
   // refreshes the Data API and never loosens access
   assert.match(universityMigration, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(universityMigration, /grant delete/);

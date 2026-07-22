@@ -2,7 +2,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 const state = {
-  audience: 'student',
+  audience: 'home',
   surface: 'site',
   workType: 'Research',
   toastTimer: null,
@@ -329,13 +329,14 @@ function showToast(message) {
 }
 
 const audienceTitles = {
+  home: 'Covenda · Real work becomes credible proof',
   student: 'Covenda · Real work becomes credible evidence',
   company: 'Covenda for companies · Turn delayed work into a project',
-  university: 'Covenda for universities · Share your students with the pilot',
+  university: 'Covenda for educators · Share your students with the pilot',
 };
 
 function setAudience(audience) {
-  if (!['student', 'company', 'university'].includes(audience)) return;
+  if (!['home', 'student', 'company', 'university'].includes(audience)) return;
   state.audience = audience;
   writeStorage(audienceStorageKey, audience);
   document.body.dataset.audience = audience;
@@ -865,7 +866,7 @@ function saveSubmission(submission) {
 
 function submissionAudience(item) {
   if (item.type === 'employer_intake') return 'company';
-  if (item.type === 'university_partner') return 'university';
+  if (item.type === 'university_partner' || item.type === 'referrer_endorsement') return 'university';
   if (item.type === 'call_request') return 'company';
   return 'student';
 }
@@ -873,6 +874,7 @@ function submissionAudience(item) {
 function submissionLabel(item) {
   if (item.type === 'employer_intake') return 'Company problem intake';
   if (item.type === 'university_partner') return 'Student roster';
+  if (item.type === 'referrer_endorsement') return 'Student endorsements';
   if (item.type === 'call_request') return 'Call request';
   return 'Student interest profile';
 }
@@ -911,6 +913,13 @@ function submissionProgress(item) {
       ['Follow-up', 'Covenda contacts you as safe projects become available.'],
     ];
   }
+  if (item.type === 'referrer_endorsement') {
+    return [
+      ['Received', 'Your endorsements and role are saved.'],
+      ['Credibility applied', 'Endorsed students carry your vouch into the pilot.'],
+      ['Follow-up', 'Covenda contacts you as safe projects become available.'],
+    ];
+  }
   return [
     ['Received', 'Your interests and working preferences are saved.'],
     ['Pilot-fit review', 'Covenda reviews fit for the current pilot.'],
@@ -929,6 +938,7 @@ function receiptSummary(item) {
   if (item.recovered) return 'This server-confirmed receipt was recovered on this device. Private form answers were not downloaded.';
   if (item.type === 'employer_intake') return 'A company problem was received for human scoping.';
   if (item.type === 'university_partner') return 'A student roster was received for pilot review.';
+  if (item.type === 'referrer_endorsement') return 'Your student endorsements were received for pilot review.';
   return 'A student interest profile was received for pilot-fit review.';
 }
 
@@ -1285,6 +1295,8 @@ function studentPayload(form) {
     },
     videoTranscript: formValue(form, 'studentVideoTranscript'),
     batch: formValue(form, 'studentBatch'),
+    stage: 'profile_completed',
+    linkedQuickRef: (readStorage(QUICK_KEY, null) || {}).reference || '',
     availability: formValue(form, 'studentAvailability'),
     preferences: {
       hoursPerWeek: formValue(form, 'studentHours'),
@@ -1364,6 +1376,109 @@ for (const form of [studentForm, companyForm]) {
 renderCompanyBoundaryGuidance(companyForm);
 companyForm.addEventListener('input', () => renderCompanyBoundaryGuidance(companyForm));
 companyForm.addEventListener('change', () => renderCompanyBoundaryGuidance(companyForm));
+
+// ---- Quick join (low-friction name + email) ------------------------------
+// Primary student entry point: get on the pilot list in seconds, then optionally
+// complete the full profile now (inline) or later (banner). Matched on email; the
+// full submission carries stage='profile_completed' + linkedQuickRef for status.
+const quickJoinDialog = $('#quickJoinDialog');
+const quickJoinForm = $('#quickJoinForm');
+const QUICK_KEY = 'covendaQuickJoin';
+
+function hasCompletedProfile() {
+  const subs = readStorage(storageKey, []);
+  return Array.isArray(subs) && subs.some(s => s.type === 'student_interest');
+}
+function openFullProfilePrefilled() {
+  const saved = readStorage(QUICK_KEY, null);
+  openDialog(studentDialog, studentForm);
+  if (saved) {
+    const set = (name, val) => { const el = $('[name="' + name + '"]', studentForm); if (el && !el.value && val) el.value = val; };
+    set('studentName', saved.name); set('studentEmail', saved.email); set('studentSchool', saved.school);
+    saveDraft(studentForm);
+  }
+}
+function renderProfileBanner() {
+  const saved = readStorage(QUICK_KEY, null);
+  let banner = $('#quickProfileBanner');
+  if (!saved || hasCompletedProfile()) { if (banner) banner.remove(); return; }
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'quickProfileBanner';
+    banner.className = 'quick-profile-banner';
+    (document.querySelector('.hero-student .hero-copy') || document.body).prepend(banner);
+  }
+  banner.innerHTML = '';
+  const txt = document.createElement('span');
+  txt.textContent = 'You’re on the pilot list. Complete your full profile to be matched to real work.';
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'gold-button compact'; btn.textContent = 'Complete profile';
+  btn.addEventListener('click', openFullProfilePrefilled);
+  banner.append(txt, btn);
+}
+function openQuickJoin() {
+  const done = $('#quickJoinDone');
+  done.hidden = true; done.textContent = '';
+  quickJoinForm.hidden = false;
+  $('#quickJoinMessage').textContent = '';
+  quickJoinForm.dataset.startedAt = String(Date.now());
+  quickJoinDialog.showModal();
+  window.setTimeout(() => $('[name="quickName"]', quickJoinForm)?.focus(), 60);
+}
+function renderQuickJoinDone(reference) {
+  quickJoinForm.hidden = true;
+  const done = $('#quickJoinDone');
+  done.hidden = false; done.innerHTML = '';
+  const head = document.createElement('div'); head.className = 'quick-done-head';
+  head.innerHTML = '<svg class="quick-done-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><div><h3>You’re on the list.</h3><p>Reference ' + reference + '. We’ll be in touch about the pilot.</p></div>';
+  const prompt = document.createElement('p'); prompt.className = 'quick-done-prompt';
+  prompt.textContent = 'Want to finish your full profile now? A few minutes now helps us match you to the right work.';
+  const actions = document.createElement('div'); actions.className = 'quick-join-actions';
+  const now = document.createElement('button'); now.type = 'button'; now.className = 'gold-button'; now.textContent = 'Complete full profile';
+  now.addEventListener('click', () => { quickJoinDialog.close(); openFullProfilePrefilled(); });
+  const later = document.createElement('button'); later.type = 'button'; later.className = 'quiet-link'; later.textContent = 'I’ll do it later';
+  later.addEventListener('click', () => quickJoinDialog.close());
+  actions.append(now, later);
+  done.append(head, prompt, actions);
+}
+if (quickJoinForm) {
+  quickJoinForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const name = formValue(quickJoinForm, 'quickName');
+    const emailVal = formValue(quickJoinForm, 'quickEmail');
+    const consent = $('[name="quickConsent"]', quickJoinForm).checked;
+    const message = $('#quickJoinMessage');
+    message.classList.remove('is-success');
+    if (!name || !emailVal || !consent) { message.textContent = 'Please add your name, email, and agree to be contacted.'; return; }
+    const submit = $('button[type="submit"]', quickJoinForm);
+    submit.disabled = true; submit.textContent = 'Joining…';
+    try {
+      const result = await sendSubmission({
+        type: 'student_quick',
+        startedAt: Number(quickJoinForm.dataset.startedAt),
+        website: formValue(quickJoinForm, 'website'),
+        consent: true,
+        contact: { name, email: emailVal },
+        school: formValue(quickJoinForm, 'quickSchool'),
+        interest: state.workType || '',
+      });
+      writeStorage(QUICK_KEY, { name, email: emailVal, school: formValue(quickJoinForm, 'quickSchool'), reference: result.reference, stage: 'quick_added', at: new Date().toISOString() });
+      saveSubmission({
+        type: 'student_quick', reference: result.reference, status: result.status || 'received',
+        storage: result.storage || 'confirmed', createdAt: result.createdAt || new Date().toISOString(),
+        title: name + ' · quick join', summary: state.workType ? 'Interested in ' + state.workType : 'Full profile pending',
+      });
+      renderQuickJoinDone(result.reference);
+      renderProfileBanner();
+      showToast('You’re on the pilot list.');
+    } catch (error) {
+      message.textContent = (error && error.message) || 'Could not join. Please try again.';
+    } finally {
+      submit.disabled = false; submit.innerHTML = 'Join the list ' + iconUse('icon-arrow-right');
+    }
+  });
+  renderProfileBanner();
+}
 
 studentForm.addEventListener('submit', async event => {
   event.preventDefault();
@@ -1641,6 +1756,77 @@ async function submitRoster() {
   }
 }
 
+function endorsementPayload() {
+  const partner = partnerFieldValues();
+  const note = $('#endorsementNote')?.value.trim() || '';
+  return {
+    type: 'referrer_endorsement',
+    startedAt: Number($('#rosterAddForm')?.dataset.startedAt || Date.now() - 4000),
+    website: '',
+    consent: $('#uniConsent')?.checked === true,
+    contact: { name: partner.contactName, email: partner.contactEmail, company: partner.orgName },
+    referrerType: partner.orgType,
+    attributionCode: '',
+    endorsements: universityRoster.map(entry => ({ name: entry.name, email: entry.email, function: entry.interest, note })),
+  };
+}
+
+async function submitEndorsement() {
+  const message = $('#rosterMessage');
+  const submit = $('[data-action="roster-endorse"]');
+  const partner = partnerFieldValues();
+  message.classList.remove('is-success');
+  if (!partner.contactName || !isEmail(partner.contactEmail.toLowerCase()) || !partner.orgName || !partner.orgType) {
+    message.textContent = 'Add your name, a valid work email, your organization, and your role first.';
+    return;
+  }
+  if (!universityRoster.length) {
+    message.textContent = 'Add at least one student to endorse.';
+    return;
+  }
+  if (!$('#uniConsent')?.checked) {
+    message.textContent = 'Please confirm you can share these details with Covenda.';
+    return;
+  }
+  submit.disabled = true;
+  submit.textContent = 'Sending…';
+  try {
+    const result = await sendSubmission(endorsementPayload());
+    applySubmissionDelivery(result);
+    message.classList.add('is-success');
+    message.textContent = 'Endorsements received. Reference ' + result.reference + submissionDeliveryMessage(result);
+    saveSubmission({
+      type: 'referrer_endorsement',
+      reference: result.reference,
+      status: result.status || 'received',
+      storage: result.storage || 'confirmed',
+      storageRoute: result.storageRoute || '',
+      syncStatus: result.syncStatus || (result.storage === 'supabase' ? 'synced' : 'pending'),
+      destination: result.destination || null,
+      createdAt: result.createdAt || new Date().toISOString(),
+      title: partner.orgName + ' · student endorsements',
+      summary: universityRoster.length + (universityRoster.length === 1 ? ' student endorsed · ' : ' students endorsed · ') + partner.orgType,
+    });
+    universityRoster = [];
+    if ($('#uniConsent')) $('#uniConsent').checked = false;
+    if ($('#endorsementNote')) $('#endorsementNote').value = '';
+    renderRoster();
+    clearRosterDraft();
+    showToast('Your endorsements were received for pilot review.');
+    window.setTimeout(() => {
+      setAudience('university');
+      setSurface('workspace');
+      setWorkspaceTab('submissions');
+    }, 900);
+  } catch (error) {
+    message.classList.remove('is-success');
+    message.textContent = error.message;
+  } finally {
+    submit.disabled = false;
+    submit.innerHTML = 'Endorse these students ' + iconUse('icon-shield');
+  }
+}
+
 function openUniversityRoster() {
   setSurface('site');
   setAudience('university');
@@ -1742,9 +1928,98 @@ $$('[data-audience-option]').forEach(button => button.addEventListener('click', 
   window.scrollTo({ top: 0, behavior: reduceMotion ? 'instant' : 'smooth' });
 }));
 $$('[data-workspace-tab]').forEach(button => button.addEventListener('click', () => setWorkspaceTab(button.dataset.workspaceTab)));
+// ---- Work-type explore: per-niche detail panels (explore before the form) ----
+const workNiches = {
+  'Research': {
+    icon: 'icon-search',
+    desc: 'Source review, market maps, competitor scans, and customer synthesis — turn scattered signals into a clear read.',
+    roles: ['Competitor landscape scan', 'Customer-interview synthesis brief'],
+    flow: ['Get the question + approved sources', 'Scan, tag, and synthesize the findings', 'Deliver an evidence-backed brief'],
+  },
+  'Data & spreadsheets': {
+    icon: 'icon-data',
+    desc: 'Cleanup, validation, analysis, and clear models — make messy data trustworthy and easy to use.',
+    roles: ['Dataset cleanup + validation', 'Financial model build'],
+    flow: ['Receive the raw, messy dataset', 'Clean, validate, and model it', 'Hand back a trustworthy sheet'],
+  },
+  'Operations': {
+    icon: 'icon-operations',
+    desc: 'Workflow mapping, documentation, and CRM hygiene — make a recurring process run without you.',
+    roles: ['Onboarding workflow map', 'CRM cleanup pass'],
+    flow: ['Map the current process end to end', 'Document and tidy the system', 'Deliver a repeatable playbook'],
+  },
+  'QA & testing': {
+    icon: 'icon-shield',
+    desc: 'Manual testing, test cases, and issue reproduction — catch what breaks before customers do.',
+    roles: ['Manual test pass + report', 'Bug reproduction set'],
+    flow: ['Get the build + test scope', 'Run cases and log every issue', 'Deliver a reproducible report'],
+  },
+  'Writing & documentation': {
+    icon: 'icon-write',
+    desc: 'Knowledge bases, playbooks, and structured briefs — turn know-how into something the team can reuse.',
+    roles: ['Knowledge-base article set', 'Process playbook'],
+    flow: ['Gather the source material', 'Structure and draft it', 'Deliver a reusable document'],
+  },
+};
+let flowStep = 0;
+
+function renderFlowStep() {
+  const data = workNiches[state.workType];
+  if (!data) return;
+  const count = data.flow.length;
+  flowStep = ((flowStep % count) + count) % count;
+  const frame = $('#workFlowFrame');
+  const tag = document.createElement('span');
+  tag.className = 'work-flow-frame-tag';
+  tag.textContent = 'Workflow · step ' + (flowStep + 1) + ' of ' + count;
+  const line = document.createElement('p');
+  line.textContent = data.flow[flowStep];
+  frame.replaceChildren(tag, line);
+  $('#workDetailStep').textContent = 'Step ' + (flowStep + 1) + ' of ' + count;
+  const dots = $('#workFlowDots');
+  dots.replaceChildren();
+  for (let i = 0; i < count; i++) {
+    const dot = document.createElement('i');
+    if (i === flowStep) dot.className = 'is-active';
+    dots.append(dot);
+  }
+}
+
+function openWorkDetail(niche) {
+  const data = workNiches[niche];
+  if (!data) return;
+  selectWorkType(niche);
+  const tag = $('#workDetailTag');
+  const strong = document.createElement('b');
+  strong.textContent = niche;
+  tag.replaceChildren(createIcon(data.icon), strong);
+  $('#workDetailDesc').textContent = data.desc;
+  const roles = $('#workDetailRoles');
+  roles.replaceChildren();
+  data.roles.forEach(role => {
+    const li = document.createElement('li');
+    li.textContent = role;
+    roles.append(li);
+  });
+  flowStep = 0;
+  renderFlowStep();
+  $('#workDetail').hidden = false;
+  $('.selector-orbit')?.classList.add('is-exploring');
+}
+
+function closeWorkDetail() {
+  $('#workDetail').hidden = true;
+  $('.selector-orbit')?.classList.remove('is-exploring');
+}
+
 $$('[data-work-type]').forEach(button => button.addEventListener('click', () => {
-  selectWorkType(button.dataset.workType);
-  if (button.classList.contains('work-option')) saveDraft(studentForm);
+  const niche = button.dataset.workType;
+  if (button.classList.contains('work-option')) {
+    openWorkDetail(niche);
+    saveDraft(studentForm);
+  } else {
+    selectWorkType(niche);
+  }
   if (button.closest('.work-types')) openDialog(studentDialog, studentForm);
 }));
 $$('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
@@ -1756,13 +2031,15 @@ $$('.form-dialog').forEach(dialog => dialog.addEventListener('click', event => {
 
 $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   const action = button.dataset.action;
-  if (action === 'home' || action === 'site') setSurface('site');
+  if (action === 'home') { setAudience('home'); setSurface('site'); window.scrollTo({ top: 0, behavior: 'instant' }); }
+  if (action === 'site') setSurface('site');
   if (action === 'workspace') setSurface('workspace');
   if (action === 'workspace-submissions') {
     setAudience('student');
     setSurface('workspace');
     setWorkspaceTab('submissions');
   }
+  if (action === 'student-quick') openQuickJoin();
   if (action === 'refresh-delivery') {
     refreshDeliveryHealth({ force: true }).then(primary => {
       showToast(primary.status === 'ready' ? 'Primary inbox is connected.' : 'Primary inbox still needs attention.');
@@ -1801,11 +2078,15 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     saveRosterDraft();
   }
   if (action === 'roster-submit') submitRoster();
+  if (action === 'roster-endorse') submitEndorsement();
   if (action === 'focus-pathfinder') {
     $('#studentPathfinder').scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => $('.work-option.is-selected')?.focus(), 420);
   }
   if (action === 'explore-work') $('#workTypes').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (action === 'explore-back') closeWorkDetail();
+  if (action === 'flow-prev') { flowStep -= 1; renderFlowStep(); }
+  if (action === 'flow-next') { flowStep += 1; renderFlowStep(); }
   if (action === 'project-fit') $('#projectFit').scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (action === 'replay-intro') {
     setSurface('site');
@@ -2162,22 +2443,25 @@ function renderVideoIntroCard(container, rawUrl, opts = {}) {
 })();
 
 // ---- Student batches -----------------------------------------------------
-// Themed pilot cohorts by function. SINGLE editable source — add/remove/edit
-// entries here to control which batches appear. A batch is an interest signal and
-// a way to build a track record through completed reviewed work, NOT a placement,
-// job, ranking, or guarantee. NOTE: the batch a student joins is captured on the
-// student submission (details.batch) — this structured batch + outcome data is the
-// intended future training-data source for a per-function capability assessment
-// (see the Litmus/batches prompt, Part G — no model or scoring is built yet).
+// Pilot cohorts by INDUSTRY (not function): anyone can run a test or clean a
+// sheet, so credibility is industry-specific — a batch builds a track record in
+// one industry, the same reason a professor's endorsement matters. SINGLE editable
+// source — add/remove/edit entries here to control which batches appear. A batch
+// is an interest + credibility signal built through completed reviewed work, NOT a
+// placement, job, ranking, or guarantee. NOTE: the batch a student joins is
+// captured on the student submission (details.batch) — this structured batch +
+// outcome data is the intended future training-data source for a per-industry
+// capability assessment (no model or scoring is built yet).
 const BATCHES = [
-  { id: 'acct-ops', function: 'Accounting Operations', title: 'Accounting Operations — pilot cohort', description: 'Reconciliations, cleanups, and workflow docs from real, de-identified finance work.', status: 'Pilot cohort · limited seats' },
-  { id: 'research', function: 'Research & Synthesis', title: 'Research & Synthesis', description: 'Public-source market maps, competitor scans, and customer synthesis briefs.', status: 'Pilot cohort · limited seats' },
-  { id: 'qa-testing', function: 'QA & Testing', title: 'QA & Testing', description: 'Manual test passes, reproducible bug reports, and structured test cases.', status: 'Forming' },
-  { id: 'data-spreadsheets', function: 'Data & Spreadsheets', title: 'Data & Spreadsheets', description: 'Cleanup, validation, and clear models on approved datasets.', status: 'Forming' },
+  { id: 'accounting-finance', industry: 'Accounting & finance', title: 'Accounting & finance', description: 'Reconciliations, close-prep checklists, cleanups, and workflow docs from real, de-identified finance work.', status: 'Pilot cohort · limited seats' },
+  { id: 'software-ai', industry: 'Software & AI', title: 'Software & AI', description: 'QA passes, reproducible bug reports, docs, and data cleanups for software and AI teams.', status: 'Pilot cohort · limited seats' },
+  { id: 'healthcare-ops', industry: 'Healthcare operations', title: 'Healthcare operations', description: 'Process mapping, documentation, and public-source research — never any patient records.', status: 'Forming' },
+  { id: 'consumer-retail', industry: 'Consumer & retail', title: 'Consumer & retail', description: 'Customer-research synthesis, competitor scans, and approved catalog/data cleanups.', status: 'Forming' },
+  { id: 'professional-services', industry: 'Professional services', title: 'Professional services', description: 'Research briefs, playbooks, and operations docs for consulting, legal, and agency teams.', status: 'Forming' },
 ];
 function joinBatch(batch) {
   const field = $('#studentBatch');
-  if (field) field.value = batch.id + ' · ' + batch.function;
+  if (field) field.value = batch.id + ' · ' + batch.industry;
   openDialog(studentDialog, studentForm);
   if (field) saveDraft(studentForm);
 }
@@ -2188,7 +2472,7 @@ function joinBatch(batch) {
   for (const batch of BATCHES) {
     const card = document.createElement('article');
     card.className = 'batch-card glass-panel';
-    const fn = document.createElement('p'); fn.className = 'batch-function'; fn.textContent = batch.function;
+    const fn = document.createElement('p'); fn.className = 'batch-function'; fn.textContent = batch.industry;
     const title = document.createElement('h3'); title.className = 'batch-title'; title.textContent = batch.title;
     const desc = document.createElement('p'); desc.className = 'batch-desc'; desc.textContent = batch.description;
     const status = document.createElement('span'); status.className = 'batch-status'; status.textContent = batch.status;
@@ -2280,8 +2564,8 @@ $('#introScreen').addEventListener('cancel', event => {
   dismissIntro({ fast: true });
 });
 
-const restoredAudience = readStorage(audienceStorageKey, 'student');
-if (['student', 'company', 'university'].includes(restoredAudience)) state.audience = restoredAudience;
+const restoredAudience = readStorage(audienceStorageKey, 'home');
+if (['home', 'student', 'company', 'university'].includes(restoredAudience)) state.audience = restoredAudience;
 const restoredWorkTypes = checkedValues(studentForm, 'workType');
 const rememberedWorkType = readStorage(workTypeStorageKey, 'Research');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];
@@ -2468,6 +2752,235 @@ setAudience(state.audience);
 selectorFxController = initSelectorFx();
 selectorFxController?.pulse($('.work-option.is-selected'));
 initButtonFeedback();
+// ---- Interactive gold icosahedron (decorative accent; drag to spin) ----
+function initIcosahedron() {
+  const canvas = document.getElementById('icoCanvas');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  const panel = canvas.closest('.feature-panel') || canvas;
+  const hint = document.getElementById('icoHint');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Icosahedron: 12 golden-ratio vertices, 30 minimum-distance edges.
+  const t = (1 + Math.sqrt(5)) / 2;
+  const norm = Math.hypot(1, t);
+  const verts = [
+    [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
+    [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
+    [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1],
+  ].map(([x, y, z]) => ({ x: x / norm, y: y / norm, z: z / norm }));
+  const edges = [];
+  let minD2 = Infinity;
+  for (let i = 0; i < verts.length; i++) for (let j = i + 1; j < verts.length; j++) {
+    const dx = verts[i].x - verts[j].x, dy = verts[i].y - verts[j].y, dz = verts[i].z - verts[j].z;
+    minD2 = Math.min(minD2, dx * dx + dy * dy + dz * dz);
+  }
+  for (let i = 0; i < verts.length; i++) for (let j = i + 1; j < verts.length; j++) {
+    const dx = verts[i].x - verts[j].x, dy = verts[i].y - verts[j].y, dz = verts[i].z - verts[j].z;
+    if (dx * dx + dy * dy + dz * dz < minD2 * 1.05) edges.push([i, j]);
+  }
+
+  // Adjacency for path-following light "signals" that travel student -> student.
+  const adj = verts.map(() => []);
+  edges.forEach(([a, b]) => { adj[a].push(b); adj[b].push(a); });
+  function newTraveler(from) {
+    const f = from ?? Math.floor(Math.random() * verts.length);
+    const to = adj[f][Math.floor(Math.random() * adj[f].length)];
+    return { from: f, to, t: Math.random(), speed: 0.005 + Math.random() * 0.004 };
+  }
+  const travelers = [newTraveler(), newTraveler(), newTraveler(), newTraveler()];
+  function updateTravelers() {
+    travelers.forEach(tr => {
+      tr.t += tr.speed;
+      if (tr.t >= 1) {
+        const prev = tr.from;
+        tr.from = tr.to;
+        let choices = adj[tr.from].filter(n => n !== prev);
+        if (!choices.length) choices = adj[tr.from];
+        tr.to = choices[Math.floor(Math.random() * choices.length)];
+        tr.t = 0;
+        tr.speed = 0.005 + Math.random() * 0.004;
+      }
+    });
+  }
+
+  let w = 0, h = 0;
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = r.width; h = r.height;
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  let rotX = 0.5, rotY = 0.4, velX = 0.0012, velY = 0.004;
+  const autoX = 0.0012, autoY = 0.004;
+  let dragging = false, lastX = 0, lastY = 0, running = false, raf = 0, hinted = false;
+
+  function rotate(p) {
+    const cxr = Math.cos(rotX), sxr = Math.sin(rotX);
+    const y1 = p.y * cxr - p.z * sxr, z1 = p.y * sxr + p.z * cxr;
+    const cyr = Math.cos(rotY), syr = Math.sin(rotY);
+    return { x: p.x * cyr + z1 * syr, y: y1, z: -p.x * syr + z1 * cyr };
+  }
+  const activeNodes = new Set([0, 4, 8]); // a few "active" students that gently pulse
+  function draw(time = 0) {
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2, scale = Math.min(w, h) * 0.32, persp = 2.8;
+    const pts = verts.map(v => {
+      const r = rotate(v), f = persp / (persp - r.z);
+      return { sx: cx + r.x * scale * f, sy: cy - r.y * scale * f, z: r.z };
+    });
+    // edges = connections between students (thinner so the student nodes stand out)
+    edges.map(([a, b]) => ({ a, b, z: (pts[a].z + pts[b].z) / 2 }))
+      .sort((m, n) => m.z - n.z)
+      .forEach(e => {
+        const depth = (e.z + 1) / 2;
+        ctx.beginPath();
+        ctx.moveTo(pts[e.a].sx, pts[e.a].sy);
+        ctx.lineTo(pts[e.b].sx, pts[e.b].sy);
+        ctx.strokeStyle = `rgba(169,130,47,${(0.20 + depth * 0.46).toFixed(3)})`;
+        ctx.lineWidth = 0.7 + depth * 0.7;
+        ctx.stroke();
+      });
+    // vertices = students: all 12 as gold nodes (depth-scaled), a few gently pulsing
+    pts.map((p, i) => ({ p, i })).sort((a, b) => a.p.z - b.p.z).forEach(({ p, i }) => {
+      const depth = (p.z + 1) / 2;
+      const pulse = activeNodes.has(i) ? 0.5 + 0.5 * Math.sin(time * 0.0022 + i) : 0;
+      const nodeR = 1.7 + depth * 2.5;
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, nodeR + 2.6 + pulse * 3.4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,162,75,${(0.05 + depth * 0.09 + pulse * 0.11).toFixed(3)})`;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, nodeR, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(169,130,47,${(0.5 + depth * 0.45).toFixed(3)})`;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.sx - nodeR * 0.28, p.sy - nodeR * 0.28, nodeR * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,250,238,${(0.45 * depth).toFixed(3)})`;
+      ctx.fill();
+    });
+    // traveling "signal" lights routing student -> student (globe-flight feel)
+    ctx.lineCap = 'round';
+    travelers.forEach(tr => {
+      const a = pts[tr.from], b = pts[tr.to];
+      const dim = 0.3 + (((a.z + b.z) / 2 + 1) / 2) * 0.7;
+      const hx = a.sx + (b.sx - a.sx) * tr.t, hy = a.sy + (b.sy - a.sy) * tr.t;
+      const tailT = Math.max(0, tr.t - 0.32);
+      const tx = a.sx + (b.sx - a.sx) * tailT, ty = a.sy + (b.sy - a.sy) * tailT;
+      const grad = ctx.createLinearGradient(tx, ty, hx, hy);
+      grad.addColorStop(0, 'rgba(233,198,121,0)');
+      grad.addColorStop(1, `rgba(255,241,205,${(0.9 * dim).toFixed(3)})`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.beginPath(); ctx.arc(hx, hy, 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(231,198,121,${(0.22 * dim).toFixed(3)})`; ctx.fill();
+      ctx.beginPath(); ctx.arc(hx, hy, 2.6, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,248,230,${(0.95 * dim).toFixed(3)})`; ctx.fill();
+    });
+    ctx.lineCap = 'butt';
+  }
+  function frame() {
+    if (!dragging) {
+      rotX += velX; rotY += velY;
+      velX += (autoX - velX) * 0.03;
+      velY += (autoY - velY) * 0.03;
+    }
+    updateTravelers();
+    draw(performance.now());
+    raf = requestAnimationFrame(frame);
+  }
+  function start() { if (running) return; running = true; raf = requestAnimationFrame(frame); }
+  function stop() { running = false; cancelAnimationFrame(raf); }
+  function panelVisible() {
+    const r = panel.getBoundingClientRect();
+    return r.bottom > 0 && r.top < window.innerHeight;
+  }
+
+  resize();
+  draw(); // render one static frame immediately so the shape is never blank
+  window.addEventListener('resize', () => { resize(); if (!running) draw(); });
+
+  if (reduceMotion) {
+    hint?.classList.add('is-hidden');
+    return;
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    canvas.setPointerCapture?.(e.pointerId);
+    if (!hinted && hint) { hint.classList.add('is-hidden'); hinted = true; }
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    rotY += dx * 0.008; rotX += dy * 0.008;
+    velY = dx * 0.008; velX = dy * 0.008;
+  });
+  const release = e => { dragging = false; canvas.releasePointerCapture?.(e.pointerId); };
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', release);
+  canvas.addEventListener('pointerleave', release);
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      entries.forEach(en => (en.isIntersecting ? start() : stop()));
+    }, { threshold: 0.05 }).observe(panel);
+  } else {
+    start();
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stop();
+    else if (panelVisible()) start();
+  });
+}
+
+// ---- Site-wide scroll reveal: sections/cards animate in as you scroll down ----
+function initScrollReveal() {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Bail (leave everything visible) for reduced-motion, no-IO, or a glitched/tiny
+  // viewport — never risk hiding content when we can't reliably reveal it.
+  if (reduce || !('IntersectionObserver' in window) || window.innerHeight < 300) return;
+  const selector = [
+    '.how-section .section-heading',
+    '.proof-rail > li', '.company-rail > li',
+    '.work-record', '.packet', '.risk-note',
+    '.feature-copy', '.feature-panel',
+    '.value-col',
+    '.why-section .why-copy', '.why-section .fit-table', '.why-section .work-types',
+    '.batches-section .section-heading', '.batch-card',
+    '.final-cta .audience-content',
+  ].join(',');
+  document.documentElement.classList.add('js-reveal');
+  const revealed = new WeakSet();
+  const reveal = el => { el.classList.add('is-revealed'); revealed.add(el); };
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); } });
+  }, { threshold: 0.1, rootMargin: '0px 0px -5% 0px' });
+  const vh = window.innerHeight;
+  const targets = [];
+  [...document.querySelectorAll(selector)].forEach(el => {
+    const r = el.getBoundingClientRect();
+    // leave anything already in view visible (no flash); only reveal what's below.
+    if (r.bottom > 0 && r.top < vh * 0.85) return;
+    el.classList.add('reveal');
+    const sibs = [...el.parentElement.children].filter(c => c.matches(selector));
+    const i = sibs.indexOf(el);
+    if (i > 0) el.style.setProperty('--reveal-i', String(Math.min(i, 6)));
+    io.observe(el);
+    targets.push(el);
+  });
+  // Safety net: if the observer never fires for something, reveal it anyway so
+  // content can never stay permanently hidden.
+  window.setTimeout(() => targets.forEach(el => { if (!revealed.has(el)) reveal(el); }), 4000);
+}
+
 initCovendaMotion();
 initFlowDemo();
+initIcosahedron();
+initScrollReveal();
 window.requestAnimationFrame(() => openIntro());
