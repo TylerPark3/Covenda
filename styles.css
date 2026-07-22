@@ -1895,3 +1895,39 @@ body[data-audience-switched] #flowDemo { display: none; }
     opacity: .85;
   }
 }
+
+/* ---- Signature gold "prove" word: metallic gradient + restrained sheen ---- */
+.word-gold {
+  position: relative;
+  font-style: italic;
+  color: var(--gold-deep); /* fallback if background-clip:text is unsupported */
+  background-image: linear-gradient(96deg, #8A6A2F 0%, #A9822F 42%, #C9A24B 66%, #A9822F 88%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .word-gold { -webkit-text-fill-color: transparent; color: transparent; }
+}
+/* A single slow sheen sweep — light catching gold. Not a glow, not a flicker. */
+.word-gold::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, rgba(255,251,240,.85) 50%, transparent 62%);
+  background-size: 250% 100%;
+  background-position: 180% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  pointer-events: none;
+  animation: word-gold-sheen 7s ease-in-out 1.2s infinite;
+}
+@keyframes word-gold-sheen {
+  0%, 22% { background-position: 180% 0; }
+  38%, 100% { background-position: -80% 0; }
+}
+.word-gold:hover::after { animation: word-gold-sheen 1.1s ease-in-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .word-gold::after { animation: none; display: none; }
+}
