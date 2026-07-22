@@ -2201,7 +2201,7 @@ function openRoleApply(role) {
   s1.append(document.createTextNode(role.function + ' · '));
   const b = document.createElement('b'); b.textContent = role.title; s1.append(b);
   const s2 = document.createElement('p'); s2.className = 'role-apply-desc'; s2.textContent = role.description;
-  summary.append(s1, s2);
+  summary.append(s1, s2, renderFitBlock(role));
   const quick = readStorage('covendaQuickJoin', null);
   const draft = readStorage(draftKeys.studentForm, null);
   const name = (quick && quick.name) || draftValue(draft, 'studentName');
@@ -2301,6 +2301,343 @@ if (requestEndorseForm) {
     done.append(h, p, actions);
     if (typeof showToast === 'function') showToast('Endorsement request noted.');
   });
+}
+
+// ============================================================================
+// Reusable gold "square" motif + credibility framework Steps 5 / 6 / 3.
+// ============================================================================
+
+// The gold square from the feature band, reused as a static (canvas-free) tile.
+// The network-of-nodes art echoes the icosahedron's "students connected" meaning
+// without a second animation loop. Injected into any [data-gold-tile] element.
+function goldTileArt() {
+  const nodes = [[60, 18], [30, 40], [90, 40], [16, 74], [60, 56], [104, 74], [42, 98], [78, 98]];
+  const edges = [[0, 1], [0, 2], [1, 2], [0, 4], [1, 4], [2, 4], [1, 3], [3, 4], [4, 5], [2, 5], [3, 6], [4, 6], [4, 7], [5, 7], [6, 7]];
+  let s = '<svg class="gold-tile-art" viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g>';
+  edges.forEach(([a, b]) => { s += '<line class="edge" x1="' + nodes[a][0] + '" y1="' + nodes[a][1] + '" x2="' + nodes[b][0] + '" y2="' + nodes[b][1] + '"/>'; });
+  s += '</g><g>';
+  nodes.forEach(([x, y]) => { s += '<circle class="node-halo" cx="' + x + '" cy="' + y + '" r="7"/>'; });
+  nodes.forEach(([x, y]) => { s += '<circle class="node" cx="' + x + '" cy="' + y + '" r="2.8"/>'; });
+  s += '</g><circle class="spark" cx="' + nodes[4][0] + '" cy="' + nodes[4][1] + '" r="2.4"/>';
+  s += '<circle class="spark" cx="' + nodes[2][0] + '" cy="' + nodes[2][1] + '" r="2.2" style="animation-delay:1.2s"/></svg>';
+  return s;
+}
+function renderGoldTiles() {
+  $$('[data-gold-tile]').forEach(tile => {
+    if (tile.dataset.tiled) return;
+    tile.dataset.tiled = '1';
+    tile.insertAdjacentHTML('beforeend', goldTileArt());
+    const kicker = document.createElement('span');
+    kicker.className = 'gold-tile-kicker';
+    kicker.textContent = tile.dataset.kicker || 'Rethinking Internships';
+    tile.append(kicker);
+  });
+}
+
+// ---- Step 5: transparent compatibility stub (NOT a model). A weighted overlap of
+// the student's declared signals against a role's requirements. Illustrative until
+// validated on real outcomes (see DATA_SCHEMA.md in the covenda-skill-score repo). ----
+const FUNCTION_WORKTYPES = {
+  'Accounting Operations': ['data & spreadsheets', 'operations'],
+  'Research & Synthesis': ['research', 'writing & documentation'],
+  'QA & Testing': ['qa & testing'],
+  'Operations': ['operations', 'data & spreadsheets'],
+};
+function studentSignalString() {
+  const draft = readStorage(draftKeys.studentForm, null);
+  return [
+    draftValue(draft, 'studentSkill', ''),
+    draftValue(draft, 'studentSkillLevel', ''),
+    draftValue(draft, 'workType', '') || (typeof state === 'object' ? state.workType : ''),
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+function skillMatches(skill, sig) {
+  return skill.toLowerCase().split(/[^a-z]+/).filter(t => t.length > 3).some(t => sig.includes(t));
+}
+function roleCompatibility(role) {
+  const sig = studentSignalString();
+  const ref = activeReferral();
+  const endorsed = !!(ref && ref.code);
+  const worked = false; // no completed reviewed work yet — kept explicit and honest
+  const skillsTotal = role.skills.length;
+  const skillsMatched = role.skills.filter(s => skillMatches(s, sig)).length;
+  const skillFrac = skillsTotal ? skillsMatched / skillsTotal : 0;
+  const domainMatch = (FUNCTION_WORKTYPES[role.function] || []).some(k => sig.includes(k));
+  const clamp = n => Math.max(0, Math.min(100, Math.round(n)));
+  // Short-term leans on skills + function fit; long-term leans on endorsement + track record.
+  const shortScore = clamp(8 + skillFrac * 50 + (domainMatch ? 22 : 0) + (endorsed ? 12 : 0) + (worked ? 8 : 0));
+  const longScore = clamp(8 + skillFrac * 32 + (domainMatch ? 16 : 0) + (endorsed ? 26 : 0) + (worked ? 18 : 0));
+  const shortEvidence = [
+    skillsMatched + ' of ' + skillsTotal + ' required skills',
+    domainMatch ? 'function match' : 'function differs',
+    endorsed ? 'endorsed' : 'no endorsement yet',
+  ].join(' · ');
+  const longEvidence = [
+    endorsed ? 'endorsed' : 'not yet endorsed',
+    worked ? 'has reviewed work' : 'no reviewed work yet',
+    domainMatch ? 'function match' : 'function gap',
+  ].join(' · ');
+  return { shortScore, longScore, shortEvidence, longEvidence, hasSignals: sig.trim().length > 0 };
+}
+function renderFitBlock(role) {
+  const c = roleCompatibility(role);
+  const block = document.createElement('div');
+  block.className = 'fit-block';
+  const tag = document.createElement('p');
+  tag.className = 'fit-illustrative';
+  tag.append(createIcon('icon-spark'), document.createTextNode('Illustrative fit · not validated yet'));
+  block.append(tag);
+  const scores = document.createElement('div');
+  scores.className = 'fit-scores';
+  const fills = [];
+  [['Short-term', c.shortScore, c.shortEvidence], ['Long-term', c.longScore, c.longEvidence]].forEach(([term, val, ev]) => {
+    const card = document.createElement('div'); card.className = 'fit-score';
+    const head = document.createElement('div'); head.className = 'fit-score-head';
+    const t = document.createElement('span'); t.className = 'fit-score-term'; t.textContent = term;
+    const v = document.createElement('span'); v.className = 'fit-score-value'; v.textContent = String(val);
+    const small = document.createElement('small'); small.textContent = '/100'; v.append(small);
+    head.append(t, v);
+    const meter = document.createElement('div'); meter.className = 'fit-meter';
+    const fill = document.createElement('div'); fill.className = 'fit-meter-fill'; meter.append(fill);
+    fills.push([fill, val]);
+    const evp = document.createElement('p'); evp.className = 'fit-evidence'; evp.textContent = ev;
+    card.append(head, meter, evp);
+    scores.append(card);
+  });
+  block.append(scores);
+  const note = document.createElement('p');
+  note.className = 'fit-note';
+  note.append(createIcon('icon-shield'), document.createTextNode(c.hasSignals
+    ? 'A score is a signal from your declared skills and interests — not a match or guarantee. Reviewed work earns the verified rungs.'
+    : 'Add your skills and work interests to your profile to sharpen this — a score is a signal, not a match or guarantee.'));
+  block.append(note);
+  window.requestAnimationFrame(() => fills.forEach(([fill, val]) => { fill.style.width = val + '%'; }));
+  return block;
+}
+
+// ---- Step 6: illustrative candidate browser for companies (referral tracing). ----
+const REFERRERS = {
+  chen: { name: 'Prof. R. Chen', role: 'Professor', institution: 'Columbia Robotics', vouches: [
+    { name: 'Maya T.', outcome: 'verified' }, { name: 'Devin K.', outcome: 'working' }, { name: 'Amir S.', outcome: 'endorsed' }] },
+  qfinance: { name: 'Quant Finance Club', role: 'Student club', institution: 'Columbia', vouches: [
+    { name: 'Priya R.', outcome: 'verified' }, { name: 'Jordan L.', outcome: 'working' }] },
+  career: { name: 'SEAS Career Center', role: 'Career center', institution: 'Columbia', vouches: [
+    { name: 'Sam W.', outcome: 'working' }, { name: 'Lena M.', outcome: 'endorsed' }] },
+  wic: { name: 'Women in CS', role: 'Student club', institution: 'Columbia', vouches: [
+    { name: 'Nina P.', outcome: 'verified' }, { name: 'Grace H.', outcome: 'endorsed' }] },
+};
+const CANDIDATES = [
+  { handle: 'Maya T.', function: 'Research & Synthesis', skills: ['Research', 'Synthesis', 'Writing'], referrer: 'chen', club: 'Columbia Robotics', clubRecord: true, score: 88 },
+  { handle: 'Devin K.', function: 'QA & Testing', skills: ['QA', 'Test cases', 'Bug reproduction'], referrer: 'chen', club: 'Columbia Robotics', clubRecord: true, score: 79 },
+  { handle: 'Priya R.', function: 'Accounting Operations', skills: ['Spreadsheets', 'Reconciliation', 'Attention to detail'], referrer: 'qfinance', club: 'Quant Finance Club', clubRecord: true, score: 91 },
+  { handle: 'Jordan L.', function: 'Operations', skills: ['Operations', 'Documentation', 'Process'], referrer: 'qfinance', club: 'Quant Finance Club', clubRecord: true, score: 72 },
+  { handle: 'Sam W.', function: 'Research & Synthesis', skills: ['Research', 'Data', 'Writing'], referrer: 'career', club: 'Independent', clubRecord: false, score: 66 },
+  { handle: 'Nina P.', function: 'QA & Testing', skills: ['QA', 'Automation', 'Bug reproduction'], referrer: 'wic', club: 'Women in CS', clubRecord: true, score: 84 },
+  { handle: 'Amir S.', function: 'Operations', skills: ['Operations', 'Spreadsheets', 'Process'], referrer: 'chen', club: 'Columbia Robotics', clubRecord: true, score: 69 },
+  { handle: 'Grace H.', function: 'Accounting Operations', skills: ['Spreadsheets', 'Reconciliation', 'Reporting'], referrer: 'wic', club: 'Women in CS', clubRecord: false, score: 61 },
+];
+const candFilters = { referrer: '', club: '', minScore: 0, function: '', skill: '' };
+function buildCandidateFilters() {
+  const bar = $('#candToolbar');
+  if (!bar) return;
+  bar.textContent = '';
+  const functions = Array.from(new Set(CANDIDATES.map(c => c.function))).sort();
+  const skills = Array.from(new Set(CANDIDATES.flatMap(c => c.skills))).sort();
+  const referrerOpts = Object.keys(REFERRERS).map(id => [id, REFERRERS[id].name]);
+  const addFilter = (labelText, key, options) => {
+    const wrap = document.createElement('label'); wrap.className = 'cand-filter';
+    const span = document.createElement('span'); span.textContent = labelText;
+    const select = document.createElement('select');
+    options.forEach(([value, label]) => { const o = document.createElement('option'); o.value = value; o.textContent = label; select.append(o); });
+    select.value = String(candFilters[key]);
+    select.addEventListener('change', () => { candFilters[key] = key === 'minScore' ? Number(select.value) : select.value; renderCandidates(); });
+    wrap.append(span, select);
+    bar.append(wrap);
+  };
+  addFilter('Referral source', 'referrer', [['', 'Any referrer'], ...referrerOpts]);
+  addFilter('Club track record', 'club', [['', 'Any club'], ['record', 'Positive track record only']]);
+  addFilter('Min compatibility', 'minScore', [['0', 'Any score'], ['60', '60+'], ['75', '75+'], ['85', '85+']]);
+  addFilter('Function', 'function', [['', 'Any function'], ...functions.map(f => [f, f])]);
+  addFilter('Skill', 'skill', [['', 'Any skill'], ...skills.map(s => [s, s])]);
+}
+function candidateCard(c) {
+  const ref = REFERRERS[c.referrer];
+  const card = document.createElement('article'); card.className = 'candidate-card';
+  const head = document.createElement('div'); head.className = 'cand-card-head';
+  const idwrap = document.createElement('div');
+  const h = document.createElement('p'); h.className = 'cand-handle'; h.textContent = c.handle;
+  const fn = document.createElement('p'); fn.className = 'cand-function'; fn.textContent = c.function;
+  idwrap.append(h, fn);
+  const score = document.createElement('div'); score.className = 'cand-score';
+  const sb = document.createElement('b'); sb.textContent = String(c.score);
+  const ss = document.createElement('span'); ss.textContent = 'fit';
+  score.append(sb, ss);
+  head.append(idwrap, score);
+  const endorser = document.createElement('p'); endorser.className = 'cand-endorser';
+  endorser.append(createIcon('icon-shield'));
+  const espan = document.createElement('span');
+  espan.append(document.createTextNode('Endorsed by '));
+  const eb = document.createElement('b'); eb.textContent = ref.name;
+  espan.append(eb, document.createTextNode(' · ' + ref.role + ', ' + ref.institution));
+  endorser.append(espan);
+  const club = document.createElement('p'); club.className = 'cand-club';
+  club.append(document.createTextNode('Club: '));
+  const cb = document.createElement('b'); cb.textContent = c.club;
+  club.append(cb);
+  if (c.clubRecord) { const rec = document.createElement('span'); rec.className = 'cand-club-record'; rec.textContent = ' · positive track record'; club.append(rec); }
+  const skills = document.createElement('div'); skills.className = 'cand-skills';
+  c.skills.forEach(s => { const chip = document.createElement('span'); chip.className = 'cand-skill' + (candFilters.skill && s === candFilters.skill ? ' is-match' : ''); chip.textContent = s; skills.append(chip); });
+  const trace = document.createElement('button'); trace.type = 'button'; trace.className = 'outline-button compact cand-trace';
+  trace.append(document.createTextNode('Trace referral'), createIcon('icon-route'));
+  trace.addEventListener('click', () => openTrace(c));
+  card.append(head, endorser, club, skills, trace);
+  return card;
+}
+function renderCandidates() {
+  const grid = $('#candGrid');
+  if (!grid) return;
+  const filtered = CANDIDATES.filter(c =>
+    (!candFilters.referrer || c.referrer === candFilters.referrer)
+    && (candFilters.club !== 'record' || c.clubRecord)
+    && (c.score >= candFilters.minScore)
+    && (!candFilters.function || c.function === candFilters.function)
+    && (!candFilters.skill || c.skills.includes(candFilters.skill)));
+  const count = $('#candCount');
+  if (count) {
+    count.textContent = '';
+    const b = document.createElement('b'); b.textContent = String(filtered.length);
+    count.append(b, document.createTextNode(' of ' + CANDIDATES.length + ' candidates match your filters'));
+  }
+  grid.textContent = '';
+  if (!filtered.length) {
+    const empty = document.createElement('div'); empty.className = 'cand-empty';
+    empty.textContent = 'No candidates match these filters yet. Loosen a filter to see more.';
+    grid.append(empty);
+    return;
+  }
+  filtered.forEach(c => grid.append(candidateCard(c)));
+}
+function traceNode(label, name, detail, isCandidate) {
+  const n = document.createElement('div'); n.className = 'trace-node' + (isCandidate ? ' is-candidate' : '');
+  const s = document.createElement('small'); s.textContent = label;
+  const b = document.createElement('b'); b.textContent = name;
+  n.append(s, b);
+  if (detail) { const p = document.createElement('p'); p.textContent = detail; n.append(p); }
+  return n;
+}
+function openTrace(c) {
+  const dialog = $('#traceDialog');
+  if (!dialog) return;
+  const ref = REFERRERS[c.referrer];
+  $('#traceIntro').textContent = 'How ' + c.handle + ' reached this list — and who else ' + ref.name + ' has vouched for. Illustrative outcomes; a referral is a signal, not a guarantee.';
+  const chain = $('#traceChain');
+  chain.textContent = '';
+  chain.append(traceNode('Candidate', c.handle, c.function + ' · illustrative fit ' + c.score, true));
+  const arrow = document.createElement('div'); arrow.className = 'trace-arrow'; arrow.append(createIcon('icon-arrow-down'));
+  chain.append(arrow);
+  const verified = ref.vouches.filter(v => v.outcome === 'verified').length;
+  const working = ref.vouches.filter(v => v.outcome === 'working').length;
+  const node = traceNode('Referred by', ref.name, ref.role + ', ' + ref.institution + ' · ' + verified + ' verified · ' + working + ' working of ' + ref.vouches.length + ' vouched (illustrative)', false);
+  const vh = document.createElement('small'); vh.textContent = 'Also vouched for'; vh.style.marginTop = '12px';
+  const list = document.createElement('ul'); list.className = 'trace-vouches';
+  ref.vouches.forEach(v => {
+    const li = document.createElement('li'); li.className = 'trace-vouch';
+    const nm = document.createElement('span'); nm.textContent = v.name + (v.name === c.handle ? ' (this candidate)' : '');
+    const cls = v.outcome === 'verified' ? 'is-verified' : v.outcome === 'working' ? 'is-working' : 'is-progress';
+    const pill = document.createElement('span'); pill.className = 'outcome-pill ' + cls;
+    pill.textContent = v.outcome === 'verified' ? 'Verified' : v.outcome === 'working' ? 'Working' : 'Endorsed';
+    li.append(nm, pill); list.append(li);
+  });
+  node.append(vh, list);
+  chain.append(node);
+  dialog.showModal();
+}
+
+// ---- Step 3: referrer credibility + dashboard (educator/university surface). ----
+const REFERRER_DASHBOARD = {
+  name: 'Prof. R. Chen', role: 'Professor', institution: 'Columbia Robotics', founding: true,
+  students: [
+    { name: 'Maya T.', fn: 'Research & Synthesis', status: 'verified' },
+    { name: 'Devin K.', fn: 'QA & Testing', status: 'working' },
+    { name: 'Ravi N.', fn: 'Data & spreadsheets', status: 'working' },
+    { name: 'Amir S.', fn: 'Operations', status: 'endorsed' },
+    { name: 'Ola B.', fn: 'Research & Synthesis', status: 'endorsed' },
+  ],
+};
+function renderReferrerDashboard() {
+  const host = $('#referrerDashboardBody');
+  if (!host) return;
+  const data = REFERRER_DASHBOARD;
+  const ref = activeReferral();
+  const name = (ref && ref.via) || data.name; // personalize the identity if referred by a named partner
+  const students = data.students;
+  const counts = { endorsed: 0, working: 0, verified: 0 };
+  students.forEach(s => { counts[s.status] = (counts[s.status] || 0) + 1; });
+  const total = students.length;
+  // Derived, illustrative credibility weight from outcomes — never a fabricated validated number.
+  const weight = total ? Math.round(((counts.verified * 1 + counts.working * 0.6 + counts.endorsed * 0.3) / total) * 100) : 0;
+  host.textContent = '';
+
+  const card = document.createElement('div'); card.className = 'referrer-cred-card';
+  const top = document.createElement('div'); top.className = 'referrer-cred-top';
+  const idy = document.createElement('div'); idy.className = 'referrer-identity';
+  const h3 = document.createElement('h3'); h3.textContent = name;
+  const p = document.createElement('p'); p.textContent = data.role + ' · ' + data.institution;
+  idy.append(h3, p);
+  top.append(idy);
+  if (data.founding) {
+    const badge = document.createElement('span'); badge.className = 'referrer-badge';
+    badge.append(createIcon('icon-shield'), document.createTextNode('Founding referring faculty'));
+    top.append(badge);
+  }
+  card.append(top);
+  const mw = document.createElement('div'); mw.className = 'referrer-meter-wrap';
+  const mh = document.createElement('div'); mh.className = 'referrer-meter-head';
+  const mb = document.createElement('b'); mb.textContent = 'Endorsement weight';
+  const ms = document.createElement('span'); ms.textContent = 'Illustrative · derived from your referrals’ outcomes';
+  mh.append(mb, ms);
+  const meter = document.createElement('div'); meter.className = 'referrer-meter';
+  const fill = document.createElement('div'); fill.className = 'referrer-meter-fill'; meter.append(fill);
+  mw.append(mh, meter);
+  card.append(mw);
+  const stats = document.createElement('div'); stats.className = 'referrer-stats';
+  [['Endorsed', counts.endorsed], ['Working', counts.working], ['Verified', counts.verified]].forEach(([label, n]) => {
+    const st = document.createElement('div'); st.className = 'referrer-stat';
+    const b = document.createElement('b'); b.textContent = String(n);
+    const sp = document.createElement('span'); sp.textContent = label;
+    st.append(b, sp); stats.append(st);
+  });
+  card.append(stats);
+  host.append(card);
+
+  const table = document.createElement('div'); table.className = 'referrer-students';
+  const thead = document.createElement('div'); thead.className = 'referrer-students-head';
+  const th = document.createElement('h3'); th.textContent = 'Students you referred';
+  const tc = document.createElement('span'); tc.textContent = total + ' students';
+  thead.append(th, tc); table.append(thead);
+  students.forEach(s => {
+    const row = document.createElement('div'); row.className = 'referrer-row';
+    const nm = document.createElement('div'); nm.className = 'r-name'; nm.textContent = s.name;
+    const fnEl = document.createElement('div'); fnEl.className = 'r-fn'; fnEl.textContent = s.fn;
+    const pill = document.createElement('span'); pill.className = 'status-pill is-' + s.status;
+    pill.textContent = s.status.charAt(0).toUpperCase() + s.status.slice(1);
+    row.append(nm, fnEl, pill); table.append(row);
+  });
+  host.append(table);
+
+  const note = document.createElement('p'); note.className = 'referrer-note';
+  note.append(createIcon('icon-lock'));
+  const ns = document.createElement('span');
+  ns.append(document.createTextNode('An endorsement is an appreciating reputation asset: as your referred students complete reviewed, verified work, your endorsements carry more weight. '));
+  const nb = document.createElement('b'); nb.textContent = 'Verified rungs are earned through reviewed work — never assigned.';
+  ns.append(nb);
+  note.append(ns);
+  host.append(note);
+  const deferred = document.createElement('p'); deferred.className = 'referrer-deferred';
+  deferred.textContent = 'Cash or revenue-share to referrers is a deferred decision — not part of this pilot.';
+  host.append(deferred);
+
+  window.requestAnimationFrame(() => { fill.style.width = weight + '%'; });
 }
 
 // Top-nav links work from EVERY audience: switch to the audience where the target
@@ -3431,6 +3768,12 @@ selectWorkType(state.workType);
 setAudience(state.audience);
 renderReferralBanner();
 renderReferralLink();
+// Steps 5/6/3 + gold-tile motif — run here (not at definition time) so the referral
+// storage key and other late consts are initialized before activeReferral() is read.
+renderGoldTiles();
+buildCandidateFilters();
+renderCandidates();
+renderReferrerDashboard();
 selectorFxController = initSelectorFx();
 selectorFxController?.pulse($('.work-option.is-selected'));
 initButtonFeedback();

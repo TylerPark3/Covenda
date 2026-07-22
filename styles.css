@@ -2369,3 +2369,230 @@ body[data-audience="university"] .roles-section { display: none; }
 .role-apply-summary { padding: 14px 16px; border-radius: 12px; background: var(--gold-pale); border: 1px solid var(--gold-light); margin-bottom: 4px; }
 .role-apply-role { margin: 0; font-size: 15px; color: var(--ink); }
 .role-apply-desc { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+/* =====================================================================
+   UI polish + credibility framework Steps 5/6/3 (appended so these rules
+   win the cascade over the base rules they intentionally refine).
+   ===================================================================== */
+
+/* ---- Fix cramped dialogs -------------------------------------------------
+   The single-step dialogs (quick join / request endorsement / role apply /
+   credential) reuse .form-dialog but never got the body padding the multi-step
+   forms get from .form-step, so their fields sat flush against the panel edges.
+   Give the body a consistent 30px inset and a little more vertical rhythm. */
+.quick-join-dialog > form > .dialog-copy,
+.quick-join-dialog > form > .role-apply-summary,
+.quick-join-dialog > form > .field-grid,
+.quick-join-dialog > form > .consent-row,
+.quick-join-dialog > form > .quick-join-actions,
+.credential-dialog > .dialog-copy,
+.credential-dialog > .credential-preview,
+.credential-dialog > .credential-actions { margin-left: 30px; margin-right: 30px; }
+.quick-join-dialog > form > .dialog-copy { margin-top: 6px; margin-bottom: 18px; color: var(--muted); font-size: 15px; line-height: 1.62; }
+.quick-join-dialog > form > .role-apply-summary { margin-top: 8px; margin-bottom: 18px; }
+.quick-join-dialog > form > .field-grid { gap: 16px 18px; }
+.quick-join-dialog > form > .consent-row { margin-top: 16px; }
+.quick-join-dialog > form > .quick-join-actions { margin-top: 22px; margin-bottom: 4px; padding-bottom: 28px; }
+.quick-join-dialog > .quick-join-done { padding: 6px 30px 26px; }
+@media (max-width: 560px) {
+  .quick-join-dialog > form > .dialog-copy,
+  .quick-join-dialog > form > .role-apply-summary,
+  .quick-join-dialog > form > .field-grid,
+  .quick-join-dialog > form > .consent-row,
+  .quick-join-dialog > form > .quick-join-actions,
+  .credential-dialog > .dialog-copy,
+  .credential-dialog > .credential-preview,
+  .credential-dialog > .credential-actions { margin-left: 20px; margin-right: 20px; }
+  .quick-join-dialog > .quick-join-done { padding: 6px 20px 22px; }
+}
+
+/* ---- Bigger "Rethinking Internships" gold square -------------------------- */
+@media (min-width: 900px) {
+  .feature-band-inner { grid-template-columns: minmax(0, 1fr) minmax(440px, 600px); }
+}
+.ico-kicker { top: 30px; font-size: 12px; letter-spacing: .16em; opacity: .8; }
+
+/* ---- Reusable gold tile (the same gold square motif, reused elsewhere) -----
+   Shares the feature panel's gradient + grain. Static (no canvas) so it can be
+   dropped into any section cheaply; the network-of-nodes art echoes the
+   icosahedron's "students connected" meaning. */
+.gold-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  aspect-ratio: 4 / 3;
+  background:
+    radial-gradient(120% 130% at 18% 18%, #FDF9F0 0%, rgba(253,249,240,0) 55%),
+    radial-gradient(110% 120% at 82% 22%, #C9A24B 0%, rgba(201,162,75,0) 58%),
+    radial-gradient(130% 130% at 78% 88%, #A9822F 0%, rgba(169,130,47,0) 55%),
+    radial-gradient(120% 130% at 22% 92%, #FBF6EC 0%, rgba(251,246,236,0) 58%),
+    linear-gradient(135deg, #FDF9F0 0%, #FBF6EC 58%, #F3E7CC 100%);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,.6), 0 14px 40px rgba(169,130,47,.14);
+}
+.gold-tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 140px 140px;
+  opacity: .5;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+.gold-tile--banner { aspect-ratio: 16 / 4.2; border-radius: 20px; }
+.gold-tile-kicker {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 13px;
+  border-radius: 999px;
+  background: rgba(255,252,246,.7);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.gold-tile-art { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; display: block; }
+.gold-tile-art .edge { stroke: rgba(169,130,47,.5); stroke-width: 1; fill: none; }
+.gold-tile-art .node { fill: rgba(169,130,47,.9); }
+.gold-tile-art .node-halo { fill: rgba(201,162,75,.16); }
+.gold-tile-art .spark { fill: rgba(255,248,230,.95); }
+@media (prefers-reduced-motion: no-preference) {
+  .gold-tile-art .spark { animation: tile-pulse 3.6s ease-in-out infinite; }
+}
+@keyframes tile-pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
+/* Batches section: reuse the gold square as a banner accent above the grid. */
+.batches-tile { width: min(100%, 840px); margin: 0 auto clamp(30px, 4vw, 46px); }
+
+/* Trace dialog body inset (this dialog has no <form>, so the form-child rules
+   above don't reach it). */
+.quick-join-dialog > .dialog-copy { margin: 10px 30px 16px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.quick-join-dialog > .trace-chain { margin: 0 30px 26px; }
+@media (max-width: 560px) {
+  .quick-join-dialog > .dialog-copy { margin-left: 20px; margin-right: 20px; }
+  .quick-join-dialog > .trace-chain { margin-left: 20px; margin-right: 20px; }
+}
+
+/* Section header with a square gold tile beside the copy (Steps 6 & 3). */
+.gold-header { display: grid; grid-template-columns: minmax(0, 1fr); gap: 30px; align-items: center; margin-bottom: clamp(30px, 4vw, 48px); }
+.gold-header .gold-tile { display: none; }
+@media (min-width: 860px) {
+  .gold-header { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); }
+  .gold-header .gold-tile { display: block; }
+}
+.gold-header h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 3.6vw, 54px); line-height: 1.05; letter-spacing: -.05em; }
+.gold-header .feature-kicker { margin: 0 0 14px; }
+.gold-header p { margin: 16px 0 0; color: var(--muted); font-size: 16px; line-height: 1.6; max-width: 60ch; }
+
+/* ---- Step 5: compatibility score inside the apply dialog ------------------ */
+.fit-block { margin-top: 16px; padding: 16px; border-radius: 14px; background: #fff; border: 1px solid var(--gold-light); }
+.fit-illustrative { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 12px; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-deep); }
+.fit-illustrative svg { width: 13px; height: 13px; }
+.fit-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 460px) { .fit-scores { grid-template-columns: 1fr; } }
+.fit-score { padding: 12px 13px; border-radius: 11px; background: var(--gold-pale); border: 1px solid var(--gold-light); }
+.fit-score-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.fit-score-term { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--gold-deep); }
+.fit-score-value { font-family: var(--font-display); font-size: 30px; line-height: 1; letter-spacing: -.03em; color: var(--ink); }
+.fit-score-value small { font-size: 13px; color: var(--soft); font-family: inherit; }
+.fit-meter { height: 7px; margin: 9px 0 8px; border-radius: 999px; background: rgba(169,130,47,.16); overflow: hidden; }
+.fit-meter-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #C9A24B, #8b5709); width: 0; transition: width .6s cubic-bezier(.22,.61,.36,1); }
+@media (prefers-reduced-motion: reduce) { .fit-meter-fill { transition: none; } }
+.fit-evidence { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+.fit-note { margin: 12px 0 0; display: flex; align-items: flex-start; gap: 7px; font-size: 11.5px; line-height: 1.45; color: var(--soft); }
+.fit-note svg { flex: 0 0 auto; width: 13px; height: 13px; margin-top: 1px; color: var(--gold-deep); }
+
+/* ---- Step 6: company candidate browser ----------------------------------- */
+#candidates { display: none; }
+body[data-audience="company"] #candidates { display: block; }
+.candidates-section { padding: clamp(48px, 6vw, 88px) var(--page-gutter); background: #fff; border-top: 1px solid var(--line); }
+.candidates-section > * { width: min(100%, var(--content)); margin-left: auto; margin-right: auto; }
+.cand-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 14px 16px; padding: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--gold-pale); }
+.cand-filter { display: grid; gap: 5px; }
+.cand-filter > span { font-size: 11px; font-weight: 650; color: var(--gold-deep); letter-spacing: .02em; }
+.cand-filter select { min-height: 42px; min-width: 150px; background: #fff; }
+.cand-count { margin: 18px 0 4px; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.cand-count b { color: var(--ink); }
+.cand-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; margin-top: 14px; }
+.candidate-card { display: flex; flex-direction: column; gap: 10px; padding: 22px; border-radius: 18px; border: 1px solid var(--line); background: #fff; box-shadow: 0 1px 2px rgba(25,22,17,.03); }
+.cand-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.cand-handle { margin: 0; font-size: 17px; font-weight: 640; letter-spacing: -.01em; }
+.cand-function { margin: 2px 0 0; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-deep); }
+.cand-score { flex: 0 0 auto; display: grid; place-items: center; text-align: center; min-width: 58px; padding: 7px 8px; border-radius: 12px; background: var(--gold-pale); border: 1px solid var(--gold-light); }
+.cand-score b { font-family: var(--font-display); font-size: 22px; line-height: 1; color: var(--ink); }
+.cand-score span { font-size: 9px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-deep); }
+.cand-endorser { display: flex; align-items: flex-start; gap: 8px; margin: 0; padding: 10px 12px; border-radius: 11px; background: var(--gold-pale); font-size: 12.5px; line-height: 1.4; color: var(--ink); }
+.cand-endorser svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 1px; color: var(--gold-deep); }
+.cand-endorser b { font-weight: 640; }
+.cand-club { margin: 0; font-size: 12px; color: var(--muted); }
+.cand-club b { color: var(--ink); font-weight: 600; }
+.cand-club .cand-club-record { color: var(--success); font-weight: 600; }
+.cand-skills { display: flex; flex-wrap: wrap; gap: 6px; }
+.cand-skill { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: 11px; color: #55554f; }
+.cand-skill.is-match { border-color: var(--gold-light); background: var(--gold-pale); color: var(--gold-deep); font-weight: 600; }
+.cand-trace { margin-top: 2px; align-self: flex-start; }
+.cand-empty { margin-top: 18px; padding: 26px; border: 1px dashed var(--line-strong); border-radius: 16px; text-align: center; color: var(--muted); font-size: 14px; }
+.cand-honest { display: flex; align-items: flex-start; gap: 9px; margin-top: 22px; padding: 14px 16px; border-radius: 13px; border: 1px solid var(--line); background: var(--gold-pale); font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.cand-honest svg { flex: 0 0 auto; width: 17px; height: 17px; margin-top: 1px; color: var(--gold-deep); }
+
+/* Referral-trace dialog */
+.trace-chain { display: grid; gap: 14px; }
+.trace-node { padding: 14px 16px; border-radius: 13px; border: 1px solid var(--line); background: #fff; }
+.trace-node.is-candidate { background: var(--gold-pale); border-color: var(--gold-light); }
+.trace-node small { display: block; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-deep); margin-bottom: 4px; }
+.trace-node b { font-size: 15px; }
+.trace-node p { margin: 3px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.trace-arrow { display: grid; place-items: center; color: var(--gold-deep); }
+.trace-arrow svg { width: 18px; height: 18px; }
+.trace-vouches { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.trace-vouch { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 10px; background: #fff; border: 1px solid var(--line); font-size: 12.5px; }
+.trace-vouch span:first-child { color: var(--ink); font-weight: 550; }
+.outcome-pill { flex: 0 0 auto; padding: 3px 10px; border-radius: 999px; font-size: 10.5px; font-weight: 650; letter-spacing: .02em; }
+.outcome-pill.is-verified { background: rgba(36,117,58,.1); color: var(--success); }
+.outcome-pill.is-working { background: var(--gold-pale); color: var(--gold-deep); }
+.outcome-pill.is-progress { background: rgba(25,22,17,.05); color: var(--soft); }
+
+/* ---- Step 3: referrer credibility + dashboard ---------------------------- */
+#referrerDashboard { display: none; }
+body[data-audience="university"] #referrerDashboard { display: block; }
+.referrer-section { padding: clamp(48px, 6vw, 88px) var(--page-gutter); background: #fff; border-top: 1px solid var(--line); }
+.referrer-section > * { width: min(100%, var(--content)); margin-left: auto; margin-right: auto; }
+.referrer-cred-card { display: grid; gap: 16px; padding: 26px; border-radius: 20px; border: 1px solid var(--gold-light); background: linear-gradient(180deg, var(--gold-pale), #fff); }
+.referrer-cred-top { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.referrer-identity h3 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+.referrer-identity p { margin: 3px 0 0; font-size: 13px; color: var(--muted); }
+.referrer-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px; background: #fff; border: 1px solid var(--gold-light); color: var(--gold-deep); font-size: 11.5px; font-weight: 650; }
+.referrer-badge svg { width: 14px; height: 14px; }
+.referrer-meter-wrap { display: grid; gap: 7px; }
+.referrer-meter-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.referrer-meter-head b { font-size: 13px; }
+.referrer-meter-head span { font-size: 11.5px; color: var(--soft); }
+.referrer-meter { height: 9px; border-radius: 999px; background: rgba(169,130,47,.16); overflow: hidden; }
+.referrer-meter-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #C9A24B, #8b5709); width: 0; transition: width .7s cubic-bezier(.22,.61,.36,1); }
+@media (prefers-reduced-motion: reduce) { .referrer-meter-fill { transition: none; } }
+.referrer-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.referrer-stat { padding: 13px; border-radius: 12px; background: #fff; border: 1px solid var(--line); text-align: center; }
+.referrer-stat b { display: block; font-family: var(--font-display); font-size: 26px; line-height: 1; color: var(--ink); }
+.referrer-stat span { display: block; margin-top: 5px; font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--gold-deep); }
+.referrer-students { margin-top: 26px; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.referrer-students-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); background: var(--gold-pale); }
+.referrer-students-head h3 { margin: 0; font-size: 15px; }
+.referrer-students-head span { font-size: 12px; color: var(--muted); }
+.referrer-row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.referrer-row:last-child { border-bottom: 0; }
+.referrer-row .r-name { font-size: 14px; font-weight: 600; }
+.referrer-row .r-fn { font-size: 12px; color: var(--muted); }
+.status-pill { justify-self: end; padding: 4px 12px; border-radius: 999px; font-size: 11px; font-weight: 650; }
+.status-pill.is-endorsed { background: var(--gold-pale); color: var(--gold-deep); border: 1px solid var(--gold-light); }
+.status-pill.is-working { background: rgba(36,117,58,.08); color: var(--success); }
+.status-pill.is-verified { background: rgba(36,117,58,.14); color: var(--success); }
+.referrer-note { display: flex; align-items: flex-start; gap: 9px; margin-top: 20px; padding: 14px 16px; border-radius: 13px; border: 1px solid var(--line); background: var(--gold-pale); font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.referrer-note svg { flex: 0 0 auto; width: 17px; height: 17px; margin-top: 1px; color: var(--gold-deep); }
+.referrer-note b { color: var(--ink); font-weight: 600; }
+.referrer-deferred { margin-top: 12px; font-size: 11.5px; color: var(--soft); font-style: italic; }

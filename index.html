@@ -498,6 +498,7 @@
           <h2>Join a batch in your industry.</h2>
           <p>Anyone can run a test or clean a spreadsheet — credibility is industry-specific. A batch is a small pilot cohort in one industry where you build a real track record by completing bounded, reviewed projects. Like a professor’s endorsement, it’s an industry credibility signal — not a placement or job guarantee.</p>
         </div>
+        <div class="gold-tile gold-tile--banner batches-tile" data-gold-tile data-kicker="Rethinking Internships" aria-hidden="true"></div>
         <div class="batch-grid" id="batchGrid" data-batch-grid></div>
       </section>
 
@@ -508,6 +509,42 @@
           <p>Illustrative pilot roles by function. Applying shows an illustrative fit signal, not a guarantee — real roles open as companies bring work.</p>
         </div>
         <div class="roles-grid" id="rolesGrid" data-roles-grid></div>
+      </section>
+
+      <!-- Step 6 — company-only candidate browser: filter illustrative candidates by
+           referral source, club track record, compatibility, function, and skills, then
+           trace the referral chain. Scoped to the company audience in CSS. -->
+      <section class="candidates-section" id="candidates">
+        <div class="gold-header">
+          <div>
+            <p class="feature-kicker">Candidate browser</p>
+            <h2>Filter students by proof, not just résumés.</h2>
+            <p>Every candidate below is illustrative. Filter by who vouched for them, their club’s track record, compatibility, function, and skills — then trace the referral chain. A high score or endorsement is a <b>signal, not a guarantee</b>.</p>
+          </div>
+          <div class="gold-tile" data-gold-tile data-kicker="Vouched talent" aria-hidden="true"></div>
+        </div>
+        <div class="cand-toolbar" id="candToolbar" role="group" aria-label="Filter candidates"></div>
+        <p class="cand-count" id="candCount"></p>
+        <div class="cand-grid" id="candGrid" data-cand-grid></div>
+        <div class="cand-honest">
+          <svg><use href="#icon-lock"/></svg>
+          <span>Covenda never hires automatically. Scores and endorsements are decision support for a human — students control what they share, and a match is never guaranteed.</span>
+        </div>
+      </section>
+
+      <!-- Step 3 — university-only referrer dashboard: a referrer's track record and
+           derived (illustrative) credibility, framed as an appreciating reputation
+           asset. Scoped to the university audience in CSS. -->
+      <section class="referrer-section" id="referrerDashboard">
+        <div class="gold-header">
+          <div>
+            <p class="feature-kicker">Referrer track record</p>
+            <h2>Your endorsements are a reputation asset.</h2>
+            <p>Every student you refer builds your track record. As they move from endorsed to working to verified, your endorsements carry more weight — something you can show a department. Counts below are illustrative until real outcomes accrue.</p>
+          </div>
+          <div class="gold-tile" data-gold-tile data-kicker="Reputation, earned" aria-hidden="true"></div>
+        </div>
+        <div id="referrerDashboardBody"></div>
       </section>
 
       <section class="final-cta">
@@ -868,6 +905,12 @@
       <div class="form-message" id="companyFormMessage" role="status" aria-live="polite"></div>
       <footer class="dialog-footer"><button class="outline-button" type="button" data-form-back hidden>Back</button><button class="gold-button" type="button" data-form-next>Continue<svg><use href="#icon-arrow-right"/></svg></button><button class="gold-button" type="submit" data-form-submit hidden>Send company problem<svg><use href="#icon-arrow-right"/></svg></button></footer>
     </form>
+  </dialog>
+
+  <dialog class="form-dialog quick-join-dialog trace-dialog" id="traceDialog" aria-labelledby="traceTitle">
+    <header class="dialog-header"><div><small>Referral chain</small><h2 id="traceTitle">Referral trace</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
+    <div class="dialog-copy" id="traceIntro"></div>
+    <div class="trace-chain" id="traceChain"></div>
   </dialog>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
