@@ -62,6 +62,14 @@ test('member workspace uses the institutional control system and actionable empt
   assert.doesNotMatch(styles,/\.progress-ring/);
 });
 
+test('project intake uses a full-screen working surface and completed work records outcomes',()=>{
+  assert.match(styles,/#intakeDialog \{[^}]*width:100vw[^}]*height:100dvh/);
+  assert.match(styles,/#intakeDialog \.dialog-body \{[^}]*overflow-y:auto/);
+  assert.match(script,/Did working together lead to anything more\?/);
+  assert.match(script,/action:'record-conversion'/);
+  assert.match(styles,/\.conversion-control/);
+});
+
 test('portal shares the canonical mark and prepares avatar photos before upload',()=>{
   assert.ok((html.match(/src="\/assets\/covenda-mark\.svg"/g)||[]).length>=2);
   assert.match(script,/function downscaleAvatar\(file\)/);

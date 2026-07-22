@@ -16,6 +16,7 @@ import {
   memberAuthReadiness,
   projectCreditCost,
   rankOpportunities,
+  recordConversion,
   requestGoogleLogin,
   requestMemberLink,
   requestPayout,
@@ -235,6 +236,24 @@ test('credits cannot be minted unless the deployment enables it', async () => {
   assert.equal(result.balance, 100);
   // an operator on the allowlist can grant without the flag
   await buyCredits(member, { credits: 500 }, { COVENDA_ADMIN_EMAILS: 'ops@acme.com' });
+});
+
+test('a completed project records a whitelisted conversion outcome for its owner', async () => {
+  let patch;
+  const supabase=queuedSupabase([
+    { result:{id:PROJECT_UUID,owner_user_id:'owner-1',status:'complete'} },
+    { result:{id:PROJECT_UUID,conversion_outcome:'full_time'},capture:value=>{patch=value;} },
+  ]);
+  const project=await recordConversion({user:{id:'owner-1'},supabase},{projectId:PROJECT_UUID,outcome:'full_time',note:'Joined the operations team.'});
+  assert.equal(project.conversion_outcome,'full_time');
+  assert.equal(patch.conversion_note,'Joined the operations team.');
+  assert.ok(patch.conversion_recorded_at);
+});
+
+test('conversion outcomes reject unknown values, non-owners, and unfinished work', async () => {
+  await assert.rejects(recordConversion({user:{id:'owner-1'},supabase:queuedSupabase([])},{projectId:PROJECT_UUID,outcome:'promoted'}),/Choose what the project led to/);
+  await assert.rejects(recordConversion({user:{id:'intruder'},supabase:queuedSupabase([{result:{id:PROJECT_UUID,owner_user_id:'owner-1',status:'complete'}}])},{projectId:PROJECT_UUID,outcome:'interview'}),/Only the project owner/);
+  await assert.rejects(recordConversion({user:{id:'owner-1'},supabase:queuedSupabase([{result:{id:PROJECT_UUID,owner_user_id:'owner-1',status:'in_progress'}}])},{projectId:PROJECT_UUID,outcome:'interview'}),/once the work is accepted/);
 });
 
 test('a payout request is bounded by the balance and never stores an account number', async () => {

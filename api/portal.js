@@ -1113,6 +1113,32 @@ export async function reviewDeliverable(member, input) {
   return Array.isArray(released) ? released[0] : released;
 }
 
+// Capture the business outcome of accepted work. This records whether a project became
+// a longer engagement or placement; it never moves credits or charges a fee.
+const CONVERSION_OUTCOMES = new Set(['none', 'continued', 'interview', 'internship', 'full_time', 'referred_on']);
+export async function recordConversion(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const outcome = cleanText(input.outcome, 40);
+  if (!CONVERSION_OUTCOMES.has(outcome)) throw new Error('Choose what the project led to.');
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', projectId).maybeSingle(),
+    null,
+  );
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can record an outcome.');
+  if (project.status !== 'complete') throw new Error('You can record an outcome once the work is accepted.');
+  const now = new Date().toISOString();
+  return checked(
+    member.supabase.from('member_projects').update({
+      conversion_outcome: outcome,
+      conversion_note: cleanText(input.note, 500) || null,
+      conversion_recorded_at: now,
+      updated_at: now,
+    }).eq('id', projectId).select('*').single(),
+    null,
+  );
+}
+
 // Cancelling before completion returns the held escrow to the company. Same atomicity
 // requirement as the release, so it also runs as a database function.
 export async function cancelProject(member, input) {
@@ -1175,6 +1201,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
+    if (req.method === 'POST' && input.action === 'record-conversion') return res.status(200).json({ ok: true, project: await recordConversion(member, input) });
     if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });
     if (req.method === 'POST' && input.action === 'request-network-access') return res.status(201).json({ ok: true, request: await requestTalentNetworkAccess(member, input) });
     if (req.method === 'POST' && input.action === 'cancel-project') return res.status(200).json({ ok: true, project: await cancelProject(member, input) });

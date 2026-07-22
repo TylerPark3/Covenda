@@ -58,6 +58,10 @@ const trustedTalent = readFileSync(
   new URL('../supabase/migrations/20260726000000_trusted_talent_network.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const projectConversion = readFileSync(
+  new URL('../supabase/migrations/20260726100000_project_conversion_tracking.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 const matchEvents = readFileSync(
   new URL('../supabase/migrations/20260722212024_create_match_events.sql', import.meta.url),
   'utf8',
@@ -190,6 +194,18 @@ test('project review migration adds close-the-loop fields idempotently without l
   assert.match(projectReview, /create index if not exists member_projects_review_idx/);
   assert.match(projectReview, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(projectReview, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('project conversion tracking is constrained, repeatable, and does not loosen access', () => {
+  for (const column of ['conversion_outcome text', 'conversion_note text', 'conversion_recorded_at timestamptz']) {
+    assert.match(projectConversion, new RegExp(`add column if not exists ${column}`));
+  }
+  for (const outcome of ['none', 'continued', 'interview', 'internship', 'full_time', 'referred_on']) {
+    assert.match(projectConversion, new RegExp(`'${outcome}'`));
+  }
+  assert.match(projectConversion, /char_length\(conversion_note\) <= 500/);
+  assert.match(projectConversion, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(projectConversion, /drop table|truncate|delete from|grant|create policy|security definer/);
 });
 
 test('member profile onboarding migration adds matching fields idempotently without loosening access', () => {

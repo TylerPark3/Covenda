@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Readable } from 'node:stream';
 
 import { generateProjectBrief, IntakeConfigError, normalizeBrief } from '../api/project-intake.js';
-import { readUploadBody, uploadPolicy, validateUpload } from '../api/project-upload.js';
+import { blobUploadFailure, readUploadBody, uploadPolicy, validateUpload } from '../api/project-upload.js';
 
 function anthropicResponse(object) {
   return { ok: true, async json() { return { content: [{ type: 'text', text: JSON.stringify(object) }] }; } };
@@ -85,4 +85,12 @@ test('upload body reader accepts both a pre-buffered runtime body and a raw stre
 test('upload body reader identifies a consumed stream and enforces the ceiling', async () => {
   await assert.rejects(readUploadBody({ body: null, readableEnded: true, headers: { 'content-length': '12' } }, 100), error => error.code === 'UPLOAD_STREAM_CONSUMED');
   await assert.rejects(readUploadBody({ body: Buffer.alloc(101), headers: {} }, 100), error => error.code === 'UPLOAD_TOO_LARGE');
+});
+
+test('Blob failures tell an operator whether the token, store, or provider write failed', () => {
+  assert.deepEqual(blobUploadFailure(new Error('Unauthorized token')).code, 'BLOB_TOKEN_INVALID');
+  assert.deepEqual(blobUploadFailure(new Error('Blob store not found')).code, 'BLOB_STORE_MISSING');
+  const unknown=blobUploadFailure(new Error('network reset'));
+  assert.equal(unknown.code, 'BLOB_WRITE_FAILED');
+  assert.doesNotMatch(unknown.error,/network reset/);
 });

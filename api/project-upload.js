@@ -113,8 +113,36 @@ export async function readUploadBody(req, maxBytes) {
   return body;
 }
 
-function logUpload(event, { kind, contentType, sizeBytes = 0, status, code = '' }) {
-  console.info(JSON.stringify({ event, kind, contentType, sizeBytes, status, ...(code ? { code } : {}) }));
+function logUpload(event, { kind, contentType, sizeBytes = 0, status, code = '', detail = '' }) {
+  const record = { event, kind, contentType, sizeBytes, status, ...(code ? { code } : {}), ...(detail ? { detail: detail.slice(0, 500) } : {}) };
+  const writer = status >= 500 ? console.error : console.info;
+  writer(JSON.stringify(record));
+}
+
+export function blobUploadFailure(error) {
+  const message = String(error?.message || error || 'Unknown Blob error');
+  if (/token|unauthorized|forbidden|invalid/i.test(message)) {
+    return {
+      status: 503,
+      code: 'BLOB_TOKEN_INVALID',
+      error: 'File storage rejected the upload. Check that BLOB_READ_WRITE_TOKEN belongs to this Vercel project and Blob store, then redeploy.',
+      detail: message,
+    };
+  }
+  if (/store|not found|no such/i.test(message)) {
+    return {
+      status: 503,
+      code: 'BLOB_STORE_MISSING',
+      error: 'No Blob store is connected to this Vercel project. Create or reconnect one under Vercel Storage, then redeploy.',
+      detail: message,
+    };
+  }
+  return {
+    status: 500,
+    code: 'BLOB_WRITE_FAILED',
+    error: 'File storage could not save this upload. Check the PROJECT_UPLOAD_FAILED entry in Vercel Runtime Logs.',
+    detail: message,
+  };
 }
 
 export default async function handler(req, res, dependencies = {}) {
@@ -159,7 +187,8 @@ export default async function handler(req, res, dependencies = {}) {
     logUpload('PROJECT_UPLOAD_STORED', { kind, contentType, sizeBytes: size, status: 200 });
     return res.status(200).json({ name: declaredName, blobUrl: blob.url, contentType, sizeBytes: size });
   } catch (error) {
-    logUpload('PROJECT_UPLOAD_FAILED', { kind, contentType, sizeBytes: size, status: 500, code: error?.code || 'BLOB_WRITE_FAILED' });
-    return res.status(500).json({ error: 'Upload failed. Please try again.' });
+    const failure = blobUploadFailure(error);
+    logUpload('PROJECT_UPLOAD_FAILED', { kind, contentType, sizeBytes: size, status: failure.status, code: failure.code, detail: failure.detail });
+    return res.status(failure.status).json({ error: failure.error, code: failure.code });
   }
 }
