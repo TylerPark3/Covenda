@@ -48,6 +48,10 @@ test('operator inbox has passwordless sign-in and a complete review surface', ()
   assert.match(script, /action:'publish-request'/);
   assert.match(script, /No client or patient records/);
   assert.match(styles, /\.packet-editor/);
+  assert.match(script, /Partner verification/);
+  assert.match(script, /Founder-confirmed partner/);
+  assert.match(script, /action:'verify-partner'/);
+  assert.match(styles, /\.partner-verification/);
 });
 
 test('operator UI stays code-native and contains no server credentials', () => {
@@ -62,6 +66,8 @@ test('admin HTML ids are unique and mobile layout is explicit', () => {
   assert.equal(new Set(ids).size, ids.length);
   assert.match(styles, /@media \(max-width: 720px\)/);
   assert.match(styles, /tbody tr/);
+  assert.match(styles, /\.admin-main \{ grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(styles, /\.admin-main,\.packaging-main \{ width:100%; max-width:100vw/);
 });
 
 test('admin shares the canonical Covenda mark', () => {

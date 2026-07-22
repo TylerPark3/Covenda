@@ -215,12 +215,13 @@ test('studentRecord stays valid with no referral (optional, defaults to empty)',
   assert.equal(record.affiliation.verificationStatus, 'not provided');
 });
 
-test('partner affiliation matching accepts only approved university or referrer records', () => {
+test('partner affiliation matching accepts only approved and founder-confirmed records', () => {
   const rows = [
     {
       reference: 'REF-APPROVED1',
       submission_type: 'referrer_endorsement',
       status: 'approved',
+      partner_verified: true,
       organization_name: 'Riverton Robotics Lab',
       details: { attributionCode: 'REF-AB12CD' },
     },
@@ -231,10 +232,19 @@ test('partner affiliation matching accepts only approved university or referrer 
       organization_name: 'Pending University',
       details: {},
     },
+    {
+      reference: 'UNI-APPROVED2',
+      submission_type: 'university_partner',
+      status: 'approved',
+      partner_verified: false,
+      organization_name: 'Approved But Unconfirmed University',
+      details: {},
+    },
   ];
   assert.equal(partnerAffiliationMatch(rows, { code: 'ref-ab12cd' }), true);
   assert.equal(partnerAffiliationMatch(rows, { organization: 'Riverton Robotics Lab' }), true);
   assert.equal(partnerAffiliationMatch(rows, { organization: 'Pending University' }), false);
+  assert.equal(partnerAffiliationMatch(rows, { organization: 'Approved But Unconfirmed University' }), false);
 });
 
 test('partner verification uses a server secret and fails closed to pending', async () => {
@@ -264,6 +274,7 @@ test('partner verification uses a server secret and fails closed to pending', as
                             reference: 'REF-RECORD1',
                             submission_type: 'referrer_endorsement',
                             status: 'approved',
+                            partner_verified: true,
                             organization_name: 'Riverton Robotics Lab',
                             details: { attributionCode: 'REF-AB12CD' },
                           }], error: null };

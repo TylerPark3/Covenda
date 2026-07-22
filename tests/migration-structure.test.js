@@ -58,6 +58,10 @@ const trustedTalent = readFileSync(
   new URL('../supabase/migrations/20260726000000_trusted_talent_network.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const partnerVerification = readFileSync(
+  new URL('../supabase/migrations/20260728000000_partner_verification.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 const projectConversion = readFileSync(
   new URL('../supabase/migrations/20260726100000_project_conversion_tracking.sql', import.meta.url),
   'utf8',
@@ -284,4 +288,15 @@ test('trusted talent normalizes operator-approved referrals without exposing stu
   assert.match(trustedTalent, /set search_path = public, pg_temp/);
   assert.doesNotMatch(trustedTalent, /security definer/);
   assert.doesNotMatch(trustedTalent, /create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('partner verification requires a separate founder confirmation and rechecks referral evidence', () => {
+  for (const column of ['partner_verified boolean', 'partner_verified_at timestamptz', 'partner_verified_by text', 'founding_partner boolean']) {
+    assert.match(partnerVerification, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(partnerVerification, /new\.status = 'approved' and new\.partner_verified = true then 'verified'/);
+  assert.match(partnerVerification, /founding_partner = false[\s\S]*partner_verified_at is null/);
+  assert.match(partnerVerification, /where submission_type = 'referrer_endorsement'/);
+  assert.match(partnerVerification, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(partnerVerification, /drop table|truncate|delete from|create policy|grant [^;]* to (anon|authenticated)/);
 });

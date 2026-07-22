@@ -562,7 +562,7 @@ test('a company can request human-reviewed network access using its authenticate
 
 test('a university cohort links its own referral roster to profiles and project progress without exposing email', () => {
   const cohort=summarizePartnerCohort([
-    {reference:'UNI-ABC123',submission_type:'university_partner',status:'approved',created_at:'2026-07-01T00:00:00Z',updated_at:'2026-07-02T00:00:00Z',details:{roster:[{name:'Maya Patel',email:'maya@school.edu',interest:'Research'},{name:'Jordan Lee',email:'jordan@school.edu',interest:'Operations'}]}},
+    {reference:'UNI-ABC123',submission_type:'university_partner',status:'approved',partner_verified:true,founding_partner:true,partner_verified_at:'2026-07-02T00:00:00Z',created_at:'2026-07-01T00:00:00Z',updated_at:'2026-07-02T00:00:00Z',details:{roster:[{name:'Maya Patel',email:'maya@school.edu',interest:'Research'},{name:'Jordan Lee',email:'jordan@school.edu',interest:'Operations'}]}},
   ],[
     {user_id:'student-1',contact_email:'maya@school.edu',display_name:'Maya Patel',headline:'Researcher',updated_at:'2026-07-03T00:00:00Z'},
   ],[
@@ -571,8 +571,13 @@ test('a university cohort links its own referral roster to profiles and project 
   ]);
   assert.deepEqual(cohort.stats,{referredStudents:2,liveProfiles:1,activeProjects:1,completedProjects:1});
   assert.equal(cohort.referralCode,'UNI-ABC123');
+  assert.equal(cohort.partnerVerified,true);
+  assert.equal(cohort.foundingPartner,true);
+  assert.equal(cohort.students[0].referral_status,'verified');
   assert.equal(cohort.students[0].project_stage,'completed');
   assert.equal(cohort.students[1].profile_status,'invited');
   assert.equal('studentEmail' in cohort.students[0],false);
   assert.doesNotMatch(JSON.stringify(cohort),/maya@school\.edu|jordan@school\.edu/);
+  const unconfirmed=summarizePartnerCohort([{reference:'UNI-PENDING1',submission_type:'university_partner',status:'approved',partner_verified:false,details:{roster:[{name:'Alex Kim',email:'alex@school.edu'}]}}]);
+  assert.equal(unconfirmed.students[0].referral_status,'under_review');
 });

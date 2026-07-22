@@ -335,7 +335,7 @@ export async function publishProjectRequest(supabase, input, operatorEmail = '')
 
 export async function updateAdminSubmission(supabase, input, operatorEmail = '') {
   const reference = text(input.reference, 40).toUpperCase();
-  if (!/^(EMP|STU|CALL|UNI)-[A-Z0-9]{6,20}$/.test(reference)) {
+  if (!/^(EMP|STU|CALL|UNI|SQ|REF|APP|NET)-[A-Z0-9]{6,20}$/.test(reference)) {
     throw new Error('Choose a valid submission.');
   }
 
@@ -373,6 +373,49 @@ export async function updateAdminSubmission(supabase, input, operatorEmail = '')
     .eq('reference', reference)
     .select('*')
     .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function verifyPartnerSubmission(supabase, input, operatorEmail = '') {
+  const reference = text(input.reference, 40).toUpperCase();
+  if (!/^(UNI|REF)-[A-Z0-9]{6,20}$/.test(reference)) throw new Error('Choose a valid partner submission.');
+  if (typeof input.partnerVerified !== 'boolean') throw new Error('Choose whether this partner is founder-confirmed.');
+
+  const { data: current, error: lookupError } = await supabase
+    .from('submissions')
+    .select('reference,submission_type,status,partner_verified,founding_partner')
+    .eq('reference', reference)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (!current || !['university_partner', 'referrer_endorsement'].includes(current.submission_type)) {
+    throw new Error('Choose a valid partner submission.');
+  }
+  if (input.partnerVerified && current.status !== 'approved') {
+    throw new Error('Approve the submission before confirming this partner.');
+  }
+
+  const reviewer = email(operatorEmail);
+  if (!reviewer) throw new Error('Operator email is required to confirm a partner.');
+  const now = new Date().toISOString();
+  const changes = input.partnerVerified
+    ? {
+      partner_verified: true,
+      founding_partner: input.foundingPartner === true,
+      partner_verified_at: now,
+      partner_verified_by: reviewer,
+      updated_at: now,
+    }
+    : {
+      partner_verified: false,
+      founding_partner: false,
+      partner_verified_at: null,
+      partner_verified_by: null,
+      updated_at: now,
+    };
+  let update = supabase.from('submissions').update(changes).eq('reference', reference);
+  if (input.partnerVerified) update = update.eq('status', 'approved');
+  const { data, error } = await update.select('*').single();
   if (error) throw error;
   return data;
 }
@@ -449,9 +492,10 @@ export default async function handler(req, res, dependencies = {}) {
     if (input.action === 'save-packaging') return res.status(200).json({ ok: true, request: await saveProjectRequestPackaging(admin.supabase, input, admin.email) });
     if (input.action === 'decline-request') return res.status(200).json({ ok: true, request: await declineProjectRequest(admin.supabase, input) });
     if (input.action === 'publish-request') return res.status(200).json({ ok: true, project: await publishProjectRequest(admin.supabase, input, admin.email) });
+    if (input.action === 'verify-partner') return res.status(200).json({ ok: true, submission: await verifyPartnerSubmission(admin.supabase, input, admin.email) });
     return res.status(400).json({ ok: false, error: 'Unknown action.' });
   } catch (error) {
-    const expected = error instanceof SyntaxError || /^(Enter|Choose|Keep|Please|Unknown|Define|Clear|The requester)/.test(error?.message || '');
+    const expected = error instanceof SyntaxError || /^(Enter|Choose|Keep|Please|Unknown|Define|Clear|Approve|Operator|The requester)/.test(error?.message || '');
     if (expected) return res.status(400).json({ ok: false, code: 'ADMIN_INPUT_INVALID', error: error.message });
     const failure = adminFailure(error);
     logAdminFailure(req, error, failure, startedAt);

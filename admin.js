@@ -143,6 +143,24 @@ function workflowSection(item) {
   return wrapper;
 }
 
+function partnerVerificationSection(item) {
+  if (!['university_partner','referrer_endorsement'].includes(item.submission_type)) return null;
+  const wrapper=document.createElement('section');wrapper.className='detail-section partner-verification';
+  const heading=document.createElement('h3');heading.textContent='Partner verification';
+  const intro=document.createElement('p');intro.className='partner-verification-intro';intro.textContent='Submission approval accepts this intake. Partner verification separately confirms Covenda has checked the source.';
+  const form=document.createElement('form');
+  const verifiedLabel=document.createElement('label');const verified=document.createElement('input');verified.type='checkbox';verified.name='partner_verified';verified.checked=item.partner_verified===true;const verifiedText=document.createElement('span');verifiedText.append(document.createElement('strong'),document.createElement('small'));verifiedText.firstChild.textContent='Founder-confirmed partner';verifiedText.lastChild.textContent='Allows verified referral language and certification.';verifiedLabel.append(verified,verifiedText);
+  const foundingLabel=document.createElement('label');const founding=document.createElement('input');founding.type='checkbox';founding.name='founding_partner';founding.checked=item.founding_partner===true;const foundingText=document.createElement('span');foundingText.append(document.createElement('strong'),document.createElement('small'));foundingText.firstChild.textContent='Founding faculty designation';foundingText.lastChild.textContent='Reserved for the consented founding partner program.';foundingLabel.append(founding,foundingText);
+  const canVerify=item.status==='approved'||item.partner_verified===true;verified.disabled=!canVerify;founding.disabled=!verified.checked||!canVerify;verified.addEventListener('change',()=>{founding.disabled=!verified.checked;if(!verified.checked)founding.checked=false;});
+  const feedback=document.createElement('p');feedback.className='partner-verification-message';feedback.setAttribute('aria-live','polite');if(!canVerify)feedback.textContent='Approve this submission before confirming the partner.';
+  const save=document.createElement('button');save.type='submit';save.textContent='Save partner verification';save.disabled=!canVerify;
+  form.append(verifiedLabel,foundingLabel,feedback,save);
+  form.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;save.textContent='Saving…';feedback.textContent='';try{const result=await adminRequest({method:'POST',body:JSON.stringify({action:'verify-partner',reference:item.reference,partnerVerified:verified.checked,foundingPartner:founding.checked})});const index=submissions.findIndex(entry=>entry.reference===item.reference);submissions[index]=result.submission;renderRows();}catch(error){feedback.textContent=error.message;feedback.classList.add('is-error');save.disabled=false;save.textContent='Save partner verification';}});
+  wrapper.append(heading,intro,form);
+  if(item.partner_verified_at){const audit=document.createElement('p');audit.className='partner-verification-audit';audit.textContent=`Confirmed ${dateLabel(item.partner_verified_at,true)}${item.partner_verified_by?` by ${item.partner_verified_by}`:''}.`;wrapper.append(audit);}
+  return wrapper;
+}
+
 function renderDetail(item) {
   const detail=$('#adminDetail'); detail.replaceChildren();
   const head=document.createElement('header'); head.className='detail-head';
@@ -152,7 +170,7 @@ function renderDetail(item) {
   const label=document.createElement('label'); label.className='detail-status-label'; label.append(document.createTextNode('Status'));
   const select=document.createElement('select'); Object.entries(statusLabels).forEach(([value,text])=>{ const option=document.createElement('option'); option.value=value; option.textContent=text; option.selected=value===item.status; select.append(option); });
   select.addEventListener('change',async()=>{ select.disabled=true; try { const result=await adminRequest({method:'PATCH',body:JSON.stringify({reference:item.reference,status:select.value})}); const index=submissions.findIndex(entry=>entry.reference===item.reference); submissions[index]=result.submission; updateQueueSummary(); renderRows(); } catch(error) { alert(error.message); select.value=item.status; } finally { select.disabled=false; } });
-  label.append(select); head.append(row,label); detail.append(head,...detailSections(item),workflowSection(item));
+  label.append(select); head.append(row,label);const partnerVerification=partnerVerificationSection(item);detail.append(head,...detailSections(item),...(partnerVerification?[partnerVerification]:[]),workflowSection(item));
   const timeline=document.createElement('section'); timeline.className='detail-section'; const timelineTitle=document.createElement('h3'); timelineTitle.textContent='Timeline'; const list=document.createElement('ol'); list.className='detail-timeline';
   const events=[['Submitted',item.created_at],['Last updated',item.updated_at],['Follow-up',item.follow_up_at]].filter(([,date])=>date);
   events.forEach(([name,date])=>{ const li=document.createElement('li'); const strong=document.createElement('strong'); const span=document.createElement('span'); strong.textContent=name; span.textContent=dateLabel(date,true); li.append(strong,span); list.append(li); }); timeline.append(timelineTitle,list); detail.append(timeline);

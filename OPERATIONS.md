@@ -120,6 +120,7 @@ Before deploying it:
 4. For email sign-in, configure custom SMTP in Supabase. Google sign-in is the recommended first production path while SMTP is being configured.
 5. Confirm Vercel has the same Supabase URL, publishable key, and server-only secret used by the project where the migration was applied. Redeploy after every variable change.
 6. Apply the later portal migrations in timestamp order, including `20260726000000_trusted_talent_network.sql`. This adds the access-request type, a server-only normalized referral table, and the member-email bridge used to attach approved endorsements to opted-in profiles.
+7. Apply `20260728000000_partner_verification.sql`. Partner submissions now require two separate operator decisions: set the submission status to **Approved**, then use **Partner verification** in the admin detail panel to record founder confirmation. Existing approvals intentionally remain unverified until this second action is completed.
 
 Google and email callbacks return to `/portal.html`; the browser stores the short-lived session only in the current tab's session storage. The API revalidates the access token with Supabase on every protected request and refreshes expired sessions with the Supabase refresh token. Member tables have no anonymous or direct authenticated-browser grants.
 
@@ -128,7 +129,7 @@ Google and email callbacks return to `/portal.html`; the browser stores the shor
 1. A company member opens **Student network** and sends an access request. It appears in `public.submissions` with a `NET-` reference and in `/admin.html` under **Trusted Talent access**.
 2. An operator reviews the company, intended roles, and hiring timeline, then changes the request to **Approved** in the private inbox.
 3. The company reloads the member portal. Only then does the API return students whose profile visibility is set to members, their operator-verified referral paths, and accepted Covenda project records.
-4. Professor, lab, club, and career-center referrals arrive as referral endorsements. Changing that source submission to **Approved** normalizes its students into `public.student_endorsements`; declining or archiving the source revokes the evidence.
+4. Professor, lab, club, and career-center referrals arrive as referral endorsements. After approving the intake, an operator must separately enable **Founder-confirmed partner**. Only then does `public.student_endorsements` mark the evidence verified; removing confirmation, declining, or archiving the source withdraws that verified state.
 
 Student and referrer email addresses never appear in the company response. The browser cannot query `student_endorsements` directly, and referral records are evidence for human review—not an automated ranking or hiring guarantee.
 

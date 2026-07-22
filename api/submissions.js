@@ -472,7 +472,7 @@ export function partnerAffiliationMatch(rows, { code = '', organization = '' } =
   const cleanCode = text(code, 40).toUpperCase();
   const cleanOrganization = normalizedPartnerValue(organization);
   return (Array.isArray(rows) ? rows : []).some(row => {
-    if (row?.status !== 'approved') return false;
+    if (row?.status !== 'approved' || row?.partner_verified !== true) return false;
     if (!['university_partner', 'referrer_endorsement'].includes(row?.submission_type)) return false;
     const details = row.details && typeof row.details === 'object' ? row.details : {};
     const rowCode = text(details.attributionCode, 40).toUpperCase();
@@ -504,7 +504,7 @@ export async function verifyPartnerAffiliation({ code = '', organization = '' } 
     });
     const { data, error } = await supabase
       .from('submissions')
-      .select('reference,submission_type,status,organization_name,details')
+      .select('reference,submission_type,status,partner_verified,organization_name,details')
       .eq('status', 'approved')
       .in('submission_type', ['university_partner', 'referrer_endorsement'])
       .limit(250);

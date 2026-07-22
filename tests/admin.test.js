@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminProjectRequests, listAdminSubmissions, publishProjectRequest, requestAdminLink, saveProjectRequestPackaging, updateAdminSubmission } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminProjectRequests, listAdminSubmissions, publishProjectRequest, requestAdminLink, saveProjectRequestPackaging, updateAdminSubmission, verifyPartnerSubmission } from '../api/admin.js';
 
 function authClient({ user, authError = null } = {}) {
   return {
@@ -211,5 +211,30 @@ test('admin workflow update validates and records private follow-up context', as
   await assert.rejects(
     () => updateAdminSubmission({ from() { throw new Error('must not query'); } }, { reference: 'EMP-AB12CD34', follow_up_at: 'not-a-date' }),
     /valid follow-up date/,
+  );
+});
+
+test('partner certification is founder-confirmed separately from submission approval', async () => {
+  const current = { reference:'REF-AB12CD34', submission_type:'referrer_endorsement', status:'approved', partner_verified:false, founding_partner:false };
+  let changes;
+  const query = {
+    select() { return this; },
+    eq() { return this; },
+    async maybeSingle() { return { data:current, error:null }; },
+    update(value) { changes=value; return this; },
+    async single() { return { data:{...current,...changes}, error:null }; },
+  };
+  const result = await verifyPartnerSubmission({ from(table) { assert.equal(table,'submissions'); return query; } }, {
+    reference:'ref-ab12cd34', partnerVerified:true, foundingPartner:true,
+  }, 'FOUNDER@COVENDA.APP');
+  assert.equal(result.partner_verified,true);
+  assert.equal(result.founding_partner,true);
+  assert.equal(result.partner_verified_by,'founder@covenda.app');
+  assert.match(result.partner_verified_at,/^\d{4}-\d{2}-\d{2}T/);
+
+  const pendingQuery = { select(){return this;},eq(){return this;},async maybeSingle(){return {data:{...current,status:'reviewing'},error:null};} };
+  await assert.rejects(
+    verifyPartnerSubmission({from(){return pendingQuery;}},{reference:'REF-AB12CD34',partnerVerified:true},'founder@covenda.app'),
+    /Approve the submission/,
   );
 });

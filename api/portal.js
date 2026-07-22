@@ -264,6 +264,8 @@ function partnerSourceEntries(sources = []) {
         sourceReference: cleanText(source.reference, 40),
         sourceType: source.submission_type,
         sourceStatus: cleanText(source.status, 40),
+        partnerVerified: source.partner_verified === true,
+        foundingPartner: source.founding_partner === true,
         referredAt: source.created_at,
         sourceUpdatedAt: source.updated_at,
       });
@@ -300,7 +302,7 @@ export function summarizePartnerCohort(sources = [], profiles = [], projects = [
       headline: profile?.headline || entry.interest || null,
       avatar_url: profile?.avatar_url || null,
       source_reference: entry.sourceReference,
-      referral_status: entry.sourceStatus === 'approved' ? 'verified' : entry.sourceStatus === 'declined' || entry.sourceStatus === 'archived' ? 'closed' : 'under_review',
+      referral_status: entry.sourceStatus === 'approved' && entry.partnerVerified ? 'verified' : entry.sourceStatus === 'declined' || entry.sourceStatus === 'archived' ? 'closed' : 'under_review',
       profile_status: profile ? 'live' : 'invited',
       project_stage: projectStage,
       active_project_count: active.length,
@@ -320,6 +322,9 @@ export function summarizePartnerCohort(sources = [], profiles = [], projects = [
     students,
     referralCode: cleanText(preferredDetails.attributionCode, 40) || cleanText(preferredSource?.reference, 40) || null,
     referralStatus: preferredSource?.status || 'not_started',
+    partnerVerified: preferredSource?.partner_verified === true,
+    foundingPartner: preferredSource?.founding_partner === true,
+    partnerVerifiedAt: preferredSource?.partner_verified_at || null,
   };
 }
 
@@ -328,7 +333,7 @@ export async function loadPartnerCohort(member, profile) {
   const partnerEmail = cleanEmail(member.user.email);
   const sources = await checked(
     member.supabase.from('submissions')
-      .select('reference,submission_type,status,details,created_at,updated_at')
+      .select('reference,submission_type,status,partner_verified,founding_partner,partner_verified_at,details,created_at,updated_at')
       .eq('submitter_email', partnerEmail)
       .in('submission_type', ['university_partner', 'referrer_endorsement'])
       .order('updated_at', { ascending: false })

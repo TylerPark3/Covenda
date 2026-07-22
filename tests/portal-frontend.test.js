@@ -95,6 +95,8 @@ test('university partners receive a functional cohort and invitation workspace',
   assert.match(script,/Your student cohort/);
   assert.match(script,/Students referred/);
   assert.match(script,/Copy invitation/);
+  assert.match(script,/Founder-confirmed founding faculty partner/);
+  assert.match(script,/No grades, student records, or ongoing administration/);
   assert.match(script,/No students linked yet/);
   assert.match(script,/partnerCohort/);
   assert.match(styles,/\.cohort-metrics/);
