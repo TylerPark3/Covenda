@@ -1961,12 +1961,22 @@ body[data-audience-switched] #flowDemo { display: none; }
   }
 }
 
-/* ---- Signature gold "prove" word: metallic gradient + restrained sheen ---- */
+/* ---- Signature gold "prove" word: metallic gradient + restrained sheen ----
+   Sheen and base gold live in ONE element as layered backgrounds (a pseudo-
+   element can't clip to text it doesn't contain). padding-right + negative
+   margin give the italic overhang room so the last letter isn't clipped, while
+   keeping the visual spacing to the following character unchanged. */
 .word-gold {
-  position: relative;
   font-style: italic;
   color: var(--gold-deep); /* fallback if background-clip:text is unsupported */
-  background-image: linear-gradient(96deg, #8A6A2F 0%, #A9822F 42%, #C9A24B 66%, #A9822F 88%);
+  padding-right: 0.16em;
+  margin-right: -0.14em;
+  background-image:
+    linear-gradient(102deg, transparent 40%, rgba(255,251,240,.9) 50%, transparent 60%),
+    linear-gradient(96deg, #8A6A2F 0%, #A9822F 42%, #C9A24B 66%, #A9822F 88%);
+  background-size: 260% 100%, 100% 100%;
+  background-position: 200% 0, 0 0;
+  background-repeat: no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -1974,25 +1984,12 @@ body[data-audience-switched] #flowDemo { display: none; }
   .word-gold { -webkit-text-fill-color: transparent; color: transparent; }
 }
 /* A single slow sheen sweep — light catching gold. Not a glow, not a flicker. */
-.word-gold::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 38%, rgba(255,251,240,.85) 50%, transparent 62%);
-  background-size: 250% 100%;
-  background-position: 180% 0;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  pointer-events: none;
-  animation: word-gold-sheen 7s ease-in-out 1.2s infinite;
-}
+.word-gold { animation: word-gold-sheen 7s ease-in-out 1.2s infinite; }
 @keyframes word-gold-sheen {
-  0%, 22% { background-position: 180% 0; }
-  38%, 100% { background-position: -80% 0; }
+  0%, 22% { background-position: 200% 0, 0 0; }
+  40%, 100% { background-position: -60% 0, 0 0; }
 }
-.word-gold:hover::after { animation: word-gold-sheen 1.1s ease-in-out both; }
+.word-gold:hover { animation: word-gold-sheen 1.1s ease-in-out both; }
 @media (prefers-reduced-motion: reduce) {
-  .word-gold::after { animation: none; display: none; }
+  .word-gold { animation: none; background-position: -60% 0, 0 0; }
 }
