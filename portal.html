@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
   <meta name="robots" content="noindex,nofollow">
+  <meta name="covenda-calendly-url" content="https://calendly.com/thp2117-columbia/30min">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https:; base-uri 'none'; form-action 'self'">
   <title>Covenda · Member portal</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -29,6 +30,18 @@
     <symbol id="p-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
     <symbol id="p-exit" viewBox="0 0 24 24"><path d="M10 4H4v16h6m5-4 4-4-4-4m4 4H8"/></symbol>
     <symbol id="p-close" viewBox="0 0 24 24"><path d="m5 5 14 14M19 5 5 19"/></symbol>
+    <symbol id="p-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h12v4"/><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8H7a2 2 0 0 1-4 0"/><circle cx="16.5" cy="13.5" r="1.2"/></symbol>
+    <symbol id="p-chart" viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M6 20v-6M11 20v-11M16 20v-8"/></symbol>
+    <symbol id="p-cpu" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></symbol>
+    <symbol id="p-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2.5-7 4 14 2.5-7H21"/></symbol>
+    <symbol id="p-cart" viewBox="0 0 24 24"><path d="M6 7h12l-1 13H7z"/><path d="M9.5 7a2.5 2.5 0 0 1 5 0"/></symbol>
+    <symbol id="p-briefcase" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M9 8V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/></symbol>
+    <symbol id="p-spark" viewBox="0 0 24 24"><path d="m12 4 1.7 4.8L18.5 10.5l-4.8 1.7L12 17l-1.7-4.8L5.5 10.5l4.8-1.7z"/><path d="M18 17.5v3M16.5 19h3"/></symbol>
+    <symbol id="p-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m15.5 15.5 4.5 4.5"/></symbol>
+    <symbol id="p-grid" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9.5 4v16M15 4v16"/></symbol>
+    <symbol id="p-flow" viewBox="0 0 24 24"><path d="M5 6h8a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h10"/><circle cx="4" cy="6" r="1.6"/><circle cx="20" cy="18" r="1.6"/></symbol>
+    <symbol id="p-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.4 3 8.2 7 9 4-.8 7-4.6 7-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="p-write" viewBox="0 0 24 24"><path d="M4 20h16"/><path d="M14.5 5.5 18 9 8.5 18.5H5v-3.5z"/></symbol>
     <symbol id="p-google" viewBox="0 0 24 24"><path d="M20.6 12.2c0-.7-.1-1.4-.2-2H12v3.6h4.8a4.1 4.1 0 0 1-1.8 2.7v2.3h3c1.7-1.6 2.6-3.9 2.6-6.6Z"/><path d="M12 21c2.4 0 4.4-.8 6-2.2l-3-2.3c-.8.6-1.9.9-3 .9-2.3 0-4.3-1.6-5-3.7H4v2.4A9 9 0 0 0 12 21Z"/><path d="M7 13.7a5.4 5.4 0 0 1 0-3.4V7.9H4a9 9 0 0 0 0 8.2z"/><path d="M12 6.6c1.3 0 2.5.5 3.4 1.3L18 5.4A8.7 8.7 0 0 0 4 7.9l3 2.4c.7-2.1 2.7-3.7 5-3.7Z"/></symbol>
   </defs></svg>
 
@@ -67,6 +80,7 @@
         <button type="button" data-view="discover" data-student-only><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
         <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
         <button type="button" data-view="messages"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
+        <button type="button" data-view="wallet" data-org-only><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
       </nav>
       <div class="member-identity"><span id="memberInitial">C</span><div><strong id="memberNavName">Member</strong><small id="memberNavRole">Covenda</small></div></div>
       <button class="member-signout" id="memberSignout" type="button"><svg><use href="#p-exit"/></svg>Sign out</button>
@@ -96,39 +110,6 @@
       <section class="portal-view" data-portal-view="projects">
         <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every active and completed project in one place.</p></div><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Post a project</button></div>
         <div class="project-list" id="projectList"></div>
-        <section class="project-workspace" id="projectWorkspace" hidden>
-          <header class="workspace-heading"><div><p class="eyebrow">Shared delivery workspace</p><h2 id="workspaceTitle">Project</h2><p id="workspaceSummary"></p></div><button class="portal-secondary" id="workspaceMessages" type="button"><svg><use href="#p-message"/></svg>Open messages</button></header>
-          <div class="lifecycle-track" id="lifecycleTrack" aria-label="Project lifecycle"></div>
-          <div class="workspace-grid">
-            <section class="milestone-panel">
-              <div class="section-heading"><div><p class="eyebrow">Delivery plan</p><h2>Milestones</h2></div><span id="milestoneCount">0 milestones</span></div>
-              <div class="milestone-list" id="milestoneList"></div>
-              <form class="milestone-form" id="milestoneForm">
-                <input name="projectId" type="hidden">
-                <div><label>New milestone<input name="title" maxlength="160" placeholder="Draft the evidence summary" required></label><label>Due date <small>Optional</small><input name="dueDate" type="date"></label></div>
-                <label>Notes <small>Optional</small><textarea name="notes" rows="3" maxlength="2000" placeholder="Define what done should look like."></textarea></label>
-                <footer><p id="milestoneFormStatus" aria-live="polite"></p><button class="portal-primary" type="submit"><svg><use href="#p-plus"/></svg>Add milestone</button></footer>
-              </form>
-            </section>
-            <aside class="workspace-brief">
-              <div><p class="eyebrow">Useful outcome</p><h3>Project brief</h3><p id="workspaceBrief"></p></div>
-              <div><small>Deliverable</small><strong id="workspaceDeliverable"></strong></div>
-              <div><small>Target date</small><strong id="workspaceTarget"></strong></div>
-              <div class="workspace-next"><p class="eyebrow">Lifecycle control</p><h3 id="workspaceNextTitle">Ready for the next stage?</h3><p id="workspaceNextCopy"></p><button class="portal-primary" id="workspaceStatusAction" type="button"></button><p id="workspaceStatusMessage" aria-live="polite"></p></div>
-            </aside>
-          </div>
-          <section class="deliverable-panel">
-            <div class="section-heading"><div><p class="eyebrow">Evidence review</p><h2>Deliverables</h2><p>Share the real work product, keep revision notes attached, and record acceptance.</p></div><span id="deliverableCount">0 deliverables</span></div>
-            <div class="deliverable-list" id="deliverableList"></div>
-            <form class="deliverable-form" id="deliverableForm" hidden>
-              <input name="projectId" type="hidden"><input name="deliverableId" type="hidden">
-              <div class="deliverable-fields"><label>Title<input name="title" maxlength="160" placeholder="Onboarding evidence map" required></label><label>Evidence type<select name="artifactType"><option value="document">Document</option><option value="presentation">Presentation</option><option value="dashboard">Dashboard</option><option value="repository">Repository</option><option value="other">Other</option></select></label></div>
-              <div class="deliverable-fields"><label>Shareable link<input name="artifactUrl" type="url" maxlength="2048" placeholder="https://…" required></label><label>Linked milestone <small>Optional</small><select name="milestoneId"><option value="">No linked milestone</option></select></label></div>
-              <label>Submission note <small>Optional</small><textarea name="notes" rows="3" maxlength="2000" placeholder="Explain what changed or what the reviewer should look for."></textarea></label>
-              <footer><p id="deliverableFormStatus" aria-live="polite"></p><div><button class="portal-secondary" id="cancelDeliverableEdit" type="button" hidden>Cancel revision</button><button class="portal-primary" id="deliverableSubmit" type="submit"><svg><use href="#p-arrow"/></svg>Submit deliverable</button></div></footer>
-            </form>
-          </section>
-        </section>
       </section>
 
       <section class="portal-view" data-portal-view="activity">
@@ -165,7 +146,34 @@
           </section>
         </div>
       </section>
+
+      <section class="portal-view" data-portal-view="wallet">
+        <div class="page-heading"><div><p class="eyebrow">Credits</p><h1>Wallet</h1><p>1 credit = $1. Posting publicly is free; a hyper-narrow post routes to matched, referred students for 25 credits. Covenda’s fee is 10% of the listed amount, charged on top — the student always receives the full amount you list.</p></div></div>
+        <div class="wallet-grid">
+          <section class="wallet-balance-card">
+            <p class="eyebrow">Available balance</p>
+            <strong id="walletBalance">0</strong>
+            <span>credits</span>
+            <p class="wallet-held" id="walletHeld"></p>
+          </section>
+          <section class="wallet-buy">
+            <div class="section-heading"><div><p class="eyebrow">Top up</p><h2>Buy credits</h2></div></div>
+            <div class="wallet-bundles" id="walletBundles"></div>
+            <p class="dialog-message" id="walletMessage" aria-live="polite"></p>
+            <p class="wallet-note"><svg><use href="#p-settings"/></svg>Payments are not live yet. Credits are granted for the pilot, and every movement is recorded in the ledger below.</p>
+          </section>
+        </div>
+        <section class="wallet-ledger">
+          <div class="section-heading"><div><p class="eyebrow">Every movement</p><h2>Ledger</h2></div><span id="walletLedgerCount"></span></div>
+          <div id="walletLedger"></div>
+        </section>
+      </section>
     </main>
+  </div>
+
+  <div class="onboard" id="onboardFlow" role="dialog" aria-modal="true" aria-label="Set up your Covenda profile" hidden>
+    <div class="onboard-glow" aria-hidden="true"></div>
+    <div class="onboard-inner" id="onboardInner"></div>
   </div>
 
   <dialog class="member-dialog" id="profileDialog">
@@ -192,8 +200,54 @@
     <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="5" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
-  <dialog class="member-dialog compact-dialog" id="deliverableReviewDialog">
-    <form method="dialog" id="deliverableReviewForm"><header><div><p class="eyebrow">Deliverable review</p><h2 id="deliverableReviewTitle">Review submitted evidence.</h2><p id="deliverableReviewCopy"></p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="deliverableId" type="hidden"><input name="status" type="hidden"><label>Review note <small id="deliverableReviewRequirement">Optional</small><textarea name="reviewNote" rows="5" maxlength="2000" placeholder="Leave clear feedback for the student."></textarea></label><p class="dialog-message" id="deliverableReviewMessage" aria-live="polite"></p></div><footer><button class="portal-primary" id="deliverableReviewSubmit" type="submit">Save review<svg><use href="#p-arrow"/></svg></button></footer></form>
+  <dialog class="member-dialog" id="intakeDialog">
+    <form method="dialog" id="intakeForm">
+      <header><div><p class="eyebrow">Post a project</p><h2>Turn a real problem into a scoped project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="intake-progress" id="intakeProgress"><span class="is-active">1. Describe</span><span>2. Understand</span><span>3. Target</span><span>4. Consult &amp; post</span></div>
+      <div class="dialog-body">
+        <section class="intake-step is-active" data-intake-step="1">
+          <label>What is not getting done, and why does it matter?<textarea name="problem" rows="6" minlength="10" maxlength="8000" placeholder="e.g. Our competitor pricing sheet is always out of date. We need a public-source scan of the top 8 competitors with pricing tiers and positioning."></textarea></label>
+          <label class="intake-consent"><input type="checkbox" name="aiConsent"><span>I consent to Covenda using AI to read what I submit (including files) to draft a project brief. This is an assistive draft; a human finalizes scope.</span></label>
+          <p class="intake-hint">Describe the work in plain words. The AI drafts a structured brief on the next step — you can edit everything before posting.</p>
+        </section>
+        <section class="intake-step" data-intake-step="2">
+          <div class="intake-files"><label class="intake-file-btn"><svg><use href="#p-inbox"/></svg>Attach files (PDF, docs, images)<input type="file" id="intakeFileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*" hidden></label><div class="intake-chips" id="intakeChips"></div></div>
+          <button class="portal-secondary" type="button" id="intakeUnderstand"><svg><use href="#p-compass"/></svg>Understand with AI</button>
+          <div class="intake-brief" id="intakeBrief" hidden></div>
+          <p class="dialog-message" id="intakeStepMessage" aria-live="polite"></p>
+        </section>
+        <section class="intake-step" data-intake-step="3">
+          <label>Project title<input name="title" maxlength="160" placeholder="Competitor pricing scan"></label>
+          <div class="intake-target"><p class="intake-label">Target verticals <small>Students in these industries see it first</small></p><div class="intake-select" id="intakeVerticals"></div></div>
+          <div class="intake-target"><p class="intake-label">Work types</p><div class="intake-select" id="intakeWorkTypes"></div></div>
+          <label>Desired skills <small>Separate with commas</small><input name="skills" placeholder="Research, spreadsheets, writing"></label>
+          <div class="intake-target">
+            <p class="intake-label">Reach <small>How this project finds students</small></p>
+            <div class="intake-select" id="intakeTargeting">
+              <button type="button" class="intake-toggle is-selected" data-targeting="public" aria-pressed="true">Public · free</button>
+              <button type="button" class="intake-toggle" data-targeting="targeted" aria-pressed="false">Hyper-narrow · 25 credits</button>
+            </div>
+            <p class="intake-hint">Public is visible to every member. Hyper-narrow routes to students matched on your verticals and work types, prioritising referred and partner-endorsed students.</p>
+          </div>
+          <div class="form-grid"><label>Listed amount <small>Credits · 1 credit = $1, and the student receives this in full</small><input name="creditsListed" type="number" min="0" max="100000" placeholder="200"></label><label>Useful by <small>Optional</small><input name="targetDate" type="date"></label></div>
+          <div class="intake-cost" id="intakeCost"></div>
+        </section>
+        <section class="intake-step" data-intake-step="4">
+          <div class="intake-consult" id="intakeConsultCard"><div><strong>Book a 20-minute consult</strong><p>The consult and founder review are where scope is finalized. The AI brief is a starting draft, not approval.</p></div><div class="intake-consult-actions"><button class="portal-primary" type="button" id="intakeBookConsult">Book the consult<svg><use href="#p-arrow"/></svg></button><button class="portal-ghost" type="button" id="intakeConsultLater">I'll book later</button></div></div>
+          <div class="intake-review" id="intakeReview"></div>
+          <p class="dialog-message" id="intakeMessage" aria-live="polite"></p>
+        </section>
+      </div>
+      <footer><button class="portal-secondary" type="button" id="intakeBack" hidden>Back</button><button class="portal-primary" type="button" id="intakeNext">Continue<svg><use href="#p-arrow"/></svg></button><button class="portal-primary" type="button" id="intakePost" hidden>Post project<svg><use href="#p-arrow"/></svg></button></footer>
+    </form>
+  </dialog>
+
+  <dialog class="member-dialog compact-dialog" id="submitWorkDialog">
+    <form method="dialog" id="submitWorkForm"><header><div><p class="eyebrow">Submit work</p><h2 id="submitWorkTitle">Submit your work</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><label>What you did<textarea name="workSummary" rows="4" minlength="10" maxlength="4000" required placeholder="Summarize what you completed and how."></textarea></label><label>Deliverable link(s) <small>One per line — doc, sheet, or repo</small><textarea name="workLinks" rows="2" placeholder="https://…"></textarea></label><label>Anything the reviewer should know <small>Optional</small><textarea name="workNotes" rows="2" maxlength="1000" placeholder="Assumptions, open questions, or where to focus."></textarea></label><p class="dialog-message" id="submitWorkMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Submit for review<svg><use href="#p-arrow"/></svg></button></footer></form>
+  </dialog>
+
+  <dialog class="member-dialog compact-dialog" id="reviewDialog">
+    <form method="dialog" id="reviewForm"><header><div><p class="eyebrow">Review deliverable</p><h2 id="reviewTitle">Review</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p class="review-submitted" id="reviewSubmittedAt"></p><div class="review-deliverable" id="reviewDeliverable"></div><label>Note to the student <small>Required to request changes</small><textarea name="note" rows="3" maxlength="2000" placeholder="What is strong, and what to change."></textarea></label><p class="dialog-message" id="reviewMessage" aria-live="polite"></p></div><footer class="review-actions"><button class="portal-secondary" type="button" data-decision="revise">Request changes</button><button class="portal-primary" type="button" data-decision="accept">Accept deliverable<svg><use href="#p-check"/></svg></button></footer></form>
   </dialog>
 </body>
 </html>

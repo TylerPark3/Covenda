@@ -30,16 +30,24 @@ const projectMessages = readFileSync(
   new URL('../supabase/migrations/20260722003808_create_project_messages.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
-const applicationReview = readFileSync(
-  new URL('../supabase/migrations/20260722014120_review_project_applications.sql', import.meta.url),
+const projectReview = readFileSync(
+  new URL('../supabase/migrations/20260724000000_add_project_review_fields.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
-const projectMilestones = readFileSync(
-  new URL('../supabase/migrations/20260722031619_create_project_milestones.sql', import.meta.url),
+const profileOnboarding = readFileSync(
+  new URL('../supabase/migrations/20260724200000_member_profile_onboarding_fields.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
-const projectDeliverables = readFileSync(
-  new URL('../supabase/migrations/20260722041319_create_project_deliverables.sql', import.meta.url),
+const projectTargeting = readFileSync(
+  new URL('../supabase/migrations/20260724300000_project_targeting_and_files.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
+const creditLedger = readFileSync(
+  new URL('../supabase/migrations/20260725000000_credit_ledger_and_project_credits.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
+const escrowFunctions = readFileSync(
+  new URL('../supabase/migrations/20260725100000_escrow_release_functions.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
 
@@ -74,12 +82,12 @@ test('university migration idempotently allows university_partner and the UNI- r
   // idempotent drop-then-add so it is safe to re-run on the live table
   assert.match(universityMigration, /drop constraint if exists submissions_type_allowed/);
   assert.match(universityMigration, /drop constraint if exists submissions_reference_format/);
-  // all four audiences remain valid
-  for (const type of ['employer_intake', 'student_interest', 'call_request', 'university_partner']) {
+  // all valid intake types remain allowed
+  for (const type of ['employer_intake', 'student_interest', 'call_request', 'university_partner', 'student_quick']) {
     assert.match(universityMigration, new RegExp(type));
   }
-  // reference format now accepts the UNI- prefix
-  assert.match(universityMigration, /\^\(emp\|stu\|call\|uni\)-\[a-z0-9\]\{6,20\}\$/);
+  // reference format accepts the UNI- and SQ- prefixes
+  assert.match(universityMigration, /\^\(emp\|stu\|call\|uni\|sq\)-\[a-z0-9\]\{6,20\}\$/);
   // refreshes the Data API and never loosens access
   assert.match(universityMigration, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(universityMigration, /grant delete/);
@@ -133,44 +141,73 @@ test('project message migration keeps conversations server-only and indexed', ()
   assert.doesNotMatch(projectMessages, /create policy|grant [^;]* to (anon|authenticated)/);
 });
 
-test('application review migration creates an atomic server-only matching operation', () => {
-  assert.match(applicationReview, /create or replace function public\.review_project_application/);
-  assert.match(applicationReview, /security invoker/);
-  assert.match(applicationReview, /set search_path = ''/);
-  assert.match(applicationReview, /for update/);
-  assert.match(applicationReview, /assigned_student_user_id = v_application\.student_user_id/);
-  assert.match(applicationReview, /status = 'matched'/);
-  assert.match(applicationReview, /status = 'declined'/);
-  assert.match(applicationReview, /revoke all on function public\.review_project_application\(uuid, uuid, text\) from public, anon, authenticated/);
-  assert.match(applicationReview, /grant execute on function public\.review_project_application\(uuid, uuid, text\) to service_role/);
-  assert.doesNotMatch(applicationReview, /security definer|grant [^;]* to (anon|authenticated)/);
+test('project review migration adds close-the-loop fields idempotently without loosening access', () => {
+  for (const column of ['deliverable_submitted_at timestamptz', 'review_note text', 'completed_at timestamptz']) {
+    assert.match(projectReview, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(projectReview, /char_length\(review_note\) <= 2000/);
+  assert.match(projectReview, /create index if not exists member_projects_review_idx/);
+  assert.match(projectReview, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(projectReview, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
 });
 
-test('project milestone migration creates a constrained server-only delivery plan', () => {
-  assert.match(projectMilestones, /create table if not exists public\.project_milestones/);
-  assert.match(projectMilestones, /references public\.member_projects\(id\) on delete cascade/);
-  assert.match(projectMilestones, /status in \('planned', 'in_progress', 'blocked', 'complete'\)/);
-  assert.match(projectMilestones, /project_milestones_completion_consistent/);
-  assert.match(projectMilestones, /create index if not exists project_milestones_project_position_idx/);
-  assert.match(projectMilestones, /alter table public\.project_milestones force row level security/);
-  assert.match(projectMilestones, /revoke all on table public\.project_milestones from public, anon, authenticated/);
-  assert.match(projectMilestones, /revoke delete on table public\.project_milestones from service_role/);
-  assert.match(projectMilestones, /grant select, insert, update on table public\.project_milestones to service_role/);
-  assert.doesNotMatch(projectMilestones, /grant delete|create policy|grant [^;]* to (anon|authenticated)/);
+test('member profile onboarding migration adds matching fields idempotently without loosening access', () => {
+  for (const column of ['verticals jsonb', 'work_types jsonb', 'avatar_url text']) {
+    assert.match(profileOnboarding, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(profileOnboarding, /jsonb_typeof\(verticals\) = 'array'/);
+  assert.match(profileOnboarding, /jsonb_typeof\(work_types\) = 'array'/);
+  assert.match(profileOnboarding, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(profileOnboarding, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
 });
 
-test('project deliverable migration creates versioned server-only evidence review', () => {
-  assert.match(projectDeliverables, /create table if not exists public\.project_deliverables/);
-  assert.match(projectDeliverables, /references public\.member_projects\(id\) on delete cascade/);
-  assert.match(projectDeliverables, /references public\.project_milestones\(id\) on delete set null/);
-  assert.match(projectDeliverables, /artifact_type in \('document', 'presentation', 'dashboard', 'repository', 'other'\)/);
-  assert.match(projectDeliverables, /artifact_url ~\* '\^https\?:\/\/'/);
-  assert.match(projectDeliverables, /status in \('submitted', 'changes_requested', 'accepted'\)/);
-  assert.match(projectDeliverables, /project_deliverables_review_consistent/);
-  assert.match(projectDeliverables, /create index if not exists project_deliverables_project_created_idx/);
-  assert.match(projectDeliverables, /alter table public\.project_deliverables force row level security/);
-  assert.match(projectDeliverables, /revoke all on table public\.project_deliverables from public, anon, authenticated/);
-  assert.match(projectDeliverables, /revoke delete on table public\.project_deliverables from service_role/);
-  assert.match(projectDeliverables, /grant select, insert, update on table public\.project_deliverables to service_role/);
-  assert.doesNotMatch(projectDeliverables, /grant delete|create policy|grant [^;]* to (anon|authenticated)/);
+test('credit ledger is append-only, guards double payouts, and stays server-only', () => {
+  assert.match(creditLedger, /create table if not exists public\.credit_ledger/);
+  // signed credits, nullable user_id (platform revenue), and the full entry vocabulary
+  for (const entry of ['purchase', 'reach_fee', 'escrow_hold', 'escrow_release', 'platform_fee', 'refund', 'adjustment']) {
+    assert.match(creditLedger, new RegExp(`'${entry}'`));
+  }
+  // a project can only ever be released once / refunded once, enforced by the database
+  assert.match(creditLedger, /create unique index if not exists credit_ledger_one_release_per_project[\s\S]*?where entry_type = 'escrow_release'/);
+  assert.match(creditLedger, /create unique index if not exists credit_ledger_one_refund_per_project[\s\S]*?where entry_type = 'refund'/);
+  for (const column of ['credits_listed integer', 'targeting text', 'credits_held integer', 'platform_fee_credits integer']) {
+    assert.match(creditLedger, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(creditLedger, /targeting in \('public', 'targeted'\)/);
+  assert.match(creditLedger, /force row level security/);
+  assert.match(creditLedger, /revoke all on table public\.credit_ledger from public, anon, authenticated/);
+  // append-only: select + insert only, never update or delete
+  assert.match(creditLedger, /grant select, insert on table public\.credit_ledger to service_role/);
+  assert.doesNotMatch(creditLedger, /grant[^;]*(update|delete)[^;]*on table public\.credit_ledger/);
+  assert.doesNotMatch(creditLedger, /create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('escrow settlement runs in the database so payout and completion commit together', () => {
+  for (const fn of ['release_project_escrow', 'refund_project_escrow']) {
+    assert.match(escrowFunctions, new RegExp(`create or replace function public\\.${fn}`));
+    assert.match(escrowFunctions, new RegExp(`grant execute on function public\\.${fn}\\(uuid, uuid\\) to service_role`));
+    assert.match(escrowFunctions, new RegExp(`revoke all on function public\\.${fn}\\(uuid, uuid\\) from public, anon, authenticated`));
+  }
+  // the row lock is what serializes two concurrent accepts
+  assert.match(escrowFunctions, /for update/);
+  // ownership and state are re-checked inside the transaction, not just in the API
+  assert.match(escrowFunctions, /only the project owner can review a deliverable/);
+  assert.match(escrowFunctions, /no submitted deliverable to review/);
+  // the student is paid credits_held in full; the fee is booked to the platform (null user)
+  assert.match(escrowFunctions, /'escrow_release', proj\.credits_held/);
+  assert.match(escrowFunctions, /values \(null, 'platform_fee', proj\.platform_fee_credits/);
+  // cancelling returns the whole hold (listed + fee) to the company
+  assert.match(escrowFunctions, /coalesce\(proj\.credits_held, 0\) \+ coalesce\(proj\.platform_fee_credits, 0\)/);
+  assert.match(escrowFunctions, /security definer/);
+  assert.match(escrowFunctions, /set search_path = public, pg_temp/);
+  assert.doesNotMatch(escrowFunctions, /grant [^;]* to (anon|authenticated)/);
+});
+
+test('project targeting migration adds intake and file columns idempotently without loosening access', () => {
+  for (const column of ['verticals jsonb', 'work_types jsonb', 'attachments jsonb', 'ai_brief jsonb', 'problem_text text', 'consult_booked boolean']) {
+    assert.match(projectTargeting, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(projectTargeting, /jsonb_typeof\(attachments\) = 'array'/);
+  assert.match(projectTargeting, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(projectTargeting, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
 });

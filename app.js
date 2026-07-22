@@ -2,7 +2,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 const state = {
-  audience: 'student',
+  audience: 'home',
   surface: 'site',
   workType: 'Research',
   toastTimer: null,
@@ -329,13 +329,14 @@ function showToast(message) {
 }
 
 const audienceTitles = {
+  home: 'Covenda · Real work becomes credible proof',
   student: 'Covenda · Real work becomes credible evidence',
   company: 'Covenda for companies · Turn delayed work into a project',
-  university: 'Covenda for universities · Share your students with the pilot',
+  university: 'Covenda for educators · Share your students with the pilot',
 };
 
 function setAudience(audience) {
-  if (!['student', 'company', 'university'].includes(audience)) return;
+  if (!['home', 'student', 'company', 'university'].includes(audience)) return;
   state.audience = audience;
   writeStorage(audienceStorageKey, audience);
   document.body.dataset.audience = audience;
@@ -629,6 +630,7 @@ function renderReview(form) {
       ['Availability', [formValue(form, 'studentAvailability'), formValue(form, 'studentHours'), formValue(form, 'studentDuration')].filter(Boolean).join(' · ')],
       ['Project terms', [formValue(form, 'studentCompensation'), formValue(form, 'studentPriority')].filter(Boolean).join(' · ')],
       ['Video intro', videoIntroReviewLabel(formValue(form, 'studentVideoIntro'))],
+      ['Batch', formValue(form, 'studentBatch') || 'Not joined via a batch'],
     ]);
     return;
   }
@@ -661,6 +663,115 @@ function renderReview(form) {
     panel.classList.add('is-warning');
     detail.textContent = 'The proposed review burden may equal or exceed the time avoided. Covenda would redesign or stop this project.';
   }
+}
+
+// Feature 1 — make credibility legible on the student profile: show WHO endorsed you
+// (from the ?ref= partner referral), or an honest "earn it through work" state. Reuses
+// the existing referral data — no new model.
+function renderProfileCredibility() {
+  const host = $('#profileCredibility');
+  if (!host) return;
+  host.innerHTML = '';
+  const ref = activeReferral();
+  const kicker = document.createElement('p');
+  kicker.className = 'profile-cred-kicker';
+  kicker.textContent = 'Credibility';
+  host.append(kicker);
+  const card = document.createElement('div');
+  card.className = 'profile-cred-card' + (ref && ref.via ? ' is-endorsed' : ' is-open');
+  if (ref && ref.via) {
+    const tag = document.createElement('span');
+    tag.className = 'cred-tag cred-tag-endorsed';
+    tag.innerHTML = '<svg><use href="#icon-shield"/></svg>Endorsed';
+    const who = document.createElement('p');
+    who.className = 'profile-cred-who';
+    who.append(document.createTextNode('Endorsed by '));
+    const b = document.createElement('b');
+    b.textContent = ref.via;
+    who.append(b);
+    const note = document.createElement('p');
+    note.className = 'profile-cred-note';
+    note.textContent = 'A trust head-start, not a placement. Reviewed work earns the verified rungs.';
+    card.append(tag, who, note);
+  } else {
+    const who = document.createElement('p');
+    who.className = 'profile-cred-who';
+    who.textContent = 'No endorsement yet — everyone can still earn credibility.';
+    const note = document.createElement('p');
+    note.className = 'profile-cred-note';
+    note.textContent = 'Ask a professor, club, or career center to vouch for you — or build proof through reviewed work.';
+    card.append(who, note);
+  }
+  host.append(card);
+}
+
+// Step 1 — club affiliations (with company track record) on the student profile.
+// Illustrative until real club track records exist.
+function renderProfileAffiliations() {
+  const host = $('#profileAffiliations');
+  if (!host) return;
+  host.innerHTML = '';
+  const kicker = document.createElement('p');
+  kicker.className = 'profile-cred-kicker';
+  kicker.textContent = 'Clubs & affiliations';
+  host.append(kicker);
+  const ref = activeReferral();
+  const card = document.createElement('div');
+  card.className = 'profile-cred-card' + (ref && ref.via ? ' is-endorsed' : '');
+  if (ref && ref.via) {
+    const who = document.createElement('p');
+    who.className = 'profile-cred-who';
+    who.append(document.createTextNode('Member · '));
+    const b = document.createElement('b');
+    b.textContent = ref.via;
+    who.append(b);
+    const note = document.createElement('p');
+    note.className = 'profile-cred-note';
+    note.textContent = 'A club’s track record grows as it places students with companies — its trust indicator ("worked with …") shows here once verified.';
+    card.append(who, note);
+  } else {
+    const who = document.createElement('p');
+    who.className = 'profile-cred-who';
+    who.textContent = 'No club affiliations yet.';
+    const note = document.createElement('p');
+    note.className = 'profile-cred-note';
+    note.textContent = 'Join a club or get referred by one — clubs that have worked with companies lend their track record to your profile.';
+    card.append(who, note);
+  }
+  host.append(card);
+}
+
+// Step 1 — work history / objective evidence on the student profile.
+function renderProfileEvidence() {
+  const host = $('#profileEvidence');
+  if (!host) return;
+  host.innerHTML = '';
+  const kicker = document.createElement('p');
+  kicker.className = 'profile-cred-kicker';
+  kicker.textContent = 'Work history & evidence';
+  host.append(kicker);
+  const draft = readStorage(draftKeys.studentForm, null);
+  const skill = draftValue(draft, 'studentSkill');
+  const level = draftValue(draft, 'studentSkillLevel');
+  const card = document.createElement('div');
+  card.className = 'profile-cred-card';
+  const dl = document.createElement('dl');
+  dl.className = 'profile-evidence-list';
+  const rows = [];
+  if (skill) rows.push(['Declared skill', skill + (level ? ' · ' + level : '') + ' (self-reported)']);
+  rows.push(['Reviewed work', 'None yet — join a batch to complete bounded, reviewed projects.']);
+  rows.push(['Verified record', 'Earned when an employer reviewer accepts your work.']);
+  for (const [k, v] of rows) {
+    const wrap = document.createElement('div');
+    const dt = document.createElement('dt');
+    dt.textContent = k;
+    const dd = document.createElement('dd');
+    dd.textContent = v;
+    wrap.append(dt, dd);
+    dl.append(wrap);
+  }
+  card.append(dl);
+  host.append(card);
 }
 
 function renderWorkspaceDrafts() {
@@ -702,6 +813,9 @@ function renderWorkspaceDrafts() {
     const workspaceCard = $('#studentVideoIntroWorkspace');
     if (workspaceCard) workspaceCard.hidden = true;
   }
+  renderProfileCredibility();
+  renderProfileAffiliations();
+  renderProfileEvidence();
 
   if (hasCompanyDraft) {
     const deliverable = draftValue(companyDraft, 'companyDeliverable', 'Working Project Packet');
@@ -864,7 +978,7 @@ function saveSubmission(submission) {
 
 function submissionAudience(item) {
   if (item.type === 'employer_intake') return 'company';
-  if (item.type === 'university_partner') return 'university';
+  if (item.type === 'university_partner' || item.type === 'referrer_endorsement') return 'university';
   if (item.type === 'call_request') return 'company';
   return 'student';
 }
@@ -872,6 +986,7 @@ function submissionAudience(item) {
 function submissionLabel(item) {
   if (item.type === 'employer_intake') return 'Company problem intake';
   if (item.type === 'university_partner') return 'Student roster';
+  if (item.type === 'referrer_endorsement') return 'Student endorsements';
   if (item.type === 'call_request') return 'Call request';
   return 'Student interest profile';
 }
@@ -910,6 +1025,13 @@ function submissionProgress(item) {
       ['Follow-up', 'Covenda contacts you as safe projects become available.'],
     ];
   }
+  if (item.type === 'referrer_endorsement') {
+    return [
+      ['Received', 'Your endorsements and role are saved.'],
+      ['Credibility applied', 'Endorsed students carry your vouch into the pilot.'],
+      ['Follow-up', 'Covenda contacts you as safe projects become available.'],
+    ];
+  }
   return [
     ['Received', 'Your interests and working preferences are saved.'],
     ['Pilot-fit review', 'Covenda reviews fit for the current pilot.'],
@@ -928,6 +1050,7 @@ function receiptSummary(item) {
   if (item.recovered) return 'This server-confirmed receipt was recovered on this device. Private form answers were not downloaded.';
   if (item.type === 'employer_intake') return 'A company problem was received for human scoping.';
   if (item.type === 'university_partner') return 'A student roster was received for pilot review.';
+  if (item.type === 'referrer_endorsement') return 'Your student endorsements were received for pilot review.';
   return 'A student interest profile was received for pilot-fit review.';
 }
 
@@ -1095,6 +1218,10 @@ function renderReceipt(item) {
   if (item.type === 'employer_intake' && item.packetSnapshot) {
     receiptActions.unshift(['packet', 'View packet', 'icon-file'], ['revise', 'Revise packet', 'icon-arrow-right']);
   }
+  // F5: a student receipt is proof — offer a shareable credential card.
+  if (item.type === 'student_interest') {
+    receiptActions.unshift(['credential', 'Share credential', 'icon-shield']);
+  }
   for (const [action, label, icon] of receiptActions) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -1247,6 +1374,7 @@ function renderLocalSubmissionState() {
   renderSubmissionHistory();
   renderWorkspaceDrafts();
   renderUniversityWorkspace();
+  renderProofRecord();
 }
 
 function studentPayload(form) {
@@ -1283,6 +1411,10 @@ function studentPayload(form) {
       videoIntro: formValue(form, 'studentVideoIntro'),
     },
     videoTranscript: formValue(form, 'studentVideoTranscript'),
+    batch: formValue(form, 'studentBatch'),
+    referral: activeReferralPayload(),
+    stage: 'profile_completed',
+    linkedQuickRef: (readStorage(QUICK_KEY, null) || {}).reference || '',
     availability: formValue(form, 'studentAvailability'),
     preferences: {
       hoursPerWeek: formValue(form, 'studentHours'),
@@ -1362,6 +1494,109 @@ for (const form of [studentForm, companyForm]) {
 renderCompanyBoundaryGuidance(companyForm);
 companyForm.addEventListener('input', () => renderCompanyBoundaryGuidance(companyForm));
 companyForm.addEventListener('change', () => renderCompanyBoundaryGuidance(companyForm));
+
+// ---- Quick join (low-friction name + email) ------------------------------
+// Primary student entry point: get on the pilot list in seconds, then optionally
+// complete the full profile now (inline) or later (banner). Matched on email; the
+// full submission carries stage='profile_completed' + linkedQuickRef for status.
+const quickJoinDialog = $('#quickJoinDialog');
+const quickJoinForm = $('#quickJoinForm');
+const QUICK_KEY = 'covendaQuickJoin';
+
+function hasCompletedProfile() {
+  const subs = readStorage(storageKey, []);
+  return Array.isArray(subs) && subs.some(s => s.type === 'student_interest');
+}
+function openFullProfilePrefilled() {
+  const saved = readStorage(QUICK_KEY, null);
+  openDialog(studentDialog, studentForm);
+  if (saved) {
+    const set = (name, val) => { const el = $('[name="' + name + '"]', studentForm); if (el && !el.value && val) el.value = val; };
+    set('studentName', saved.name); set('studentEmail', saved.email); set('studentSchool', saved.school);
+    saveDraft(studentForm);
+  }
+}
+function renderProfileBanner() {
+  const saved = readStorage(QUICK_KEY, null);
+  let banner = $('#quickProfileBanner');
+  if (!saved || hasCompletedProfile()) { if (banner) banner.remove(); return; }
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'quickProfileBanner';
+    banner.className = 'quick-profile-banner';
+    (document.querySelector('.hero-student .hero-copy') || document.body).prepend(banner);
+  }
+  banner.innerHTML = '';
+  const txt = document.createElement('span');
+  txt.textContent = 'You’re on the pilot list. Complete your full profile to be matched to real work.';
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'gold-button compact'; btn.textContent = 'Complete profile';
+  btn.addEventListener('click', openFullProfilePrefilled);
+  banner.append(txt, btn);
+}
+function openQuickJoin() {
+  const done = $('#quickJoinDone');
+  done.hidden = true; done.textContent = '';
+  quickJoinForm.hidden = false;
+  $('#quickJoinMessage').textContent = '';
+  quickJoinForm.dataset.startedAt = String(Date.now());
+  quickJoinDialog.showModal();
+  window.setTimeout(() => $('[name="quickName"]', quickJoinForm)?.focus(), 60);
+}
+function renderQuickJoinDone(reference) {
+  quickJoinForm.hidden = true;
+  const done = $('#quickJoinDone');
+  done.hidden = false; done.innerHTML = '';
+  const head = document.createElement('div'); head.className = 'quick-done-head';
+  head.innerHTML = '<svg class="quick-done-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><div><h3>You’re on the list.</h3><p>Reference ' + reference + '. We’ll be in touch about the pilot.</p></div>';
+  const prompt = document.createElement('p'); prompt.className = 'quick-done-prompt';
+  prompt.textContent = 'Want to finish your full profile now? A few minutes now helps us match you to the right work.';
+  const actions = document.createElement('div'); actions.className = 'quick-join-actions';
+  const now = document.createElement('button'); now.type = 'button'; now.className = 'gold-button'; now.textContent = 'Complete full profile';
+  now.addEventListener('click', () => { quickJoinDialog.close(); openFullProfilePrefilled(); });
+  const later = document.createElement('button'); later.type = 'button'; later.className = 'quiet-link'; later.textContent = 'I’ll do it later';
+  later.addEventListener('click', () => quickJoinDialog.close());
+  actions.append(now, later);
+  done.append(head, prompt, actions);
+}
+if (quickJoinForm) {
+  quickJoinForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const name = formValue(quickJoinForm, 'quickName');
+    const emailVal = formValue(quickJoinForm, 'quickEmail');
+    const consent = $('[name="quickConsent"]', quickJoinForm).checked;
+    const message = $('#quickJoinMessage');
+    message.classList.remove('is-success');
+    if (!name || !emailVal || !consent) { message.textContent = 'Please add your name, email, and agree to be contacted.'; return; }
+    const submit = $('button[type="submit"]', quickJoinForm);
+    submit.disabled = true; submit.textContent = 'Joining…';
+    try {
+      const result = await sendSubmission({
+        type: 'student_quick',
+        startedAt: Number(quickJoinForm.dataset.startedAt),
+        website: formValue(quickJoinForm, 'website'),
+        consent: true,
+        contact: { name, email: emailVal },
+        school: formValue(quickJoinForm, 'quickSchool'),
+        interest: state.workType || '',
+      });
+      writeStorage(QUICK_KEY, { name, email: emailVal, school: formValue(quickJoinForm, 'quickSchool'), reference: result.reference, stage: 'quick_added', at: new Date().toISOString() });
+      saveSubmission({
+        type: 'student_quick', reference: result.reference, status: result.status || 'received',
+        storage: result.storage || 'confirmed', createdAt: result.createdAt || new Date().toISOString(),
+        title: name + ' · quick join', summary: state.workType ? 'Interested in ' + state.workType : 'Full profile pending',
+      });
+      renderQuickJoinDone(result.reference);
+      renderProfileBanner();
+      showToast('You’re on the pilot list.');
+    } catch (error) {
+      message.textContent = (error && error.message) || 'Could not join. Please try again.';
+    } finally {
+      submit.disabled = false; submit.innerHTML = 'Join the list ' + iconUse('icon-arrow-right');
+    }
+  });
+  renderProfileBanner();
+}
 
 studentForm.addEventListener('submit', async event => {
   event.preventDefault();
@@ -1565,6 +1800,7 @@ function renderRoster() {
   if (count) count.textContent = total + (total === 1 ? ' student' : ' students');
   if (empty) empty.hidden = total > 0;
   if (clear) clear.hidden = total === 0;
+  renderCohortDashboard();
 }
 
 function universityPayload() {
@@ -1639,6 +1875,79 @@ async function submitRoster() {
   }
 }
 
+function endorsementPayload() {
+  const partner = partnerFieldValues();
+  const note = $('#endorsementNote')?.value.trim() || '';
+  return {
+    type: 'referrer_endorsement',
+    startedAt: Number($('#rosterAddForm')?.dataset.startedAt || Date.now() - 4000),
+    website: '',
+    consent: $('#uniConsent')?.checked === true,
+    contact: { name: partner.contactName, email: partner.contactEmail, company: partner.orgName },
+    referrerType: partner.orgType,
+    // Same stable code the partner's shareable referral link carries, so a student who
+    // arrives via that link (F3) can be matched back to this endorsement.
+    attributionCode: makeReferralCode(partner.orgName, partner.contactEmail),
+    endorsements: universityRoster.map(entry => ({ name: entry.name, email: entry.email, function: entry.interest, note })),
+  };
+}
+
+async function submitEndorsement() {
+  const message = $('#rosterMessage');
+  const submit = $('[data-action="roster-endorse"]');
+  const partner = partnerFieldValues();
+  message.classList.remove('is-success');
+  if (!partner.contactName || !isEmail(partner.contactEmail.toLowerCase()) || !partner.orgName || !partner.orgType) {
+    message.textContent = 'Add your name, a valid work email, your organization, and your role first.';
+    return;
+  }
+  if (!universityRoster.length) {
+    message.textContent = 'Add at least one student to endorse.';
+    return;
+  }
+  if (!$('#uniConsent')?.checked) {
+    message.textContent = 'Please confirm you can share these details with Covenda.';
+    return;
+  }
+  submit.disabled = true;
+  submit.textContent = 'Sending…';
+  try {
+    const result = await sendSubmission(endorsementPayload());
+    applySubmissionDelivery(result);
+    message.classList.add('is-success');
+    message.textContent = 'Endorsements received. Reference ' + result.reference + submissionDeliveryMessage(result);
+    saveSubmission({
+      type: 'referrer_endorsement',
+      reference: result.reference,
+      status: result.status || 'received',
+      storage: result.storage || 'confirmed',
+      storageRoute: result.storageRoute || '',
+      syncStatus: result.syncStatus || (result.storage === 'supabase' ? 'synced' : 'pending'),
+      destination: result.destination || null,
+      createdAt: result.createdAt || new Date().toISOString(),
+      title: partner.orgName + ' · student endorsements',
+      summary: universityRoster.length + (universityRoster.length === 1 ? ' student endorsed · ' : ' students endorsed · ') + partner.orgType,
+    });
+    universityRoster = [];
+    if ($('#uniConsent')) $('#uniConsent').checked = false;
+    if ($('#endorsementNote')) $('#endorsementNote').value = '';
+    renderRoster();
+    clearRosterDraft();
+    showToast('Your endorsements were received for pilot review.');
+    window.setTimeout(() => {
+      setAudience('university');
+      setSurface('workspace');
+      setWorkspaceTab('submissions');
+    }, 900);
+  } catch (error) {
+    message.classList.remove('is-success');
+    message.textContent = error.message;
+  } finally {
+    submit.disabled = false;
+    submit.innerHTML = 'Endorse these students ' + iconUse('icon-shield');
+  }
+}
+
 function openUniversityRoster() {
   setSurface('site');
   setAudience('university');
@@ -1672,6 +1981,8 @@ function renderUniversityWorkspace() {
       ['Last sent', lastSubmission ? lastSubmission.reference : 'Nothing sent yet.'],
     ]);
   }
+  renderCohortDashboard();
+  renderReferralLink();
 }
 
 function restoreRosterDraft() {
@@ -1720,8 +2031,11 @@ if (rosterAddForm) {
 }
 
 for (const field of ['#uniContactName', '#uniContactEmail', '#uniOrgName', '#uniOrgType']) {
-  $(field)?.addEventListener('change', saveRosterDraft);
+  $(field)?.addEventListener('change', () => { saveRosterDraft(); renderReferralLink(); });
 }
+// Org name shapes the referral link as it is typed; note toggles the cohort entry rung.
+$('#uniOrgName')?.addEventListener('input', renderReferralLink);
+$('#endorsementNote')?.addEventListener('input', renderCohortDashboard);
 
 $('#rosterList')?.addEventListener('click', event => {
   const button = event.target.closest('[data-roster-remove]');
@@ -1740,9 +2054,98 @@ $$('[data-audience-option]').forEach(button => button.addEventListener('click', 
   window.scrollTo({ top: 0, behavior: reduceMotion ? 'instant' : 'smooth' });
 }));
 $$('[data-workspace-tab]').forEach(button => button.addEventListener('click', () => setWorkspaceTab(button.dataset.workspaceTab)));
+// ---- Work-type explore: per-niche detail panels (explore before the form) ----
+const workNiches = {
+  'Research': {
+    icon: 'icon-search',
+    desc: 'Source review, market maps, competitor scans, and customer synthesis — turn scattered signals into a clear read.',
+    roles: ['Competitor landscape scan', 'Customer-interview synthesis brief'],
+    flow: ['Get the question + approved sources', 'Scan, tag, and synthesize the findings', 'Deliver an evidence-backed brief'],
+  },
+  'Data & spreadsheets': {
+    icon: 'icon-data',
+    desc: 'Cleanup, validation, analysis, and clear models — make messy data trustworthy and easy to use.',
+    roles: ['Dataset cleanup + validation', 'Financial model build'],
+    flow: ['Receive the raw, messy dataset', 'Clean, validate, and model it', 'Hand back a trustworthy sheet'],
+  },
+  'Operations': {
+    icon: 'icon-operations',
+    desc: 'Workflow mapping, documentation, and CRM hygiene — make a recurring process run without you.',
+    roles: ['Onboarding workflow map', 'CRM cleanup pass'],
+    flow: ['Map the current process end to end', 'Document and tidy the system', 'Deliver a repeatable playbook'],
+  },
+  'QA & testing': {
+    icon: 'icon-shield',
+    desc: 'Manual testing, test cases, and issue reproduction — catch what breaks before customers do.',
+    roles: ['Manual test pass + report', 'Bug reproduction set'],
+    flow: ['Get the build + test scope', 'Run cases and log every issue', 'Deliver a reproducible report'],
+  },
+  'Writing & documentation': {
+    icon: 'icon-write',
+    desc: 'Knowledge bases, playbooks, and structured briefs — turn know-how into something the team can reuse.',
+    roles: ['Knowledge-base article set', 'Process playbook'],
+    flow: ['Gather the source material', 'Structure and draft it', 'Deliver a reusable document'],
+  },
+};
+let flowStep = 0;
+
+function renderFlowStep() {
+  const data = workNiches[state.workType];
+  if (!data) return;
+  const count = data.flow.length;
+  flowStep = ((flowStep % count) + count) % count;
+  const frame = $('#workFlowFrame');
+  const tag = document.createElement('span');
+  tag.className = 'work-flow-frame-tag';
+  tag.textContent = 'Workflow · step ' + (flowStep + 1) + ' of ' + count;
+  const line = document.createElement('p');
+  line.textContent = data.flow[flowStep];
+  frame.replaceChildren(tag, line);
+  $('#workDetailStep').textContent = 'Step ' + (flowStep + 1) + ' of ' + count;
+  const dots = $('#workFlowDots');
+  dots.replaceChildren();
+  for (let i = 0; i < count; i++) {
+    const dot = document.createElement('i');
+    if (i === flowStep) dot.className = 'is-active';
+    dots.append(dot);
+  }
+}
+
+function openWorkDetail(niche) {
+  const data = workNiches[niche];
+  if (!data) return;
+  selectWorkType(niche);
+  const tag = $('#workDetailTag');
+  const strong = document.createElement('b');
+  strong.textContent = niche;
+  tag.replaceChildren(createIcon(data.icon), strong);
+  $('#workDetailDesc').textContent = data.desc;
+  const roles = $('#workDetailRoles');
+  roles.replaceChildren();
+  data.roles.forEach(role => {
+    const li = document.createElement('li');
+    li.textContent = role;
+    roles.append(li);
+  });
+  flowStep = 0;
+  renderFlowStep();
+  $('#workDetail').hidden = false;
+  $('.selector-orbit')?.classList.add('is-exploring');
+}
+
+function closeWorkDetail() {
+  $('#workDetail').hidden = true;
+  $('.selector-orbit')?.classList.remove('is-exploring');
+}
+
 $$('[data-work-type]').forEach(button => button.addEventListener('click', () => {
-  selectWorkType(button.dataset.workType);
-  if (button.classList.contains('work-option')) saveDraft(studentForm);
+  const niche = button.dataset.workType;
+  if (button.classList.contains('work-option')) {
+    openWorkDetail(niche);
+    saveDraft(studentForm);
+  } else {
+    selectWorkType(niche);
+  }
   if (button.closest('.work-types')) openDialog(studentDialog, studentForm);
 }));
 $$('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
@@ -1752,15 +2155,502 @@ $$('.form-dialog').forEach(dialog => dialog.addEventListener('click', event => {
   if (outside) dialog.close();
 }));
 
+// Step 4 — roles + applications foundation. Illustrative company roles a student can
+// apply to; the application persists as a role_application submission. The
+// compatibility score (Step 5) plugs into the apply dialog. NOT a marketplace yet.
+const ROLES = [
+  { id: 'acct-recon', company: 'A finance-ops team', function: 'Accounting Operations', title: 'Month-end reconciliation cleanup', skills: ['Spreadsheets', 'Reconciliation', 'Attention to detail'], term: 'short', description: 'Reconcile and document a recurring month-end close step from de-identified data.' },
+  { id: 'research-scan', company: 'A seed startup', function: 'Research & Synthesis', title: 'Competitor landscape scan', skills: ['Research', 'Synthesis', 'Writing'], term: 'short', description: 'Public-source scan of the top competitors with pricing and positioning.' },
+  { id: 'qa-pass', company: 'A Series A product team', function: 'QA & Testing', title: 'Manual test pass + bug reports', skills: ['QA', 'Test cases', 'Bug reproduction'], term: 'short', description: 'Run a structured manual test pass and file reproducible bug reports.' },
+  { id: 'ops-map', company: 'An operations team', function: 'Operations', title: 'Onboarding workflow map', skills: ['Operations', 'Documentation', 'Process'], term: 'long', description: 'Map and document a recurring internal onboarding workflow.' },
+];
+const roleApplyDialog = $('#roleApplyDialog');
+const roleApplyForm = $('#roleApplyForm');
+let activeRole = null;
+
+function renderRoles() {
+  const grid = $('[data-roles-grid]');
+  if (!grid) return;
+  grid.textContent = '';
+  for (const role of ROLES) {
+    const card = document.createElement('article');
+    card.className = 'role-card glass-panel';
+    const fn = document.createElement('p'); fn.className = 'role-function'; fn.textContent = role.function;
+    const title = document.createElement('h3'); title.className = 'role-title'; title.textContent = role.title;
+    const company = document.createElement('p'); company.className = 'role-company'; company.textContent = role.company + ' · ' + (role.term === 'short' ? 'Short-term' : 'Longer-term');
+    const desc = document.createElement('p'); desc.className = 'role-desc'; desc.textContent = role.description;
+    const skills = document.createElement('div'); skills.className = 'role-skills';
+    for (const s of role.skills) { const chip = document.createElement('span'); chip.className = 'role-skill'; chip.textContent = s; skills.append(chip); }
+    const apply = document.createElement('button'); apply.type = 'button'; apply.className = 'gold-button role-apply'; apply.textContent = 'Apply to this role';
+    apply.addEventListener('click', () => openRoleApply(role));
+    card.append(fn, title, company, desc, skills, apply);
+    grid.append(card);
+  }
+}
+
+function openRoleApply(role) {
+  if (!roleApplyForm) return;
+  activeRole = role;
+  const done = $('#roleApplyDone'); done.hidden = true; done.textContent = '';
+  roleApplyForm.hidden = false;
+  $('#roleApplyMessage').textContent = '';
+  $('#roleApplyTitle').textContent = 'Apply · ' + role.title;
+  const summary = $('#roleApplySummary');
+  summary.textContent = '';
+  const s1 = document.createElement('p'); s1.className = 'role-apply-role';
+  s1.append(document.createTextNode(role.function + ' · '));
+  const b = document.createElement('b'); b.textContent = role.title; s1.append(b);
+  const s2 = document.createElement('p'); s2.className = 'role-apply-desc'; s2.textContent = role.description;
+  summary.append(s1, s2, renderFitBlock(role));
+  const quick = readStorage('covendaQuickJoin', null);
+  const draft = readStorage(draftKeys.studentForm, null);
+  const name = (quick && quick.name) || draftValue(draft, 'studentName');
+  const emailVal = (quick && quick.email) || draftValue(draft, 'studentEmail');
+  if (name) $('[name="applyName"]', roleApplyForm).value = name;
+  if (emailVal) $('[name="applyEmail"]', roleApplyForm).value = emailVal;
+  roleApplyForm.dataset.startedAt = String(Date.now());
+  roleApplyDialog.showModal();
+}
+
+if (roleApplyForm) {
+  roleApplyForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (formValue(roleApplyForm, 'website')) { roleApplyDialog.close(); return; }
+    const name = formValue(roleApplyForm, 'applyName');
+    const emailVal = formValue(roleApplyForm, 'applyEmail');
+    const msg = $('#roleApplyMessage');
+    if (!name || !emailVal || !activeRole) { msg.textContent = 'Please add your name and email.'; return; }
+    const submit = $('button[type="submit"]', roleApplyForm);
+    submit.disabled = true; submit.textContent = 'Submitting…';
+    try {
+      const result = await sendSubmission({
+        type: 'role_application',
+        startedAt: Number(roleApplyForm.dataset.startedAt) || (Date.now() - 3000),
+        website: '',
+        consent: true,
+        contact: { name, email: emailVal },
+        roleId: activeRole.id,
+        roleTitle: activeRole.title,
+        roleFunction: activeRole.function,
+        note: formValue(roleApplyForm, 'applyNote'),
+      });
+      saveSubmission({
+        type: 'role_application', reference: result.reference, status: result.status || 'received',
+        storage: result.storage || 'confirmed', createdAt: result.createdAt || new Date().toISOString(),
+        title: name + ' · ' + activeRole.title, summary: 'Applied to ' + activeRole.title,
+      });
+      roleApplyForm.hidden = true;
+      const doneEl = $('#roleApplyDone'); doneEl.hidden = false; doneEl.innerHTML = '';
+      const h = document.createElement('p'); h.className = 'quick-done-prompt'; h.style.fontWeight = '640'; h.style.color = 'var(--ink)';
+      h.textContent = 'Application received · ' + result.reference;
+      const p = document.createElement('p'); p.className = 'quick-done-prompt';
+      p.textContent = 'Covenda reviews fit before anything moves forward. An application is not a match or a guarantee.';
+      const close = document.createElement('button'); close.type = 'button'; close.className = 'gold-button'; close.textContent = 'Done';
+      close.addEventListener('click', () => roleApplyDialog.close());
+      const actions = document.createElement('div'); actions.className = 'quick-join-actions'; actions.append(close);
+      doneEl.append(h, p, actions);
+      if (typeof showToast === 'function') showToast('Application received.');
+    } catch (error) {
+      msg.textContent = (error && error.message) || 'Could not submit. Please try again.';
+    } finally {
+      submit.disabled = false; submit.innerHTML = 'Submit application ' + iconUse('icon-arrow-right');
+    }
+  });
+}
+renderRoles();
+
+// Step 2 — student requests an endorsement from a professor/club (stored locally;
+// Covenda facilitates the vouch). Honest: an endorsement is a signal, not a placement.
+const requestEndorseDialog = $('#requestEndorseDialog');
+const requestEndorseForm = $('#requestEndorseForm');
+function openRequestEndorse() {
+  if (!requestEndorseForm) return;
+  const done = $('#requestEndorseDone');
+  done.hidden = true; done.textContent = '';
+  requestEndorseForm.hidden = false;
+  $('#requestEndorseMessage').textContent = '';
+  requestEndorseDialog.showModal();
+  window.setTimeout(() => $('[name="endorserName"]', requestEndorseForm)?.focus(), 60);
+}
+if (requestEndorseForm) {
+  requestEndorseForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (formValue(requestEndorseForm, 'website')) { requestEndorseDialog.close(); return; }
+    const name = formValue(requestEndorseForm, 'endorserName');
+    const msg = $('#requestEndorseMessage');
+    if (!name) { msg.textContent = 'Please add who you’d like to endorse you.'; return; }
+    const list = readStorage('covendaEndorseRequests', []);
+    list.push({
+      name,
+      role: formValue(requestEndorseForm, 'endorserRole'),
+      email: formValue(requestEndorseForm, 'endorserEmail'),
+      note: formValue(requestEndorseForm, 'endorserNote'),
+      at: new Date().toISOString(),
+    });
+    writeStorage('covendaEndorseRequests', list);
+    requestEndorseForm.hidden = true;
+    const done = $('#requestEndorseDone');
+    done.hidden = false; done.innerHTML = '';
+    const h = document.createElement('p'); h.className = 'quick-done-prompt'; h.style.fontWeight = '640'; h.style.color = 'var(--ink)';
+    h.textContent = 'Request noted for ' + name + '.';
+    const p = document.createElement('p'); p.className = 'quick-done-prompt';
+    p.textContent = 'Covenda will help them add a vouch to your profile. You can also earn credibility through reviewed batch work in the meantime.';
+    const close = document.createElement('button'); close.type = 'button'; close.className = 'gold-button'; close.textContent = 'Done';
+    close.addEventListener('click', () => requestEndorseDialog.close());
+    const actions = document.createElement('div'); actions.className = 'quick-join-actions'; actions.append(close);
+    done.append(h, p, actions);
+    if (typeof showToast === 'function') showToast('Endorsement request noted.');
+  });
+}
+
+// ============================================================================
+// Reusable gold "square" motif + credibility framework Steps 5 / 6 / 3.
+// ============================================================================
+
+// The gold square from the feature band, reused as a plain gradient field with a
+// single label — no figure inside. (The interactive icosahedron stays on the feature
+// panel itself; these reused tiles are just the colour and the words.)
+function renderGoldTiles() {
+  $$('[data-gold-tile]').forEach(tile => {
+    if (tile.dataset.tiled) return;
+    tile.dataset.tiled = '1';
+    const kicker = document.createElement('span');
+    kicker.className = 'gold-tile-kicker';
+    kicker.textContent = tile.dataset.kicker || 'Rethinking Internships';
+    tile.append(kicker);
+  });
+}
+
+// ---- Step 5: transparent compatibility stub (NOT a model). A weighted overlap of
+// the student's declared signals against a role's requirements. Illustrative until
+// validated on real outcomes (see DATA_SCHEMA.md in the covenda-skill-score repo). ----
+const FUNCTION_WORKTYPES = {
+  'Accounting Operations': ['data & spreadsheets', 'operations'],
+  'Research & Synthesis': ['research', 'writing & documentation'],
+  'QA & Testing': ['qa & testing'],
+  'Operations': ['operations', 'data & spreadsheets'],
+};
+function studentSignalString() {
+  const draft = readStorage(draftKeys.studentForm, null);
+  return [
+    draftValue(draft, 'studentSkill', ''),
+    draftValue(draft, 'studentSkillLevel', ''),
+    draftValue(draft, 'workType', '') || (typeof state === 'object' ? state.workType : ''),
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+function skillMatches(skill, sig) {
+  return skill.toLowerCase().split(/[^a-z]+/).filter(t => t.length > 3).some(t => sig.includes(t));
+}
+function roleCompatibility(role) {
+  const sig = studentSignalString();
+  const ref = activeReferral();
+  const endorsed = !!(ref && ref.code);
+  const worked = false; // no completed reviewed work yet — kept explicit and honest
+  const skillsTotal = role.skills.length;
+  const skillsMatched = role.skills.filter(s => skillMatches(s, sig)).length;
+  const skillFrac = skillsTotal ? skillsMatched / skillsTotal : 0;
+  const domainMatch = (FUNCTION_WORKTYPES[role.function] || []).some(k => sig.includes(k));
+  const clamp = n => Math.max(0, Math.min(100, Math.round(n)));
+  // Short-term leans on skills + function fit; long-term leans on endorsement + track record.
+  const shortScore = clamp(8 + skillFrac * 50 + (domainMatch ? 22 : 0) + (endorsed ? 12 : 0) + (worked ? 8 : 0));
+  const longScore = clamp(8 + skillFrac * 32 + (domainMatch ? 16 : 0) + (endorsed ? 26 : 0) + (worked ? 18 : 0));
+  const shortEvidence = [
+    skillsMatched + ' of ' + skillsTotal + ' required skills',
+    domainMatch ? 'function match' : 'function differs',
+    endorsed ? 'endorsed' : 'no endorsement yet',
+  ].join(' · ');
+  const longEvidence = [
+    endorsed ? 'endorsed' : 'not yet endorsed',
+    worked ? 'has reviewed work' : 'no reviewed work yet',
+    domainMatch ? 'function match' : 'function gap',
+  ].join(' · ');
+  return { shortScore, longScore, shortEvidence, longEvidence, hasSignals: sig.trim().length > 0 };
+}
+function renderFitBlock(role) {
+  const c = roleCompatibility(role);
+  const block = document.createElement('div');
+  block.className = 'fit-block';
+  const tag = document.createElement('p');
+  tag.className = 'fit-illustrative';
+  tag.append(createIcon('icon-spark'), document.createTextNode('Illustrative fit · not validated yet'));
+  block.append(tag);
+  const scores = document.createElement('div');
+  scores.className = 'fit-scores';
+  const fills = [];
+  [['Short-term', c.shortScore, c.shortEvidence], ['Long-term', c.longScore, c.longEvidence]].forEach(([term, val, ev]) => {
+    const card = document.createElement('div'); card.className = 'fit-score';
+    const head = document.createElement('div'); head.className = 'fit-score-head';
+    const t = document.createElement('span'); t.className = 'fit-score-term'; t.textContent = term;
+    const v = document.createElement('span'); v.className = 'fit-score-value'; v.textContent = String(val);
+    const small = document.createElement('small'); small.textContent = '/100'; v.append(small);
+    head.append(t, v);
+    const meter = document.createElement('div'); meter.className = 'fit-meter';
+    const fill = document.createElement('div'); fill.className = 'fit-meter-fill'; meter.append(fill);
+    fills.push([fill, val]);
+    const evp = document.createElement('p'); evp.className = 'fit-evidence'; evp.textContent = ev;
+    card.append(head, meter, evp);
+    scores.append(card);
+  });
+  block.append(scores);
+  const note = document.createElement('p');
+  note.className = 'fit-note';
+  note.append(createIcon('icon-shield'), document.createTextNode(c.hasSignals
+    ? 'A score is a signal from your declared skills and interests — not a match or guarantee. Reviewed work earns the verified rungs.'
+    : 'Add your skills and work interests to your profile to sharpen this — a score is a signal, not a match or guarantee.'));
+  block.append(note);
+  window.requestAnimationFrame(() => fills.forEach(([fill, val]) => { fill.style.width = val + '%'; }));
+  return block;
+}
+
+// ---- Step 6: illustrative candidate browser for companies (referral tracing). ----
+const REFERRERS = {
+  chen: { name: 'Prof. R. Chen', role: 'Professor', institution: 'Columbia Robotics', vouches: [
+    { name: 'Maya T.', outcome: 'verified' }, { name: 'Devin K.', outcome: 'working' }, { name: 'Amir S.', outcome: 'endorsed' }] },
+  qfinance: { name: 'Quant Finance Club', role: 'Student club', institution: 'Columbia', vouches: [
+    { name: 'Priya R.', outcome: 'verified' }, { name: 'Jordan L.', outcome: 'working' }] },
+  career: { name: 'SEAS Career Center', role: 'Career center', institution: 'Columbia', vouches: [
+    { name: 'Sam W.', outcome: 'working' }, { name: 'Lena M.', outcome: 'endorsed' }] },
+  wic: { name: 'Women in CS', role: 'Student club', institution: 'Columbia', vouches: [
+    { name: 'Nina P.', outcome: 'verified' }, { name: 'Grace H.', outcome: 'endorsed' }] },
+};
+const CANDIDATES = [
+  { handle: 'Maya T.', function: 'Research & Synthesis', skills: ['Research', 'Synthesis', 'Writing'], referrer: 'chen', club: 'Columbia Robotics', clubRecord: true, score: 88 },
+  { handle: 'Devin K.', function: 'QA & Testing', skills: ['QA', 'Test cases', 'Bug reproduction'], referrer: 'chen', club: 'Columbia Robotics', clubRecord: true, score: 79 },
+  { handle: 'Priya R.', function: 'Accounting Operations', skills: ['Spreadsheets', 'Reconciliation', 'Attention to detail'], referrer: 'qfinance', club: 'Quant Finance Club', clubRecord: true, score: 91 },
+  { handle: 'Jordan L.', function: 'Operations', skills: ['Operations', 'Documentation', 'Process'], referrer: 'qfinance', club: 'Quant Finance Club', clubRecord: true, score: 72 },
+  { handle: 'Sam W.', function: 'Research & Synthesis', skills: ['Research', 'Data', 'Writing'], referrer: 'career', club: 'Independent', clubRecord: false, score: 66 },
+  { handle: 'Nina P.', function: 'QA & Testing', skills: ['QA', 'Automation', 'Bug reproduction'], referrer: 'wic', club: 'Women in CS', clubRecord: true, score: 84 },
+  { handle: 'Amir S.', function: 'Operations', skills: ['Operations', 'Spreadsheets', 'Process'], referrer: 'chen', club: 'Columbia Robotics', clubRecord: true, score: 69 },
+  { handle: 'Grace H.', function: 'Accounting Operations', skills: ['Spreadsheets', 'Reconciliation', 'Reporting'], referrer: 'wic', club: 'Women in CS', clubRecord: false, score: 61 },
+];
+const candFilters = { referrer: '', club: '', minScore: 0, function: '', skill: '' };
+function buildCandidateFilters() {
+  const bar = $('#candToolbar');
+  if (!bar) return;
+  bar.textContent = '';
+  const functions = Array.from(new Set(CANDIDATES.map(c => c.function))).sort();
+  const skills = Array.from(new Set(CANDIDATES.flatMap(c => c.skills))).sort();
+  const referrerOpts = Object.keys(REFERRERS).map(id => [id, REFERRERS[id].name]);
+  const addFilter = (labelText, key, options) => {
+    const wrap = document.createElement('label'); wrap.className = 'cand-filter';
+    const span = document.createElement('span'); span.textContent = labelText;
+    const select = document.createElement('select');
+    options.forEach(([value, label]) => { const o = document.createElement('option'); o.value = value; o.textContent = label; select.append(o); });
+    select.value = String(candFilters[key]);
+    select.addEventListener('change', () => { candFilters[key] = key === 'minScore' ? Number(select.value) : select.value; renderCandidates(); });
+    wrap.append(span, select);
+    bar.append(wrap);
+  };
+  addFilter('Referral source', 'referrer', [['', 'Any referrer'], ...referrerOpts]);
+  addFilter('Club track record', 'club', [['', 'Any club'], ['record', 'Positive track record only']]);
+  addFilter('Min compatibility', 'minScore', [['0', 'Any score'], ['60', '60+'], ['75', '75+'], ['85', '85+']]);
+  addFilter('Function', 'function', [['', 'Any function'], ...functions.map(f => [f, f])]);
+  addFilter('Skill', 'skill', [['', 'Any skill'], ...skills.map(s => [s, s])]);
+}
+function candidateCard(c) {
+  const ref = REFERRERS[c.referrer];
+  const card = document.createElement('article'); card.className = 'candidate-card';
+  const head = document.createElement('div'); head.className = 'cand-card-head';
+  const idwrap = document.createElement('div');
+  const h = document.createElement('p'); h.className = 'cand-handle'; h.textContent = c.handle;
+  const fn = document.createElement('p'); fn.className = 'cand-function'; fn.textContent = c.function;
+  idwrap.append(h, fn);
+  const score = document.createElement('div'); score.className = 'cand-score';
+  const sb = document.createElement('b'); sb.textContent = String(c.score);
+  const ss = document.createElement('span'); ss.textContent = 'fit';
+  score.append(sb, ss);
+  head.append(idwrap, score);
+  const endorser = document.createElement('p'); endorser.className = 'cand-endorser';
+  endorser.append(createIcon('icon-shield'));
+  const espan = document.createElement('span');
+  espan.append(document.createTextNode('Endorsed by '));
+  const eb = document.createElement('b'); eb.textContent = ref.name;
+  espan.append(eb, document.createTextNode(' · ' + ref.role + ', ' + ref.institution));
+  endorser.append(espan);
+  const club = document.createElement('p'); club.className = 'cand-club';
+  club.append(document.createTextNode('Club: '));
+  const cb = document.createElement('b'); cb.textContent = c.club;
+  club.append(cb);
+  if (c.clubRecord) { const rec = document.createElement('span'); rec.className = 'cand-club-record'; rec.textContent = ' · positive track record'; club.append(rec); }
+  const skills = document.createElement('div'); skills.className = 'cand-skills';
+  c.skills.forEach(s => { const chip = document.createElement('span'); chip.className = 'cand-skill' + (candFilters.skill && s === candFilters.skill ? ' is-match' : ''); chip.textContent = s; skills.append(chip); });
+  const trace = document.createElement('button'); trace.type = 'button'; trace.className = 'outline-button compact cand-trace';
+  trace.append(document.createTextNode('Trace referral'), createIcon('icon-route'));
+  trace.addEventListener('click', () => openTrace(c));
+  card.append(head, endorser, club, skills, trace);
+  return card;
+}
+function renderCandidates() {
+  const grid = $('#candGrid');
+  if (!grid) return;
+  const filtered = CANDIDATES.filter(c =>
+    (!candFilters.referrer || c.referrer === candFilters.referrer)
+    && (candFilters.club !== 'record' || c.clubRecord)
+    && (c.score >= candFilters.minScore)
+    && (!candFilters.function || c.function === candFilters.function)
+    && (!candFilters.skill || c.skills.includes(candFilters.skill)));
+  const count = $('#candCount');
+  if (count) {
+    count.textContent = '';
+    const b = document.createElement('b'); b.textContent = String(filtered.length);
+    count.append(b, document.createTextNode(' of ' + CANDIDATES.length + ' candidates match your filters'));
+  }
+  grid.textContent = '';
+  if (!filtered.length) {
+    const empty = document.createElement('div'); empty.className = 'cand-empty';
+    empty.textContent = 'No candidates match these filters yet. Loosen a filter to see more.';
+    grid.append(empty);
+    return;
+  }
+  filtered.forEach(c => grid.append(candidateCard(c)));
+}
+function traceNode(label, name, detail, isCandidate) {
+  const n = document.createElement('div'); n.className = 'trace-node' + (isCandidate ? ' is-candidate' : '');
+  const s = document.createElement('small'); s.textContent = label;
+  const b = document.createElement('b'); b.textContent = name;
+  n.append(s, b);
+  if (detail) { const p = document.createElement('p'); p.textContent = detail; n.append(p); }
+  return n;
+}
+function openTrace(c) {
+  const dialog = $('#traceDialog');
+  if (!dialog) return;
+  const ref = REFERRERS[c.referrer];
+  $('#traceIntro').textContent = 'How ' + c.handle + ' reached this list — and who else ' + ref.name + ' has vouched for. Illustrative outcomes; a referral is a signal, not a guarantee.';
+  const chain = $('#traceChain');
+  chain.textContent = '';
+  chain.append(traceNode('Candidate', c.handle, c.function + ' · illustrative fit ' + c.score, true));
+  const arrow = document.createElement('div'); arrow.className = 'trace-arrow'; arrow.append(createIcon('icon-arrow-down'));
+  chain.append(arrow);
+  const verified = ref.vouches.filter(v => v.outcome === 'verified').length;
+  const working = ref.vouches.filter(v => v.outcome === 'working').length;
+  const node = traceNode('Referred by', ref.name, ref.role + ', ' + ref.institution + ' · ' + verified + ' verified · ' + working + ' working of ' + ref.vouches.length + ' vouched (illustrative)', false);
+  const vh = document.createElement('small'); vh.textContent = 'Also vouched for'; vh.style.marginTop = '12px';
+  const list = document.createElement('ul'); list.className = 'trace-vouches';
+  ref.vouches.forEach(v => {
+    const li = document.createElement('li'); li.className = 'trace-vouch';
+    const nm = document.createElement('span'); nm.textContent = v.name + (v.name === c.handle ? ' (this candidate)' : '');
+    const cls = v.outcome === 'verified' ? 'is-verified' : v.outcome === 'working' ? 'is-working' : 'is-progress';
+    const pill = document.createElement('span'); pill.className = 'outcome-pill ' + cls;
+    pill.textContent = v.outcome === 'verified' ? 'Verified' : v.outcome === 'working' ? 'Working' : 'Endorsed';
+    li.append(nm, pill); list.append(li);
+  });
+  node.append(vh, list);
+  chain.append(node);
+  dialog.showModal();
+}
+
+// ---- Step 3: referrer credibility + dashboard (educator/university surface). ----
+const REFERRER_DASHBOARD = {
+  name: 'Prof. R. Chen', role: 'Professor', institution: 'Columbia Robotics', founding: true,
+  students: [
+    { name: 'Maya T.', fn: 'Research & Synthesis', status: 'verified' },
+    { name: 'Devin K.', fn: 'QA & Testing', status: 'working' },
+    { name: 'Ravi N.', fn: 'Data & spreadsheets', status: 'working' },
+    { name: 'Amir S.', fn: 'Operations', status: 'endorsed' },
+    { name: 'Ola B.', fn: 'Research & Synthesis', status: 'endorsed' },
+  ],
+};
+function renderReferrerDashboard() {
+  const host = $('#referrerDashboardBody');
+  if (!host) return;
+  const data = REFERRER_DASHBOARD;
+  const ref = activeReferral();
+  const name = (ref && ref.via) || data.name; // personalize the identity if referred by a named partner
+  const students = data.students;
+  const counts = { endorsed: 0, working: 0, verified: 0 };
+  students.forEach(s => { counts[s.status] = (counts[s.status] || 0) + 1; });
+  const total = students.length;
+  // Derived, illustrative credibility weight from outcomes — never a fabricated validated number.
+  const weight = total ? Math.round(((counts.verified * 1 + counts.working * 0.6 + counts.endorsed * 0.3) / total) * 100) : 0;
+  host.textContent = '';
+
+  const card = document.createElement('div'); card.className = 'referrer-cred-card';
+  const top = document.createElement('div'); top.className = 'referrer-cred-top';
+  const idy = document.createElement('div'); idy.className = 'referrer-identity';
+  const h3 = document.createElement('h3'); h3.textContent = name;
+  const p = document.createElement('p'); p.textContent = data.role + ' · ' + data.institution;
+  idy.append(h3, p);
+  top.append(idy);
+  if (data.founding) {
+    const badge = document.createElement('span'); badge.className = 'referrer-badge';
+    badge.append(createIcon('icon-shield'), document.createTextNode('Founding referring faculty'));
+    top.append(badge);
+  }
+  card.append(top);
+  const mw = document.createElement('div'); mw.className = 'referrer-meter-wrap';
+  const mh = document.createElement('div'); mh.className = 'referrer-meter-head';
+  const mb = document.createElement('b'); mb.textContent = 'Endorsement weight';
+  const ms = document.createElement('span'); ms.textContent = 'Illustrative · derived from your referrals’ outcomes';
+  mh.append(mb, ms);
+  const meter = document.createElement('div'); meter.className = 'referrer-meter';
+  const fill = document.createElement('div'); fill.className = 'referrer-meter-fill'; meter.append(fill);
+  mw.append(mh, meter);
+  card.append(mw);
+  const stats = document.createElement('div'); stats.className = 'referrer-stats';
+  [['Endorsed', counts.endorsed], ['Working', counts.working], ['Verified', counts.verified]].forEach(([label, n]) => {
+    const st = document.createElement('div'); st.className = 'referrer-stat';
+    const b = document.createElement('b'); b.textContent = String(n);
+    const sp = document.createElement('span'); sp.textContent = label;
+    st.append(b, sp); stats.append(st);
+  });
+  card.append(stats);
+  host.append(card);
+
+  const table = document.createElement('div'); table.className = 'referrer-students';
+  const thead = document.createElement('div'); thead.className = 'referrer-students-head';
+  const th = document.createElement('h3'); th.textContent = 'Students you referred';
+  const tc = document.createElement('span'); tc.textContent = total + ' students';
+  thead.append(th, tc); table.append(thead);
+  students.forEach(s => {
+    const row = document.createElement('div'); row.className = 'referrer-row';
+    const nm = document.createElement('div'); nm.className = 'r-name'; nm.textContent = s.name;
+    const fnEl = document.createElement('div'); fnEl.className = 'r-fn'; fnEl.textContent = s.fn;
+    const pill = document.createElement('span'); pill.className = 'status-pill is-' + s.status;
+    pill.textContent = s.status.charAt(0).toUpperCase() + s.status.slice(1);
+    row.append(nm, fnEl, pill); table.append(row);
+  });
+  host.append(table);
+
+  const note = document.createElement('p'); note.className = 'referrer-note';
+  note.append(createIcon('icon-lock'));
+  const ns = document.createElement('span');
+  ns.append(document.createTextNode('An endorsement is an appreciating reputation asset: as your referred students complete reviewed, verified work, your endorsements carry more weight. '));
+  const nb = document.createElement('b'); nb.textContent = 'Verified rungs are earned through reviewed work — never assigned.';
+  ns.append(nb);
+  note.append(ns);
+  host.append(note);
+  const deferred = document.createElement('p'); deferred.className = 'referrer-deferred';
+  deferred.textContent = 'Cash or revenue-share to referrers is a deferred decision — not part of this pilot.';
+  host.append(deferred);
+
+  window.requestAnimationFrame(() => { fill.style.width = weight + '%'; });
+}
+
+// Top-nav links work from EVERY audience: switch to the audience where the target
+// section lives (home for the brand story), then smooth-scroll to it. Fixes the dead
+// "How it works" / "Why Covenda" links on the company/university tabs.
+$$('.site-nav [data-nav-target]').forEach(link => link.addEventListener('click', event => {
+  event.preventDefault();
+  if (link.dataset.navAudience) setAudience(link.dataset.navAudience);
+  setSurface('site');
+  const target = document.getElementById(link.dataset.navTarget);
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.setTimeout(() => target?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' }), 60);
+}));
+
 $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   const action = button.dataset.action;
-  if (action === 'home' || action === 'site') setSurface('site');
+  if (action === 'home') { setAudience('home'); setSurface('site'); window.scrollTo({ top: 0, behavior: 'instant' }); }
+  if (action === 'site') setSurface('site');
   if (action === 'workspace') setSurface('workspace');
   if (action === 'workspace-submissions') {
     setAudience('student');
     setSurface('workspace');
     setWorkspaceTab('submissions');
   }
+  if (action === 'student-quick') openQuickJoin();
+  if (action === 'request-endorsement') openRequestEndorse();
   if (action === 'refresh-delivery') {
     refreshDeliveryHealth({ force: true }).then(primary => {
       showToast(primary.status === 'ready' ? 'Primary inbox is connected.' : 'Primary inbox still needs attention.');
@@ -1799,15 +2689,33 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     saveRosterDraft();
   }
   if (action === 'roster-submit') submitRoster();
+  if (action === 'roster-endorse') submitEndorsement();
   if (action === 'focus-pathfinder') {
     $('#studentPathfinder').scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => $('.work-option.is-selected')?.focus(), 420);
   }
   if (action === 'explore-work') $('#workTypes').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (action === 'explore-back') closeWorkDetail();
+  if (action === 'flow-prev') { flowStep -= 1; renderFlowStep(); }
+  if (action === 'flow-next') { flowStep += 1; renderFlowStep(); }
   if (action === 'project-fit') $('#projectFit').scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (action === 'replay-intro') {
     setSurface('site');
     openIntro({ force: true });
+  }
+  // F3 partner referral
+  if (action === 'referral-start') { setAudience('student'); selectWorkType(state.workType); openDialog(studentDialog, studentForm); }
+  if (action === 'referral-dismiss') dismissReferralBanner();
+  if (action === 'referral-copy') copyReferralLink();
+  // F5 credential card
+  if (action === 'credential-image' && credentialItem) downloadCredentialImage(credentialItem);
+  if (action === 'credential-copy' && credentialItem) copyCredentialText(credentialItem);
+  if (action === 'credential-json' && credentialItem) downloadReceipt(credentialItem);
+  // F4 student proof record → open the credential card for the latest receipt
+  if (action === 'proof-credential') {
+    const item = studentLatestReceipt();
+    if (item) openCredentialCard(item);
+    else showToast('Build your interest profile first to create a shareable credential.');
   }
 }));
 
@@ -1886,6 +2794,10 @@ function detectVideoHost(raw) {
   let u;
   try { u = new URL(clean); } catch { return null; }
   if (u.protocol !== 'https:') return null;
+  // A recording we stored (Vercel Blob) or a direct video file plays natively.
+  if (/\.blob\.vercel-storage\.com$/.test(u.hostname) || /\.(webm|mp4|mov|m4v)$/i.test(u.pathname)) {
+    return { name: 'Recording', native: true, src: u.toString() };
+  }
   for (const host of VIDEO_HOSTS) {
     if (host.test(u.hostname)) {
       const embed = host.embed(u);
@@ -1920,24 +2832,34 @@ function renderVideoIntroCard(container, rawUrl, opts = {}) {
   container.hidden = false;
   const card = document.createElement('div');
   card.className = 'video-intro-player';
-  const poster = document.createElement('div');
-  poster.className = 'video-poster';
-  poster.innerHTML =
-    '<button type="button" class="video-play" aria-label="Play video introduction">'
-    + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>'
-    + '<span class="video-duration">≈ 1 min</span>'
-    + '<span class="video-host">' + host.name + '</span>';
-  poster.querySelector('.video-play').addEventListener('click', () => {
-    const frame = document.createElement('iframe');
-    frame.src = host.embed;
-    frame.title = 'Video introduction';
-    frame.className = 'video-frame';
-    frame.loading = 'lazy';
-    frame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
-    frame.setAttribute('allowfullscreen', '');
-    poster.replaceWith(frame);
-  });
-  card.append(poster);
+  if (host.native) {
+    const vid = document.createElement('video');
+    vid.className = 'video-frame';
+    vid.src = host.src;
+    vid.controls = true;
+    vid.playsInline = true;
+    vid.preload = 'metadata';
+    card.append(vid);
+  } else {
+    const poster = document.createElement('div');
+    poster.className = 'video-poster';
+    poster.innerHTML =
+      '<button type="button" class="video-play" aria-label="Play video introduction">'
+      + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>'
+      + '<span class="video-duration">≈ 1 min</span>'
+      + '<span class="video-host">' + host.name + '</span>';
+    poster.querySelector('.video-play').addEventListener('click', () => {
+      const frame = document.createElement('iframe');
+      frame.src = host.embed;
+      frame.title = 'Video introduction';
+      frame.className = 'video-frame';
+      frame.loading = 'lazy';
+      frame.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen');
+      frame.setAttribute('allowfullscreen', '');
+      poster.replaceWith(frame);
+    });
+    card.append(poster);
+  }
   const actions = document.createElement('div');
   actions.className = 'video-actions';
   const replace = document.createElement('button');
@@ -1981,6 +2903,152 @@ function renderVideoIntroCard(container, rawUrl, opts = {}) {
   sync();
 })();
 
+// ---- In-browser video-intro recorder (full-screen overlay) ---------------
+// Opens a large, focused recorder as a modal <dialog> (so it stacks above the
+// intake form): big camera, a standard 3-2-1 pre-roll countdown, a clean mono
+// timer, then Retake / Use. Uploads to /api/video-upload and saves the returned
+// URL as the video intro. Degrades gracefully when recording/camera is unavailable.
+(() => {
+  const toggle = document.querySelector('[data-video-record-toggle]');
+  const input = document.querySelector('[data-video-intro-input]');
+  if (!toggle || !input) return;
+  const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && typeof MediaRecorder !== 'undefined';
+  // No camera/MediaRecorder here — hide the recorder and open the paste-a-link fallback
+  // so the option is never simply missing.
+  if (!canRecord) { toggle.hidden = true; document.querySelector('.video-link-fallback')?.setAttribute('open', ''); return; }
+
+  const MAX_SECONDS = 60;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fmt = s => '0:' + String(s).padStart(2, '0');
+  let overlay = null, body = null, stream = null, recorder = null, chunks = [], timer = null, seconds = 0, recordedBlob = null;
+
+  function teardown() {
+    if (timer) clearInterval(timer);
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = recorder = null;
+    if (overlay) overlay.remove();
+    overlay = body = null;
+  }
+  function closeRec() { if (overlay && overlay.open) overlay.close(); else teardown(); }
+
+  function ensureOverlay() {
+    overlay = document.createElement('dialog');
+    overlay.className = 'rec-overlay';
+    overlay.setAttribute('aria-label', 'Record a one-minute video intro');
+    const panel = document.createElement('div'); panel.className = 'rec-panel';
+    const head = document.createElement('div'); head.className = 'rec-head';
+    const heading = document.createElement('div');
+    heading.innerHTML = '<p class="rec-kicker">Video intro</p><h3 class="rec-title">Record a 1-minute intro</h3>';
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button'; closeBtn.className = 'rec-close'; closeBtn.setAttribute('aria-label', 'Close recorder'); closeBtn.textContent = '×';
+    closeBtn.addEventListener('click', closeRec);
+    head.append(heading, closeBtn);
+    body = document.createElement('div'); body.className = 'rec-body';
+    panel.append(head, body);
+    overlay.append(panel);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeRec(); });
+    overlay.addEventListener('close', teardown);
+    document.body.append(overlay);
+    overlay.showModal();
+  }
+  function status(cls, text) {
+    body.innerHTML = '';
+    const p = document.createElement('p'); p.className = cls; p.setAttribute('role', 'status'); p.textContent = text;
+    body.append(p);
+  }
+  async function open() {
+    if (!overlay) ensureOverlay();
+    status('rec-status', 'Requesting camera…');
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }, audio: true });
+    } catch {
+      body.innerHTML = '';
+      const p = document.createElement('p'); p.className = 'rec-error';
+      p.textContent = 'Camera access was blocked. Allow the camera in your browser, or close this and paste a video link instead.';
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'outline-button'; b.textContent = 'Close'; b.addEventListener('click', closeRec);
+      body.append(p, b);
+      return;
+    }
+    renderLive();
+  }
+  function renderLive() {
+    body.innerHTML = '';
+    const stage = document.createElement('div'); stage.className = 'rec-stage';
+    const preview = document.createElement('video'); preview.className = 'rec-video is-mirror'; preview.autoplay = true; preview.muted = true; preview.playsInline = true; preview.srcObject = stream;
+    const timerEl = document.createElement('div'); timerEl.className = 'rec-timer';
+    timerEl.innerHTML = '<span class="rec-dot"></span><span class="rec-time">0:00</span><span class="rec-max">/ 1:00</span>';
+    const count = document.createElement('div'); count.className = 'rec-count'; count.hidden = true;
+    stage.append(preview, timerEl, count);
+    const controls = document.createElement('div'); controls.className = 'rec-controls';
+    const recBtn = document.createElement('button'); recBtn.type = 'button'; recBtn.className = 'gold-button rec-record'; recBtn.textContent = 'Record';
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.className = 'quiet-link'; cancel.textContent = 'Cancel'; cancel.addEventListener('click', closeRec);
+    controls.append(recBtn, cancel);
+    body.append(stage, controls);
+    let recording = false;
+    recBtn.addEventListener('click', () => {
+      if (recording) { stop(); return; }
+      recording = true; recBtn.disabled = true;
+      countdown(count, () => { recBtn.disabled = false; recBtn.textContent = 'Stop'; recBtn.classList.add('is-recording'); startRec(timerEl); });
+    });
+  }
+  function countdown(el, done) {
+    if (reduce) { done(); return; }  // reduced motion: no animated pre-roll
+    let n = 3;
+    el.hidden = false; el.textContent = n; el.classList.add('pop');
+    const iv = setInterval(() => {
+      n -= 1;
+      if (n <= 0) { clearInterval(iv); el.hidden = true; done(); return; }
+      el.textContent = n; el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+    }, 1000);
+  }
+  function startRec(timerEl) {
+    chunks = []; seconds = 0; recordedBlob = null;
+    timerEl.querySelector('.rec-dot').classList.add('is-live');
+    const time = timerEl.querySelector('.rec-time');
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
+      : MediaRecorder.isTypeSupported('video/webm') ? 'video/webm' : '';
+    recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    recorder.onstop = () => { recordedBlob = new Blob(chunks, { type: (recorder && recorder.mimeType) || 'video/webm' }); renderReview(); };
+    recorder.start();
+    timer = setInterval(() => { seconds += 1; time.textContent = fmt(seconds); if (seconds >= MAX_SECONDS) stop(); }, 1000);
+  }
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
+  }
+  function renderReview() {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null;
+    body.innerHTML = '';
+    const stage = document.createElement('div'); stage.className = 'rec-stage';
+    const vid = document.createElement('video'); vid.className = 'rec-video'; vid.src = URL.createObjectURL(recordedBlob); vid.controls = true; vid.playsInline = true;
+    stage.append(vid);
+    const controls = document.createElement('div'); controls.className = 'rec-controls';
+    const retake = document.createElement('button'); retake.type = 'button'; retake.className = 'outline-button'; retake.textContent = 'Retake'; retake.addEventListener('click', open);
+    const use = document.createElement('button'); use.type = 'button'; use.className = 'gold-button'; use.textContent = 'Use this intro';
+    const st = document.createElement('p'); st.className = 'rec-status'; st.setAttribute('role', 'status');
+    use.addEventListener('click', () => upload(st, use, retake));
+    controls.append(retake, use);
+    body.append(stage, controls, st);
+  }
+  async function upload(st, use, retake) {
+    use.disabled = true; retake.disabled = true; st.textContent = 'Saving your intro…';
+    try {
+      const res = await fetch('/api/video-upload', { method: 'POST', headers: { 'Content-Type': recordedBlob.type || 'video/webm' }, body: recordedBlob });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) throw new Error(data.error || 'Could not save the recording.');
+      input.value = data.url; input.dispatchEvent(new Event('input', { bubbles: true }));
+      closeRec();
+      if (typeof showToast === 'function') showToast('Video intro saved.');
+    } catch (e) {
+      use.disabled = false; retake.disabled = false;
+      st.textContent = (e && e.message) ? e.message : 'Could not save. You can paste a link instead.';
+    }
+  }
+  toggle.addEventListener('click', open);
+})();
+
 // ---- University school-logo marquee --------------------------------------
 // The <li> logos in index.html are the single editable source (placeholder,
 // illustrative marks — real logos need trademark permission). Without JS the row
@@ -1999,6 +3067,47 @@ function renderVideoIntroCard(container, rawUrl, opts = {}) {
     track.append(clone);
   }
   track.dataset.mode = 'marquee';
+})();
+
+// ---- Student batches -----------------------------------------------------
+// Pilot cohorts by INDUSTRY (not function): anyone can run a test or clean a
+// sheet, so credibility is industry-specific — a batch builds a track record in
+// one industry, the same reason a professor's endorsement matters. SINGLE editable
+// source — add/remove/edit entries here to control which batches appear. A batch
+// is an interest + credibility signal built through completed reviewed work, NOT a
+// placement, job, ranking, or guarantee. NOTE: the batch a student joins is
+// captured on the student submission (details.batch) — this structured batch +
+// outcome data is the intended future training-data source for a per-industry
+// capability assessment (no model or scoring is built yet).
+const BATCHES = [
+  { id: 'accounting-finance', industry: 'Accounting & finance', title: 'Accounting & finance', description: 'Reconciliations, close-prep checklists, cleanups, and workflow docs from real, de-identified finance work.', status: 'Pilot cohort · limited seats' },
+  { id: 'software-ai', industry: 'Software & AI', title: 'Software & AI', description: 'QA passes, reproducible bug reports, docs, and data cleanups for software and AI teams.', status: 'Pilot cohort · limited seats' },
+  { id: 'healthcare-ops', industry: 'Healthcare operations', title: 'Healthcare operations', description: 'Process mapping, documentation, and public-source research — never any patient records.', status: 'Forming' },
+  { id: 'consumer-retail', industry: 'Consumer & retail', title: 'Consumer & retail', description: 'Customer-research synthesis, competitor scans, and approved catalog/data cleanups.', status: 'Forming' },
+  { id: 'professional-services', industry: 'Professional services', title: 'Professional services', description: 'Research briefs, playbooks, and operations docs for consulting, legal, and agency teams.', status: 'Forming' },
+];
+function joinBatch(batch) {
+  const field = $('#studentBatch');
+  if (field) field.value = batch.id + ' · ' + batch.industry;
+  openDialog(studentDialog, studentForm);
+  if (field) saveDraft(studentForm);
+}
+(() => {
+  const grid = document.querySelector('[data-batch-grid]');
+  if (!grid) return;
+  grid.textContent = '';
+  for (const batch of BATCHES) {
+    const card = document.createElement('article');
+    card.className = 'batch-card glass-panel';
+    const fn = document.createElement('p'); fn.className = 'batch-function'; fn.textContent = batch.industry;
+    const title = document.createElement('h3'); title.className = 'batch-title'; title.textContent = batch.title;
+    const desc = document.createElement('p'); desc.className = 'batch-desc'; desc.textContent = batch.description;
+    const status = document.createElement('span'); status.className = 'batch-status'; status.textContent = batch.status;
+    const join = document.createElement('button'); join.type = 'button'; join.className = 'gold-button batch-join'; join.textContent = 'Join this batch';
+    join.addEventListener('click', () => joinBatch(batch));
+    card.append(fn, title, desc, status, join);
+    grid.append(card);
+  }
 })();
 
 $('#submissionHistory').addEventListener('click', event => {
@@ -2021,6 +3130,7 @@ $('#submissionHistory').addEventListener('click', event => {
   if (action === 'verify') openReceiptRecovery(item);
   if (action === 'packet') toggleReceiptPacket(button, item);
   if (action === 'revise') startPacketRevision(item);
+  if (action === 'credential') openCredentialCard(item);
 });
 
 const receiptRecoveryForm = $('#receiptRecoveryForm');
@@ -2082,8 +3192,8 @@ $('#introScreen').addEventListener('cancel', event => {
   dismissIntro({ fast: true });
 });
 
-const restoredAudience = readStorage(audienceStorageKey, 'student');
-if (['student', 'company', 'university'].includes(restoredAudience)) state.audience = restoredAudience;
+const restoredAudience = readStorage(audienceStorageKey, 'home');
+if (['home', 'student', 'company', 'university'].includes(restoredAudience)) state.audience = restoredAudience;
 const restoredWorkTypes = checkedValues(studentForm, 'workType');
 const rememberedWorkType = readStorage(workTypeStorageKey, 'Research');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];
@@ -2263,13 +3373,734 @@ function initButtonFeedback() {
   }
 }
 
+// ============================================================================
+// F3 — Partner referral attribution (?ref= landing + partner's shareable link)
+// ============================================================================
+const referralStorageKey = 'covendaReferral';
+
+// Deterministic 6-char code from a partner's org + email, so one partner keeps one
+// stable link. Shape matches the REF- reference format used across the API/migration.
+function makeReferralCode(org, email) {
+  const seed = (String(org || '') + '|' + String(email || '')).trim().toUpperCase();
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  const body = (hash.toString(36).toUpperCase() + 'COVENDA').replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  return 'REF-' + body;
+}
+
+function referralBaseUrl() {
+  const origin = location.origin && location.origin !== 'null' ? location.origin : 'https://covenda.app';
+  return origin + location.pathname.replace(/index\.html?$/, '');
+}
+
+function partnerReferralLink() {
+  const partner = partnerFieldValues();
+  const org = (partner.orgName || '').trim();
+  if (!org) return '';
+  return referralBaseUrl() + '?ref=' + makeReferralCode(org, partner.contactEmail) + '&via=' + encodeURIComponent(org);
+}
+
+// Untrusted URL input — sanitized before display/storage; `via` is rendered with
+// textContent only (never innerHTML), and is a partner's own public label, not PII.
+function readReferralFromUrl() {
+  let params;
+  try { params = new URLSearchParams(location.search); } catch { return null; }
+  const raw = (params.get('ref') || '').trim();
+  if (!raw) return null;
+  const code = raw.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 40);
+  if (!code) return null;
+  const via = (params.get('via') || '').replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  return { code, via, at: new Date().toISOString() };
+}
+
+function activeReferral() {
+  const stored = readStorage(referralStorageKey, null);
+  return stored && stored.code ? stored : null;
+}
+
+function activeReferralPayload() {
+  const ref = activeReferral();
+  return { code: ref ? ref.code : '', via: ref ? ref.via : '' };
+}
+
+function renderReferralBanner() {
+  const banner = $('#referralBanner');
+  if (!banner) return;
+  const ref = activeReferral();
+  if (!ref || ref.dismissed) { banner.hidden = true; return; }
+  const text = $('#referralBannerText');
+  if (text) text.textContent = 'Referred by ' + (ref.via || 'a Covenda partner')
+    + '. Your partner endorsement is noted — build your proof profile to carry it into the pilot.';
+  banner.hidden = false;
+}
+
+// Dismiss only hides the banner — the attribution is kept so the student's submission,
+// credential (F5), and proof record (F4) still reflect the partner endorsement.
+function dismissReferralBanner() {
+  const stored = readStorage(referralStorageKey, null);
+  if (stored) { stored.dismissed = true; writeStorage(referralStorageKey, stored); }
+  const banner = $('#referralBanner');
+  if (banner) banner.hidden = true;
+}
+
+function renderReferralLink() {
+  const section = $('#referralLinkSection');
+  const input = $('#referralLinkInput');
+  if (!section || !input) return;
+  const link = partnerReferralLink();
+  if (!link) { section.hidden = true; return; }
+  input.value = link;
+  section.hidden = false;
+}
+
+async function copyReferralLink() {
+  const link = partnerReferralLink();
+  if (!link) { showToast('Add your organization name first to generate a link.'); return; }
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast('Referral link copied.');
+  } catch {
+    const input = $('#referralLinkInput');
+    if (input) { input.focus(); input.select(); }
+    showToast('Copy is unavailable. Select the link to copy it.');
+  }
+}
+
+// ============================================================================
+// F5 — Shareable milestone credential card (drawn to canvas for image export)
+// ============================================================================
+let credentialItem = null;
+
+function credentialHolderName(item) {
+  const name = String(item.title || '').split('·')[0].trim();
+  return name || 'Covenda member';
+}
+
+// Honest mapping: standing is derived from the receipt's real status; verified rungs
+// only appear once the server marks the work reviewed/approved.
+function credentialMilestone(item) {
+  const status = item.status || 'received';
+  if (status === 'approved') return { label: 'Employer-Verified', index: 2 };
+  if (status === 'packet_proposed' || status === 'approval_pending') return { label: 'Role-Qualified', index: 1 };
+  if (activeReferral()) return { label: 'Endorsed', index: 0 };
+  return { label: 'Building proof', index: 0 };
+}
+
+function drawFittedText(ctx, textValue, x, y, maxWidth, weight, family, sizePx, color) {
+  let size = sizePx;
+  ctx.fillStyle = color;
+  while (size > 24) {
+    ctx.font = weight + ' ' + size + 'px ' + family;
+    if (ctx.measureText(textValue).width <= maxWidth) break;
+    size -= 4;
+  }
+  ctx.fillText(textValue, x, y);
+}
+
+function drawCredentialCard(item) {
+  const canvas = $('#credentialCanvas');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const serif = 'Georgia, "Times New Roman", serif';
+  const sans = 'Arial, "Helvetica Neue", sans-serif';
+  const milestone = credentialMilestone(item);
+
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#17130d');
+  bg.addColorStop(1, '#2c2114');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(201,164,90,0.5)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(30, 30, W - 60, H - 60);
+
+  ctx.fillStyle = '#e9c877';
+  ctx.font = '600 44px ' + serif;
+  ctx.fillText('Covenda', 72, 108);
+  ctx.fillStyle = 'rgba(233,200,119,0.72)';
+  ctx.font = '700 22px ' + sans;
+  ctx.fillText('P R O O F   C R E D E N T I A L', 74, 150);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '400 26px ' + sans;
+  ctx.fillText('This record certifies that', 72, 262);
+  drawFittedText(ctx, credentialHolderName(item), 72, 348, W - 150, '700', serif, 82, '#ffffff');
+
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '400 26px ' + sans;
+  ctx.fillText('is building verifiable proof of real work. Current standing:', 72, 424);
+  ctx.fillStyle = '#e9c877';
+  ctx.font = '700 52px ' + serif;
+  ctx.fillText(milestone.label, 72, 486);
+
+  // Credibility rungs, current one lit. Sits higher up so the labels stay well
+  // clear of the footer line below (they used to collide with the reference).
+  const rungs = ['Endorsed / Building', 'Role-Qualified', 'Employer-Verified', 'Proven'];
+  const pipY = 524, pipX0 = 74, gap = (W - 148) / rungs.length;
+  rungs.forEach((label, i) => {
+    const cx = pipX0 + gap * i + 18;
+    const lit = i <= milestone.index;
+    ctx.beginPath();
+    ctx.arc(cx, pipY, 9, 0, Math.PI * 2);
+    ctx.fillStyle = lit ? '#e9c877' : 'rgba(255,255,255,0.22)';
+    ctx.fill();
+    if (i < rungs.length - 1) {
+      ctx.strokeStyle = i < milestone.index ? '#e9c877' : 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + 12, pipY);
+      ctx.lineTo(cx + gap - 12, pipY);
+      ctx.stroke();
+    }
+    ctx.fillStyle = lit ? 'rgba(233,200,119,0.9)' : 'rgba(255,255,255,0.4)';
+    ctx.font = '600 17px ' + sans;
+    ctx.fillText(label, cx - 12, pipY + 30);
+  });
+
+  // Single footer line: reference · date · site — one row keeps it clear of the
+  // rung labels above at every card size.
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '400 22px ' + sans;
+  ctx.fillText([item.reference || '', receiptDate(item.createdAt), 'covenda.app'].filter(Boolean).join('   ·   '), 72, H - 50);
+}
+
+function openCredentialCard(item) {
+  credentialItem = item;
+  const dialog = $('#credentialDialog');
+  if (!dialog) return;
+  const message = $('#credentialMessage');
+  if (message) message.textContent = '';
+  drawCredentialCard(item);
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
+
+function downloadCredentialImage(item) {
+  const canvas = $('#credentialCanvas');
+  if (!canvas || !canvas.toBlob) { showToast('Image export is unavailable on this device.'); return; }
+  canvas.toBlob(blob => {
+    if (!blob) { showToast('Could not render the image.'); return; }
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'covenda-credential-' + String(item.reference || 'card').toLowerCase() + '.png';
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    showToast('Credential image downloaded.');
+  }, 'image/png');
+}
+
+async function copyCredentialText(item) {
+  const milestone = credentialMilestone(item);
+  const shareText = 'I’m building verifiable proof of my work with Covenda — current standing: '
+    + milestone.label + '. Reference ' + item.reference + ' · covenda.app';
+  try {
+    await navigator.clipboard.writeText(shareText);
+    showToast('Share text copied.');
+  } catch {
+    const message = $('#credentialMessage');
+    if (message) message.textContent = shareText;
+    showToast('Copy is unavailable — the text is shown above.');
+  }
+}
+
+// ============================================================================
+// F4 — Student proof record ("where you stand"): the student's own position on
+// the credibility ladder, endorsement status (from an F3 referral), and a
+// shortcut to their shareable credential (F5). Same ladder the educators see.
+// ============================================================================
+function studentLatestReceipt() {
+  return savedSubmissions().find(item => item.type === 'student_interest');
+}
+
+function studentStanding() {
+  const receipt = studentLatestReceipt();
+  if (receipt) {
+    const milestone = credentialMilestone(receipt); // honest: derived from receipt status
+    return { label: milestone.label, index: milestone.index, started: true, receipt };
+  }
+  // Referred but not yet submitted — a partner head-start still puts them at Endorsed.
+  if (activeReferral()) return { label: 'Endorsed', index: 0, started: false, receipt: null };
+  return { label: 'Not started', index: -1, started: false, receipt: null };
+}
+
+function renderProofRecord() {
+  const panel = $('#proofRecord');
+  if (!panel) return;
+  const ladder = $('#proofRecordLadder');
+  const standingEl = $('#proofRecordStanding');
+  const endorsementEl = $('#proofRecordEndorsement');
+  const shareBtn = $('#proofRecordShare');
+  const standing = studentStanding();
+  const ref = activeReferral();
+
+  if (standingEl) {
+    standingEl.textContent = standing.label;
+    standingEl.dataset.started = String(standing.started || standing.index >= 0);
+  }
+  if (endorsementEl) {
+    if (ref) {
+      endorsementEl.hidden = false;
+      endorsementEl.replaceChildren(
+        createIcon('icon-shield'),
+        document.createTextNode('Endorsed by ' + (ref.via || 'a Covenda partner') + ' — a partner referral head-start.'),
+      );
+    } else {
+      endorsementEl.hidden = true;
+    }
+  }
+  if (ladder) {
+    const rungs = ['Endorsed / Building proof', 'Role-Qualified', 'Employer-Verified', 'Proven'];
+    ladder.replaceChildren();
+    rungs.forEach((label, index) => {
+      const reached = standing.index >= 0 && standing.index >= index;
+      const current = standing.index === index;
+      const cell = document.createElement('div');
+      cell.className = 'proof-rung' + (reached ? ' is-reached' : '') + (current ? ' is-current' : '');
+      const dot = document.createElement('span');
+      dot.className = 'proof-rung-dot';
+      dot.append(reached ? createIcon('icon-check') : document.createTextNode(String(index + 1)));
+      const text = document.createElement('span');
+      text.className = 'proof-rung-label';
+      text.textContent = label;
+      cell.append(dot, text);
+      ladder.append(cell);
+    });
+  }
+  if (shareBtn) shareBtn.hidden = !standing.receipt;
+}
+
+// ============================================================================
+// F6 — Feeder cohort dashboard (educators workspace), driven by the live roster
+// ============================================================================
+function renderCohortDashboard() {
+  const body = $('#cohortBody');
+  const ladder = $('#cohortLadder');
+  const bars = $('#cohortBars');
+  if (!body || !ladder || !bars) return;
+  const total = $('#cohortTotal');
+  const empty = $('#cohortEmpty');
+  const roster = universityRoster;
+  const count = roster.length;
+  if (total) total.textContent = count + (count === 1 ? ' student' : ' students');
+  if (count === 0) {
+    if (empty) empty.hidden = false;
+    body.hidden = true;
+    return;
+  }
+  if (empty) empty.hidden = true;
+  body.hidden = false;
+
+  // Entry rung: an attached vouch note enters the cohort as "Endorsed"; otherwise the
+  // open path, "Building proof". Verified rungs stay at zero — earned, never assigned.
+  const endorsed = ($('#endorsementNote')?.value || '').trim().length > 0;
+  const rungs = [
+    { label: endorsed ? 'Endorsed' : 'Building proof', value: count, active: true },
+    { label: 'Role-Qualified', value: 0, active: false },
+    { label: 'Employer-Verified', value: 0, active: false },
+    { label: 'Proven', value: 0, active: false },
+  ];
+  ladder.replaceChildren();
+  rungs.forEach(rung => {
+    const cell = document.createElement('div');
+    cell.className = 'cohort-rung' + (rung.active ? ' is-active' : '');
+    const value = document.createElement('span');
+    value.className = 'cohort-rung-count';
+    value.textContent = String(rung.value);
+    const label = document.createElement('span');
+    label.className = 'cohort-rung-label';
+    label.textContent = rung.label;
+    cell.append(value, label);
+    ladder.append(cell);
+  });
+
+  const byInterest = {};
+  roster.forEach(entry => { byInterest[entry.interest] = (byInterest[entry.interest] || 0) + 1; });
+  bars.replaceChildren();
+  universityInterests.filter(interest => byInterest[interest]).forEach(interest => {
+    const value = byInterest[interest];
+    const pct = Math.round((value / count) * 100);
+    const row = document.createElement('li');
+    row.className = 'cohort-bar';
+    const head = document.createElement('div');
+    head.className = 'cohort-bar-head';
+    const name = document.createElement('span');
+    name.textContent = interest;
+    const num = document.createElement('span');
+    num.className = 'cohort-bar-value';
+    num.textContent = value + ' · ' + pct + '%';
+    head.append(name, num);
+    const track = document.createElement('div');
+    track.className = 'cohort-bar-track';
+    const fill = document.createElement('i');
+    fill.style.width = Math.max(pct, 5) + '%';
+    track.append(fill);
+    row.append(head, track);
+    bars.append(row);
+  });
+}
+
+// F3: a partner referral link (?ref=) lands the visitor as a prospective student.
+const incomingReferral = readReferralFromUrl();
+if (incomingReferral) {
+  writeStorage(referralStorageKey, incomingReferral);
+  state.audience = 'student';
+}
+
+// ---- Vertical-first narrowing -----------------------------------------------
+// Industry → focus area → the specific work. Each round is derived from the previous
+// pick, so a student lands on "Month-end close · reconciliation cleanup" instead of
+// declaring "I can do research". Every leaf maps to one of the five work types, which
+// is what the rest of the app already understands, so nothing downstream changes.
+const NARROW_TREE = {
+  'Accounting & finance': {
+    'Month-end close': [['Reconciliation cleanup', 'Data & spreadsheets'], ['Exception write-ups', 'Writing & documentation'], ['Close checklist mapping', 'Operations']],
+    'Revenue & billing': [['Invoice accuracy audit', 'Data & spreadsheets'], ['Pricing benchmark', 'Research'], ['Billing workflow map', 'Operations']],
+    'Financial research': [['Competitor cost scan', 'Research'], ['Market sizing', 'Research'], ['Findings memo', 'Writing & documentation']],
+  },
+  'Software & AI': {
+    'Quality & testing': [['Structured test passes', 'QA & testing'], ['Bug reproduction', 'QA & testing'], ['Test case authoring', 'QA & testing']],
+    'Product research': [['Competitor teardown', 'Research'], ['User feedback synthesis', 'Research'], ['Positioning brief', 'Writing & documentation']],
+    'Docs & enablement': [['API documentation', 'Writing & documentation'], ['Onboarding guides', 'Writing & documentation'], ['Release notes upkeep', 'Operations']],
+  },
+  'Healthcare operations': {
+    'Process & workflow': [['Intake workflow map', 'Operations'], ['Scheduling analysis', 'Data & spreadsheets'], ['SOP authoring', 'Writing & documentation']],
+    'Public-source research': [['Vendor comparison', 'Research'], ['Policy scan', 'Research'], ['Briefing memo', 'Writing & documentation']],
+  },
+  'Consumer & retail': {
+    'Customer insight': [['Review mining', 'Research'], ['Survey synthesis', 'Research'], ['Segment brief', 'Writing & documentation']],
+    'Merchandising & ops': [['Catalog cleanup', 'Data & spreadsheets'], ['Returns analysis', 'Data & spreadsheets'], ['Store process map', 'Operations']],
+  },
+  'Professional services': {
+    'Client delivery': [['Deliverable QA', 'QA & testing'], ['Template build', 'Writing & documentation'], ['Process documentation', 'Operations']],
+    'Business development': [['Prospect research', 'Research'], ['Proposal support', 'Writing & documentation'], ['CRM hygiene', 'Operations']],
+  },
+};
+const NARROW_ANY = 'Not sure yet — show me everything';
+const narrowStorageKey = 'covendaNarrowPath';
+
+function narrowRound(label, options, selected, onPick) {
+  const round = document.createElement('div');
+  round.className = 'narrow-round';
+  const heading = document.createElement('p');
+  heading.className = 'narrow-label';
+  heading.textContent = label;
+  const grid = document.createElement('div');
+  grid.className = 'narrow-options';
+  options.forEach(option => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'narrow-option' + (option === selected ? ' is-selected' : '');
+    button.setAttribute('aria-pressed', option === selected ? 'true' : 'false');
+    button.textContent = option;
+    button.addEventListener('click', () => onPick(option));
+    grid.append(button);
+  });
+  round.append(heading, grid);
+  return round;
+}
+
+function narrowResult(path) {
+  const box = document.createElement('div');
+  box.className = 'narrow-result';
+  const trail = document.createElement('p');
+  trail.className = 'narrow-trail';
+  trail.textContent = [path.vertical, path.focus, path.specific].filter(Boolean).join('  ·  ');
+  const note = document.createElement('p');
+  note.className = 'narrow-note';
+  note.textContent = 'Covenda will show you paid projects that look like this. You can change it any time.';
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'narrow-reset';
+  reset.textContent = 'Start over';
+  reset.addEventListener('click', () => { state.narrowPath = {}; writeStorage(narrowStorageKey, {}); renderNarrowFlow(); });
+  box.append(trail, note, reset);
+  return box;
+}
+
+function renderNarrowFlow() {
+  const root = document.querySelector('[data-narrow-flow]');
+  if (!root) return;
+  const path = state.narrowPath || {};
+  root.textContent = '';
+  const verticals = Object.keys(NARROW_TREE).concat([NARROW_ANY]);
+  root.append(narrowRound('Start with your industry', verticals, path.vertical, value => {
+    state.narrowPath = { vertical: value };
+    writeStorage(narrowStorageKey, state.narrowPath);
+    renderNarrowFlow();
+    if (value === NARROW_ANY) document.getElementById('narrowFallback')?.setAttribute('open', '');
+  }));
+  if (!path.vertical || !NARROW_TREE[path.vertical]) return;
+
+  const focuses = Object.keys(NARROW_TREE[path.vertical]);
+  root.append(narrowRound('Where in ' + path.vertical.toLowerCase() + '?', focuses, path.focus, value => {
+    state.narrowPath = { vertical: path.vertical, focus: value };
+    writeStorage(narrowStorageKey, state.narrowPath);
+    renderNarrowFlow();
+  }));
+  if (!path.focus) return;
+
+  const leaves = NARROW_TREE[path.vertical][path.focus] || [];
+  root.append(narrowRound('What would you want to own?', leaves.map(leaf => leaf[0]), path.specific, value => {
+    const leaf = leaves.find(item => item[0] === value);
+    state.narrowPath = { vertical: path.vertical, focus: path.focus, specific: value, workType: leaf ? leaf[1] : '' };
+    writeStorage(narrowStorageKey, state.narrowPath);
+    renderNarrowFlow();
+    if (leaf) selectWorkType(leaf[1]);
+  }));
+  if (path.specific) root.append(narrowResult(path));
+}
+
 restoreRosterDraft();
 renderLocalSubmissionState();
-selectWorkType(state.workType);
+state.narrowPath = readStorage(narrowStorageKey, {}) || {};
+renderNarrowFlow();
+selectWorkType(state.narrowPath.workType || state.workType);
 setAudience(state.audience);
+renderReferralBanner();
+renderReferralLink();
+// Steps 5/6/3 + gold-tile motif — run here (not at definition time) so the referral
+// storage key and other late consts are initialized before activeReferral() is read.
+renderGoldTiles();
+buildCandidateFilters();
+renderCandidates();
+renderReferrerDashboard();
 selectorFxController = initSelectorFx();
 selectorFxController?.pulse($('.work-option.is-selected'));
 initButtonFeedback();
+// ---- Interactive gold icosahedron (decorative accent; drag to spin) ----
+function initIcosahedron() {
+  const canvas = document.getElementById('icoCanvas');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  const panel = canvas.closest('.feature-panel') || canvas;
+  const hint = document.getElementById('icoHint');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Icosahedron: 12 golden-ratio vertices, 30 minimum-distance edges.
+  const t = (1 + Math.sqrt(5)) / 2;
+  const norm = Math.hypot(1, t);
+  const verts = [
+    [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
+    [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
+    [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1],
+  ].map(([x, y, z]) => ({ x: x / norm, y: y / norm, z: z / norm }));
+  const edges = [];
+  let minD2 = Infinity;
+  for (let i = 0; i < verts.length; i++) for (let j = i + 1; j < verts.length; j++) {
+    const dx = verts[i].x - verts[j].x, dy = verts[i].y - verts[j].y, dz = verts[i].z - verts[j].z;
+    minD2 = Math.min(minD2, dx * dx + dy * dy + dz * dz);
+  }
+  for (let i = 0; i < verts.length; i++) for (let j = i + 1; j < verts.length; j++) {
+    const dx = verts[i].x - verts[j].x, dy = verts[i].y - verts[j].y, dz = verts[i].z - verts[j].z;
+    if (dx * dx + dy * dy + dz * dz < minD2 * 1.05) edges.push([i, j]);
+  }
+
+  // Adjacency for path-following light "signals" that travel student -> student.
+  const adj = verts.map(() => []);
+  edges.forEach(([a, b]) => { adj[a].push(b); adj[b].push(a); });
+  function newTraveler(from) {
+    const f = from ?? Math.floor(Math.random() * verts.length);
+    const to = adj[f][Math.floor(Math.random() * adj[f].length)];
+    return { from: f, to, t: Math.random(), speed: 0.005 + Math.random() * 0.004 };
+  }
+  const travelers = [newTraveler(), newTraveler(), newTraveler(), newTraveler()];
+  function updateTravelers() {
+    travelers.forEach(tr => {
+      tr.t += tr.speed;
+      if (tr.t >= 1) {
+        const prev = tr.from;
+        tr.from = tr.to;
+        let choices = adj[tr.from].filter(n => n !== prev);
+        if (!choices.length) choices = adj[tr.from];
+        tr.to = choices[Math.floor(Math.random() * choices.length)];
+        tr.t = 0;
+        tr.speed = 0.005 + Math.random() * 0.004;
+      }
+    });
+  }
+
+  let w = 0, h = 0;
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = r.width; h = r.height;
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  let rotX = 0.5, rotY = 0.4, velX = 0.0012, velY = 0.004;
+  const autoX = 0.0012, autoY = 0.004;
+  let dragging = false, lastX = 0, lastY = 0, running = false, raf = 0, hinted = false;
+
+  function rotate(p) {
+    const cxr = Math.cos(rotX), sxr = Math.sin(rotX);
+    const y1 = p.y * cxr - p.z * sxr, z1 = p.y * sxr + p.z * cxr;
+    const cyr = Math.cos(rotY), syr = Math.sin(rotY);
+    return { x: p.x * cyr + z1 * syr, y: y1, z: -p.x * syr + z1 * cyr };
+  }
+  const activeNodes = new Set([0, 4, 8]); // a few "active" students that gently pulse
+  function draw(time = 0) {
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2, scale = Math.min(w, h) * 0.32, persp = 2.8;
+    const pts = verts.map(v => {
+      const r = rotate(v), f = persp / (persp - r.z);
+      return { sx: cx + r.x * scale * f, sy: cy - r.y * scale * f, z: r.z };
+    });
+    // edges = connections between students (thinner so the student nodes stand out)
+    edges.map(([a, b]) => ({ a, b, z: (pts[a].z + pts[b].z) / 2 }))
+      .sort((m, n) => m.z - n.z)
+      .forEach(e => {
+        const depth = (e.z + 1) / 2;
+        ctx.beginPath();
+        ctx.moveTo(pts[e.a].sx, pts[e.a].sy);
+        ctx.lineTo(pts[e.b].sx, pts[e.b].sy);
+        ctx.strokeStyle = `rgba(169,130,47,${(0.20 + depth * 0.46).toFixed(3)})`;
+        ctx.lineWidth = 0.7 + depth * 0.7;
+        ctx.stroke();
+      });
+    // vertices = students: all 12 as gold nodes (depth-scaled), a few gently pulsing
+    pts.map((p, i) => ({ p, i })).sort((a, b) => a.p.z - b.p.z).forEach(({ p, i }) => {
+      const depth = (p.z + 1) / 2;
+      const pulse = activeNodes.has(i) ? 0.5 + 0.5 * Math.sin(time * 0.0022 + i) : 0;
+      const nodeR = 1.7 + depth * 2.5;
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, nodeR + 2.6 + pulse * 3.4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,162,75,${(0.05 + depth * 0.09 + pulse * 0.11).toFixed(3)})`;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, nodeR, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(169,130,47,${(0.5 + depth * 0.45).toFixed(3)})`;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.sx - nodeR * 0.28, p.sy - nodeR * 0.28, nodeR * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,250,238,${(0.45 * depth).toFixed(3)})`;
+      ctx.fill();
+    });
+    // traveling "signal" lights routing student -> student (globe-flight feel)
+    ctx.lineCap = 'round';
+    travelers.forEach(tr => {
+      const a = pts[tr.from], b = pts[tr.to];
+      const dim = 0.3 + (((a.z + b.z) / 2 + 1) / 2) * 0.7;
+      const hx = a.sx + (b.sx - a.sx) * tr.t, hy = a.sy + (b.sy - a.sy) * tr.t;
+      const tailT = Math.max(0, tr.t - 0.32);
+      const tx = a.sx + (b.sx - a.sx) * tailT, ty = a.sy + (b.sy - a.sy) * tailT;
+      const grad = ctx.createLinearGradient(tx, ty, hx, hy);
+      grad.addColorStop(0, 'rgba(233,198,121,0)');
+      grad.addColorStop(1, `rgba(255,241,205,${(0.9 * dim).toFixed(3)})`);
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+      ctx.beginPath(); ctx.arc(hx, hy, 5.5, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(231,198,121,${(0.22 * dim).toFixed(3)})`; ctx.fill();
+      ctx.beginPath(); ctx.arc(hx, hy, 2.6, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,248,230,${(0.95 * dim).toFixed(3)})`; ctx.fill();
+    });
+    ctx.lineCap = 'butt';
+  }
+  function frame() {
+    if (!dragging) {
+      rotX += velX; rotY += velY;
+      velX += (autoX - velX) * 0.03;
+      velY += (autoY - velY) * 0.03;
+    }
+    updateTravelers();
+    draw(performance.now());
+    raf = requestAnimationFrame(frame);
+  }
+  function start() { if (running) return; running = true; raf = requestAnimationFrame(frame); }
+  function stop() { running = false; cancelAnimationFrame(raf); }
+  function panelVisible() {
+    const r = panel.getBoundingClientRect();
+    return r.bottom > 0 && r.top < window.innerHeight;
+  }
+
+  resize();
+  draw(); // render one static frame immediately so the shape is never blank
+  window.addEventListener('resize', () => { resize(); if (!running) draw(); });
+
+  if (reduceMotion) {
+    hint?.classList.add('is-hidden');
+    return;
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    canvas.setPointerCapture?.(e.pointerId);
+    if (!hinted && hint) { hint.classList.add('is-hidden'); hinted = true; }
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    rotY += dx * 0.008; rotX += dy * 0.008;
+    velY = dx * 0.008; velX = dy * 0.008;
+  });
+  const release = e => { dragging = false; canvas.releasePointerCapture?.(e.pointerId); };
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', release);
+  canvas.addEventListener('pointerleave', release);
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      entries.forEach(en => (en.isIntersecting ? start() : stop()));
+    }, { threshold: 0.05 }).observe(panel);
+  } else {
+    start();
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stop();
+    else if (panelVisible()) start();
+  });
+}
+
+// ---- Site-wide scroll reveal: sections/cards animate in as you scroll down ----
+function initScrollReveal() {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Bail (leave everything visible) for reduced-motion, no-IO, or a glitched/tiny
+  // viewport — never risk hiding content when we can't reliably reveal it.
+  if (reduce || !('IntersectionObserver' in window) || window.innerHeight < 300) return;
+  const selector = [
+    '.how-section .section-heading',
+    '.proof-rail > li', '.company-rail > li',
+    '.work-record', '.packet', '.risk-note',
+    '.feature-copy', '.feature-panel',
+    '.value-col',
+    '.why-section .why-copy', '.why-section .fit-table', '.why-section .work-types',
+    '.batches-section .section-heading', '.batch-card',
+    '.final-cta .audience-content',
+  ].join(',');
+  document.documentElement.classList.add('js-reveal');
+  const revealed = new WeakSet();
+  const reveal = el => { el.classList.add('is-revealed'); revealed.add(el); };
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); } });
+  }, { threshold: 0.1, rootMargin: '0px 0px -5% 0px' });
+  const vh = window.innerHeight;
+  const targets = [];
+  [...document.querySelectorAll(selector)].forEach(el => {
+    const r = el.getBoundingClientRect();
+    // leave anything already in view visible (no flash); only reveal what's below.
+    if (r.bottom > 0 && r.top < vh * 0.85) return;
+    el.classList.add('reveal');
+    const sibs = [...el.parentElement.children].filter(c => c.matches(selector));
+    const i = sibs.indexOf(el);
+    if (i > 0) el.style.setProperty('--reveal-i', String(Math.min(i, 6)));
+    io.observe(el);
+    targets.push(el);
+  });
+  // Safety net: if the observer never fires for something, reveal it anyway so
+  // content can never stay permanently hidden.
+  window.setTimeout(() => targets.forEach(el => { if (!revealed.has(el)) reveal(el); }), 4000);
+}
+
 initCovendaMotion();
 initFlowDemo();
+initIcosahedron();
+initScrollReveal();
 window.requestAnimationFrame(() => openIntro());

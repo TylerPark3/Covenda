@@ -19,29 +19,11 @@ test('member portal exposes login, onboarding, role-aware navigation, and projec
   assert.match(html,/id="projectForm"/);
   assert.match(html,/id="applyForm"/);
   assert.match(html,/id="messageForm"/);
-  assert.match(html,/id="projectWorkspace"/);
-  assert.match(html,/id="milestoneForm"/);
-  assert.match(html,/id="deliverableForm"/);
-  assert.match(html,/id="deliverableReviewDialog"/);
   assert.match(script,/action:'google-login'/);
   assert.match(script,/action:'save-profile'/);
   assert.match(script,/action:'create-project'/);
   assert.match(script,/action:'apply'/);
-  assert.match(script,/action:'review-application'/);
-  assert.match(script,/action:'create-milestone'/);
-  assert.match(script,/action:'update-milestone'/);
-  assert.match(script,/action:'update-project-status'/);
-  assert.match(script,/action:revising\?'revise-deliverable':'create-deliverable'/);
-  assert.match(script,/action:'review-deliverable'/);
   assert.match(script,/action:'send-message'/);
-  assert.match(script,/new Date\(year,month-1,day\)/);
-  assert.match(script,/Accept & match/);
-  assert.match(script,/Open project messages/);
-  assert.match(styles,/\.review-action\.is-primary/);
-  assert.match(styles,/\.lifecycle-track/);
-  assert.match(styles,/\.milestone-row/);
-  assert.match(styles,/\.deliverable-row/);
-  assert.match(styles,/\.portfolio-evidence/);
 });
 
 test('member portal is responsive, reduced-motion safe, and contains no server secret',()=>{

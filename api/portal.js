@@ -4,10 +4,10 @@ import { supabaseConfiguration } from './submissions.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
-const APPLICATION_REVIEW_STATUSES = new Set(['reviewing', 'shortlisted', 'accepted', 'declined']);
-const MILESTONE_STATUSES = new Set(['planned', 'in_progress', 'blocked', 'complete']);
-const DELIVERABLE_TYPES = new Set(['document', 'presentation', 'dashboard', 'repository', 'other']);
-const DELIVERABLE_REVIEW_STATUSES = new Set(['changes_requested', 'accepted']);
+// Fixed taxonomies shared with the marketing site (BATCHES industries + work types).
+// The vertical project-matcher reads these exact strings, so onboarding must write them verbatim.
+export const VERTICALS = new Set(['Accounting & finance', 'Software & AI', 'Healthcare operations', 'Consumer & retail', 'Professional services', 'Not sure yet — show me everything']);
+export const WORK_TYPES = new Set(['Research', 'Data & spreadsheets', 'Operations', 'QA & testing', 'Writing & documentation']);
 const emailBuckets = new Map();
 
 export class PortalOperationalError extends Error {
@@ -33,14 +33,9 @@ function cleanList(value, maxItems = 20) {
   return [...new Set(items.map(item => cleanText(item, 80)).filter(Boolean))].slice(0, maxItems);
 }
 
-function cleanWebUrl(value) {
-  const result = cleanText(value, 2_048);
-  try {
-    const url = new URL(result);
-    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : '';
-  } catch {
-    return '';
-  }
+// Keep only values that exactly match a fixed taxonomy (verticals / work types).
+function cleanTaxonomy(value, allowed, maxItems = 8) {
+  return cleanList(value, maxItems).filter(item => allowed.has(item));
 }
 
 function parseBody(req) {
@@ -190,7 +185,7 @@ export async function loadMemberDashboard(member) {
     checked(supabase.from('member_profiles').select('*').eq('user_id', user.id).maybeSingle(), null),
     loadMemberIntakes(member),
   ]);
-  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], applicantProfiles: [], studentDirectory: [], intakes, messages: [], milestones: [], deliverables: [] };
+  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [], verifiedCount: 0 };
 
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
@@ -199,14 +194,16 @@ export async function loadMemberDashboard(member) {
       checked(supabase.from('project_applications').select('*').eq('student_user_id', user.id).order('updated_at', { ascending: false }).limit(100)),
     ]);
     const projectIds = projects.map(project => project.id);
-    const [messages, milestones, deliverables] = projectIds.length
-      ? await Promise.all([
-        checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500)),
-        checked(supabase.from('project_milestones').select('*').in('project_id', projectIds).order('position', { ascending: true }).order('created_at', { ascending: true }).limit(500)),
-        checked(supabase.from('project_deliverables').select('*').in('project_id', projectIds).order('created_at', { ascending: false }).limit(500)),
-      ])
-      : [[], [], []];
-    return { user, profile, projects, opportunities, applications, applicantProfiles: [], studentDirectory: [], intakes, messages, milestones, deliverables };
+    const messages = projectIds.length
+      ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
+      : [];
+    const verifiedCount = projects.filter(project => project.status === 'complete').length;
+    const rankedOpportunities = rankOpportunities(opportunities, profile);
+    const matchedCount = rankedOpportunities.filter(project => project.matched).length;
+    // Students hold credits too once escrow is released, so they get a balance (the
+    // Wallet view itself stays company/university only).
+    const walletBalance = await creditBalance(member);
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -214,21 +211,15 @@ export async function loadMemberDashboard(member) {
   const applications = projectIds.length
     ? await checked(supabase.from('project_applications').select('*').in('project_id', projectIds).order('updated_at', { ascending: false }).limit(200))
     : [];
-  const applicantUserIds = [...new Set(applications.map(application => application.student_user_id).filter(Boolean))];
-  const applicantProfiles = applicantUserIds.length
-    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,portfolio_visibility,updated_at').in('user_id', applicantUserIds).limit(200))
-    : [];
   const studentDirectory = profile.role === 'company'
     ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
     : [];
-  const [messages, milestones, deliverables] = projectIds.length
-    ? await Promise.all([
-      checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500)),
-      checked(supabase.from('project_milestones').select('*').in('project_id', projectIds).order('position', { ascending: true }).order('created_at', { ascending: true }).limit(500)),
-      checked(supabase.from('project_deliverables').select('*').in('project_id', projectIds).order('created_at', { ascending: false }).limit(500)),
-    ])
-    : [[], [], []];
-  return { user, profile, projects, opportunities: [], applications, applicantProfiles, studentDirectory, intakes, messages, milestones, deliverables };
+  const messages = projectIds.length
+    ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
+    : [];
+  const verifiedCount = projects.filter(project => project.status === 'complete').length;
+  const [walletBalance, creditLedger] = await Promise.all([creditBalance(member), loadCreditLedger(member)]);
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -257,7 +248,110 @@ export async function saveMemberProfile(member, input) {
     onboarding_complete: true,
     updated_at: new Date().toISOString(),
   };
+  // Additive onboarding/matching fields — only written when the caller supplies them,
+  // so the existing profile modal keeps saving even before the migration is applied.
+  if (input.verticals !== undefined) row.verticals = cleanTaxonomy(input.verticals, VERTICALS);
+  if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
+  if (input.avatarUrl !== undefined) row.avatar_url = cleanText(input.avatarUrl, 500) || null;
   return checked(supabase.from('member_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
+}
+
+// ---- Credits. 1 credit = $1. Public posts are free; a hyper-narrow (vertical +
+// work-type + referred students) post costs a reach fee. The platform fee is 10% of the
+// listed amount charged ON TOP, so the student always receives the full listed amount.
+export const REACH_FEE_TARGETED = 25;
+export const PLATFORM_FEE_RATE = 0.10;
+// Payments are stubbed in v1: bundles record what the company *would* pay, and the
+// discount lives in the price, not in extra credits (1 credit stays $1 of value).
+export const CREDIT_BUNDLES = new Map([[100, 100], [500, 475], [1000, 900]]);
+
+// Pure cost model — the UI, the server, and the tests all read from this one function.
+export function projectCreditCost(creditsListed, targeting) {
+  const listed = Math.max(0, Math.round(Number(creditsListed) || 0));
+  const reachFee = targeting === 'targeted' ? REACH_FEE_TARGETED : 0;
+  const platformFee = Math.round(listed * PLATFORM_FEE_RATE);
+  return { listed, reachFee, platformFee, total: listed + reachFee + platformFee };
+}
+
+// The ledger is the only source of truth for a balance. Pilot volumes are small enough
+// to sum in the API; if this grows, move it to a Postgres aggregate/RPC.
+export async function creditBalance(member, userId = member.user.id) {
+  const rows = await checked(member.supabase.from('credit_ledger').select('credits').eq('user_id', userId), []);
+  return rows.reduce((sum, row) => sum + (Number(row.credits) || 0), 0);
+}
+
+export async function loadCreditLedger(member, limit = 50) {
+  return checked(
+    member.supabase.from('credit_ledger').select('*').eq('user_id', member.user.id).order('created_at', { ascending: false }).limit(limit),
+    [],
+  );
+}
+
+function operatorEmails(env) {
+  return cleanText(env.COVENDA_ADMIN_EMAILS, 4_000).toLowerCase().split(/[,\s]+/).filter(Boolean);
+}
+
+// Granting credits without charging is a production footgun, so it is off unless the
+// deployment explicitly enables it or the caller is a listed operator.
+export async function buyCredits(member, input, env = process.env) {
+  const enabled = env.COVENDA_CREDIT_GRANTS_ENABLED === 'true' || operatorEmails(env).includes(member.user.email || '');
+  if (!enabled) throw new Error('This deployment does not have credit purchases enabled yet.');
+  const bundle = Math.round(Number(input.credits) || 0);
+  if (!CREDIT_BUNDLES.has(bundle)) throw new Error('Choose one of the available credit bundles.');
+  const priceUsd = CREDIT_BUNDLES.get(bundle);
+  await checked(
+    member.supabase.from('credit_ledger').insert({
+      user_id: member.user.id,
+      entry_type: 'purchase',
+      credits: bundle,
+      note: `Stubbed purchase · ${bundle} credits · $${priceUsd}`,
+    }).select('id').single(),
+    null,
+  );
+  return { balance: await creditBalance(member) };
+}
+
+function cleanAttachments(value) {
+  return (Array.isArray(value) ? value : []).slice(0, 6).map(item => ({
+    name: cleanText(item?.name, 120),
+    blobUrl: /^https:\/\//i.test(item?.blobUrl || '') ? cleanText(item.blobUrl, 600) : '',
+    contentType: cleanText(item?.contentType, 100),
+    sizeBytes: Number.isFinite(item?.sizeBytes) ? Math.max(0, Math.min(item.sizeBytes, 50_000_000)) : 0,
+  })).filter(item => item.blobUrl);
+}
+
+// The AI brief originates from our own intake endpoint, but the client could tamper with
+// it, so re-bound every field and re-whitelist the taxonomy before it is stored.
+function sanitizeBrief(brief) {
+  const list = (value, max) => (Array.isArray(value) ? value.map(item => cleanText(item, 300)).filter(Boolean).slice(0, max) : []);
+  return {
+    summary: cleanText(brief.summary, 1_200),
+    structuredProblem: cleanText(brief.structuredProblem, 3_000),
+    candidateDeliverables: list(brief.candidateDeliverables, 5),
+    suggestedVerticals: cleanTaxonomy(brief.suggestedVerticals, VERTICALS),
+    suggestedWorkTypes: cleanTaxonomy(brief.suggestedWorkTypes, WORK_TYPES),
+    safetyFlags: list(brief.safetyFlags, 8),
+    safeToPost: brief.safeToPost === true,
+  };
+}
+
+// Rank open opportunities so ones matching the student's verticals/work types come
+// first, each tagged `matched` for the "Matched to your vertical" badge. A student who
+// picked "Not sure yet — show me everything" matches every vertical.
+export function rankOpportunities(opportunities, profile) {
+  const profileVerticals = new Set(profile?.verticals || []);
+  const profileWorkTypes = new Set(profile?.work_types || []);
+  const everything = profileVerticals.has('Not sure yet — show me everything');
+  const isMatch = project => {
+    const verticals = project.verticals || [];
+    const workTypes = project.work_types || [];
+    const verticalMatch = everything || verticals.some(value => profileVerticals.has(value));
+    const workTypeMatch = workTypes.some(value => profileWorkTypes.has(value));
+    return Boolean((verticals.length && verticalMatch) || (workTypes.length && workTypeMatch));
+  };
+  return (opportunities || [])
+    .map(project => ({ ...project, matched: isMatch(project) }))
+    .sort((a, b) => Number(b.matched) - Number(a.matched));
 }
 
 export async function createMemberProject(member, input) {
@@ -279,7 +373,46 @@ export async function createMemberProject(member, input) {
     target_date: /^\d{4}-\d{2}-\d{2}$/.test(input.targetDate || '') ? input.targetDate : null,
     updated_at: new Date().toISOString(),
   };
-  return checked(member.supabase.from('member_projects').insert(row).select('*').single(), null);
+  // Additive intake/targeting fields — only written when supplied, so the simple project
+  // modal keeps working even before the targeting migration is applied.
+  if (input.verticals !== undefined) row.verticals = cleanTaxonomy(input.verticals, VERTICALS);
+  if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
+  if (input.problemText !== undefined) row.problem_text = cleanText(input.problemText, 8_000) || null;
+  if (input.consultBooked !== undefined) row.consult_booked = input.consultBooked === true;
+  if (input.budgetCents !== undefined) row.budget_cents = Number.isFinite(input.budgetCents) ? Math.max(0, Math.min(Math.round(input.budgetCents), 100_000_00)) : null;
+  if (input.attachments !== undefined) row.attachments = cleanAttachments(input.attachments);
+  if (input.aiBrief && typeof input.aiBrief === 'object') row.ai_brief = sanitizeBrief(input.aiBrief);
+
+  // Credits: charge the reach fee and hold escrow (listed + platform fee) at post time.
+  const priced = input.creditsListed !== undefined;
+  const targeting = input.targeting === 'targeted' ? 'targeted' : 'public';
+  const cost = projectCreditCost(input.creditsListed, targeting);
+  if (priced) {
+    const balance = await creditBalance(member);
+    if (balance < cost.total) {
+      throw new Error(`This project needs ${cost.total} credits (${cost.listed} listed + ${cost.platformFee} platform fee + ${cost.reachFee} reach fee) but your balance is ${balance}.`);
+    }
+    row.credits_listed = cost.listed;
+    row.targeting = targeting;
+    row.credits_held = cost.listed;
+    row.platform_fee_credits = cost.platformFee;
+  }
+
+  const project = await checked(member.supabase.from('member_projects').insert(row).select('*').single(), null);
+
+  if (priced && project?.id) {
+    const entries = [];
+    if (cost.reachFee > 0) {
+      // Both sides of the reach fee, so member balances and platform revenue reconcile.
+      entries.push({ user_id: member.user.id, entry_type: 'reach_fee', credits: -cost.reachFee, project_id: project.id, note: 'Hyper-narrow reach fee' });
+      entries.push({ user_id: null, entry_type: 'reach_fee', credits: cost.reachFee, project_id: project.id, note: 'Hyper-narrow reach fee' });
+    }
+    if (cost.listed + cost.platformFee > 0) {
+      entries.push({ user_id: member.user.id, entry_type: 'escrow_hold', credits: -(cost.listed + cost.platformFee), project_id: project.id, note: `Escrow: ${cost.listed} listed + ${cost.platformFee} platform fee` });
+    }
+    if (entries.length) await checked(member.supabase.from('credit_ledger').insert(entries).select('id'), []);
+  }
+  return project;
 }
 
 export async function applyToProject(member, input) {
@@ -298,201 +431,6 @@ export async function applyToProject(member, input) {
   return checked(member.supabase.from('project_applications').insert(row).select('*').single(), null);
 }
 
-export async function reviewProjectApplication(member, input) {
-  const applicationId = cleanText(input.applicationId, 50);
-  const status = cleanText(input.status, 20);
-  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(applicationId)) throw new Error('Choose a valid student application.');
-  if (!APPLICATION_REVIEW_STATUSES.has(status)) throw new Error('Choose a valid application status.');
-
-  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
-  if (!profile || !['company', 'university'].includes(profile.role)) throw new Error('Only company and university accounts can review applications.');
-
-  const { data, error } = await member.supabase.rpc('review_project_application', {
-    p_owner_user_id: member.user.id,
-    p_application_id: applicationId,
-    p_status: status,
-  });
-  if (error) {
-    const message = cleanText(error.message, 1_000);
-    if (/not found|not owned/i.test(message)) throw new Error('This application is no longer available to review.');
-    if (/already has a matched student/i.test(message)) throw new Error('This project already has a matched student. Refresh the workspace to see the current match.');
-    if (/not ready for matching/i.test(message)) throw new Error('This project must be open before a student can be accepted.');
-    if (/accepted matches/i.test(message)) throw new Error('Accepted matches cannot be changed from the portal.');
-    throw error;
-  }
-  return data ?? null;
-}
-
-async function participantProject(member, projectId) {
-  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project workspace.');
-  const project = await checked(
-    member.supabase.from('member_projects').select('*').eq('id', projectId).maybeSingle(),
-    null,
-  );
-  const participant = project && (project.owner_user_id === member.user.id || project.assigned_student_user_id === member.user.id);
-  if (!participant) throw new Error('This project workspace is not available to your account.');
-  return project;
-}
-
-export async function createProjectMilestone(member, input) {
-  const projectId = cleanText(input.projectId, 50);
-  const project = await participantProject(member, projectId);
-  if (!['matched', 'in_progress', 'review'].includes(project.status)) throw new Error('This project is not accepting new milestones.');
-  const title = cleanText(input.title, 160);
-  if (title.length < 3) throw new Error('Enter a milestone title.');
-  const latest = await checked(
-    member.supabase.from('project_milestones').select('position').eq('project_id', projectId).order('position', { ascending: false }).limit(1).maybeSingle(),
-    null,
-  );
-  const row = {
-    project_id: projectId,
-    title,
-    notes: cleanText(input.notes, 2_000) || null,
-    due_date: /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate || '') ? input.dueDate : null,
-    position: Math.min(Number(latest?.position || 0) + 1, 1000),
-    created_by_user_id: member.user.id,
-  };
-  return checked(member.supabase.from('project_milestones').insert(row).select('*').single(), null);
-}
-
-export async function updateProjectMilestone(member, input) {
-  const milestoneId = cleanText(input.milestoneId, 50);
-  const status = cleanText(input.status, 20);
-  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(milestoneId)) throw new Error('Choose a valid milestone.');
-  if (!MILESTONE_STATUSES.has(status)) throw new Error('Choose a valid milestone status.');
-  const milestone = await checked(member.supabase.from('project_milestones').select('*').eq('id', milestoneId).maybeSingle(), null);
-  if (!milestone) throw new Error('This milestone is no longer available.');
-  const project = await participantProject(member, milestone.project_id);
-  if (['complete', 'archived'].includes(project.status)) throw new Error('This completed project is read-only.');
-  const row = { status, completed_at: status === 'complete' ? new Date().toISOString() : null, updated_at: new Date().toISOString() };
-  return checked(member.supabase.from('project_milestones').update(row).eq('id', milestoneId).select('*').single(), null);
-}
-
-export async function createProjectDeliverable(member, input) {
-  const projectId = cleanText(input.projectId, 50);
-  const project = await participantProject(member, projectId);
-  if (project.assigned_student_user_id !== member.user.id) throw new Error('Only the matched student can submit project evidence.');
-  if (!['matched', 'in_progress', 'review'].includes(project.status)) throw new Error('This project is not accepting deliverables.');
-  const title = cleanText(input.title, 160);
-  const artifactUrl = cleanWebUrl(input.artifactUrl);
-  if (title.length < 3) throw new Error('Enter a deliverable title.');
-  if (!artifactUrl) throw new Error('Enter a valid http or https evidence link.');
-  const artifactType = DELIVERABLE_TYPES.has(input.artifactType) ? input.artifactType : 'other';
-  const milestoneId = cleanText(input.milestoneId, 50);
-  if (milestoneId) {
-    if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(milestoneId)) throw new Error('Choose a valid linked milestone.');
-    const milestone = await checked(member.supabase.from('project_milestones').select('id,project_id').eq('id', milestoneId).maybeSingle(), null);
-    if (!milestone || milestone.project_id !== projectId) throw new Error('The linked milestone is not part of this project.');
-  }
-  const row = {
-    project_id: projectId,
-    milestone_id: milestoneId || null,
-    submitted_by_user_id: member.user.id,
-    title,
-    artifact_type: artifactType,
-    artifact_url: artifactUrl,
-    notes: cleanText(input.notes, 2_000) || null,
-  };
-  return checked(member.supabase.from('project_deliverables').insert(row).select('*').single(), null);
-}
-
-export async function reviewProjectDeliverable(member, input) {
-  const deliverableId = cleanText(input.deliverableId, 50);
-  const status = cleanText(input.status, 30);
-  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(deliverableId)) throw new Error('Choose a valid deliverable.');
-  if (!DELIVERABLE_REVIEW_STATUSES.has(status)) throw new Error('Choose a valid deliverable review status.');
-  const deliverable = await checked(member.supabase.from('project_deliverables').select('*').eq('id', deliverableId).maybeSingle(), null);
-  if (!deliverable) throw new Error('This deliverable is no longer available.');
-  const project = await participantProject(member, deliverable.project_id);
-  if (project.owner_user_id !== member.user.id) throw new Error('Only the project owner can review deliverables.');
-  if (!['matched', 'in_progress', 'review'].includes(project.status)) throw new Error('This completed project is read-only.');
-  if (deliverable.status !== 'submitted') throw new Error('This deliverable has already been reviewed.');
-  const reviewNote = cleanText(input.reviewNote, 2_000);
-  if (status === 'changes_requested' && reviewNote.length < 3) throw new Error('Explain what needs to change.');
-  const row = {
-    status,
-    review_note: reviewNote || null,
-    reviewed_by_user_id: member.user.id,
-    reviewed_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-  const updated = await checked(
-    member.supabase.from('project_deliverables').update(row).eq('id', deliverableId).eq('status', 'submitted').select('*').maybeSingle(),
-    null,
-  );
-  if (!updated) throw new Error('This deliverable changed while you were viewing it. Refresh and try again.');
-  return updated;
-}
-
-export async function reviseProjectDeliverable(member, input) {
-  const deliverableId = cleanText(input.deliverableId, 50);
-  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(deliverableId)) throw new Error('Choose a valid deliverable.');
-  const deliverable = await checked(member.supabase.from('project_deliverables').select('*').eq('id', deliverableId).maybeSingle(), null);
-  if (!deliverable) throw new Error('This deliverable is no longer available.');
-  const project = await participantProject(member, deliverable.project_id);
-  if (project.assigned_student_user_id !== member.user.id || deliverable.submitted_by_user_id !== member.user.id) throw new Error('Only the submitting student can revise this evidence.');
-  if (deliverable.status !== 'changes_requested') throw new Error('Only a deliverable with requested changes can be revised.');
-  const title = cleanText(input.title, 160);
-  const artifactUrl = cleanWebUrl(input.artifactUrl);
-  if (title.length < 3) throw new Error('Enter a deliverable title.');
-  if (!artifactUrl) throw new Error('Enter a valid http or https evidence link.');
-  const milestoneId = cleanText(input.milestoneId, 50);
-  if (milestoneId) {
-    if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(milestoneId)) throw new Error('Choose a valid linked milestone.');
-    const milestone = await checked(member.supabase.from('project_milestones').select('id,project_id').eq('id', milestoneId).maybeSingle(), null);
-    if (!milestone || milestone.project_id !== project.id) throw new Error('The linked milestone is not part of this project.');
-  }
-  const row = {
-    title,
-    artifact_type: DELIVERABLE_TYPES.has(input.artifactType) ? input.artifactType : deliverable.artifact_type,
-    artifact_url: artifactUrl,
-    milestone_id: milestoneId || null,
-    notes: cleanText(input.notes, 2_000) || null,
-    status: 'submitted',
-    revision: Math.min(Number(deliverable.revision || 1) + 1, 50),
-    review_note: null,
-    reviewed_by_user_id: null,
-    reviewed_at: null,
-    updated_at: new Date().toISOString(),
-  };
-  const updated = await checked(
-    member.supabase.from('project_deliverables').update(row).eq('id', deliverableId).eq('status', 'changes_requested').select('*').maybeSingle(),
-    null,
-  );
-  if (!updated) throw new Error('This deliverable changed while you were editing it. Refresh and try again.');
-  return updated;
-}
-
-export async function updateProjectStatus(member, input) {
-  const projectId = cleanText(input.projectId, 50);
-  const status = cleanText(input.status, 20);
-  const project = await participantProject(member, projectId);
-  const owner = project.owner_user_id === member.user.id;
-  const transitionAllowed = (project.status === 'matched' && status === 'in_progress')
-    || (project.status === 'in_progress' && status === 'review')
-    || (project.status === 'review' && status === 'in_progress' && owner)
-    || (project.status === 'review' && status === 'complete' && owner);
-  if (!transitionAllowed) throw new Error('This project status change is not available to your account.');
-  if (status === 'complete') {
-    const incomplete = await checked(
-      member.supabase.from('project_milestones').select('id').eq('project_id', projectId).neq('status', 'complete').limit(1).maybeSingle(),
-      null,
-    );
-    if (incomplete) throw new Error('Complete every milestone before closing the project.');
-    const accepted = await checked(
-      member.supabase.from('project_deliverables').select('id').eq('project_id', projectId).eq('status', 'accepted').limit(1).maybeSingle(),
-      null,
-    );
-    if (!accepted) throw new Error('Accept at least one deliverable before closing the project.');
-  }
-  const updated = await checked(
-    member.supabase.from('member_projects').update({ status, updated_at: new Date().toISOString() }).eq('id', projectId).eq('status', project.status).select('*').maybeSingle(),
-    null,
-  );
-  if (!updated) throw new Error('This project changed while you were viewing it. Refresh and try again.');
-  return updated;
-}
-
 export async function sendProjectMessage(member, input) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project conversation.');
@@ -508,10 +446,118 @@ export async function sendProjectMessage(member, input) {
   return checked(member.supabase.from('project_messages').insert(row).select('*').single(), null);
 }
 
+const PROJECT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
+
+// Close-the-loop transitions. Every one re-reads the project and verifies the caller
+// is the owner (company/university) or the assigned student before writing, and
+// enforces the status state-machine server-side so no step can be skipped or replayed.
+
+export async function acceptApplication(member, input) {
+  const applicationId = cleanText(input.applicationId, 50);
+  if (!PROJECT_ID_PATTERN.test(applicationId)) throw new Error('Choose a valid application.');
+  const application = await checked(
+    member.supabase.from('project_applications').select('id,project_id,student_user_id,status').eq('id', applicationId).maybeSingle(),
+    null,
+  );
+  if (!application) throw new Error('This application is no longer available.');
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', application.project_id).maybeSingle(),
+    null,
+  );
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can accept an applicant.');
+  if (!['open', 'matched'].includes(project.status)) throw new Error('This project is not open for accepting an applicant.');
+  const now = new Date().toISOString();
+  const accepted = await checked(
+    member.supabase.from('project_applications').update({ status: 'accepted', updated_at: now }).eq('id', applicationId).select('*').single(),
+    null,
+  );
+  // Assign the student and move the project into progress.
+  await checked(
+    member.supabase.from('member_projects').update({ assigned_student_user_id: application.student_user_id, status: 'in_progress', updated_at: now }).eq('id', project.id).select('id').single(),
+    null,
+  );
+  // Decline the remaining live applications so the pipeline is unambiguous (leave withdrawn ones as-is).
+  await checked(
+    member.supabase.from('project_applications').update({ status: 'declined', updated_at: now }).eq('project_id', project.id).neq('id', applicationId).neq('status', 'withdrawn').select('id'),
+    [],
+  );
+  return accepted;
+}
+
+export async function submitDeliverable(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const summary = cleanText(input.deliverable, 4_000);
+  if (summary.length < 10) throw new Error('Describe your work in at least 10 characters.');
+  const rawLinks = Array.isArray(input.deliverableLinks) ? input.deliverableLinks : cleanText(input.deliverableLinks, 2_000).split(/[\n,]/);
+  const links = [...new Set(rawLinks.map(link => cleanText(link, 500)).filter(link => /^https?:\/\//i.test(link)))].slice(0, 10);
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,assigned_student_user_id,status').eq('id', projectId).maybeSingle(),
+    null,
+  );
+  if (!project || project.assigned_student_user_id !== member.user.id) throw new Error('Only the assigned student can submit work for this project.');
+  if (!['in_progress', 'review'].includes(project.status)) throw new Error('This project is not ready for a deliverable yet.');
+  const body = links.length ? `${summary}\n\nLinks:\n${links.map(link => `- ${link}`).join('\n')}` : summary;
+  const now = new Date().toISOString();
+  // Clear any prior revision note so a stale "changes requested" message does not linger after resubmission.
+  return checked(
+    member.supabase.from('member_projects').update({ deliverable: body, status: 'review', deliverable_submitted_at: now, review_note: null, updated_at: now }).eq('id', projectId).select('*').single(),
+    null,
+  );
+}
+
+export async function reviewDeliverable(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const decision = input.decision === 'accept' ? 'accept' : input.decision === 'revise' ? 'revise' : '';
+  if (!decision) throw new Error('Choose accept or request changes.');
+  const note = cleanText(input.note, 2_000);
+  if (decision === 'revise' && !note) throw new Error('Add a note so the student knows what to revise.');
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', projectId).maybeSingle(),
+    null,
+  );
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can review a deliverable.');
+  if (project.status !== 'review') throw new Error('This project has no submitted deliverable to review.');
+  const now = new Date().toISOString();
+
+  if (decision === 'revise') {
+    // No credit movement — the escrow stays held while the student reworks it.
+    return checked(
+      member.supabase.from('member_projects').update({ status: 'in_progress', review_note: note, updated_at: now }).eq('id', projectId).select('*').single(),
+      null,
+    );
+  }
+
+  // Accepting settles money, so the ledger writes and the status change must commit
+  // together. The database function does both under a row lock; if it fails, nothing
+  // moves and the project stays in review rather than completing unpaid.
+  if (note) {
+    await checked(member.supabase.from('member_projects').update({ review_note: note, updated_at: now }).eq('id', projectId).select('id').single(), null);
+  }
+  const released = await checked(member.supabase.rpc('release_project_escrow', { p_project_id: projectId, p_owner_id: member.user.id }), null);
+  return Array.isArray(released) ? released[0] : released;
+}
+
+// Cancelling before completion returns the held escrow to the company. Same atomicity
+// requirement as the release, so it also runs as a database function.
+export async function cancelProject(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', projectId).maybeSingle(),
+    null,
+  );
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can cancel a project.');
+  if (['complete', 'archived'].includes(project.status)) throw new Error('This project is already finished.');
+  const refunded = await checked(member.supabase.rpc('refund_project_escrow', { p_project_id: projectId, p_owner_id: member.user.id }), null);
+  return Array.isArray(refunded) ? refunded[0] : refunded;
+}
+
 function portalFailure(error) {
   if (error instanceof PortalOperationalError) return { status: 503, code: error.code, message: error.publicMessage };
   const message = cleanText(error?.message, 2_000);
-  if (/member_profiles|member_projects|project_applications|project_messages|project_milestones|project_deliverables|review_project_application|submissions|schema cache|relation .* does not exist/i.test(message)) {
+  if (/member_profiles|member_projects|project_applications|project_messages|submissions|schema cache|relation .* does not exist/i.test(message)) {
     return { status: 503, code: 'PORTAL_SCHEMA_MISSING', message: 'Member sign-in worked, but the portal tables are not available. Apply the newest Supabase migration to the same project used by Vercel.' };
   }
   return { status: 503, code: 'PORTAL_UNAVAILABLE', message: 'The member portal is temporarily unavailable. Check the newest /api/portal entry in Vercel Runtime Logs.' };
@@ -545,19 +591,17 @@ export default async function handler(req, res, dependencies = {}) {
 
     const input = parseBody(req);
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
-    if (req.method === 'PATCH' && input.action === 'update-project-status') return res.status(200).json({ ok: true, project: await updateProjectStatus(member, input) });
-    if (req.method === 'PATCH' && input.action === 'update-milestone') return res.status(200).json({ ok: true, milestone: await updateProjectMilestone(member, input) });
-    if (req.method === 'PATCH' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, deliverable: await reviewProjectDeliverable(member, input) });
-    if (req.method === 'PATCH' && input.action === 'revise-deliverable') return res.status(200).json({ ok: true, deliverable: await reviseProjectDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
-    if (req.method === 'POST' && input.action === 'create-milestone') return res.status(201).json({ ok: true, milestone: await createProjectMilestone(member, input) });
-    if (req.method === 'POST' && input.action === 'create-deliverable') return res.status(201).json({ ok: true, deliverable: await createProjectDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input) });
-    if (req.method === 'POST' && input.action === 'review-application') return res.status(200).json({ ok: true, application: await reviewProjectApplication(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
+    if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
+    if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
+    if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
+    if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });
+    if (req.method === 'POST' && input.action === 'cancel-project') return res.status(200).json({ ok: true, project: await cancelProject(member, input) });
     return res.status(400).json({ ok: false, error: 'Unknown portal action.' });
   } catch (error) {
-    const expected = error instanceof SyntaxError || /^(Enter|Choose|Only|Account|This|Please|Complete|A refresh)/.test(error?.message || '');
+    const expected = error instanceof SyntaxError || /^(Enter|Choose|Only|Account|This|Please|Add|Describe|A refresh)/.test(error?.message || '');
     if (expected) return res.status(400).json({ ok: false, code: 'PORTAL_INPUT_INVALID', error: error.message });
     const failure = portalFailure(error);
     console.error(JSON.stringify({ level: 'error', message: 'Portal API failed', route: '/api/portal', method: req.method, requestId: cleanText(req.headers['x-vercel-id'], 200) || null, code: failure.code, error: cleanText(error?.cause?.message || error?.message || error, 2_000), durationMs: Date.now() - startedAt }));
