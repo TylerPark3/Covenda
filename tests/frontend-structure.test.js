@@ -70,6 +70,14 @@ test('company story preserves the managed Project Packet workflow and risk bound
   assert.match(html, /Illustrative Project Packet/);
 });
 
+test('company hero problem composer remains focusable above decorative effects', () => {
+  assert.match(html, /id="companyProblemSeed"/);
+  assert.match(styles, /\.selector-orbit::after[\s\S]*pointer-events: none/);
+  assert.match(styles, /\.company-composer[\s\S]*z-index: 2/);
+  assert.match(styles, /\.company-composer textarea[\s\S]*pointer-events: auto/);
+  assert.match(script, /seed\.addEventListener\('input', update\)/);
+});
+
 test('workspace includes honest student and company pilot states', () => {
   assert.match(html, /id="workspaceShell"/);
   assert.match(html, /Build proof one project at a time/);
@@ -120,6 +128,17 @@ test('server-confirmed submissions become durable review receipts', () => {
   assert.match(script, /Backup · sync pending/);
   assert.match(script, /function refreshDeliveryHealth/);
   assert.match(script, /Primary sync pending/);
+  assert.match(html, /id="deliveryDetails"/);
+  assert.match(html, /id="deliveryProjectRef"/);
+  assert.match(html, /Supabase → Table Editor/);
+  assert.match(script, /result\.destination/);
+  assert.match(styles, /\.delivery-details/);
+  assert.match(html, /id="receiptRecoveryForm"/);
+  assert.match(html, /Receipt missing from this device/);
+  assert.match(script, /function findServerReceipt/);
+  assert.match(script, /function openReceiptRecovery/);
+  assert.match(script, /Refresh status/);
+  assert.match(styles, /\.receipt-recovery/);
   assert.match(script, /setWorkspaceTab\('submissions'\)/);
   assert.match(styles, /\.receipt-progress/);
   assert.match(styles, /\.receipt-action/);
@@ -192,7 +211,8 @@ test('design system stays true white and supports responsive and reduced-motion 
 
 test('page avoids unsupported marketplace claims and legacy branding', () => {
   assert.doesNotMatch(html, /ProofPath/i);
-  assert.doesNotMatch(html, /Sign in/i);
+  assert.match(html, /href="\/portal\.html"/);
+  assert.match(html, /Member sign in/);
   assert.doesNotMatch(html, /customer logos/i);
   assert.doesNotMatch(html, /success rate/i);
   assert.doesNotMatch(html, /Student score:/i);

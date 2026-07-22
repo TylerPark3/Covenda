@@ -44,6 +44,9 @@ button:not(:disabled) {
 }
 button:not(:disabled).is-pressing { transform: translateY(1px) scale(.975)!important; }
 a { color: inherit; text-decoration: none; }
+.member-login-link { display:inline-flex; min-height:40px; align-items:center; gap:7px; padding:8px 4px; border-bottom:1px solid rgba(180,123,32,.52); color:var(--gold-deep); font-size:11px; font-weight:650; white-space:nowrap; }
+.member-login-link svg { display:none; }
+.member-login-link:hover { border-color:var(--gold-deep); }
 svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.55; }
 .svg-library { position: absolute; width: 0; height: 0; overflow: hidden; }
 .sr-only { position: absolute!important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
@@ -299,6 +302,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   border-radius: 999px;
   background: radial-gradient(ellipse at center, rgba(231,198,121,.19), transparent 68%);
   filter: blur(24px);
+  pointer-events: none;
 }
 .selector-fx {
   position: absolute;
@@ -509,6 +513,8 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 
 .hero-company { display: none; }
 .company-composer {
+  position: relative;
+  z-index: 2;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -518,6 +524,8 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 }
 .composer-icon { width: 30px; height: 30px; color: #6c6c67; }
 .company-composer textarea {
+  position: relative;
+  z-index: 1;
   width: 100%;
   min-height: 66px;
   max-height: 120px;
@@ -530,6 +538,9 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   font-size: 16px;
   line-height: 1.45;
   box-shadow: inset 0 1px 2px rgba(30,25,16,.04);
+  caret-color: var(--gold-deep);
+  pointer-events: auto;
+  touch-action: manipulation;
 }
 .company-composer textarea::placeholder { color: #898984; }
 .company-composer .gold-button { min-width: 168px; min-height: 66px; }
@@ -1163,6 +1174,48 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
 .receipt-status.is-pending { border-color: rgba(182,106,22,.3); background: rgba(182,106,22,.06); color: #9a5912; }
 .submission-heading > span.is-ready { color: var(--success); }
 .submission-heading > span.is-pending { color: #9a5912; }
+.delivery-details {
+  margin-top: 24px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(251,247,237,.72));
+  box-shadow: 0 14px 36px rgba(45,38,24,.045);
+  transition: border-color .24s ease, box-shadow .24s ease, transform .24s ease;
+}
+.delivery-details[data-status="ready"] { border-color: rgba(36,117,58,.32); box-shadow: 0 14px 36px rgba(36,117,58,.055); }
+.delivery-details[data-status="unavailable"], .delivery-details[data-status="not-configured"] { border-color: rgba(182,106,22,.32); }
+.delivery-details > header { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 20px 22px; border-bottom: 1px solid var(--line); }
+.delivery-details-icon { display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgba(180,123,32,.28); border-radius: 13px; background: rgba(255,255,255,.76); color: var(--gold-deep); }
+.delivery-details[data-status="ready"] .delivery-details-icon { border-color: rgba(36,117,58,.25); color: var(--success); }
+.delivery-details-icon svg { width: 20px; height: 20px; }
+.delivery-details small { color: var(--gold-deep); font-size: 9px; font-weight: 720; letter-spacing: .075em; text-transform: uppercase; }
+.delivery-details h2 { margin: 3px 0 0; font-size: 17px; letter-spacing: -.025em; }
+.delivery-details dl { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0; padding: 0 22px; }
+.delivery-details dl div { min-width: 0; padding: 16px 18px 16px 0; }
+.delivery-details dl div:not(:last-child) { border-right: 1px solid var(--line); }
+.delivery-details dl div:not(:first-child) { padding-left: 18px; }
+.delivery-details dt { color: var(--soft); font-size: 9px; font-weight: 680; }
+.delivery-details dd { margin: 5px 0 0; font-size: 11px; font-weight: 650; overflow-wrap: anywhere; }
+.delivery-details code { font: inherit; color: var(--ink); }
+.delivery-details > p { margin: 0; padding: 0 22px 18px; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.receipt-recovery { margin-top: 14px; border: 1px solid var(--line); border-radius: 18px; background: rgba(255,255,255,.7); }
+.receipt-recovery > summary { display: flex; align-items: center; justify-content: space-between; gap: 22px; min-height: 76px; padding: 15px 18px; list-style: none; cursor: pointer; }
+.receipt-recovery > summary::-webkit-details-marker { display: none; }
+.receipt-recovery > summary > span { display: flex; align-items: center; gap: 12px; }
+.receipt-recovery > summary > span:first-child > svg { flex: 0 0 auto; width: 22px; height: 22px; color: var(--gold-deep); }
+.receipt-recovery > summary strong, .receipt-recovery > summary small { display: block; }
+.receipt-recovery > summary strong { font-size: 12px; }
+.receipt-recovery > summary small { margin-top: 3px; color: var(--soft); font-size: 10px; font-weight: 500; line-height: 1.4; }
+.receipt-recovery > summary > span:last-child { flex: 0 0 auto; color: var(--gold-deep); font-size: 10px; font-weight: 700; }
+.receipt-recovery > summary > span:last-child svg { width: 15px; height: 15px; transition: transform .2s ease; }
+.receipt-recovery[open] > summary > span:last-child svg { transform: rotate(90deg); }
+.receipt-recovery form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 14px; align-items: end; padding: 18px; border-top: 1px solid var(--line); }
+.receipt-recovery form label { display: grid; gap: 7px; color: #31312e; font-size: 10px; font-weight: 650; }
+.receipt-recovery form .gold-button { min-height: 47px; }
+.receipt-recovery-message { grid-column: 1 / -1; min-height: 16px; margin: 0; color: var(--soft); font-size: 9px; line-height: 1.5; }
+.receipt-recovery-message.is-error { color: #9b2e22; }
+.receipt-recovery-message.is-success { color: var(--success); }
 .receipt-summary { margin: 0; padding: 0 26px 22px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .receipt-lineage { display: flex; align-items: center; gap: 8px; margin: -8px 26px 20px; color: var(--gold-deep); font-size: 10px; font-weight: 650; }
 .receipt-lineage svg { width: 15px; height: 15px; }
@@ -1397,6 +1450,9 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12px; font-weight: 650;
   .brand-mark { width: 31px; height: 31px; }
   .workspace-link span, .back-link { display: none; }
   .workspace-link { width: 42px; min-height: 42px; padding: 9px; justify-content: center; }
+  .member-login-link { width:42px; min-height:42px; justify-content:center; padding:9px; border:1px solid var(--line); border-radius:50%; }
+  .member-login-link span { position:absolute; width:1px; height:1px; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+  .member-login-link svg { display:block; width:18px; height:18px; }
   .audience-switch button { min-width: auto; padding: 8px 11px; }
   .audience-switch button svg { display: none; }
   .hero { min-height: auto; padding-top: 68px; padding-bottom: 128px; }
@@ -1506,6 +1562,15 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12px; font-weight: 650;
   .form-progress { padding: 0 20px; }
   .submission-heading { flex-direction: column; gap: 4px; }
   .submission-heading > span { margin-top: 0; }
+  .delivery-details > header { grid-template-columns: auto 1fr; }
+  .delivery-details > header .outline-button { grid-column: 2; justify-self: start; }
+  .delivery-details dl { grid-template-columns: 1fr; }
+  .delivery-details dl div:not(:last-child) { border-right: 0; border-bottom: 1px solid var(--line); }
+  .delivery-details dl div:not(:first-child) { padding-left: 0; }
+  .receipt-recovery > summary { align-items: flex-start; }
+  .receipt-recovery > summary > span:last-child { font-size: 0; }
+  .receipt-recovery form { grid-template-columns: 1fr; }
+  .receipt-recovery-message { grid-column: 1; }
   .submission-empty { padding: 24px; }
   .receipt-card > header, .receipt-card > footer { align-items: flex-start; flex-direction: column; }
   .receipt-packet { margin-left: 18px; margin-right: 18px; }
