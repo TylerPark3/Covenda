@@ -1847,9 +1847,98 @@ $$('[data-audience-option]').forEach(button => button.addEventListener('click', 
   window.scrollTo({ top: 0, behavior: reduceMotion ? 'instant' : 'smooth' });
 }));
 $$('[data-workspace-tab]').forEach(button => button.addEventListener('click', () => setWorkspaceTab(button.dataset.workspaceTab)));
+// ---- Work-type explore: per-niche detail panels (explore before the form) ----
+const workNiches = {
+  'Research': {
+    icon: 'icon-search',
+    desc: 'Source review, market maps, competitor scans, and customer synthesis — turn scattered signals into a clear read.',
+    roles: ['Competitor landscape scan', 'Customer-interview synthesis brief'],
+    flow: ['Get the question + approved sources', 'Scan, tag, and synthesize the findings', 'Deliver an evidence-backed brief'],
+  },
+  'Data & spreadsheets': {
+    icon: 'icon-data',
+    desc: 'Cleanup, validation, analysis, and clear models — make messy data trustworthy and easy to use.',
+    roles: ['Dataset cleanup + validation', 'Financial model build'],
+    flow: ['Receive the raw, messy dataset', 'Clean, validate, and model it', 'Hand back a trustworthy sheet'],
+  },
+  'Operations': {
+    icon: 'icon-operations',
+    desc: 'Workflow mapping, documentation, and CRM hygiene — make a recurring process run without you.',
+    roles: ['Onboarding workflow map', 'CRM cleanup pass'],
+    flow: ['Map the current process end to end', 'Document and tidy the system', 'Deliver a repeatable playbook'],
+  },
+  'QA & testing': {
+    icon: 'icon-shield',
+    desc: 'Manual testing, test cases, and issue reproduction — catch what breaks before customers do.',
+    roles: ['Manual test pass + report', 'Bug reproduction set'],
+    flow: ['Get the build + test scope', 'Run cases and log every issue', 'Deliver a reproducible report'],
+  },
+  'Writing & documentation': {
+    icon: 'icon-write',
+    desc: 'Knowledge bases, playbooks, and structured briefs — turn know-how into something the team can reuse.',
+    roles: ['Knowledge-base article set', 'Process playbook'],
+    flow: ['Gather the source material', 'Structure and draft it', 'Deliver a reusable document'],
+  },
+};
+let flowStep = 0;
+
+function renderFlowStep() {
+  const data = workNiches[state.workType];
+  if (!data) return;
+  const count = data.flow.length;
+  flowStep = ((flowStep % count) + count) % count;
+  const frame = $('#workFlowFrame');
+  const tag = document.createElement('span');
+  tag.className = 'work-flow-frame-tag';
+  tag.textContent = 'Workflow · step ' + (flowStep + 1) + ' of ' + count;
+  const line = document.createElement('p');
+  line.textContent = data.flow[flowStep];
+  frame.replaceChildren(tag, line);
+  $('#workDetailStep').textContent = 'Step ' + (flowStep + 1) + ' of ' + count;
+  const dots = $('#workFlowDots');
+  dots.replaceChildren();
+  for (let i = 0; i < count; i++) {
+    const dot = document.createElement('i');
+    if (i === flowStep) dot.className = 'is-active';
+    dots.append(dot);
+  }
+}
+
+function openWorkDetail(niche) {
+  const data = workNiches[niche];
+  if (!data) return;
+  selectWorkType(niche);
+  const tag = $('#workDetailTag');
+  const strong = document.createElement('b');
+  strong.textContent = niche;
+  tag.replaceChildren(createIcon(data.icon), strong);
+  $('#workDetailDesc').textContent = data.desc;
+  const roles = $('#workDetailRoles');
+  roles.replaceChildren();
+  data.roles.forEach(role => {
+    const li = document.createElement('li');
+    li.textContent = role;
+    roles.append(li);
+  });
+  flowStep = 0;
+  renderFlowStep();
+  $('#workDetail').hidden = false;
+  $('.selector-orbit')?.classList.add('is-exploring');
+}
+
+function closeWorkDetail() {
+  $('#workDetail').hidden = true;
+  $('.selector-orbit')?.classList.remove('is-exploring');
+}
+
 $$('[data-work-type]').forEach(button => button.addEventListener('click', () => {
-  selectWorkType(button.dataset.workType);
-  if (button.classList.contains('work-option')) saveDraft(studentForm);
+  const niche = button.dataset.workType;
+  if (button.classList.contains('work-option')) {
+    openWorkDetail(niche);
+    saveDraft(studentForm);
+  } else {
+    selectWorkType(niche);
+  }
   if (button.closest('.work-types')) openDialog(studentDialog, studentForm);
 }));
 $$('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
@@ -1912,6 +2001,9 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     window.setTimeout(() => $('.work-option.is-selected')?.focus(), 420);
   }
   if (action === 'explore-work') $('#workTypes').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (action === 'explore-back') closeWorkDetail();
+  if (action === 'flow-prev') { flowStep -= 1; renderFlowStep(); }
+  if (action === 'flow-next') { flowStep += 1; renderFlowStep(); }
   if (action === 'project-fit') $('#projectFit').scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (action === 'replay-intro') {
     setSurface('site');

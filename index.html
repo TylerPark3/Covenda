@@ -101,6 +101,27 @@
             <button class="work-option" type="button" data-work-type="QA & testing" aria-pressed="false"><svg><use href="#icon-shield"/></svg><span>QA &amp; testing</span></button>
             <button class="work-option" type="button" data-work-type="Writing & documentation" aria-pressed="false"><svg><use href="#icon-write"/></svg><span>Writing &amp;<br>documentation</span></button>
           </div>
+          <div class="work-detail glass-panel" id="workDetail" hidden aria-live="polite">
+            <div class="work-detail-top">
+              <span class="work-detail-tag" id="workDetailTag"><svg><use href="#icon-search"/></svg><b>Research</b></span>
+              <button class="work-detail-back" type="button" data-action="explore-back"><svg class="flip"><use href="#icon-chevron"/></svg>See all paths</button>
+            </div>
+            <p class="work-detail-desc" id="workDetailDesc"></p>
+            <div class="work-detail-roles">
+              <span class="work-detail-label">Sample roles</span>
+              <ul id="workDetailRoles"></ul>
+            </div>
+            <div class="work-detail-flow">
+              <div class="work-detail-flow-head"><span class="work-detail-label">Workflow preview</span><span class="work-detail-step" id="workDetailStep">Step 1 of 3</span></div>
+              <div class="work-flow-frame" id="workFlowFrame"></div>
+              <div class="work-flow-nav">
+                <button type="button" class="work-flow-prev" data-action="flow-prev" aria-label="Previous step"><svg class="flip"><use href="#icon-chevron"/></svg></button>
+                <div class="work-flow-dots" id="workFlowDots"></div>
+                <button type="button" class="work-flow-next" data-action="flow-next" aria-label="Next step"><svg><use href="#icon-chevron"/></svg></button>
+              </div>
+            </div>
+            <button class="gold-button work-detail-cta" type="button" data-action="student-quick">This fits me → join<svg><use href="#icon-arrow-right"/></svg></button>
+          </div>
           <button class="gold-button selector-submit" type="button" data-action="student-quick">Join the pilot list<svg><use href="#icon-arrow-right"/></svg></button>
           <button class="quiet-link selector-secondary" type="button" data-action="student-form">Or complete your full profile now<svg><use href="#icon-chevron"/></svg></button>
           <nav class="student-journey" aria-label="Student journey">
