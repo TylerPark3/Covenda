@@ -2419,6 +2419,9 @@ body[data-audience="university"] .stat-band { display: none; }
    Sizes off the container (cqw) so the figure and its cards scale together. Uses the
    site tokens rather than its own font/colour stack so it sits inside the band. */
 .covenda-tree { container-type: inline-size; width: 100%; margin: clamp(34px, 4vw, 54px) 0 0; color: var(--ink); }
+/* The tree explains the model to a visitor deciding what Covenda is — a student who has
+   already picked their path does not need it, so it stays on home only. */
+body[data-audience="student"] .covenda-tree { display: none; }
 .covenda-tree * { box-sizing: border-box; }
 .ct-inner { padding: clamp(18px, 3cqw, 40px) clamp(12px, 2cqw, 28px) clamp(14px, 2.5cqw, 30px); }
 .ct-head { text-align: center; margin-bottom: .6cqw; }
