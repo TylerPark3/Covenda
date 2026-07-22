@@ -1106,6 +1106,10 @@ function renderReceipt(item) {
   if (item.type === 'employer_intake' && item.packetSnapshot) {
     receiptActions.unshift(['packet', 'View packet', 'icon-file'], ['revise', 'Revise packet', 'icon-arrow-right']);
   }
+  // F5: a student receipt is proof — offer a shareable credential card.
+  if (item.type === 'student_interest') {
+    receiptActions.unshift(['credential', 'Share credential', 'icon-shield']);
+  }
   for (const [action, label, icon] of receiptActions) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -1258,6 +1262,7 @@ function renderLocalSubmissionState() {
   renderSubmissionHistory();
   renderWorkspaceDrafts();
   renderUniversityWorkspace();
+  renderProofRecord();
 }
 
 function studentPayload(form) {
@@ -1295,6 +1300,7 @@ function studentPayload(form) {
     },
     videoTranscript: formValue(form, 'studentVideoTranscript'),
     batch: formValue(form, 'studentBatch'),
+    referral: activeReferralPayload(),
     stage: 'profile_completed',
     linkedQuickRef: (readStorage(QUICK_KEY, null) || {}).reference || '',
     availability: formValue(form, 'studentAvailability'),
@@ -1682,6 +1688,7 @@ function renderRoster() {
   if (count) count.textContent = total + (total === 1 ? ' student' : ' students');
   if (empty) empty.hidden = total > 0;
   if (clear) clear.hidden = total === 0;
+  renderCohortDashboard();
 }
 
 function universityPayload() {
@@ -1766,7 +1773,9 @@ function endorsementPayload() {
     consent: $('#uniConsent')?.checked === true,
     contact: { name: partner.contactName, email: partner.contactEmail, company: partner.orgName },
     referrerType: partner.orgType,
-    attributionCode: '',
+    // Same stable code the partner's shareable referral link carries, so a student who
+    // arrives via that link (F3) can be matched back to this endorsement.
+    attributionCode: makeReferralCode(partner.orgName, partner.contactEmail),
     endorsements: universityRoster.map(entry => ({ name: entry.name, email: entry.email, function: entry.interest, note })),
   };
 }
@@ -1860,6 +1869,8 @@ function renderUniversityWorkspace() {
       ['Last sent', lastSubmission ? lastSubmission.reference : 'Nothing sent yet.'],
     ]);
   }
+  renderCohortDashboard();
+  renderReferralLink();
 }
 
 function restoreRosterDraft() {
@@ -1908,8 +1919,11 @@ if (rosterAddForm) {
 }
 
 for (const field of ['#uniContactName', '#uniContactEmail', '#uniOrgName', '#uniOrgType']) {
-  $(field)?.addEventListener('change', saveRosterDraft);
+  $(field)?.addEventListener('change', () => { saveRosterDraft(); renderReferralLink(); });
 }
+// Org name shapes the referral link as it is typed; note toggles the cohort entry rung.
+$('#uniOrgName')?.addEventListener('input', renderReferralLink);
+$('#endorsementNote')?.addEventListener('input', renderCohortDashboard);
 
 $('#rosterList')?.addEventListener('click', event => {
   const button = event.target.closest('[data-roster-remove]');
@@ -2091,6 +2105,20 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   if (action === 'replay-intro') {
     setSurface('site');
     openIntro({ force: true });
+  }
+  // F3 partner referral
+  if (action === 'referral-start') { setAudience('student'); selectWorkType(state.workType); openDialog(studentDialog, studentForm); }
+  if (action === 'referral-dismiss') dismissReferralBanner();
+  if (action === 'referral-copy') copyReferralLink();
+  // F5 credential card
+  if (action === 'credential-image' && credentialItem) downloadCredentialImage(credentialItem);
+  if (action === 'credential-copy' && credentialItem) copyCredentialText(credentialItem);
+  if (action === 'credential-json' && credentialItem) downloadReceipt(credentialItem);
+  // F4 student proof record → open the credential card for the latest receipt
+  if (action === 'proof-credential') {
+    const item = studentLatestReceipt();
+    if (item) openCredentialCard(item);
+    else showToast('Build your interest profile first to create a shareable credential.');
   }
 }));
 
@@ -2503,6 +2531,7 @@ $('#submissionHistory').addEventListener('click', event => {
   if (action === 'verify') openReceiptRecovery(item);
   if (action === 'packet') toggleReceiptPacket(button, item);
   if (action === 'revise') startPacketRevision(item);
+  if (action === 'credential') openCredentialCard(item);
 });
 
 const receiptRecoveryForm = $('#receiptRecoveryForm');
@@ -2745,10 +2774,391 @@ function initButtonFeedback() {
   }
 }
 
+// ============================================================================
+// F3 — Partner referral attribution (?ref= landing + partner's shareable link)
+// ============================================================================
+const referralStorageKey = 'covendaReferral';
+
+// Deterministic 6-char code from a partner's org + email, so one partner keeps one
+// stable link. Shape matches the REF- reference format used across the API/migration.
+function makeReferralCode(org, email) {
+  const seed = (String(org || '') + '|' + String(email || '')).trim().toUpperCase();
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  const body = (hash.toString(36).toUpperCase() + 'COVENDA').replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  return 'REF-' + body;
+}
+
+function referralBaseUrl() {
+  const origin = location.origin && location.origin !== 'null' ? location.origin : 'https://covenda.app';
+  return origin + location.pathname.replace(/index\.html?$/, '');
+}
+
+function partnerReferralLink() {
+  const partner = partnerFieldValues();
+  const org = (partner.orgName || '').trim();
+  if (!org) return '';
+  return referralBaseUrl() + '?ref=' + makeReferralCode(org, partner.contactEmail) + '&via=' + encodeURIComponent(org);
+}
+
+// Untrusted URL input — sanitized before display/storage; `via` is rendered with
+// textContent only (never innerHTML), and is a partner's own public label, not PII.
+function readReferralFromUrl() {
+  let params;
+  try { params = new URLSearchParams(location.search); } catch { return null; }
+  const raw = (params.get('ref') || '').trim();
+  if (!raw) return null;
+  const code = raw.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 40);
+  if (!code) return null;
+  const via = (params.get('via') || '').replace(/[<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  return { code, via, at: new Date().toISOString() };
+}
+
+function activeReferral() {
+  const stored = readStorage(referralStorageKey, null);
+  return stored && stored.code ? stored : null;
+}
+
+function activeReferralPayload() {
+  const ref = activeReferral();
+  return { code: ref ? ref.code : '', via: ref ? ref.via : '' };
+}
+
+function renderReferralBanner() {
+  const banner = $('#referralBanner');
+  if (!banner) return;
+  const ref = activeReferral();
+  if (!ref || ref.dismissed) { banner.hidden = true; return; }
+  const text = $('#referralBannerText');
+  if (text) text.textContent = 'Referred by ' + (ref.via || 'a Covenda partner')
+    + '. Your partner endorsement is noted — build your proof profile to carry it into the pilot.';
+  banner.hidden = false;
+}
+
+// Dismiss only hides the banner — the attribution is kept so the student's submission,
+// credential (F5), and proof record (F4) still reflect the partner endorsement.
+function dismissReferralBanner() {
+  const stored = readStorage(referralStorageKey, null);
+  if (stored) { stored.dismissed = true; writeStorage(referralStorageKey, stored); }
+  const banner = $('#referralBanner');
+  if (banner) banner.hidden = true;
+}
+
+function renderReferralLink() {
+  const section = $('#referralLinkSection');
+  const input = $('#referralLinkInput');
+  if (!section || !input) return;
+  const link = partnerReferralLink();
+  if (!link) { section.hidden = true; return; }
+  input.value = link;
+  section.hidden = false;
+}
+
+async function copyReferralLink() {
+  const link = partnerReferralLink();
+  if (!link) { showToast('Add your organization name first to generate a link.'); return; }
+  try {
+    await navigator.clipboard.writeText(link);
+    showToast('Referral link copied.');
+  } catch {
+    const input = $('#referralLinkInput');
+    if (input) { input.focus(); input.select(); }
+    showToast('Copy is unavailable. Select the link to copy it.');
+  }
+}
+
+// ============================================================================
+// F5 — Shareable milestone credential card (drawn to canvas for image export)
+// ============================================================================
+let credentialItem = null;
+
+function credentialHolderName(item) {
+  const name = String(item.title || '').split('·')[0].trim();
+  return name || 'Covenda member';
+}
+
+// Honest mapping: standing is derived from the receipt's real status; verified rungs
+// only appear once the server marks the work reviewed/approved.
+function credentialMilestone(item) {
+  const status = item.status || 'received';
+  if (status === 'approved') return { label: 'Employer-Verified', index: 2 };
+  if (status === 'packet_proposed' || status === 'approval_pending') return { label: 'Role-Qualified', index: 1 };
+  if (activeReferral()) return { label: 'Endorsed', index: 0 };
+  return { label: 'Building proof', index: 0 };
+}
+
+function drawFittedText(ctx, textValue, x, y, maxWidth, weight, family, sizePx, color) {
+  let size = sizePx;
+  ctx.fillStyle = color;
+  while (size > 24) {
+    ctx.font = weight + ' ' + size + 'px ' + family;
+    if (ctx.measureText(textValue).width <= maxWidth) break;
+    size -= 4;
+  }
+  ctx.fillText(textValue, x, y);
+}
+
+function drawCredentialCard(item) {
+  const canvas = $('#credentialCanvas');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const serif = 'Georgia, "Times New Roman", serif';
+  const sans = 'Arial, "Helvetica Neue", sans-serif';
+  const mono = '"Courier New", monospace';
+  const milestone = credentialMilestone(item);
+
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#17130d');
+  bg.addColorStop(1, '#2c2114');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(201,164,90,0.5)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(30, 30, W - 60, H - 60);
+
+  ctx.fillStyle = '#e9c877';
+  ctx.font = '600 44px ' + serif;
+  ctx.fillText('Covenda', 72, 108);
+  ctx.fillStyle = 'rgba(233,200,119,0.72)';
+  ctx.font = '700 22px ' + sans;
+  ctx.fillText('P R O O F   C R E D E N T I A L', 74, 150);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '400 26px ' + sans;
+  ctx.fillText('This record certifies that', 72, 262);
+  drawFittedText(ctx, credentialHolderName(item), 72, 348, W - 150, '700', serif, 82, '#ffffff');
+
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.font = '400 26px ' + sans;
+  ctx.fillText('is building verifiable proof of real work. Current standing:', 72, 424);
+  ctx.fillStyle = '#e9c877';
+  ctx.font = '700 52px ' + serif;
+  ctx.fillText(milestone.label, 72, 486);
+
+  // Credibility rungs, current one lit.
+  const rungs = ['Endorsed / Building', 'Role-Qualified', 'Employer-Verified', 'Proven'];
+  const pipY = 556, pipX0 = 74, gap = (W - 148) / rungs.length;
+  rungs.forEach((label, i) => {
+    const cx = pipX0 + gap * i + 18;
+    const lit = i <= milestone.index;
+    ctx.beginPath();
+    ctx.arc(cx, pipY, 9, 0, Math.PI * 2);
+    ctx.fillStyle = lit ? '#e9c877' : 'rgba(255,255,255,0.22)';
+    ctx.fill();
+    if (i < rungs.length - 1) {
+      ctx.strokeStyle = i < milestone.index ? '#e9c877' : 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx + 12, pipY);
+      ctx.lineTo(cx + gap - 12, pipY);
+      ctx.stroke();
+    }
+    ctx.fillStyle = lit ? 'rgba(233,200,119,0.9)' : 'rgba(255,255,255,0.4)';
+    ctx.font = '600 17px ' + sans;
+    ctx.fillText(label, cx - 12, pipY + 34);
+  });
+
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font = '400 24px ' + mono;
+  ctx.fillText(item.reference || '', 72, H - 76);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.font = '400 22px ' + sans;
+  ctx.fillText(receiptDate(item.createdAt) + '   ·   covenda.app', 72, H - 44);
+}
+
+function openCredentialCard(item) {
+  credentialItem = item;
+  const dialog = $('#credentialDialog');
+  if (!dialog) return;
+  const message = $('#credentialMessage');
+  if (message) message.textContent = '';
+  drawCredentialCard(item);
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
+
+function downloadCredentialImage(item) {
+  const canvas = $('#credentialCanvas');
+  if (!canvas || !canvas.toBlob) { showToast('Image export is unavailable on this device.'); return; }
+  canvas.toBlob(blob => {
+    if (!blob) { showToast('Could not render the image.'); return; }
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'covenda-credential-' + String(item.reference || 'card').toLowerCase() + '.png';
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    showToast('Credential image downloaded.');
+  }, 'image/png');
+}
+
+async function copyCredentialText(item) {
+  const milestone = credentialMilestone(item);
+  const shareText = 'I’m building verifiable proof of my work with Covenda — current standing: '
+    + milestone.label + '. Reference ' + item.reference + ' · covenda.app';
+  try {
+    await navigator.clipboard.writeText(shareText);
+    showToast('Share text copied.');
+  } catch {
+    const message = $('#credentialMessage');
+    if (message) message.textContent = shareText;
+    showToast('Copy is unavailable — the text is shown above.');
+  }
+}
+
+// ============================================================================
+// F4 — Student proof record ("where you stand"): the student's own position on
+// the credibility ladder, endorsement status (from an F3 referral), and a
+// shortcut to their shareable credential (F5). Same ladder the educators see.
+// ============================================================================
+function studentLatestReceipt() {
+  return savedSubmissions().find(item => item.type === 'student_interest');
+}
+
+function studentStanding() {
+  const receipt = studentLatestReceipt();
+  if (receipt) {
+    const milestone = credentialMilestone(receipt); // honest: derived from receipt status
+    return { label: milestone.label, index: milestone.index, started: true, receipt };
+  }
+  // Referred but not yet submitted — a partner head-start still puts them at Endorsed.
+  if (activeReferral()) return { label: 'Endorsed', index: 0, started: false, receipt: null };
+  return { label: 'Not started', index: -1, started: false, receipt: null };
+}
+
+function renderProofRecord() {
+  const panel = $('#proofRecord');
+  if (!panel) return;
+  const ladder = $('#proofRecordLadder');
+  const standingEl = $('#proofRecordStanding');
+  const endorsementEl = $('#proofRecordEndorsement');
+  const shareBtn = $('#proofRecordShare');
+  const standing = studentStanding();
+  const ref = activeReferral();
+
+  if (standingEl) {
+    standingEl.textContent = standing.label;
+    standingEl.dataset.started = String(standing.started || standing.index >= 0);
+  }
+  if (endorsementEl) {
+    if (ref) {
+      endorsementEl.hidden = false;
+      endorsementEl.replaceChildren(
+        createIcon('icon-shield'),
+        document.createTextNode('Endorsed by ' + (ref.via || 'a Covenda partner') + ' — a partner referral head-start.'),
+      );
+    } else {
+      endorsementEl.hidden = true;
+    }
+  }
+  if (ladder) {
+    const rungs = ['Endorsed / Building proof', 'Role-Qualified', 'Employer-Verified', 'Proven'];
+    ladder.replaceChildren();
+    rungs.forEach((label, index) => {
+      const reached = standing.index >= 0 && standing.index >= index;
+      const current = standing.index === index;
+      const cell = document.createElement('div');
+      cell.className = 'proof-rung' + (reached ? ' is-reached' : '') + (current ? ' is-current' : '');
+      const dot = document.createElement('span');
+      dot.className = 'proof-rung-dot';
+      dot.append(reached ? createIcon('icon-check') : document.createTextNode(String(index + 1)));
+      const text = document.createElement('span');
+      text.className = 'proof-rung-label';
+      text.textContent = label;
+      cell.append(dot, text);
+      ladder.append(cell);
+    });
+  }
+  if (shareBtn) shareBtn.hidden = !standing.receipt;
+}
+
+// ============================================================================
+// F6 — Feeder cohort dashboard (educators workspace), driven by the live roster
+// ============================================================================
+function renderCohortDashboard() {
+  const body = $('#cohortBody');
+  const ladder = $('#cohortLadder');
+  const bars = $('#cohortBars');
+  if (!body || !ladder || !bars) return;
+  const total = $('#cohortTotal');
+  const empty = $('#cohortEmpty');
+  const roster = universityRoster;
+  const count = roster.length;
+  if (total) total.textContent = count + (count === 1 ? ' student' : ' students');
+  if (count === 0) {
+    if (empty) empty.hidden = false;
+    body.hidden = true;
+    return;
+  }
+  if (empty) empty.hidden = true;
+  body.hidden = false;
+
+  // Entry rung: an attached vouch note enters the cohort as "Endorsed"; otherwise the
+  // open path, "Building proof". Verified rungs stay at zero — earned, never assigned.
+  const endorsed = ($('#endorsementNote')?.value || '').trim().length > 0;
+  const rungs = [
+    { label: endorsed ? 'Endorsed' : 'Building proof', value: count, active: true },
+    { label: 'Role-Qualified', value: 0, active: false },
+    { label: 'Employer-Verified', value: 0, active: false },
+    { label: 'Proven', value: 0, active: false },
+  ];
+  ladder.replaceChildren();
+  rungs.forEach(rung => {
+    const cell = document.createElement('div');
+    cell.className = 'cohort-rung' + (rung.active ? ' is-active' : '');
+    const value = document.createElement('span');
+    value.className = 'cohort-rung-count';
+    value.textContent = String(rung.value);
+    const label = document.createElement('span');
+    label.className = 'cohort-rung-label';
+    label.textContent = rung.label;
+    cell.append(value, label);
+    ladder.append(cell);
+  });
+
+  const byInterest = {};
+  roster.forEach(entry => { byInterest[entry.interest] = (byInterest[entry.interest] || 0) + 1; });
+  bars.replaceChildren();
+  universityInterests.filter(interest => byInterest[interest]).forEach(interest => {
+    const value = byInterest[interest];
+    const pct = Math.round((value / count) * 100);
+    const row = document.createElement('li');
+    row.className = 'cohort-bar';
+    const head = document.createElement('div');
+    head.className = 'cohort-bar-head';
+    const name = document.createElement('span');
+    name.textContent = interest;
+    const num = document.createElement('span');
+    num.className = 'cohort-bar-value';
+    num.textContent = value + ' · ' + pct + '%';
+    head.append(name, num);
+    const track = document.createElement('div');
+    track.className = 'cohort-bar-track';
+    const fill = document.createElement('i');
+    fill.style.width = Math.max(pct, 5) + '%';
+    track.append(fill);
+    row.append(head, track);
+    bars.append(row);
+  });
+}
+
+// F3: a partner referral link (?ref=) lands the visitor as a prospective student.
+const incomingReferral = readReferralFromUrl();
+if (incomingReferral) {
+  writeStorage(referralStorageKey, incomingReferral);
+  state.audience = 'student';
+}
+
 restoreRosterDraft();
 renderLocalSubmissionState();
 selectWorkType(state.workType);
 setAudience(state.audience);
+renderReferralBanner();
+renderReferralLink();
 selectorFxController = initSelectorFx();
 selectorFxController?.pulse($('.work-option.is-selected'));
 initButtonFeedback();

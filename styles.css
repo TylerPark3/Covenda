@@ -2178,7 +2178,11 @@ body[data-audience="student"] .feature-band { display: none; }
 }
 
 /* ---- Two-tier credibility ladder (student surface) ---- */
+/* This is a direct child of .why-section, whose `> div` rule lays children out as a
+   2-col copy|visual grid. The ladder has 4 stacked parts and its own full-width
+   composition, so opt it out of that grid (specificity beats `.why-section > div`). */
 .credibility-ladder { margin-top: clamp(72px, 9vw, 128px); }
+.why-section > .credibility-ladder { display: block; }
 .cred-doors { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
 .cred-door { padding: clamp(20px, 2.4vw, 28px); border-radius: var(--radius-sm); }
 .cred-tag {
@@ -2231,4 +2235,98 @@ body[data-audience="student"] .feature-band { display: none; }
   .cred-rungs { grid-template-columns: 1fr; }
   .cred-rungs li { flex-direction: row; align-items: center; padding-right: 0; }
   .cred-rungs li:not(:last-child)::after { display: none; }
+}
+
+/* ---- F3: partner referral banner (student hero) + partner's shareable link ---- */
+.referral-banner {
+  display: flex; align-items: center; gap: 16px;
+  width: min(100%, 760px); margin: 0 auto 26px;
+  padding: 15px 18px; border-radius: var(--radius-sm);
+  background: var(--gold-pale); border: 1px solid var(--gold-light); text-align: left;
+}
+.referral-banner-mark { flex: none; width: 26px; height: 26px; color: var(--gold-deep); }
+.referral-banner p { margin: 0; flex: 1; color: #4a4436; font-size: 14px; line-height: 1.5; }
+.referral-banner-actions { display: flex; align-items: center; gap: 8px; flex: none; }
+.referral-banner-dismiss {
+  display: grid; place-items: center; width: 34px; height: 34px;
+  border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--muted);
+}
+.referral-banner-dismiss:hover { color: var(--gold-deep); border-color: var(--gold-light); }
+.referral-banner-dismiss svg { width: 15px; height: 15px; }
+
+.referral-link-section { border-top: 1px solid var(--line); padding-top: 16px; }
+.referral-link-icon { width: 15px; height: 15px; margin-right: 6px; vertical-align: -2px; color: var(--gold-deep); }
+.referral-link-help { margin: 6px 0 12px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.referral-link-row { display: flex; gap: 10px; }
+.referral-link-input {
+  flex: 1; min-width: 0; padding: 11px 14px; font-size: 13px;
+  border: 1px solid var(--line-strong); border-radius: 12px;
+  background: var(--gold-pale); color: var(--ink); font-family: "Courier New", monospace;
+}
+
+/* ---- F5: shareable credential card ---- */
+.credential-dialog { max-width: 720px; }
+.credential-preview {
+  border-radius: var(--radius-sm); overflow: hidden; margin-top: 18px;
+  border: 1px solid var(--line); background: #17130d; line-height: 0;
+}
+.credential-preview canvas { display: block; width: 100%; height: auto; }
+.credential-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.credential-actions .gold-button, .credential-actions .outline-button { flex: 1 1 auto; justify-content: center; }
+
+/* ---- F6: feeder cohort dashboard (educators workspace) ---- */
+.cohort-dashboard { margin-top: 22px; padding: clamp(20px, 2.4vw, 28px); }
+.cohort-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.cohort-head small { display: block; color: var(--gold-deep); font-size: 12px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.cohort-head h2 { margin: 4px 0 0; font-size: clamp(20px, 2vw, 26px); letter-spacing: -.02em; }
+.cohort-total { flex: none; padding: 6px 13px; border-radius: 999px; background: var(--gold-pale); border: 1px solid var(--gold-light); color: var(--gold-deep); font-size: 13px; font-weight: 650; }
+.cohort-empty { margin: 0; color: var(--muted); font-size: 14px; }
+.cohort-ladder { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 22px; }
+.cohort-rung { display: flex; flex-direction: column; gap: 4px; padding: 14px 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+.cohort-rung.is-active { border-color: var(--gold-light); background: var(--gold-pale); }
+.cohort-rung-count { font-size: 26px; font-weight: 700; letter-spacing: -.03em; color: var(--ink); }
+.cohort-rung.is-active .cohort-rung-count { color: var(--gold-deep); }
+.cohort-rung-label { font-size: 12px; color: var(--muted); line-height: 1.3; }
+.cohort-subhead { margin: 0 0 10px; font-size: 12px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.cohort-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.cohort-bar-head { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+.cohort-bar-value { color: var(--muted); }
+.cohort-bar-track { height: 8px; border-radius: 999px; background: var(--gold-pale); overflow: hidden; }
+.cohort-bar-track i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--gold), var(--gold-light)); }
+.cohort-note { display: flex; align-items: flex-start; gap: 9px; margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.cohort-note svg { flex: none; width: 15px; height: 15px; color: var(--gold-deep); margin-top: 1px; }
+.cohort-note b { color: var(--gold-deep); }
+
+/* ---- F4: student proof record ("where you stand") ---- */
+.proof-record { margin-top: 22px; padding: clamp(20px, 2.4vw, 28px); }
+.proof-record-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.proof-record-head small { display: block; color: var(--gold-deep); font-size: 12px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.proof-record-head h2 { margin: 4px 0 0; font-size: clamp(20px, 2vw, 26px); letter-spacing: -.02em; }
+.proof-record-standing { flex: none; padding: 6px 14px; border-radius: 999px; background: var(--gold-pale); border: 1px solid var(--gold-light); color: var(--gold-deep); font-size: 13px; font-weight: 650; }
+.proof-record-standing[data-started="false"] { background: #fff; border-color: var(--line); color: var(--muted); }
+.proof-record-endorsement { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; padding: 10px 14px; border-radius: 12px; background: var(--gold-pale); border: 1px solid var(--gold-light); color: #4a4436; font-size: 13px; line-height: 1.45; }
+.proof-record-endorsement svg { flex: none; width: 16px; height: 16px; color: var(--gold-deep); }
+.proof-record-ladder { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.proof-rung { display: flex; flex-direction: column; gap: 8px; padding: 14px 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+.proof-rung.is-reached { border-color: var(--gold-light); }
+.proof-rung.is-current { border-color: var(--gold-light); background: var(--gold-pale); }
+.proof-rung-dot { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-strong); color: var(--muted); font-size: 13px; font-weight: 650; }
+.proof-rung.is-reached .proof-rung-dot { border-color: var(--gold); background: #fff; color: var(--gold-deep); }
+.proof-rung.is-current .proof-rung-dot { background: var(--gold); border-color: var(--gold); color: #fff; }
+.proof-rung-dot svg { width: 15px; height: 15px; }
+.proof-rung-label { font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+.proof-rung.is-current .proof-rung-label { color: var(--ink); font-weight: 600; }
+.proof-record-foot { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.proof-record-note { display: flex; align-items: flex-start; gap: 9px; margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.proof-record-note svg { flex: none; width: 15px; height: 15px; color: var(--gold-deep); margin-top: 1px; }
+.proof-record-foot .gold-button { flex: none; }
+
+@media (max-width: 620px) {
+  .referral-banner { flex-wrap: wrap; }
+  .referral-link-row { flex-direction: column; }
+  .cohort-ladder { grid-template-columns: 1fr 1fr; }
+  .cohort-head { flex-wrap: wrap; }
+  .proof-record-ladder { grid-template-columns: 1fr 1fr; }
+  .proof-record-head { flex-wrap: wrap; }
+  .proof-record-foot { flex-direction: column; }
 }
