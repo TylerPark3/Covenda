@@ -2307,26 +2307,13 @@ if (requestEndorseForm) {
 // Reusable gold "square" motif + credibility framework Steps 5 / 6 / 3.
 // ============================================================================
 
-// The gold square from the feature band, reused as a static (canvas-free) tile.
-// The network-of-nodes art echoes the icosahedron's "students connected" meaning
-// without a second animation loop. Injected into any [data-gold-tile] element.
-function goldTileArt() {
-  const nodes = [[60, 18], [30, 40], [90, 40], [16, 74], [60, 56], [104, 74], [42, 98], [78, 98]];
-  const edges = [[0, 1], [0, 2], [1, 2], [0, 4], [1, 4], [2, 4], [1, 3], [3, 4], [4, 5], [2, 5], [3, 6], [4, 6], [4, 7], [5, 7], [6, 7]];
-  let s = '<svg class="gold-tile-art" viewBox="0 0 120 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><g>';
-  edges.forEach(([a, b]) => { s += '<line class="edge" x1="' + nodes[a][0] + '" y1="' + nodes[a][1] + '" x2="' + nodes[b][0] + '" y2="' + nodes[b][1] + '"/>'; });
-  s += '</g><g>';
-  nodes.forEach(([x, y]) => { s += '<circle class="node-halo" cx="' + x + '" cy="' + y + '" r="7"/>'; });
-  nodes.forEach(([x, y]) => { s += '<circle class="node" cx="' + x + '" cy="' + y + '" r="2.8"/>'; });
-  s += '</g><circle class="spark" cx="' + nodes[4][0] + '" cy="' + nodes[4][1] + '" r="2.4"/>';
-  s += '<circle class="spark" cx="' + nodes[2][0] + '" cy="' + nodes[2][1] + '" r="2.2" style="animation-delay:1.2s"/></svg>';
-  return s;
-}
+// The gold square from the feature band, reused as a plain gradient field with a
+// single label — no figure inside. (The interactive icosahedron stays on the feature
+// panel itself; these reused tiles are just the colour and the words.)
 function renderGoldTiles() {
   $$('[data-gold-tile]').forEach(tile => {
     if (tile.dataset.tiled) return;
     tile.dataset.tiled = '1';
-    tile.insertAdjacentHTML('beforeend', goldTileArt());
     const kicker = document.createElement('span');
     kicker.className = 'gold-tile-kicker';
     kicker.textContent = tile.dataset.kicker || 'Rethinking Internships';

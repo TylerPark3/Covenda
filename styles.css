@@ -2480,32 +2480,21 @@ body[data-audience="university"] .stat-band { display: none; }
   pointer-events: none;
 }
 .gold-tile--banner { aspect-ratio: 16 / 4.2; border-radius: 20px; }
+/* No figure inside — the tile is the gold field plus one centred label. */
 .gold-tile-kicker {
   position: absolute;
   z-index: 2;
-  top: 14px;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
-  padding: 4px 13px;
-  border-radius: 999px;
-  background: rgba(255,252,246,.7);
-  font-size: 11px;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: .16em;
+  letter-spacing: .2em;
   text-transform: uppercase;
   color: var(--gold-deep);
   white-space: nowrap;
   pointer-events: none;
 }
-.gold-tile-art { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; display: block; }
-.gold-tile-art .edge { stroke: rgba(169,130,47,.5); stroke-width: 1; fill: none; }
-.gold-tile-art .node { fill: rgba(169,130,47,.9); }
-.gold-tile-art .node-halo { fill: rgba(201,162,75,.16); }
-.gold-tile-art .spark { fill: rgba(255,248,230,.95); }
-@media (prefers-reduced-motion: no-preference) {
-  .gold-tile-art .spark { animation: tile-pulse 3.6s ease-in-out infinite; }
-}
-@keyframes tile-pulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
 
 /* Batches section: reuse the gold square as a banner accent above the grid. */
 .batches-tile { width: min(100%, 840px); margin: 0 auto clamp(30px, 4vw, 46px); }
