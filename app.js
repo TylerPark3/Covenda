@@ -2574,6 +2574,137 @@ setAudience(state.audience);
 selectorFxController = initSelectorFx();
 selectorFxController?.pulse($('.work-option.is-selected'));
 initButtonFeedback();
+// ---- Interactive gold icosahedron (decorative accent; drag to spin) ----
+function initIcosahedron() {
+  const canvas = document.getElementById('icoCanvas');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  const panel = canvas.closest('.feature-panel') || canvas;
+  const hint = document.getElementById('icoHint');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Icosahedron: 12 golden-ratio vertices, 30 minimum-distance edges.
+  const t = (1 + Math.sqrt(5)) / 2;
+  const norm = Math.hypot(1, t);
+  const verts = [
+    [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
+    [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
+    [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1],
+  ].map(([x, y, z]) => ({ x: x / norm, y: y / norm, z: z / norm }));
+  const edges = [];
+  let minD2 = Infinity;
+  for (let i = 0; i < verts.length; i++) for (let j = i + 1; j < verts.length; j++) {
+    const dx = verts[i].x - verts[j].x, dy = verts[i].y - verts[j].y, dz = verts[i].z - verts[j].z;
+    minD2 = Math.min(minD2, dx * dx + dy * dy + dz * dz);
+  }
+  for (let i = 0; i < verts.length; i++) for (let j = i + 1; j < verts.length; j++) {
+    const dx = verts[i].x - verts[j].x, dy = verts[i].y - verts[j].y, dz = verts[i].z - verts[j].z;
+    if (dx * dx + dy * dy + dz * dz < minD2 * 1.05) edges.push([i, j]);
+  }
+
+  let w = 0, h = 0;
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = r.width; h = r.height;
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  let rotX = 0.5, rotY = 0.4, velX = 0.0012, velY = 0.004;
+  const autoX = 0.0012, autoY = 0.004;
+  let dragging = false, lastX = 0, lastY = 0, running = false, raf = 0, hinted = false;
+
+  function rotate(p) {
+    const cxr = Math.cos(rotX), sxr = Math.sin(rotX);
+    const y1 = p.y * cxr - p.z * sxr, z1 = p.y * sxr + p.z * cxr;
+    const cyr = Math.cos(rotY), syr = Math.sin(rotY);
+    return { x: p.x * cyr + z1 * syr, y: y1, z: -p.x * syr + z1 * cyr };
+  }
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2, scale = Math.min(w, h) * 0.34, persp = 2.8;
+    const pts = verts.map(v => {
+      const r = rotate(v), f = persp / (persp - r.z);
+      return { sx: cx + r.x * scale * f, sy: cy - r.y * scale * f, z: r.z };
+    });
+    edges.map(([a, b]) => ({ a, b, z: (pts[a].z + pts[b].z) / 2 }))
+      .sort((m, n) => m.z - n.z)
+      .forEach(e => {
+        const depth = (e.z + 1) / 2;
+        ctx.beginPath();
+        ctx.moveTo(pts[e.a].sx, pts[e.a].sy);
+        ctx.lineTo(pts[e.b].sx, pts[e.b].sy);
+        ctx.strokeStyle = `rgba(169,130,47,${(0.28 + depth * 0.64).toFixed(3)})`;
+        ctx.lineWidth = 0.9 + depth * 0.9;
+        ctx.stroke();
+      });
+    pts.forEach(p => {
+      const depth = (p.z + 1) / 2;
+      if (depth < 0.55) return;
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, 1.1 + depth * 1.4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,162,75,${(0.35 + depth * 0.5).toFixed(3)})`;
+      ctx.fill();
+    });
+  }
+  function frame() {
+    if (!dragging) {
+      rotX += velX; rotY += velY;
+      velX += (autoX - velX) * 0.03;
+      velY += (autoY - velY) * 0.03;
+    }
+    draw();
+    raf = requestAnimationFrame(frame);
+  }
+  function start() { if (running) return; running = true; raf = requestAnimationFrame(frame); }
+  function stop() { running = false; cancelAnimationFrame(raf); }
+  function panelVisible() {
+    const r = panel.getBoundingClientRect();
+    return r.bottom > 0 && r.top < window.innerHeight;
+  }
+
+  resize();
+  draw(); // render one static frame immediately so the shape is never blank
+  window.addEventListener('resize', () => { resize(); if (!running) draw(); });
+
+  if (reduceMotion) {
+    hint?.classList.add('is-hidden');
+    return;
+  }
+
+  canvas.addEventListener('pointerdown', e => {
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    canvas.setPointerCapture?.(e.pointerId);
+    if (!hinted && hint) { hint.classList.add('is-hidden'); hinted = true; }
+  });
+  canvas.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    rotY += dx * 0.008; rotX += dy * 0.008;
+    velY = dx * 0.008; velX = dy * 0.008;
+  });
+  const release = e => { dragging = false; canvas.releasePointerCapture?.(e.pointerId); };
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', release);
+  canvas.addEventListener('pointerleave', release);
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      entries.forEach(en => (en.isIntersecting ? start() : stop()));
+    }, { threshold: 0.05 }).observe(panel);
+  } else {
+    start();
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stop();
+    else if (panelVisible()) start();
+  });
+}
+
 initCovendaMotion();
 initFlowDemo();
+initIcosahedron();
 window.requestAnimationFrame(() => openIntro());

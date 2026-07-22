@@ -1993,3 +1993,35 @@ body[data-audience-switched] #flowDemo { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .word-gold { animation: none; background-position: -60% 0, 0 0; }
 }
+
+/* ---- Interactive gold icosahedron (decorative accent in the feature panel) ---- */
+.ico-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: pan-y;        /* page can still scroll vertically; horizontal drag spins */
+  cursor: grab;
+}
+.ico-canvas:active { cursor: grabbing; }
+.ico-hint {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: 13px;
+  transform: translateX(-50%);
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.55);
+  color: var(--gold-deep);
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  pointer-events: none;
+  transition: opacity .5s ease;
+}
+.ico-hint.is-hidden { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .ico-canvas { cursor: default; } }
