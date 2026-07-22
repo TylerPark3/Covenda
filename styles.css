@@ -719,6 +719,19 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 @keyframes rec-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
 @keyframes rec-pop { 0% { transform: scale(.4); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(1.18); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .rec-dot.is-live { animation: none; } .rec-count.pop { animation: none; } }
+
+/* Quick join */
+.quick-join-actions { display: flex; align-items: center; gap: 14px; margin-top: 18px; flex-wrap: wrap; }
+.quick-join-done { padding: 4px 0; }
+.quick-done-head { display: flex; align-items: flex-start; gap: 14px; }
+.quick-done-check { width: 34px; height: 34px; color: var(--gold-deep); flex-shrink: 0; }
+.quick-done-check circle, .quick-done-check path { fill: none; stroke: currentColor; }
+.quick-done-head h3 { margin: 0 0 3px; font-size: 20px; }
+.quick-done-head p { margin: 0; color: var(--muted); font-size: 14.5px; }
+.quick-done-prompt { margin: 18px 0 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
+.quick-profile-banner { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 22px; padding: 12px 16px; border-radius: 14px; background: var(--gold-pale); border: 1px solid var(--gold-light); font-size: 14px; color: var(--ink); }
+.quick-profile-banner .gold-button.compact { margin-left: auto; }
+.selector-secondary { margin-top: 12px; }
 @media (prefers-reduced-motion: reduce) {
   .video-play, .video-poster:hover .video-play { transition: none; transform: none; }
 }
@@ -1547,7 +1560,7 @@ body[data-audience-switched] #flowDemo { display: none; }
 /* Extra breathing room below the core story, before "Real work becomes credible
    evidence". Uses #id so it beats `.how-section > div { margin: 0 auto }`. */
 #flowDemo { margin-bottom: clamp(96px, 11vw, 168px); }
-.flow-demo-head { max-width: 640px; margin: 0 0 clamp(22px, 2.6vw, 34px); }
+.flow-demo-head { max-width: 880px; margin: 0 0 clamp(22px, 2.6vw, 34px); }
 .flow-demo-kicker {
   margin: 0 0 8px;
   font-size: 12px;
@@ -1559,12 +1572,12 @@ body[data-audience-switched] #flowDemo { display: none; }
 .flow-demo-head h2 {
   margin: 0 0 8px;
   font-family: var(--font-display);
-  font-size: clamp(26px, 3.2vw, 34px);
-  line-height: 1.12;
-  letter-spacing: -.03em;
+  font-size: clamp(38px, 4vw, 60px);
+  line-height: 1.03;
+  letter-spacing: -.055em;
   font-weight: 400;
 }
-.flow-demo-head p { margin: 0; max-width: 620px; color: #45453f; font-size: 15.5px; line-height: 1.6; }
+.flow-demo-head p { margin: 0; max-width: 660px; color: #45453f; font-size: 17px; line-height: 1.6; }
 .flow-demo-track {
   display: flex;
   align-items: stretch;
@@ -1577,8 +1590,8 @@ body[data-audience-switched] #flowDemo { display: none; }
 .fd-stage { flex: 1; min-width: 210px; }
 .fd-stage-b { flex: 1.25; min-width: 250px; }
 .fd-kicker {
-  margin: 0 0 12px;
-  font-size: 11px;
+  margin: 0 0 14px;
+  font-size: 12.5px;
   font-weight: 640;
   letter-spacing: .12em;
   text-transform: uppercase;
@@ -1586,7 +1599,7 @@ body[data-audience-switched] #flowDemo { display: none; }
 }
 .fd-kicker-muted { color: var(--soft); }
 
-.fd-card { border-radius: 14px; padding: 20px; }
+.fd-card { border-radius: 16px; padding: 26px; }
 .fd-card-problem {
   border: 1px dashed var(--line-strong);
   background: #faf9f6;
@@ -1605,7 +1618,7 @@ body[data-audience-switched] #flowDemo { display: none; }
 .fd-tag-backlog { color: #a24a2c; background: #f7ece7; border: 1px solid #eed3c8; }
 .fd-line { display: block; height: 9px; margin-bottom: 9px; border-radius: 4px; background: #e7e3d8; }
 .fd-line:last-of-type { margin-bottom: 0; }
-.fd-quote { margin: 14px 0 0; font-size: 12.5px; font-style: italic; color: var(--soft); }
+.fd-quote { margin: 16px 0 0; font-size: 14.5px; font-style: italic; color: var(--soft); }
 
 .fd-connector {
   flex: none;
@@ -1660,20 +1673,20 @@ body[data-audience-switched] #flowDemo { display: none; }
 }
 .fd-field { margin-bottom: 12px; }
 .fd-field:last-child { margin-bottom: 0; }
-.fd-field-label { display: block; font-size: 10px; font-weight: 640; letter-spacing: .08em; text-transform: uppercase; color: #9a8a5f; }
-.fd-field-value { display: block; margin-top: 2px; font-size: 13.5px; color: var(--ink); }
+.fd-field-label { display: block; font-size: 12px; font-weight: 640; letter-spacing: .08em; text-transform: uppercase; color: #9a8a5f; }
+.fd-field-value { display: block; margin-top: 4px; font-size: 16px; color: var(--ink); }
 
 .fd-card-proof { border: 1px solid var(--gold-light); background: #fff; }
 .fd-proof-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-.fd-proof-head span { font-family: var(--font-display); font-size: 17px; }
+.fd-proof-head span { font-family: var(--font-display); font-size: 21px; }
 .fd-seal { width: 22px; height: 22px; }
 .fd-seal circle { fill: var(--gold); stroke: none; }
 .fd-seal path { fill: none; stroke: #fff; stroke-width: 2.2; }
 .fd-chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .fd-chip {
-  padding: 5px 11px;
+  padding: 6px 14px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 13.5px;
   color: var(--gold-deep);
   background: var(--gold-pale);
   border: 1px solid var(--gold-light);

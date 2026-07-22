@@ -1203,6 +1203,8 @@ function studentPayload(form) {
     },
     videoTranscript: formValue(form, 'studentVideoTranscript'),
     batch: formValue(form, 'studentBatch'),
+    stage: 'profile_completed',
+    linkedQuickRef: (readStorage(QUICK_KEY, null) || {}).reference || '',
     availability: formValue(form, 'studentAvailability'),
     preferences: {
       hoursPerWeek: formValue(form, 'studentHours'),
@@ -1282,6 +1284,109 @@ for (const form of [studentForm, companyForm]) {
 renderCompanyBoundaryGuidance(companyForm);
 companyForm.addEventListener('input', () => renderCompanyBoundaryGuidance(companyForm));
 companyForm.addEventListener('change', () => renderCompanyBoundaryGuidance(companyForm));
+
+// ---- Quick join (low-friction name + email) ------------------------------
+// Primary student entry point: get on the pilot list in seconds, then optionally
+// complete the full profile now (inline) or later (banner). Matched on email; the
+// full submission carries stage='profile_completed' + linkedQuickRef for status.
+const quickJoinDialog = $('#quickJoinDialog');
+const quickJoinForm = $('#quickJoinForm');
+const QUICK_KEY = 'covendaQuickJoin';
+
+function hasCompletedProfile() {
+  const subs = readStorage(storageKey, []);
+  return Array.isArray(subs) && subs.some(s => s.type === 'student_interest');
+}
+function openFullProfilePrefilled() {
+  const saved = readStorage(QUICK_KEY, null);
+  openDialog(studentDialog, studentForm);
+  if (saved) {
+    const set = (name, val) => { const el = $('[name="' + name + '"]', studentForm); if (el && !el.value && val) el.value = val; };
+    set('studentName', saved.name); set('studentEmail', saved.email); set('studentSchool', saved.school);
+    saveDraft(studentForm);
+  }
+}
+function renderProfileBanner() {
+  const saved = readStorage(QUICK_KEY, null);
+  let banner = $('#quickProfileBanner');
+  if (!saved || hasCompletedProfile()) { if (banner) banner.remove(); return; }
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'quickProfileBanner';
+    banner.className = 'quick-profile-banner';
+    (document.querySelector('.hero-student .hero-copy') || document.body).prepend(banner);
+  }
+  banner.innerHTML = '';
+  const txt = document.createElement('span');
+  txt.textContent = 'You’re on the pilot list. Complete your full profile to be matched to real work.';
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'gold-button compact'; btn.textContent = 'Complete profile';
+  btn.addEventListener('click', openFullProfilePrefilled);
+  banner.append(txt, btn);
+}
+function openQuickJoin() {
+  const done = $('#quickJoinDone');
+  done.hidden = true; done.textContent = '';
+  quickJoinForm.hidden = false;
+  $('#quickJoinMessage').textContent = '';
+  quickJoinForm.dataset.startedAt = String(Date.now());
+  quickJoinDialog.showModal();
+  window.setTimeout(() => $('[name="quickName"]', quickJoinForm)?.focus(), 60);
+}
+function renderQuickJoinDone(reference) {
+  quickJoinForm.hidden = true;
+  const done = $('#quickJoinDone');
+  done.hidden = false; done.innerHTML = '';
+  const head = document.createElement('div'); head.className = 'quick-done-head';
+  head.innerHTML = '<svg class="quick-done-check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7.5 12.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><div><h3>You’re on the list.</h3><p>Reference ' + reference + '. We’ll be in touch about the pilot.</p></div>';
+  const prompt = document.createElement('p'); prompt.className = 'quick-done-prompt';
+  prompt.textContent = 'Want to finish your full profile now? A few minutes now helps us match you to the right work.';
+  const actions = document.createElement('div'); actions.className = 'quick-join-actions';
+  const now = document.createElement('button'); now.type = 'button'; now.className = 'gold-button'; now.textContent = 'Complete full profile';
+  now.addEventListener('click', () => { quickJoinDialog.close(); openFullProfilePrefilled(); });
+  const later = document.createElement('button'); later.type = 'button'; later.className = 'quiet-link'; later.textContent = 'I’ll do it later';
+  later.addEventListener('click', () => quickJoinDialog.close());
+  actions.append(now, later);
+  done.append(head, prompt, actions);
+}
+if (quickJoinForm) {
+  quickJoinForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const name = formValue(quickJoinForm, 'quickName');
+    const emailVal = formValue(quickJoinForm, 'quickEmail');
+    const consent = $('[name="quickConsent"]', quickJoinForm).checked;
+    const message = $('#quickJoinMessage');
+    message.classList.remove('is-success');
+    if (!name || !emailVal || !consent) { message.textContent = 'Please add your name, email, and agree to be contacted.'; return; }
+    const submit = $('button[type="submit"]', quickJoinForm);
+    submit.disabled = true; submit.textContent = 'Joining…';
+    try {
+      const result = await sendSubmission({
+        type: 'student_quick',
+        startedAt: Number(quickJoinForm.dataset.startedAt),
+        website: formValue(quickJoinForm, 'website'),
+        consent: true,
+        contact: { name, email: emailVal },
+        school: formValue(quickJoinForm, 'quickSchool'),
+        interest: state.workType || '',
+      });
+      writeStorage(QUICK_KEY, { name, email: emailVal, school: formValue(quickJoinForm, 'quickSchool'), reference: result.reference, stage: 'quick_added', at: new Date().toISOString() });
+      saveSubmission({
+        type: 'student_quick', reference: result.reference, status: result.status || 'received',
+        storage: result.storage || 'confirmed', createdAt: result.createdAt || new Date().toISOString(),
+        title: name + ' · quick join', summary: state.workType ? 'Interested in ' + state.workType : 'Full profile pending',
+      });
+      renderQuickJoinDone(result.reference);
+      renderProfileBanner();
+      showToast('You’re on the pilot list.');
+    } catch (error) {
+      message.textContent = (error && error.message) || 'Could not join. Please try again.';
+    } finally {
+      submit.disabled = false; submit.innerHTML = 'Join the list ' + iconUse('icon-arrow-right');
+    }
+  });
+  renderProfileBanner();
+}
 
 studentForm.addEventListener('submit', async event => {
   event.preventDefault();
@@ -1678,6 +1783,7 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     setSurface('workspace');
     setWorkspaceTab('submissions');
   }
+  if (action === 'student-quick') openQuickJoin();
   if (action === 'student-form') {
     selectWorkType(state.workType);
     openDialog(studentDialog, studentForm);

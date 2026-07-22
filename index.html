@@ -100,7 +100,8 @@
             <button class="work-option" type="button" data-work-type="QA & testing" aria-pressed="false"><svg><use href="#icon-shield"/></svg><span>QA &amp; testing</span></button>
             <button class="work-option" type="button" data-work-type="Writing & documentation" aria-pressed="false"><svg><use href="#icon-write"/></svg><span>Writing &amp;<br>documentation</span></button>
           </div>
-          <button class="gold-button selector-submit" type="button" data-action="student-form">Find my path<svg><use href="#icon-arrow-right"/></svg></button>
+          <button class="gold-button selector-submit" type="button" data-action="student-quick">Join the pilot list<svg><use href="#icon-arrow-right"/></svg></button>
+          <button class="quiet-link selector-secondary" type="button" data-action="student-form">Or complete your full profile now<svg><use href="#icon-chevron"/></svg></button>
           <nav class="student-journey" aria-label="Student journey">
             <button type="button" data-action="focus-pathfinder"><i>1</i><span><b>Explore</b><small>Choose a work path</small></span></button>
             <button type="button" data-action="student-form"><i>2</i><span><b>Profile</b><small>Tell us what fits</small></span></button>
@@ -581,6 +582,23 @@
       <div class="form-message" id="studentFormMessage" role="status" aria-live="polite"></div>
       <footer class="dialog-footer"><button class="outline-button" type="button" data-form-back hidden>Back</button><button class="gold-button" type="button" data-form-next>Continue<svg><use href="#icon-arrow-right"/></svg></button><button class="gold-button" type="submit" data-form-submit hidden>Send interest profile<svg><use href="#icon-arrow-right"/></svg></button></footer>
     </form>
+  </dialog>
+
+  <dialog class="form-dialog quick-join-dialog" id="quickJoinDialog" aria-labelledby="quickJoinTitle">
+    <form id="quickJoinForm" novalidate>
+      <header class="dialog-header"><div><small>Join the pilot list</small><h2 id="quickJoinTitle">Get on the list in seconds.</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
+      <p class="dialog-copy">Covenda turns real company work into short, paid projects that give you proof of skill. Add your name and email to join the pilot list—no long form, no commitment. You can complete your full profile whenever you're ready.</p>
+      <div class="field-grid">
+        <label>Full name<input name="quickName" autocomplete="name" required></label>
+        <label>Email<input name="quickEmail" type="email" autocomplete="email" required></label>
+        <label class="wide">School <span>Optional</span><input name="quickSchool" autocomplete="organization"></label>
+      </div>
+      <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+      <label class="consent-row"><input name="quickConsent" type="checkbox" required><span>Covenda may email me about the pilot. This is an interest signal, not a job offer or guarantee.</span></label>
+      <div class="form-message" id="quickJoinMessage" role="status" aria-live="polite"></div>
+      <div class="quick-join-actions"><button class="gold-button" type="submit">Join the list<svg><use href="#icon-arrow-right"/></svg></button></div>
+    </form>
+    <div class="quick-join-done" id="quickJoinDone" hidden></div>
   </dialog>
 
   <dialog class="form-dialog" id="companyDialog" aria-labelledby="companyDialogTitle">
