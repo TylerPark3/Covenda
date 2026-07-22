@@ -38,6 +38,10 @@ const profileOnboarding = readFileSync(
   new URL('../supabase/migrations/20260724200000_member_profile_onboarding_fields.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const projectTargeting = readFileSync(
+  new URL('../supabase/migrations/20260724300000_project_targeting_and_files.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -147,4 +151,13 @@ test('member profile onboarding migration adds matching fields idempotently with
   assert.match(profileOnboarding, /jsonb_typeof\(work_types\) = 'array'/);
   assert.match(profileOnboarding, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(profileOnboarding, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('project targeting migration adds intake and file columns idempotently without loosening access', () => {
+  for (const column of ['verticals jsonb', 'work_types jsonb', 'attachments jsonb', 'ai_brief jsonb', 'problem_text text', 'consult_booked boolean']) {
+    assert.match(projectTargeting, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(projectTargeting, /jsonb_typeof\(attachments\) = 'array'/);
+  assert.match(projectTargeting, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(projectTargeting, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
 });

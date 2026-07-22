@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#ffffff">
   <meta name="robots" content="noindex,nofollow">
+  <meta name="covenda-calendly-url" content="https://calendly.com/thp2117-columbia/30min">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https:; base-uri 'none'; form-action 'self'">
   <title>Covenda · Member portal</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -162,6 +163,39 @@
 
   <dialog class="member-dialog compact-dialog" id="applyDialog">
     <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="5" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
+  </dialog>
+
+  <dialog class="member-dialog" id="intakeDialog">
+    <form method="dialog" id="intakeForm">
+      <header><div><p class="eyebrow">Post a project</p><h2>Turn a real problem into a scoped project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="intake-progress" id="intakeProgress"><span class="is-active">1. Describe</span><span>2. Understand</span><span>3. Target</span><span>4. Consult &amp; post</span></div>
+      <div class="dialog-body">
+        <section class="intake-step is-active" data-intake-step="1">
+          <label>What is not getting done, and why does it matter?<textarea name="problem" rows="6" minlength="10" maxlength="8000" placeholder="e.g. Our competitor pricing sheet is always out of date. We need a public-source scan of the top 8 competitors with pricing tiers and positioning."></textarea></label>
+          <label class="intake-consent"><input type="checkbox" name="aiConsent"><span>I consent to Covenda using AI to read what I submit (including files) to draft a project brief. This is an assistive draft; a human finalizes scope.</span></label>
+          <p class="intake-hint">Describe the work in plain words. The AI drafts a structured brief on the next step — you can edit everything before posting.</p>
+        </section>
+        <section class="intake-step" data-intake-step="2">
+          <div class="intake-files"><label class="intake-file-btn"><svg><use href="#p-inbox"/></svg>Attach files (PDF, docs, images)<input type="file" id="intakeFileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*" hidden></label><div class="intake-chips" id="intakeChips"></div></div>
+          <button class="portal-secondary" type="button" id="intakeUnderstand"><svg><use href="#p-compass"/></svg>Understand with AI</button>
+          <div class="intake-brief" id="intakeBrief" hidden></div>
+          <p class="dialog-message" id="intakeStepMessage" aria-live="polite"></p>
+        </section>
+        <section class="intake-step" data-intake-step="3">
+          <label>Project title<input name="title" maxlength="160" placeholder="Competitor pricing scan"></label>
+          <div class="intake-target"><p class="intake-label">Target verticals <small>Students in these industries see it first</small></p><div class="intake-select" id="intakeVerticals"></div></div>
+          <div class="intake-target"><p class="intake-label">Work types</p><div class="intake-select" id="intakeWorkTypes"></div></div>
+          <label>Desired skills <small>Separate with commas</small><input name="skills" placeholder="Research, spreadsheets, writing"></label>
+          <div class="form-grid"><label>Budget (USD) <small>Optional</small><input name="budget" type="number" min="0" max="100000" placeholder="500"></label><label>Useful by <small>Optional</small><input name="targetDate" type="date"></label></div>
+        </section>
+        <section class="intake-step" data-intake-step="4">
+          <div class="intake-consult" id="intakeConsultCard"><div><strong>Book a 20-minute consult</strong><p>The consult and founder review are where scope is finalized. The AI brief is a starting draft, not approval.</p></div><div class="intake-consult-actions"><button class="portal-primary" type="button" id="intakeBookConsult">Book the consult<svg><use href="#p-arrow"/></svg></button><button class="portal-ghost" type="button" id="intakeConsultLater">I'll book later</button></div></div>
+          <div class="intake-review" id="intakeReview"></div>
+          <p class="dialog-message" id="intakeMessage" aria-live="polite"></p>
+        </section>
+      </div>
+      <footer><button class="portal-secondary" type="button" id="intakeBack" hidden>Back</button><button class="portal-primary" type="button" id="intakeNext">Continue<svg><use href="#p-arrow"/></svg></button><button class="portal-primary" type="button" id="intakePost" hidden>Post project<svg><use href="#p-arrow"/></svg></button></footer>
+    </form>
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="submitWorkDialog">

@@ -6,8 +6,8 @@ const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
 // Fixed taxonomies shared with the marketing site (BATCHES industries + work types).
 // The vertical project-matcher reads these exact strings, so onboarding must write them verbatim.
-const VERTICALS = new Set(['Accounting & finance', 'Software & AI', 'Healthcare operations', 'Consumer & retail', 'Professional services', 'Not sure yet — show me everything']);
-const WORK_TYPES = new Set(['Research', 'Data & spreadsheets', 'Operations', 'QA & testing', 'Writing & documentation']);
+export const VERTICALS = new Set(['Accounting & finance', 'Software & AI', 'Healthcare operations', 'Consumer & retail', 'Professional services', 'Not sure yet — show me everything']);
+export const WORK_TYPES = new Set(['Research', 'Data & spreadsheets', 'Operations', 'QA & testing', 'Writing & documentation']);
 const emailBuckets = new Map();
 
 export class PortalOperationalError extends Error {
@@ -198,7 +198,9 @@ export async function loadMemberDashboard(member) {
       ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
       : [];
     const verifiedCount = projects.filter(project => project.status === 'complete').length;
-    return { user, profile, projects, opportunities, applications, studentDirectory: [], intakes, messages, verifiedCount };
+    const rankedOpportunities = rankOpportunities(opportunities, profile);
+    const matchedCount = rankedOpportunities.filter(project => project.matched).length;
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -250,6 +252,49 @@ export async function saveMemberProfile(member, input) {
   return checked(supabase.from('member_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
 }
 
+function cleanAttachments(value) {
+  return (Array.isArray(value) ? value : []).slice(0, 6).map(item => ({
+    name: cleanText(item?.name, 120),
+    blobUrl: /^https:\/\//i.test(item?.blobUrl || '') ? cleanText(item.blobUrl, 600) : '',
+    contentType: cleanText(item?.contentType, 100),
+    sizeBytes: Number.isFinite(item?.sizeBytes) ? Math.max(0, Math.min(item.sizeBytes, 50_000_000)) : 0,
+  })).filter(item => item.blobUrl);
+}
+
+// The AI brief originates from our own intake endpoint, but the client could tamper with
+// it, so re-bound every field and re-whitelist the taxonomy before it is stored.
+function sanitizeBrief(brief) {
+  const list = (value, max) => (Array.isArray(value) ? value.map(item => cleanText(item, 300)).filter(Boolean).slice(0, max) : []);
+  return {
+    summary: cleanText(brief.summary, 1_200),
+    structuredProblem: cleanText(brief.structuredProblem, 3_000),
+    candidateDeliverables: list(brief.candidateDeliverables, 5),
+    suggestedVerticals: cleanTaxonomy(brief.suggestedVerticals, VERTICALS),
+    suggestedWorkTypes: cleanTaxonomy(brief.suggestedWorkTypes, WORK_TYPES),
+    safetyFlags: list(brief.safetyFlags, 8),
+    safeToPost: brief.safeToPost === true,
+  };
+}
+
+// Rank open opportunities so ones matching the student's verticals/work types come
+// first, each tagged `matched` for the "Matched to your vertical" badge. A student who
+// picked "Not sure yet — show me everything" matches every vertical.
+export function rankOpportunities(opportunities, profile) {
+  const profileVerticals = new Set(profile?.verticals || []);
+  const profileWorkTypes = new Set(profile?.work_types || []);
+  const everything = profileVerticals.has('Not sure yet — show me everything');
+  const isMatch = project => {
+    const verticals = project.verticals || [];
+    const workTypes = project.work_types || [];
+    const verticalMatch = everything || verticals.some(value => profileVerticals.has(value));
+    const workTypeMatch = workTypes.some(value => profileWorkTypes.has(value));
+    return Boolean((verticals.length && verticalMatch) || (workTypes.length && workTypeMatch));
+  };
+  return (opportunities || [])
+    .map(project => ({ ...project, matched: isMatch(project) }))
+    .sort((a, b) => Number(b.matched) - Number(a.matched));
+}
+
 export async function createMemberProject(member, input) {
   const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
   if (!profile || !['company', 'university'].includes(profile.role)) throw new Error('Only company and university accounts can create projects.');
@@ -269,6 +314,15 @@ export async function createMemberProject(member, input) {
     target_date: /^\d{4}-\d{2}-\d{2}$/.test(input.targetDate || '') ? input.targetDate : null,
     updated_at: new Date().toISOString(),
   };
+  // Additive intake/targeting fields — only written when supplied, so the simple project
+  // modal keeps working even before the targeting migration is applied.
+  if (input.verticals !== undefined) row.verticals = cleanTaxonomy(input.verticals, VERTICALS);
+  if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
+  if (input.problemText !== undefined) row.problem_text = cleanText(input.problemText, 8_000) || null;
+  if (input.consultBooked !== undefined) row.consult_booked = input.consultBooked === true;
+  if (input.budgetCents !== undefined) row.budget_cents = Number.isFinite(input.budgetCents) ? Math.max(0, Math.min(Math.round(input.budgetCents), 100_000_00)) : null;
+  if (input.attachments !== undefined) row.attachments = cleanAttachments(input.attachments);
+  if (input.aiBrief && typeof input.aiBrief === 'object') row.ai_brief = sanitizeBrief(input.aiBrief);
   return checked(member.supabase.from('member_projects').insert(row).select('*').single(), null);
 }
 

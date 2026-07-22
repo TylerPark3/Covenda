@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+import { acceptApplication, authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, rankOpportunities, requestGoogleLogin, requestMemberLink, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
@@ -110,6 +110,44 @@ test('the existing profile modal save omits onboarding columns so it works befor
   assert.equal('verticals' in saved,false);
   assert.equal('work_types' in saved,false);
   assert.equal('avatar_url' in saved,false);
+});
+
+test('opportunities matching the student vertical or work type are flagged and sorted first', () => {
+  const ranked = rankOpportunities([
+    { id: '1', verticals: ['Consumer & retail'], work_types: ['Operations'] },
+    { id: '2', verticals: ['Software & AI'], work_types: [] },
+    { id: '3', verticals: [], work_types: ['Research'] },
+  ], { verticals: ['Software & AI'], work_types: ['Research'] });
+  assert.equal(ranked[0].matched, true);
+  assert.equal(ranked[ranked.length - 1].id, '1');
+  assert.equal(ranked.find(project => project.id === '1').matched, false);
+});
+
+test('a show-me-everything student matches every open vertical', () => {
+  const ranked = rankOpportunities([{ id: '1', verticals: ['Healthcare operations'], work_types: [] }], { verticals: ['Not sure yet — show me everything'], work_types: [] });
+  assert.equal(ranked[0].matched, true);
+});
+
+test('project intake stores whitelisted targeting fields, secure attachments, and the AI brief', async () => {
+  let inserted;
+  const supabase = { from(table) { if (table === 'member_profiles') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { role: 'company' }, error: null }; } }; return { insert(value) { inserted = value; return this; }, select() { return this; }, async single() { return { data: { id: 'p', ...inserted }, error: null }; } }; } };
+  const project = await createMemberProject({ user: { id: 'c1' }, supabase }, {
+    title: 'Pricing scan', summary: 'A public-source competitor pricing scan.', visibility: 'members',
+    verticals: ['Software & AI', 'Bogus'], workTypes: ['Research', 'Bad'],
+    attachments: [
+      { name: 'brief.pdf', blobUrl: 'https://blob.example/x.pdf', contentType: 'application/pdf', sizeBytes: 1000 },
+      { name: 'insecure', blobUrl: 'http://insecure/x', contentType: 'text/plain', sizeBytes: 1 },
+    ],
+    aiBrief: { summary: 's', structuredProblem: 'p', candidateDeliverables: ['d'], suggestedVerticals: ['Software & AI'], suggestedWorkTypes: ['Research'], safetyFlags: [], safeToPost: true },
+    problemText: 'raw problem text', consultBooked: true,
+  });
+  assert.deepEqual(project.verticals, ['Software & AI']);
+  assert.deepEqual(project.work_types, ['Research']);
+  assert.equal(project.attachments.length, 1); // the insecure http attachment is dropped
+  assert.equal(project.attachments[0].blobUrl, 'https://blob.example/x.pdf');
+  assert.equal(project.ai_brief.safeToPost, true);
+  assert.equal(project.consult_booked, true);
+  assert.equal(project.problem_text, 'raw problem text');
 });
 
 test('only organization roles can create projects', async () => {
