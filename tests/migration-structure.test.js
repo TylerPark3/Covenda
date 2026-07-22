@@ -42,6 +42,10 @@ const projectTargeting = readFileSync(
   new URL('../supabase/migrations/20260724300000_project_targeting_and_files.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const creditLedger = readFileSync(
+  new URL('../supabase/migrations/20260725000000_credit_ledger_and_project_credits.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -151,6 +155,27 @@ test('member profile onboarding migration adds matching fields idempotently with
   assert.match(profileOnboarding, /jsonb_typeof\(work_types\) = 'array'/);
   assert.match(profileOnboarding, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(profileOnboarding, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('credit ledger is append-only, guards double payouts, and stays server-only', () => {
+  assert.match(creditLedger, /create table if not exists public\.credit_ledger/);
+  // signed credits, nullable user_id (platform revenue), and the full entry vocabulary
+  for (const entry of ['purchase', 'reach_fee', 'escrow_hold', 'escrow_release', 'platform_fee', 'refund', 'adjustment']) {
+    assert.match(creditLedger, new RegExp(`'${entry}'`));
+  }
+  // a project can only ever be released once / refunded once, enforced by the database
+  assert.match(creditLedger, /create unique index if not exists credit_ledger_one_release_per_project[\s\S]*?where entry_type = 'escrow_release'/);
+  assert.match(creditLedger, /create unique index if not exists credit_ledger_one_refund_per_project[\s\S]*?where entry_type = 'refund'/);
+  for (const column of ['credits_listed integer', 'targeting text', 'credits_held integer', 'platform_fee_credits integer']) {
+    assert.match(creditLedger, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(creditLedger, /targeting in \('public', 'targeted'\)/);
+  assert.match(creditLedger, /force row level security/);
+  assert.match(creditLedger, /revoke all on table public\.credit_ledger from public, anon, authenticated/);
+  // append-only: select + insert only, never update or delete
+  assert.match(creditLedger, /grant select, insert on table public\.credit_ledger to service_role/);
+  assert.doesNotMatch(creditLedger, /grant[^;]*(update|delete)[^;]*on table public\.credit_ledger/);
+  assert.doesNotMatch(creditLedger, /create policy|grant [^;]* to (anon|authenticated)/);
 });
 
 test('project targeting migration adds intake and file columns idempotently without loosening access', () => {

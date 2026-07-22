@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, rankOpportunities, requestGoogleLogin, requestMemberLink, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+import { acceptApplication, authorizeMember, buyCredits, createMemberProject, creditBalance, loadMemberIntakes, memberAuthReadiness, projectCreditCost, rankOpportunities, requestGoogleLogin, requestMemberLink, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
@@ -110,6 +110,70 @@ test('the existing profile modal save omits onboarding columns so it works befor
   assert.equal('verticals' in saved,false);
   assert.equal('work_types' in saved,false);
   assert.equal('avatar_url' in saved,false);
+});
+
+test('credit cost charges the platform fee ON TOP so the student keeps the full listed amount', () => {
+  const publicPost = projectCreditCost(200, 'public');
+  assert.deepEqual(publicPost, { listed: 200, reachFee: 0, platformFee: 20, total: 220 });
+  const targeted = projectCreditCost(200, 'targeted');
+  assert.deepEqual(targeted, { listed: 200, reachFee: 25, platformFee: 20, total: 245 });
+  // the listed amount is never reduced by the fee — that is the student's payout
+  assert.equal(targeted.listed, 200);
+  assert.equal(projectCreditCost(0, 'public').total, 0);
+  assert.equal(projectCreditCost(-50, 'public').listed, 0);
+});
+
+test('balance is the signed sum of the ledger, and platform rows never touch it', async () => {
+  const supabase = { from() { return { select() { return this; }, eq(column, value) { assert.equal(column, 'user_id'); assert.equal(value, 'company-1'); return Promise.resolve({ data: [{ credits: 500 }, { credits: -25 }, { credits: -220 }], error: null }); } }; } };
+  assert.equal(await creditBalance({ user: { id: 'company-1' }, supabase }), 255);
+});
+
+test('posting a priced project holds escrow, charges the reach fee, and books both sides', async () => {
+  let inserted, ledger;
+  const supabase = { from(table) {
+    if (table === 'member_profiles') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { role: 'company' }, error: null }; } };
+    if (table === 'credit_ledger') return {
+      select() { return this; },
+      eq() { return Promise.resolve({ data: [{ credits: 1000 }], error: null }); },
+      insert(value) { ledger = value; return this; },
+      then(onF, onR) { return Promise.resolve({ data: [], error: null }).then(onF, onR); },
+    };
+    return { insert(value) { inserted = value; return this; }, select() { return this; }, async single() { return { data: { id: 'proj-1', ...inserted }, error: null }; } };
+  } };
+  const project = await createMemberProject({ user: { id: 'company-1' }, supabase }, {
+    title: 'Pricing scan', summary: 'A public-source competitor pricing scan.', visibility: 'members',
+    creditsListed: 200, targeting: 'targeted',
+  });
+  assert.equal(project.credits_listed, 200);
+  assert.equal(project.credits_held, 200);
+  assert.equal(project.platform_fee_credits, 20);
+  assert.equal(project.targeting, 'targeted');
+  const byType = Object.fromEntries(ledger.map(row => [`${row.entry_type}:${row.user_id === null ? 'platform' : 'member'}`, row.credits]));
+  assert.equal(byType['reach_fee:member'], -25);
+  assert.equal(byType['reach_fee:platform'], 25);   // platform revenue is booked, not implied
+  assert.equal(byType['escrow_hold:member'], -220); // listed + fee held together
+});
+
+test('a project is rejected when the balance cannot cover listed + fee + reach', async () => {
+  const supabase = { from(table) {
+    if (table === 'member_profiles') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { role: 'company' }, error: null }; } };
+    return { select() { return this; }, eq() { return Promise.resolve({ data: [{ credits: 100 }], error: null }); } };
+  } };
+  await assert.rejects(
+    createMemberProject({ user: { id: 'company-1' }, supabase }, { title: 'Scan', summary: 'A public-source scan of competitors.', creditsListed: 200, targeting: 'targeted' }),
+    /needs 245 credits.*balance is 100/,
+  );
+});
+
+test('credits cannot be minted unless the deployment enables it', async () => {
+  const supabase = { from() { return { insert() { return this; }, select() { return this; }, async single() { return { data: { id: 'l1' }, error: null }; }, eq() { return Promise.resolve({ data: [{ credits: 100 }], error: null }); } }; } };
+  const member = { user: { id: 'company-1', email: 'ops@acme.com' }, supabase };
+  await assert.rejects(buyCredits(member, { credits: 100 }, {}), /does not have credit purchases enabled/);
+  await assert.rejects(buyCredits(member, { credits: 7 }, { COVENDA_CREDIT_GRANTS_ENABLED: 'true' }), /Choose one of the available/);
+  const result = await buyCredits(member, { credits: 100 }, { COVENDA_CREDIT_GRANTS_ENABLED: 'true' });
+  assert.equal(result.balance, 100);
+  // an operator on the allowlist can grant without the flag
+  await buyCredits(member, { credits: 500 }, { COVENDA_ADMIN_EMAILS: 'ops@acme.com' });
 });
 
 test('opportunities matching the student vertical or work type are flagged and sorted first', () => {

@@ -200,7 +200,10 @@ export async function loadMemberDashboard(member) {
     const verifiedCount = projects.filter(project => project.status === 'complete').length;
     const rankedOpportunities = rankOpportunities(opportunities, profile);
     const matchedCount = rankedOpportunities.filter(project => project.matched).length;
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount };
+    // Students hold credits too once escrow is released, so they get a balance (the
+    // Wallet view itself stays company/university only).
+    const walletBalance = await creditBalance(member);
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -215,7 +218,8 @@ export async function loadMemberDashboard(member) {
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
     : [];
   const verifiedCount = projects.filter(project => project.status === 'complete').length;
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount };
+  const [walletBalance, creditLedger] = await Promise.all([creditBalance(member), loadCreditLedger(member)]);
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -250,6 +254,61 @@ export async function saveMemberProfile(member, input) {
   if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
   if (input.avatarUrl !== undefined) row.avatar_url = cleanText(input.avatarUrl, 500) || null;
   return checked(supabase.from('member_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
+}
+
+// ---- Credits. 1 credit = $1. Public posts are free; a hyper-narrow (vertical +
+// work-type + referred students) post costs a reach fee. The platform fee is 10% of the
+// listed amount charged ON TOP, so the student always receives the full listed amount.
+export const REACH_FEE_TARGETED = 25;
+export const PLATFORM_FEE_RATE = 0.10;
+// Payments are stubbed in v1: bundles record what the company *would* pay, and the
+// discount lives in the price, not in extra credits (1 credit stays $1 of value).
+export const CREDIT_BUNDLES = new Map([[100, 100], [500, 475], [1000, 900]]);
+
+// Pure cost model — the UI, the server, and the tests all read from this one function.
+export function projectCreditCost(creditsListed, targeting) {
+  const listed = Math.max(0, Math.round(Number(creditsListed) || 0));
+  const reachFee = targeting === 'targeted' ? REACH_FEE_TARGETED : 0;
+  const platformFee = Math.round(listed * PLATFORM_FEE_RATE);
+  return { listed, reachFee, platformFee, total: listed + reachFee + platformFee };
+}
+
+// The ledger is the only source of truth for a balance. Pilot volumes are small enough
+// to sum in the API; if this grows, move it to a Postgres aggregate/RPC.
+export async function creditBalance(member, userId = member.user.id) {
+  const rows = await checked(member.supabase.from('credit_ledger').select('credits').eq('user_id', userId), []);
+  return rows.reduce((sum, row) => sum + (Number(row.credits) || 0), 0);
+}
+
+export async function loadCreditLedger(member, limit = 50) {
+  return checked(
+    member.supabase.from('credit_ledger').select('*').eq('user_id', member.user.id).order('created_at', { ascending: false }).limit(limit),
+    [],
+  );
+}
+
+function operatorEmails(env) {
+  return cleanText(env.COVENDA_ADMIN_EMAILS, 4_000).toLowerCase().split(/[,\s]+/).filter(Boolean);
+}
+
+// Granting credits without charging is a production footgun, so it is off unless the
+// deployment explicitly enables it or the caller is a listed operator.
+export async function buyCredits(member, input, env = process.env) {
+  const enabled = env.COVENDA_CREDIT_GRANTS_ENABLED === 'true' || operatorEmails(env).includes(member.user.email || '');
+  if (!enabled) throw new Error('This deployment does not have credit purchases enabled yet.');
+  const bundle = Math.round(Number(input.credits) || 0);
+  if (!CREDIT_BUNDLES.has(bundle)) throw new Error('Choose one of the available credit bundles.');
+  const priceUsd = CREDIT_BUNDLES.get(bundle);
+  await checked(
+    member.supabase.from('credit_ledger').insert({
+      user_id: member.user.id,
+      entry_type: 'purchase',
+      credits: bundle,
+      note: `Stubbed purchase · ${bundle} credits · $${priceUsd}`,
+    }).select('id').single(),
+    null,
+  );
+  return { balance: await creditBalance(member) };
 }
 
 function cleanAttachments(value) {
@@ -323,7 +382,37 @@ export async function createMemberProject(member, input) {
   if (input.budgetCents !== undefined) row.budget_cents = Number.isFinite(input.budgetCents) ? Math.max(0, Math.min(Math.round(input.budgetCents), 100_000_00)) : null;
   if (input.attachments !== undefined) row.attachments = cleanAttachments(input.attachments);
   if (input.aiBrief && typeof input.aiBrief === 'object') row.ai_brief = sanitizeBrief(input.aiBrief);
-  return checked(member.supabase.from('member_projects').insert(row).select('*').single(), null);
+
+  // Credits: charge the reach fee and hold escrow (listed + platform fee) at post time.
+  const priced = input.creditsListed !== undefined;
+  const targeting = input.targeting === 'targeted' ? 'targeted' : 'public';
+  const cost = projectCreditCost(input.creditsListed, targeting);
+  if (priced) {
+    const balance = await creditBalance(member);
+    if (balance < cost.total) {
+      throw new Error(`This project needs ${cost.total} credits (${cost.listed} listed + ${cost.platformFee} platform fee + ${cost.reachFee} reach fee) but your balance is ${balance}.`);
+    }
+    row.credits_listed = cost.listed;
+    row.targeting = targeting;
+    row.credits_held = cost.listed;
+    row.platform_fee_credits = cost.platformFee;
+  }
+
+  const project = await checked(member.supabase.from('member_projects').insert(row).select('*').single(), null);
+
+  if (priced && project?.id) {
+    const entries = [];
+    if (cost.reachFee > 0) {
+      // Both sides of the reach fee, so member balances and platform revenue reconcile.
+      entries.push({ user_id: member.user.id, entry_type: 'reach_fee', credits: -cost.reachFee, project_id: project.id, note: 'Hyper-narrow reach fee' });
+      entries.push({ user_id: null, entry_type: 'reach_fee', credits: cost.reachFee, project_id: project.id, note: 'Hyper-narrow reach fee' });
+    }
+    if (cost.listed + cost.platformFee > 0) {
+      entries.push({ user_id: member.user.id, entry_type: 'escrow_hold', credits: -(cost.listed + cost.platformFee), project_id: project.id, note: `Escrow: ${cost.listed} listed + ${cost.platformFee} platform fee` });
+    }
+    if (entries.length) await checked(member.supabase.from('credit_ledger').insert(entries).select('id'), []);
+  }
+  return project;
 }
 
 export async function applyToProject(member, input) {
@@ -480,6 +569,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
+    if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });
     return res.status(400).json({ ok: false, error: 'Unknown portal action.' });
   } catch (error) {
     const expected = error instanceof SyntaxError || /^(Enter|Choose|Only|Account|This|Please|Add|Describe|A refresh)/.test(error?.message || '');
