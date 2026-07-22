@@ -202,8 +202,10 @@ export async function loadMemberDashboard(member) {
     const matchedCount = rankedOpportunities.filter(project => project.matched).length;
     // Students hold credits too once escrow is released, so they get a balance (the
     // Wallet view itself stays company/university only).
-    const walletBalance = await creditBalance(member);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance };
+    const [walletBalance, creditLedger, payoutRequests] = await Promise.all([
+      creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member),
+    ]);
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -309,6 +311,70 @@ export async function buyCredits(member, input, env = process.env) {
     null,
   );
   return { balance: await creditBalance(member) };
+}
+
+// ---- Payouts. A student's balance is money Covenda owes them; a request makes that
+// obligation explicit and auditable until real payment rails exist. ----
+const PAYOUT_METHODS = new Set(['PayPal', 'Zelle', 'Bank transfer', 'Other']);
+
+// We never want bank/card numbers in the database. Reject anything that looks like a raw
+// account or card number rather than quietly storing it.
+export function looksLikeAccountNumber(value) {
+  const digits = String(value || '').replace(/[\s-]/g, '');
+  return /^\d{8,}$/.test(digits);
+}
+
+export async function loadPayoutRequests(member) {
+  return checked(
+    member.supabase.from('payout_requests').select('*').eq('user_id', member.user.id).order('requested_at', { ascending: false }).limit(20),
+    [],
+  );
+}
+
+export async function requestPayout(member, input) {
+  const credits = Math.round(Number(input.credits) || 0);
+  if (credits <= 0) throw new Error('Enter how many credits you want paid out.');
+  const balance = await creditBalance(member);
+  if (credits > balance) throw new Error(`This payout is larger than your balance of ${balance} credits.`);
+  const method = cleanText(input.method, 40);
+  if (!PAYOUT_METHODS.has(method)) throw new Error('Choose how you would like to be paid.');
+  const handle = cleanText(input.handle, 160);
+  if (!handle) throw new Error('Add the email or handle Covenda should send the payment to.');
+  if (looksLikeAccountNumber(handle)) throw new Error('Please share an email or handle instead of an account number — Covenda will arrange the transfer with you directly.');
+  const open = await checked(
+    member.supabase.from('payout_requests').select('id').eq('user_id', member.user.id).eq('status', 'requested').maybeSingle(),
+    null,
+  );
+  if (open) throw new Error('You already have a payout request awaiting review.');
+  return checked(
+    member.supabase.from('payout_requests').insert({ user_id: member.user.id, credits, method, handle }).select('*').single(),
+    null,
+  );
+}
+
+export async function cancelPayoutRequest(member, input) {
+  const id = cleanText(input.requestId, 50);
+  if (!PROJECT_ID_PATTERN.test(id)) throw new Error('Choose a valid payout request.');
+  const request = await checked(member.supabase.from('payout_requests').select('id,user_id,status').eq('id', id).maybeSingle(), null);
+  if (!request || request.user_id !== member.user.id) throw new Error('Only the requesting student can cancel this payout.');
+  if (request.status !== 'requested') throw new Error('This payout request has already been resolved.');
+  return checked(
+    member.supabase.from('payout_requests').update({ status: 'cancelled', resolved_at: new Date().toISOString() }).eq('id', id).select('*').single(),
+    null,
+  );
+}
+
+// Operator-only. Marking a payout paid debits the ledger and closes the request in one
+// transaction, so a student is never shown as paid without the ledger agreeing.
+export async function fulfilPayout(member, input, env = process.env) {
+  if (!operatorEmails(env).includes(member.user.email || '')) throw new Error('Only a Covenda operator can settle payouts.');
+  const id = cleanText(input.requestId, 50);
+  if (!PROJECT_ID_PATTERN.test(id)) throw new Error('Choose a valid payout request.');
+  const settled = await checked(
+    member.supabase.rpc('fulfil_payout_request', { p_request_id: id, p_operator_id: member.user.id, p_note: cleanText(input.note, 500) || null }),
+    null,
+  );
+  return Array.isArray(settled) ? settled[0] : settled;
 }
 
 function cleanAttachments(value) {
@@ -599,6 +665,9 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });
     if (req.method === 'POST' && input.action === 'cancel-project') return res.status(200).json({ ok: true, project: await cancelProject(member, input) });
+    if (req.method === 'POST' && input.action === 'request-payout') return res.status(201).json({ ok: true, payout: await requestPayout(member, input) });
+    if (req.method === 'POST' && input.action === 'cancel-payout') return res.status(200).json({ ok: true, payout: await cancelPayoutRequest(member, input) });
+    if (req.method === 'POST' && input.action === 'fulfil-payout') return res.status(200).json({ ok: true, payout: await fulfilPayout(member, input, dependencies.env || process.env) });
     return res.status(400).json({ ok: false, error: 'Unknown portal action.' });
   } catch (error) {
     const expected = error instanceof SyntaxError || /^(Enter|Choose|Only|Account|This|Please|Add|Describe|A refresh)/.test(error?.message || '');

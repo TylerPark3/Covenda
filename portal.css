@@ -354,6 +354,20 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .wallet-bundle em { justify-self:start; margin-top:4px; padding:2px 8px; border-radius:999px; background:var(--gold-pale); color:var(--gold-deep); font-size:9px; font-style:normal; font-weight:700; }
 .wallet-note { display:flex; align-items:flex-start; gap:8px; margin:16px 0 0; color:var(--soft); font-size:10px; line-height:1.55; }
 .wallet-note svg { flex:0 0 auto; width:14px; height:14px; color:var(--gold-deep); }
+.wallet-payout { padding:24px; border:1px solid var(--line); border-radius:20px; }
+.payout-form { display:grid; gap:14px; }
+.payout-field { display:grid; gap:5px; }
+.payout-field > span { font-size:11px; font-weight:650; color:#31312e; }
+.payout-field small { color:var(--soft); font-size:9px; line-height:1.5; }
+.payout-field input, .payout-field select { min-height:44px; }
+.wallet-payout .portal-primary { justify-self:start; }
+.payout-pending { display:grid; gap:6px; padding:16px; border:1px solid #eadfca; border-radius:14px; background:var(--gold-pale); }
+.payout-pending strong { font-size:15px; font-variant-numeric:tabular-nums; }
+.payout-pending small { color:var(--muted); font-size:10px; line-height:1.55; }
+.payout-pending .portal-ghost { justify-self:start; margin-top:4px; }
+.payout-empty { margin:0; color:var(--muted); font-size:11px; line-height:1.6; }
+.status-pill[data-status="payout"] { border-color:rgba(164,49,36,.22); background:#fbf4f3; color:var(--danger); }
+
 .wallet-ledger { margin-top:30px; }
 .ledger-table { border:1px solid var(--line); border-radius:16px; overflow:hidden; }
 .ledger-row { display:grid; grid-template-columns:minmax(88px,.7fr) minmax(96px,.8fr) minmax(0,1.4fr) minmax(70px,.5fr) minmax(70px,.5fr); gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); font-size:11px; }

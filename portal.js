@@ -237,14 +237,68 @@ function projectCreditCost(creditsListed,targeting){
   return {listed,reachFee,platformFee,total:listed+reachFee+platformFee};
 }
 function projectTitleFor(projectId){return (state.dashboard.projects||[]).find(p=>p.id===projectId)?.title||'';}
-function renderWallet(){
+const PAYOUT_METHODS=['PayPal','Zelle','Bank transfer','Other'];
+function renderPayout(){
+  const root=$('#payoutState');if(!root)return;
   const d=state.dashboard;const balance=Number(d.walletBalance)||0;
+  const open=(d.payoutRequests||[]).find(r=>r.status==='requested');
+  root.replaceChildren();
+  if(open){
+    const card=document.createElement('div');card.className='payout-pending';
+    const strong=document.createElement('strong');strong.textContent=`${Number(open.credits).toLocaleString()} credits requested`;
+    const small=document.createElement('small');small.textContent=`${open.method||'—'} · ${open.handle||''} · requested ${dateLabel(open.requested_at)}. Covenda will be in touch to arrange the transfer.`;
+    const cancel=document.createElement('button');cancel.type='button';cancel.className='portal-ghost';cancel.textContent='Cancel this request';
+    cancel.addEventListener('click',async()=>{cancel.disabled=true;setDialogMessage('#payoutMessage','Cancelling…');
+      try{await portalRequest({method:'POST',body:JSON.stringify({action:'cancel-payout',requestId:open.id})});await loadDashboard();setView('wallet');}
+      catch(error){setDialogMessage('#payoutMessage',error.message,true);cancel.disabled=false;}});
+    card.append(strong,small,cancel);root.append(card);return;
+  }
+  if(balance<=0){
+    const empty=document.createElement('p');empty.className='payout-empty';
+    empty.textContent='Complete a reviewed project and your earnings will appear here, ready to request.';
+    root.append(empty);return;
+  }
+  const form=document.createElement('div');form.className='payout-form';
+  const amount=document.createElement('label');amount.className='payout-field';
+  const amountLabel=document.createElement('span');amountLabel.textContent='Amount (credits)';
+  const amountInput=document.createElement('input');amountInput.type='number';amountInput.min='1';amountInput.max=String(balance);amountInput.value=String(balance);
+  amount.append(amountLabel,amountInput);
+  const method=document.createElement('label');method.className='payout-field';
+  const methodLabel=document.createElement('span');methodLabel.textContent='How should we pay you?';
+  const methodSelect=document.createElement('select');
+  PAYOUT_METHODS.forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;methodSelect.append(o);});
+  method.append(methodLabel,methodSelect);
+  const handle=document.createElement('label');handle.className='payout-field';
+  const handleLabel=document.createElement('span');handleLabel.textContent='Email or handle';
+  const handleInput=document.createElement('input');handleInput.type='text';handleInput.placeholder='you@example.com';
+  const handleHelp=document.createElement('small');handleHelp.textContent='Never enter a bank or card number — Covenda arranges the transfer with you directly.';
+  handle.append(handleLabel,handleInput,handleHelp);
+  const submit=document.createElement('button');submit.type='button';submit.className='portal-primary compact';submit.textContent='Request payout';
+  submit.addEventListener('click',async()=>{
+    submit.disabled=true;setDialogMessage('#payoutMessage','Sending your request…');
+    try{await portalRequest({method:'POST',body:JSON.stringify({action:'request-payout',credits:Number(amountInput.value),method:methodSelect.value,handle:handleInput.value})});await loadDashboard();setView('wallet');setDialogMessage('#payoutMessage','');}
+    catch(error){setDialogMessage('#payoutMessage',error.message,true);submit.disabled=false;}
+  });
+  form.append(amount,method,handle,submit);root.append(form);
+}
+function renderWallet(){
+  const d=state.dashboard;const balance=Number(d.walletBalance)||0;const role=d.profile?.role;
   const nav=$('#walletNavBalance');if(nav)nav.textContent=balance.toLocaleString();
   const balanceEl=$('#walletBalance');if(!balanceEl)return;
   balanceEl.textContent=balance.toLocaleString();
+  const intro=$('#walletIntro');
+  if(intro)intro.textContent=role==='student'
+    ? '1 credit = $1. Credits arrive when a company accepts your work — you receive the full listed amount, never less. Request a payout whenever you like.'
+    : '1 credit = $1. Posting publicly is free; a hyper-narrow post routes to matched, referred students for 25 credits. Covenda’s fee is 10% of the listed amount, charged on top — the student always receives the full amount you list.';
+  const balanceLabel=$('#walletBalanceLabel');
+  if(balanceLabel)balanceLabel.textContent=role==='student'?'Earned and available':'Available balance';
   const held=(d.projects||[]).reduce((sum,p)=>sum+(Number(p.credits_held)||0),0);
-  $('#walletHeld').textContent=held?`${held.toLocaleString()} credits held in escrow across active projects.`:'No credits held in escrow right now.';
-  const bundles=$('#walletBundles');bundles.replaceChildren();
+  $('#walletHeld').textContent=role==='student'
+    ? (held?`${held.toLocaleString()} credits are held in escrow for work you have in progress.`:'Credits are released to you the moment a reviewer accepts your work.')
+    : (held?`${held.toLocaleString()} credits held in escrow across active projects.`:'No credits held in escrow right now.');
+  renderPayout();
+  const bundles=$('#walletBundles');if(!bundles){renderWalletLedger();return;}
+  bundles.replaceChildren();
   CREDIT_BUNDLES.forEach(([credits,price])=>{
     const b=document.createElement('button');b.type='button';b.className='wallet-bundle';
     const c=document.createElement('strong');c.textContent=`${credits.toLocaleString()} credits`;
