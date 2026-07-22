@@ -743,6 +743,19 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 .quick-profile-banner { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 0 0 22px; padding: 12px 16px; border-radius: 14px; background: var(--gold-pale); border: 1px solid var(--gold-light); font-size: 14px; color: var(--ink); }
 .quick-profile-banner .gold-button.compact { margin-left: auto; }
 .selector-secondary { margin-top: 12px; }
+.selector-explainer { margin: 10px 0 0; color: var(--soft); font-size: 12.5px; line-height: 1.55; max-width: 46ch; }
+
+/* Video intro: recording is the default path, pasting a link is the fallback. */
+.video-intro-label { margin: 0 0 4px; color: #31312e; font-size: 12px; font-weight: 650; }
+.video-intro-label span { color: var(--soft); font-weight: 500; }
+.video-record .field-help { display: block; margin: 0 0 12px; color: var(--soft); font-size: 11.5px; line-height: 1.5; }
+.video-record-primary { display: inline-flex; align-items: center; gap: 8px; }
+.video-link-fallback { margin-top: 14px; }
+.video-link-fallback summary { cursor: pointer; color: var(--gold-deep); font-size: 12px; font-weight: 650; list-style: none; }
+.video-link-fallback summary::-webkit-details-marker { display: none; }
+.video-link-fallback summary::before { content: "+ "; }
+.video-link-fallback[open] summary::before { content: "– "; }
+.video-link-fallback input { margin-top: 10px; }
 @media (prefers-reduced-motion: reduce) {
   .video-play, .video-poster:hover .video-play { transition: none; transform: none; }
 }
@@ -1786,8 +1799,17 @@ body[data-audience="university"] #flowDemo { display: none; }
 .flow-demo.is-armed.is-playing .fd-chip-3 { animation: cv-stampIn .45s ease-out 3.15s both; }
 .flow-demo.is-armed.is-playing .fd-chip-4 { animation: cv-stampIn .45s ease-out 3.3s both; }
 
-@media (max-width: 720px) {
-  .flow-demo-track { min-width: 720px; }
+/* Compressed (phone, or a narrowed desktop window): the core story flows DOWNWARD
+   instead of forcing a horizontal scroll. The travelling-dot animation is decorative
+   and horizontal-only, so it is replaced with a static vertical rule. */
+@media (max-width: 860px) {
+  .flow-demo-scroll { overflow-x: visible; }
+  .flow-demo-track { min-width: 0; flex-direction: column; align-items: stretch; }
+  .fd-stage, .fd-stage-b { flex: none; width: 100%; min-width: 0; }
+  .fd-connector { width: 100%; padding: 16px 0; flex-direction: column; gap: 8px; }
+  .fd-connector-label { margin: 0; }
+  .fd-track { width: 2px; height: 30px; background: rgba(180,123,32,.35); }
+  .fd-fill, .fd-dot { display: none; }
 }
 
 /* ---- University / partner roster builder --------------------------- */
@@ -2374,6 +2396,24 @@ body[data-audience="university"] .roles-section { display: none; }
    UI polish + credibility framework Steps 5/6/3 (appended so these rules
    win the cascade over the base rules they intentionally refine).
    ===================================================================== */
+
+/* ---- "Why now" statistics band + founder note ---- */
+.stat-band { padding: clamp(56px, 7vw, 104px) var(--page-gutter); background: #fff; border-top: 1px solid var(--line); }
+body[data-audience="company"] .stat-band,
+body[data-audience="university"] .stat-band { display: none; }
+.stat-band-inner { width: min(100%, var(--content)); margin: 0 auto; }
+.stat-band-head h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 4vw, 58px); line-height: 1.04; letter-spacing: -.05em; }
+.stat-band-head > p:last-child { margin: 16px 0 0; max-width: 62ch; color: var(--muted); font-size: 17px; line-height: 1.6; }
+.stat-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 22px; margin: clamp(34px, 4vw, 52px) 0 0; padding: 0; }
+.stat-list li { display: grid; gap: 9px; align-content: start; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: linear-gradient(170deg, var(--gold-pale), #fff); }
+.stat-list b { font-family: var(--font-display); font-size: clamp(38px, 4.4vw, 54px); line-height: 1; letter-spacing: -.04em; color: var(--gold-deep); }
+.stat-list span { color: var(--muted); font-size: 14px; line-height: 1.6; }
+.stat-list cite { font-style: normal; color: var(--soft); font-size: 11px; }
+.founder-note { margin: clamp(30px, 4vw, 44px) 0 0; padding: 26px 30px; border-left: 3px solid var(--gold); border-radius: 0 16px 16px 0; background: var(--gold-pale); }
+.founder-note p { margin: 0; font-family: var(--font-display); font-size: clamp(19px, 2.2vw, 25px); line-height: 1.5; color: var(--ink); }
+.founder-note cite { display: block; margin-top: 14px; font-style: normal; color: var(--gold-deep); font-size: 12px; font-weight: 650; }
+.stat-note { display: flex; align-items: flex-start; gap: 9px; margin: 22px 0 0; color: var(--soft); font-size: 12px; line-height: 1.55; }
+.stat-note svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 1px; color: var(--gold-deep); }
 
 /* ---- Fix cramped dialogs -------------------------------------------------
    The single-step dialogs (quick join / request endorsement / role apply /

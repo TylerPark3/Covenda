@@ -2926,7 +2926,9 @@ function renderVideoIntroCard(container, rawUrl, opts = {}) {
   const input = document.querySelector('[data-video-intro-input]');
   if (!toggle || !input) return;
   const canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && typeof MediaRecorder !== 'undefined';
-  if (!canRecord) { toggle.hidden = true; return; }
+  // No camera/MediaRecorder here — hide the recorder and open the paste-a-link fallback
+  // so the option is never simply missing.
+  if (!canRecord) { toggle.hidden = true; document.querySelector('.video-link-fallback')?.setAttribute('open', ''); return; }
 
   const MAX_SECONDS = 60;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
