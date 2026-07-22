@@ -361,7 +361,11 @@ async function finishOnboarding(){
   if(onboardState.saving)return;onboardState.saving=true;const v=onboardState.values;const msg=$('#onboardMessage');
   if(msg){msg.textContent='Saving your profile…';msg.classList.remove('is-error');}
   try{
-    await portalRequest({method:'PATCH',body:JSON.stringify({action:'save-profile',role:'student',displayName:v.displayName||'',schoolName:v.schoolName||'',graduationYear:v.graduationYear||'',headline:v.headline||'',bio:v.bio||'',skills:v.skills||'',portfolioVisibility:'members',verticals:v.verticals||[],workTypes:v.workTypes||[],avatarUrl:v.avatarUrl||''})});
+    const payload={action:'save-profile',role:'student',displayName:v.displayName||'',schoolName:v.schoolName||'',graduationYear:v.graduationYear||'',headline:v.headline||'',bio:v.bio||'',skills:v.skills||'',portfolioVisibility:'members',verticals:v.verticals||[],workTypes:v.workTypes||[]};
+    // Only claim the avatar_url column when there is actually an image — otherwise every
+    // student's save would depend on that column existing.
+    if(v.avatarUrl)payload.avatarUrl=v.avatarUrl;
+    await portalRequest({method:'PATCH',body:JSON.stringify(payload)});
     clearOnboard();$('#onboardFlow').hidden=true;await loadDashboard();setView('discover');
   }catch(error){onboardState.saving=false;if(msg){msg.textContent=error.message;msg.classList.add('is-error');}}
 }
