@@ -4,12 +4,13 @@ const ACCESS_KEY = 'covendaMemberAccessToken';
 const REFRESH_KEY = 'covendaMemberRefreshToken';
 const EXPIRY_KEY = 'covendaMemberExpiry';
 
-const state = { dashboard: null, view: 'overview', applyProject: null, messageProjectId: null };
+const state = { dashboard: null, view: 'overview', applyProject: null, messageProjectId: null, projectWorkspaceId: null };
 const roleLabels = { student: 'Student', company: 'Company', university: 'University partner' };
 const statusLabels = { draft:'Draft', scoping:'In scoping', open:'Open', matched:'Matched', in_progress:'In progress', review:'In review', complete:'Complete', archived:'Archived' };
 const intakeStatusLabels = { received:'Received', reviewing:'In review', needs_information:'Needs information', packet_proposed:'Packet proposed', approval_pending:'Approval pending', approved:'Approved', declined:'Declined', archived:'Archived' };
 const intakeTypeLabels = { student_interest:'Student interest', employer_intake:'Company problem', university_partner:'University roster', call_request:'Call request' };
 const applicationStatusLabels = { submitted:'Interest sent', reviewing:'In review', shortlisted:'Shortlisted', accepted:'Accepted', declined:'Not selected', withdrawn:'Withdrawn' };
+const milestoneStatusLabels = { planned:'Planned', in_progress:'In progress', blocked:'Blocked', complete:'Complete' };
 const statusProgress = { draft:8, scoping:20, open:30, matched:42, in_progress:65, review:86, complete:100, archived:100 };
 
 function icon(id) {
@@ -19,7 +20,7 @@ function icon(id) {
 }
 function text(value) { return value === null || value === undefined ? '' : String(value); }
 function titleCase(value) { return text(value).replaceAll('_',' ').replace(/\b\w/g, letter => letter.toUpperCase()); }
-function dateLabel(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Not set' : date.toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' }); }
+function dateLabel(value) { const literal=text(value);const date=/^\d{4}-\d{2}-\d{2}$/.test(literal)?(()=>{const [year,month,day]=literal.split('-').map(Number);return new Date(year,month-1,day);})():new Date(literal);return Number.isNaN(date.getTime())?'Not set':date.toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'}); }
 function initial(name) { return text(name).trim().charAt(0).toUpperCase() || 'C'; }
 function session() { return { accessToken:sessionStorage.getItem(ACCESS_KEY)||'', refreshToken:sessionStorage.getItem(REFRESH_KEY)||'', expiresAt:Number(sessionStorage.getItem(EXPIRY_KEY)||0) }; }
 function saveSession(data) { if (data.accessToken) sessionStorage.setItem(ACCESS_KEY,data.accessToken); if (data.refreshToken) sessionStorage.setItem(REFRESH_KEY,data.refreshToken); if (data.expiresAt) sessionStorage.setItem(EXPIRY_KEY,String(data.expiresAt)); }
@@ -132,7 +133,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderActivity(); renderDiscover(); renderPortfolio(); renderMessages();
+  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderProjectWorkspace(); renderActivity(); renderDiscover(); renderPortfolio(); renderMessages();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -154,8 +155,38 @@ function renderActions(){const root=$('#nextActions');root.replaceChildren();con
 
 function emptyList(root,iconId,title,copy){root.replaceChildren();const box=document.createElement('div');box.className='list-empty';const mark=document.createElement('span');mark.append(icon(iconId));const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=copy;box.append(mark,h,p);root.append(box);}
 
-function renderProjects(){const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();if(!items.length){emptyList(root,'p-project','No projects in this workspace yet.',state.dashboard.profile?.role==='student'?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.');return;}for(const project of items){const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');const matched=(state.dashboard.applicantProfiles||[]).find(profile=>profile.user_id===project.assigned_student_user_id);const visibility=cell(project.assigned_student_user_id?'Matched with':'Visibility',matched?.display_name||titleCase(project.visibility));row.append(main,status,due,visibility);root.append(row);}}
+function renderProjects(){
+  const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();
+  if(!items.length){state.projectWorkspaceId=null;emptyList(root,'p-project','No projects in this workspace yet.',state.dashboard.profile?.role==='student'?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.');return;}
+  if(!items.some(project=>project.id===state.projectWorkspaceId&&project.assigned_student_user_id))state.projectWorkspaceId=items.find(project=>project.assigned_student_user_id)?.id||null;
+  for(const project of items){
+    const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);
+    const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));
+    const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');row.append(main,status,due);
+    if(project.assigned_student_user_id){const button=document.createElement('button');button.type='button';button.className=project.id===state.projectWorkspaceId?'is-active':'';button.textContent=project.id===state.projectWorkspaceId?'Workspace open':'Open workspace';button.addEventListener('click',()=>openProjectWorkspace(project.id));row.append(button);}else{row.append(cell('Visibility',titleCase(project.visibility)));}
+    root.append(row);
+  }
+}
 function cell(label,value){const div=document.createElement('div');div.className='list-cell';const small=document.createElement('small');small.textContent=label;const strong=document.createElement('strong');strong.textContent=value;div.append(small,strong);return div;}
+
+function openProjectWorkspace(projectId){state.projectWorkspaceId=projectId;renderProjects();renderProjectWorkspace();$('#projectWorkspace').scrollIntoView({behavior:'smooth',block:'start'});}
+
+function lifecycleAction(project){const owner=project.owner_user_id===state.dashboard.user.id;if(project.status==='matched')return {status:'in_progress',label:'Start project work',title:'Ready to begin?',copy:'Starting work makes the shared delivery plan active for both participants.'};if(project.status==='in_progress')return {status:'review',label:'Request review',title:'Ready for review?',copy:'Move the project into review when the planned work is ready for feedback.'};if(project.status==='review'&&owner)return {status:'complete',label:'Mark project complete',title:'Approve the outcome',copy:'Complete every milestone, then close the project when the deliverable is accepted.'};if(project.status==='review')return {title:'Review is with the project owner',copy:'Use messages for feedback or scope questions while the company reviews the work.'};return {title:'Project complete',copy:'The delivery record and private message history remain available here.'};}
+
+function renderProjectWorkspace(){
+  const root=$('#projectWorkspace');const projects=state.dashboard?.projects||[];let project=projects.find(item=>item.id===state.projectWorkspaceId&&item.assigned_student_user_id);
+  if(!project){project=projects.find(item=>item.assigned_student_user_id&&!['archived'].includes(item.status));state.projectWorkspaceId=project?.id||null;}
+  if(!project){root.hidden=true;return;}root.hidden=false;
+  $('#workspaceTitle').textContent=project.title;$('#workspaceSummary').textContent=`${statusLabels[project.status]||titleCase(project.status)} · Shared with your matched project participant`;
+  $('#workspaceBrief').textContent=project.summary;$('#workspaceDeliverable').textContent=project.deliverable||'Deliverable will be confirmed in the project thread.';$('#workspaceTarget').textContent=project.target_date?dateLabel(project.target_date):'Flexible';
+  const track=$('#lifecycleTrack');track.replaceChildren();const lifecycle=['matched','in_progress','review','complete'];const current=Math.max(0,lifecycle.indexOf(project.status));for(const [index,status] of lifecycle.entries()){const item=document.createElement('div');item.className=`lifecycle-step${index<current?' is-complete':''}${index===current?' is-current':''}`;const marker=document.createElement('span');marker.textContent=index<current?'✓':String(index+1);const label=document.createElement('strong');label.textContent=statusLabels[status];item.append(marker,label);track.append(item);}
+  const milestones=(state.dashboard.milestones||[]).filter(item=>item.project_id===project.id);$('#milestoneCount').textContent=`${milestones.length} ${milestones.length===1?'milestone':'milestones'}`;const list=$('#milestoneList');list.replaceChildren();
+  if(!milestones.length){const empty=document.createElement('div');empty.className='milestone-empty';const h=document.createElement('h3');h.textContent='Build the shared delivery plan.';const p=document.createElement('p');p.textContent='Add the first concrete checkpoint so both participants know what happens next.';empty.append(h,p);list.append(empty);}else for(const milestone of milestones){const row=document.createElement('article');row.className=`milestone-row is-${milestone.status}`;const mark=document.createElement('button');mark.type='button';mark.className='milestone-mark';mark.title=milestone.status==='complete'?'Reopen milestone':'Mark milestone complete';mark.append(icon(milestone.status==='complete'?'p-check':'p-clock'));mark.addEventListener('click',()=>setMilestoneStatus(milestone,milestone.status==='complete'?'planned':'complete',mark));const copy=document.createElement('div');const h=document.createElement('h3');h.textContent=milestone.title;const p=document.createElement('p');p.textContent=[milestone.notes,milestone.due_date&&`Due ${dateLabel(milestone.due_date)}`].filter(Boolean).join(' · ')||'No additional notes';copy.append(h,p);const select=document.createElement('select');select.setAttribute('aria-label',`Status for ${milestone.title}`);for(const status of ['planned','in_progress','blocked','complete']){const option=document.createElement('option');option.value=status;option.textContent=milestoneStatusLabels[status];option.selected=status===milestone.status;select.append(option);}select.addEventListener('change',()=>setMilestoneStatus(milestone,select.value,select));row.append(mark,copy,select);list.append(row);}
+  const form=$('#milestoneForm');form.hidden=project.status==='complete';form.elements.projectId.value=project.id;setDialogMessage('#milestoneFormStatus','');
+  const action=lifecycleAction(project);$('#workspaceNextTitle').textContent=action.title;$('#workspaceNextCopy').textContent=action.copy;const button=$('#workspaceStatusAction');button.hidden=!action.status;button.disabled=false;button.dataset.status=action.status||'';button.textContent=action.label||'';setDialogMessage('#workspaceStatusMessage','');
+}
+
+async function setMilestoneStatus(milestone,status,control){control.disabled=true;try{await portalRequest({method:'PATCH',body:JSON.stringify({action:'update-milestone',milestoneId:milestone.id,status})});await loadDashboard();setView('projects');}catch(error){setDialogMessage('#workspaceStatusMessage',error.message,true);control.disabled=false;}}
 
 function renderActivity(){
   const d=state.dashboard;const intakes=d.intakes||[];const applications=d.applications||[];const intakeRoot=$('#intakeList');const applicationRoot=$('#applicationList');
@@ -208,6 +239,12 @@ $('#profileForm').addEventListener('submit',async event=>{event.preventDefault()
 $('#projectForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#projectMessage','Creating project…');const payload={action:'create-project',title:form.elements.title.value,summary:form.elements.summary.value,deliverable:form.elements.deliverable.value,desiredSkills:form.elements.desiredSkills.value,targetDate:form.elements.targetDate.value,visibility:form.elements.visibility.value};try{await portalRequest({method:'POST',body:JSON.stringify(payload)});$('#projectDialog').close();await loadDashboard();setView('projects');}catch(error){setDialogMessage('#projectMessage',error.message,true);}finally{button.disabled=false;}});
 
 $('#applyForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#applyMessage','Sending your interest…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'apply',projectId:form.elements.projectId.value,note:form.elements.note.value})});$('#applyDialog').close();await loadDashboard();setView('discover');}catch(error){setDialogMessage('#applyMessage',error.message,true);}finally{button.disabled=false;}});
+
+$('#milestoneForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#milestoneFormStatus','Adding the shared milestone…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'create-milestone',projectId:form.elements.projectId.value,title:form.elements.title.value,dueDate:form.elements.dueDate.value,notes:form.elements.notes.value})});form.elements.title.value='';form.elements.dueDate.value='';form.elements.notes.value='';await loadDashboard();setView('projects');}catch(error){setDialogMessage('#milestoneFormStatus',error.message,true);}finally{button.disabled=false;}});
+
+$('#workspaceStatusAction').addEventListener('click',async event=>{const button=event.currentTarget;const status=button.dataset.status;const projectId=state.projectWorkspaceId;if(!status||!projectId)return;button.disabled=true;setDialogMessage('#workspaceStatusMessage','Updating the shared project stage…');try{await portalRequest({method:'PATCH',body:JSON.stringify({action:'update-project-status',projectId,status})});await loadDashboard();setView('projects');}catch(error){setDialogMessage('#workspaceStatusMessage',error.message,true);button.disabled=false;}});
+
+$('#workspaceMessages').addEventListener('click',()=>{state.messageProjectId=state.projectWorkspaceId;setView('messages');renderMessages();});
 
 $('#messageForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const status=$('#messageFormStatus');button.disabled=true;status.textContent='Sending…';status.classList.remove('is-error');try{const result=await portalRequest({method:'POST',body:JSON.stringify({action:'send-message',projectId:state.messageProjectId,message:form.elements.message.value})});state.dashboard.messages.push(result.message);form.reset();status.textContent='Sent securely.';renderMessages();}catch(error){status.textContent=error.message;status.classList.add('is-error');}finally{button.disabled=false;}});
 

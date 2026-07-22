@@ -96,6 +96,28 @@
       <section class="portal-view" data-portal-view="projects">
         <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every active and completed project in one place.</p></div><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Post a project</button></div>
         <div class="project-list" id="projectList"></div>
+        <section class="project-workspace" id="projectWorkspace" hidden>
+          <header class="workspace-heading"><div><p class="eyebrow">Shared delivery workspace</p><h2 id="workspaceTitle">Project</h2><p id="workspaceSummary"></p></div><button class="portal-secondary" id="workspaceMessages" type="button"><svg><use href="#p-message"/></svg>Open messages</button></header>
+          <div class="lifecycle-track" id="lifecycleTrack" aria-label="Project lifecycle"></div>
+          <div class="workspace-grid">
+            <section class="milestone-panel">
+              <div class="section-heading"><div><p class="eyebrow">Delivery plan</p><h2>Milestones</h2></div><span id="milestoneCount">0 milestones</span></div>
+              <div class="milestone-list" id="milestoneList"></div>
+              <form class="milestone-form" id="milestoneForm">
+                <input name="projectId" type="hidden">
+                <div><label>New milestone<input name="title" maxlength="160" placeholder="Draft the evidence summary" required></label><label>Due date <small>Optional</small><input name="dueDate" type="date"></label></div>
+                <label>Notes <small>Optional</small><textarea name="notes" rows="3" maxlength="2000" placeholder="Define what done should look like."></textarea></label>
+                <footer><p id="milestoneFormStatus" aria-live="polite"></p><button class="portal-primary" type="submit"><svg><use href="#p-plus"/></svg>Add milestone</button></footer>
+              </form>
+            </section>
+            <aside class="workspace-brief">
+              <div><p class="eyebrow">Useful outcome</p><h3>Project brief</h3><p id="workspaceBrief"></p></div>
+              <div><small>Deliverable</small><strong id="workspaceDeliverable"></strong></div>
+              <div><small>Target date</small><strong id="workspaceTarget"></strong></div>
+              <div class="workspace-next"><p class="eyebrow">Lifecycle control</p><h3 id="workspaceNextTitle">Ready for the next stage?</h3><p id="workspaceNextCopy"></p><button class="portal-primary" id="workspaceStatusAction" type="button"></button><p id="workspaceStatusMessage" aria-live="polite"></p></div>
+            </aside>
+          </div>
+        </section>
       </section>
 
       <section class="portal-view" data-portal-view="activity">

@@ -34,6 +34,10 @@ const applicationReview = readFileSync(
   new URL('../supabase/migrations/20260722014120_review_project_applications.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const projectMilestones = readFileSync(
+  new URL('../supabase/migrations/20260722031619_create_project_milestones.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -136,4 +140,17 @@ test('application review migration creates an atomic server-only matching operat
   assert.match(applicationReview, /revoke all on function public\.review_project_application\(uuid, uuid, text\) from public, anon, authenticated/);
   assert.match(applicationReview, /grant execute on function public\.review_project_application\(uuid, uuid, text\) to service_role/);
   assert.doesNotMatch(applicationReview, /security definer|grant [^;]* to (anon|authenticated)/);
+});
+
+test('project milestone migration creates a constrained server-only delivery plan', () => {
+  assert.match(projectMilestones, /create table if not exists public\.project_milestones/);
+  assert.match(projectMilestones, /references public\.member_projects\(id\) on delete cascade/);
+  assert.match(projectMilestones, /status in \('planned', 'in_progress', 'blocked', 'complete'\)/);
+  assert.match(projectMilestones, /project_milestones_completion_consistent/);
+  assert.match(projectMilestones, /create index if not exists project_milestones_project_position_idx/);
+  assert.match(projectMilestones, /alter table public\.project_milestones force row level security/);
+  assert.match(projectMilestones, /revoke all on table public\.project_milestones from public, anon, authenticated/);
+  assert.match(projectMilestones, /revoke delete on table public\.project_milestones from service_role/);
+  assert.match(projectMilestones, /grant select, insert, update on table public\.project_milestones to service_role/);
+  assert.doesNotMatch(projectMilestones, /grant delete|create policy|grant [^;]* to (anon|authenticated)/);
 });

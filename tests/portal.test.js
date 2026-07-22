@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { authorizeMember, createMemberProject, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, reviewProjectApplication, saveMemberProfile, sendProjectMessage } from '../api/portal.js';
+import { authorizeMember, createMemberProject, createProjectMilestone, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, reviewProjectApplication, saveMemberProfile, sendProjectMessage, updateProjectStatus } from '../api/portal.js';
 
 const authEnv = { SUPABASE_URL:'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY:'publishable', SUPABASE_SECRET_KEY:'secret' };
 
@@ -89,6 +89,31 @@ test('students cannot review project applications', async () => {
   const applicationId='aa013d65-b83a-48b7-a3f2-077dcfa502d8';
   const supabase={from(){return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{role:'student'},error:null};}};}};
   await assert.rejects(()=>reviewProjectApplication({user:{id:'student-1'},supabase},{applicationId,status:'shortlisted'}),/Only company and university accounts/);
+});
+
+test('matched participants can add bounded milestones to the shared workspace', async () => {
+  let inserted;
+  const projectId='f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  const milestoneQuery={
+    select(){return this;},eq(){return this;},order(){return this;},limit(){return this;},
+    async maybeSingle(){return {data:{position:2},error:null};},
+    insert(value){inserted=value;return this;},async single(){return {data:{id:'milestone-1',status:'planned',...inserted},error:null};},
+  };
+  const supabase={from(table){if(table==='member_projects')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{id:projectId,status:'matched',owner_user_id:'company-1',assigned_student_user_id:'student-1'},error:null};}};assert.equal(table,'project_milestones');return milestoneQuery;}};
+  const milestone=await createProjectMilestone({user:{id:'student-1'},supabase},{projectId,title:'  Draft the evidence summary  ',notes:'Include citations.',dueDate:'2026-08-12'});
+  assert.equal(milestone.title,'Draft the evidence summary');
+  assert.equal(milestone.position,3);
+  assert.equal(milestone.created_by_user_id,'student-1');
+});
+
+test('project lifecycle allows a matched participant to request review with an optimistic status check', async () => {
+  let updated;
+  const projectId='f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  const projectQuery={select(){return this;},eq(){return this;},update(value){updated=value;return this;},async maybeSingle(){return {data:updated?{id:projectId,owner_user_id:'company-1',assigned_student_user_id:'student-1',...updated}:{id:projectId,status:'in_progress',owner_user_id:'company-1',assigned_student_user_id:'student-1'},error:null};}};
+  const supabase={from(table){assert.equal(table,'member_projects');return projectQuery;}};
+  const project=await updateProjectStatus({user:{id:'student-1'},supabase},{projectId,status:'review'});
+  assert.equal(project.status,'review');
+  assert.match(updated.updated_at,/^\d{4}-\d{2}-\d{2}T/);
 });
 
 test('project messages require project membership and store only bounded text', async () => {
