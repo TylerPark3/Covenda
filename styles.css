@@ -2178,7 +2178,11 @@ body[data-audience="student"] .feature-band { display: none; }
 }
 
 /* ---- Two-tier credibility ladder (student surface) ---- */
+/* This is a direct child of .why-section, whose `> div` rule lays children out as a
+   2-col copy|visual grid. The ladder has 4 stacked parts and its own full-width
+   composition, so opt it out of that grid (specificity beats `.why-section > div`). */
 .credibility-ladder { margin-top: clamp(72px, 9vw, 128px); }
+.why-section > .credibility-ladder { display: block; }
 .cred-doors { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
 .cred-door { padding: clamp(20px, 2.4vw, 28px); border-radius: var(--radius-sm); }
 .cred-tag {
