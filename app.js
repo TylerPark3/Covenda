@@ -2155,6 +2155,110 @@ $$('.form-dialog').forEach(dialog => dialog.addEventListener('click', event => {
   if (outside) dialog.close();
 }));
 
+// Step 4 — roles + applications foundation. Illustrative company roles a student can
+// apply to; the application persists as a role_application submission. The
+// compatibility score (Step 5) plugs into the apply dialog. NOT a marketplace yet.
+const ROLES = [
+  { id: 'acct-recon', company: 'A finance-ops team', function: 'Accounting Operations', title: 'Month-end reconciliation cleanup', skills: ['Spreadsheets', 'Reconciliation', 'Attention to detail'], term: 'short', description: 'Reconcile and document a recurring month-end close step from de-identified data.' },
+  { id: 'research-scan', company: 'A seed startup', function: 'Research & Synthesis', title: 'Competitor landscape scan', skills: ['Research', 'Synthesis', 'Writing'], term: 'short', description: 'Public-source scan of the top competitors with pricing and positioning.' },
+  { id: 'qa-pass', company: 'A Series A product team', function: 'QA & Testing', title: 'Manual test pass + bug reports', skills: ['QA', 'Test cases', 'Bug reproduction'], term: 'short', description: 'Run a structured manual test pass and file reproducible bug reports.' },
+  { id: 'ops-map', company: 'An operations team', function: 'Operations', title: 'Onboarding workflow map', skills: ['Operations', 'Documentation', 'Process'], term: 'long', description: 'Map and document a recurring internal onboarding workflow.' },
+];
+const roleApplyDialog = $('#roleApplyDialog');
+const roleApplyForm = $('#roleApplyForm');
+let activeRole = null;
+
+function renderRoles() {
+  const grid = $('[data-roles-grid]');
+  if (!grid) return;
+  grid.textContent = '';
+  for (const role of ROLES) {
+    const card = document.createElement('article');
+    card.className = 'role-card glass-panel';
+    const fn = document.createElement('p'); fn.className = 'role-function'; fn.textContent = role.function;
+    const title = document.createElement('h3'); title.className = 'role-title'; title.textContent = role.title;
+    const company = document.createElement('p'); company.className = 'role-company'; company.textContent = role.company + ' · ' + (role.term === 'short' ? 'Short-term' : 'Longer-term');
+    const desc = document.createElement('p'); desc.className = 'role-desc'; desc.textContent = role.description;
+    const skills = document.createElement('div'); skills.className = 'role-skills';
+    for (const s of role.skills) { const chip = document.createElement('span'); chip.className = 'role-skill'; chip.textContent = s; skills.append(chip); }
+    const apply = document.createElement('button'); apply.type = 'button'; apply.className = 'gold-button role-apply'; apply.textContent = 'Apply to this role';
+    apply.addEventListener('click', () => openRoleApply(role));
+    card.append(fn, title, company, desc, skills, apply);
+    grid.append(card);
+  }
+}
+
+function openRoleApply(role) {
+  if (!roleApplyForm) return;
+  activeRole = role;
+  const done = $('#roleApplyDone'); done.hidden = true; done.textContent = '';
+  roleApplyForm.hidden = false;
+  $('#roleApplyMessage').textContent = '';
+  $('#roleApplyTitle').textContent = 'Apply · ' + role.title;
+  const summary = $('#roleApplySummary');
+  summary.textContent = '';
+  const s1 = document.createElement('p'); s1.className = 'role-apply-role';
+  s1.append(document.createTextNode(role.function + ' · '));
+  const b = document.createElement('b'); b.textContent = role.title; s1.append(b);
+  const s2 = document.createElement('p'); s2.className = 'role-apply-desc'; s2.textContent = role.description;
+  summary.append(s1, s2);
+  const quick = readStorage('covendaQuickJoin', null);
+  const draft = readStorage(draftKeys.studentForm, null);
+  const name = (quick && quick.name) || draftValue(draft, 'studentName');
+  const emailVal = (quick && quick.email) || draftValue(draft, 'studentEmail');
+  if (name) $('[name="applyName"]', roleApplyForm).value = name;
+  if (emailVal) $('[name="applyEmail"]', roleApplyForm).value = emailVal;
+  roleApplyForm.dataset.startedAt = String(Date.now());
+  roleApplyDialog.showModal();
+}
+
+if (roleApplyForm) {
+  roleApplyForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (formValue(roleApplyForm, 'website')) { roleApplyDialog.close(); return; }
+    const name = formValue(roleApplyForm, 'applyName');
+    const emailVal = formValue(roleApplyForm, 'applyEmail');
+    const msg = $('#roleApplyMessage');
+    if (!name || !emailVal || !activeRole) { msg.textContent = 'Please add your name and email.'; return; }
+    const submit = $('button[type="submit"]', roleApplyForm);
+    submit.disabled = true; submit.textContent = 'Submitting…';
+    try {
+      const result = await sendSubmission({
+        type: 'role_application',
+        startedAt: Number(roleApplyForm.dataset.startedAt) || (Date.now() - 3000),
+        website: '',
+        consent: true,
+        contact: { name, email: emailVal },
+        roleId: activeRole.id,
+        roleTitle: activeRole.title,
+        roleFunction: activeRole.function,
+        note: formValue(roleApplyForm, 'applyNote'),
+      });
+      saveSubmission({
+        type: 'role_application', reference: result.reference, status: result.status || 'received',
+        storage: result.storage || 'confirmed', createdAt: result.createdAt || new Date().toISOString(),
+        title: name + ' · ' + activeRole.title, summary: 'Applied to ' + activeRole.title,
+      });
+      roleApplyForm.hidden = true;
+      const doneEl = $('#roleApplyDone'); doneEl.hidden = false; doneEl.innerHTML = '';
+      const h = document.createElement('p'); h.className = 'quick-done-prompt'; h.style.fontWeight = '640'; h.style.color = 'var(--ink)';
+      h.textContent = 'Application received · ' + result.reference;
+      const p = document.createElement('p'); p.className = 'quick-done-prompt';
+      p.textContent = 'Covenda reviews fit before anything moves forward. An application is not a match or a guarantee.';
+      const close = document.createElement('button'); close.type = 'button'; close.className = 'gold-button'; close.textContent = 'Done';
+      close.addEventListener('click', () => roleApplyDialog.close());
+      const actions = document.createElement('div'); actions.className = 'quick-join-actions'; actions.append(close);
+      doneEl.append(h, p, actions);
+      if (typeof showToast === 'function') showToast('Application received.');
+    } catch (error) {
+      msg.textContent = (error && error.message) || 'Could not submit. Please try again.';
+    } finally {
+      submit.disabled = false; submit.innerHTML = 'Submit application ' + iconUse('icon-arrow-right');
+    }
+  });
+}
+renderRoles();
+
 // Step 2 — student requests an endorsement from a professor/club (stored locally;
 // Covenda facilitates the vouch). Honest: an endorsement is a signal, not a placement.
 const requestEndorseDialog = $('#requestEndorseDialog');

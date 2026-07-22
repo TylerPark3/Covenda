@@ -220,7 +220,7 @@ test('API accepted types + reference prefixes stay in sync with the DB migration
   // mint a reference prefix) that the database's constraints would reject.
   // Read the most recent migration that (re)defines the full allowed set.
   const migration = readFileSync(
-    new URL('../supabase/migrations/20260722120000_allow_referrer_endorsement.sql', import.meta.url),
+    new URL('../supabase/migrations/20260723000000_allow_role_application.sql', import.meta.url),
     'utf8',
   );
 

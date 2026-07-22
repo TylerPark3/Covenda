@@ -501,6 +501,15 @@
         <div class="batch-grid" id="batchGrid" data-batch-grid></div>
       </section>
 
+      <section class="roles-section" id="roles">
+        <div class="section-heading">
+          <p class="feature-kicker">Open roles</p>
+          <h2>Apply to a real role.</h2>
+          <p>Illustrative pilot roles by function. Applying shows an illustrative fit signal, not a guarantee — real roles open as companies bring work.</p>
+        </div>
+        <div class="roles-grid" id="rolesGrid" data-roles-grid></div>
+      </section>
+
       <section class="final-cta">
         <div data-for-audience="student" class="audience-content"><h2>Start with the work you want to <span class="word-gold">prove</span>.</h2><p>Submit an interest profile. We’ll use it to shape the first pilot group—not to promise a job or automatic match.</p><button class="gold-button" type="button" data-action="student-form">Build my interest profile<svg><use href="#icon-arrow-right"/></svg></button></div>
         <div data-for-audience="company" class="audience-content"><h2>Bring us the work that keeps slipping.</h2><p>Book a 20-minute demo to walk through a real problem, or write it up as a Project Packet. Covenda assesses whether it can become a safe project before asking you to fund or publish anything.</p><div class="cta-actions"><button class="gold-button" type="button" data-action="schedule-demo">Schedule a demo<svg><use href="#icon-arrow-right"/></svg></button><button class="outline-button" type="button" data-action="company-form">Start a Project Packet<svg><use href="#icon-arrow-right"/></svg></button></div></div>
@@ -784,6 +793,22 @@
       <div class="quick-join-actions"><button class="gold-button" type="submit">Send request<svg><use href="#icon-arrow-right"/></svg></button></div>
     </form>
     <div class="quick-join-done" id="requestEndorseDone" hidden></div>
+  </dialog>
+
+  <dialog class="form-dialog quick-join-dialog" id="roleApplyDialog" aria-labelledby="roleApplyTitle">
+    <form id="roleApplyForm" novalidate>
+      <header class="dialog-header"><div><small>Apply to a role</small><h2 id="roleApplyTitle">Apply</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
+      <div class="role-apply-summary" id="roleApplySummary"></div>
+      <div class="field-grid">
+        <label>Full name<input name="applyName" autocomplete="name" required></label>
+        <label>Email<input name="applyEmail" type="email" autocomplete="email" required></label>
+        <label class="wide">Anything to add <span>Optional</span><textarea name="applyNote" rows="2" placeholder="Why you're a fit — optional"></textarea></label>
+      </div>
+      <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+      <div class="form-message" id="roleApplyMessage" role="status" aria-live="polite"></div>
+      <div class="quick-join-actions"><button class="gold-button" type="submit">Submit application<svg><use href="#icon-arrow-right"/></svg></button></div>
+    </form>
+    <div class="quick-join-done" id="roleApplyDone" hidden></div>
   </dialog>
 
   <dialog class="form-dialog" id="companyDialog" aria-labelledby="companyDialogTitle">

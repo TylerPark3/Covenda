@@ -2350,3 +2350,22 @@ body[data-audience="student"] .feature-band { display: none; }
 .profile-evidence-list dd { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
 .profile-credibility + .profile-credibility { margin-top: 14px; }
 @media (max-width: 560px) { .profile-evidence-list > div { grid-template-columns: 1fr; gap: 2px; } }
+
+/* Step 4 — roles + applications */
+body[data-audience="home"] .roles-section,
+body[data-audience="company"] .roles-section,
+body[data-audience="university"] .roles-section { display: none; }
+.roles-section { padding: clamp(56px, 7vw, 100px) var(--page-gutter); background: #fff; border-top: 1px solid var(--line); }
+.roles-section > * { width: min(100%, var(--content)); margin-left: auto; margin-right: auto; }
+.roles-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: clamp(28px, 4vw, 48px); }
+.role-card { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; padding: 26px; border-radius: 20px; }
+.role-function { margin: 0; font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-deep); }
+.role-title { margin: 0; font-size: 19px; line-height: 1.25; }
+.role-company { margin: 0; font-size: 12.5px; color: var(--gold-deep); }
+.role-desc { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; flex: 1; }
+.role-skills { display: flex; flex-wrap: wrap; gap: 6px; }
+.role-skill { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: 11.5px; color: #55554f; }
+.role-apply { margin-top: 8px; }
+.role-apply-summary { padding: 14px 16px; border-radius: 12px; background: var(--gold-pale); border: 1px solid var(--gold-light); margin-bottom: 4px; }
+.role-apply-role { margin: 0; font-size: 15px; color: var(--ink); }
+.role-apply-desc { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.5; }

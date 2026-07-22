@@ -14,6 +14,7 @@ export const REFERENCE_PREFIXES = {
   university_partner: 'UNI',
   student_quick: 'SQ',
   referrer_endorsement: 'REF',
+  role_application: 'APP',
 };
 export const SUBMISSION_TYPES = Object.keys(REFERENCE_PREFIXES);
 const TYPES = new Set(SUBMISSION_TYPES);
@@ -328,7 +329,26 @@ export function submissionDetails(body) {
   if (body.type === 'university_partner') return universityRecord(body);
   if (body.type === 'student_quick') return studentQuickRecord(body);
   if (body.type === 'referrer_endorsement') return referrerRecord(body);
+  if (body.type === 'role_application') return roleApplicationRecord(body);
   return callRecord(body);
+}
+
+// Step 4 — a student applies to a specific illustrative company role. Foundation for
+// the compatibility score (F5) and company candidate filtering (F6). Persisted like
+// any other intake; the role list itself is client-side/illustrative for now.
+export function roleApplicationRecord(body) {
+  const record = {
+    contact: contact(body.contact),
+    roleId: text(body.roleId, 60),
+    roleTitle: text(body.roleTitle, 160),
+    roleFunction: text(body.roleFunction, 120),
+    note: text(body.note, 1000),
+    stage: 'applied',
+  };
+  if (!record.contact.name || !record.contact.email || !record.roleTitle) {
+    throw new Error('Please add your name, email, and choose a role to apply to.');
+  }
+  return record;
 }
 
 function parseBody(req) {
@@ -361,6 +381,9 @@ function submissionSummary(record) {
   if (record.type === 'referrer_endorsement') {
     const count = record.details.endorsements.length;
     return `${count} student endorsement${count === 1 ? '' : 's'} from ${record.details.referrerType || 'a referrer'}.`;
+  }
+  if (record.type === 'role_application') {
+    return 'Applied to ' + (record.details.roleTitle || 'a role') + '.';
   }
   return record.details.topic || 'Call requested.';
 }
