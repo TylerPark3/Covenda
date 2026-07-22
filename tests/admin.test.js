@@ -71,6 +71,35 @@ test('admin magic link reports the missing publishable key without exposing a se
   );
 });
 
+test('admin magic link identifies Supabase project and delivery configuration failures', async () => {
+  const cases = [
+    ['otp_disabled', 'ADMIN_MAGIC_LINK_OTP_DISABLED', /same Supabase project connected to Vercel/],
+    ['over_email_send_rate_limit', 'ADMIN_MAGIC_LINK_RATE_LIMITED', /rate-limited/],
+    ['email_address_not_authorized', 'ADMIN_MAGIC_LINK_EMAIL_UNAUTHORIZED', /custom SMTP/],
+    ['email_provider_disabled', 'ADMIN_MAGIC_LINK_EMAIL_DISABLED', /Email provider/],
+  ];
+
+  for (const [authCode, expectedCode, expectedMessage] of cases) {
+    await assert.rejects(
+      requestAdminLink('operator@covenda.com', {
+        headers: { host: 'proof-path.vercel.app', 'x-forwarded-for': `203.0.113.${20 + cases.findIndex(item => item[0] === authCode)}` },
+      }, {
+        env: {
+          SUPABASE_URL: 'https://project.supabase.co',
+          SUPABASE_PUBLISHABLE_KEY: 'publishable',
+          COVENDA_ADMIN_EMAILS: 'operator@covenda.com',
+        },
+        createSupabaseClient() {
+          return { auth: { async signInWithOtp() { return { error: { code: authCode, message: authCode } }; } } };
+        },
+      }),
+      error => error instanceof AdminOperationalError
+        && error.code === expectedCode
+        && expectedMessage.test(error.publicMessage),
+    );
+  }
+});
+
 test('admin endpoint returns an actionable allowlist diagnostic', async () => {
   const response = {
     headers: {},

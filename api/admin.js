@@ -110,6 +110,43 @@ function linkRateLimited(req, address) {
   return recent.length > 3;
 }
 
+function magicLinkOperationalError(error) {
+  const authCode = text(error?.code, 120);
+  if (authCode === 'otp_disabled') {
+    return new AdminOperationalError(
+      'ADMIN_MAGIC_LINK_OTP_DISABLED',
+      'The connected Supabase project rejected email OTP sign-in. Confirm this operator exists in the same Supabase project connected to Vercel and that Email sign-in is enabled there.',
+      error,
+    );
+  }
+  if (authCode === 'over_email_send_rate_limit' || authCode === 'over_request_rate_limit') {
+    return new AdminOperationalError(
+      'ADMIN_MAGIC_LINK_RATE_LIMITED',
+      'Supabase temporarily rate-limited sign-in emails. Wait before requesting another link, or configure custom SMTP for production delivery.',
+      error,
+    );
+  }
+  if (authCode === 'email_address_not_authorized') {
+    return new AdminOperationalError(
+      'ADMIN_MAGIC_LINK_EMAIL_UNAUTHORIZED',
+      'Supabase\'s default email service is not authorized to send to this address. Add the address to the Supabase organization team or configure custom SMTP.',
+      error,
+    );
+  }
+  if (authCode === 'email_provider_disabled') {
+    return new AdminOperationalError(
+      'ADMIN_MAGIC_LINK_EMAIL_DISABLED',
+      'Email authentication is disabled in the Supabase project connected to Vercel. Enable the Email provider, then try again.',
+      error,
+    );
+  }
+  return new AdminOperationalError(
+    'ADMIN_MAGIC_LINK_FAILED',
+    'Supabase could not send the sign-in link. Confirm the operator exists in the same Supabase project connected to Vercel, then check that project\'s Auth logs for the latest /otp error.',
+    error,
+  );
+}
+
 export async function authorizeAdmin(req, {
   env = process.env,
   createSupabaseClient = createClient,
@@ -151,11 +188,7 @@ export async function requestAdminLink(address, req, {
     options: { shouldCreateUser: false, emailRedirectTo: redirectUrl(req) },
   });
   if (error) {
-    throw new AdminOperationalError(
-      'ADMIN_MAGIC_LINK_FAILED',
-      'Supabase could not send the sign-in link. Confirm this email exists under Authentication → Users and that Email sign-in is enabled.',
-      error,
-    );
+    throw magicLinkOperationalError(error);
   }
   return { accepted: true, delivery: 'requested' };
 }
