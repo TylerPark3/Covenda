@@ -2908,7 +2908,6 @@ function drawCredentialCard(item) {
   const W = canvas.width, H = canvas.height;
   const serif = 'Georgia, "Times New Roman", serif';
   const sans = 'Arial, "Helvetica Neue", sans-serif';
-  const mono = '"Courier New", monospace';
   const milestone = credentialMilestone(item);
 
   const bg = ctx.createLinearGradient(0, 0, W, H);
@@ -2939,9 +2938,10 @@ function drawCredentialCard(item) {
   ctx.font = '700 52px ' + serif;
   ctx.fillText(milestone.label, 72, 486);
 
-  // Credibility rungs, current one lit.
+  // Credibility rungs, current one lit. Sits higher up so the labels stay well
+  // clear of the footer line below (they used to collide with the reference).
   const rungs = ['Endorsed / Building', 'Role-Qualified', 'Employer-Verified', 'Proven'];
-  const pipY = 556, pipX0 = 74, gap = (W - 148) / rungs.length;
+  const pipY = 524, pipX0 = 74, gap = (W - 148) / rungs.length;
   rungs.forEach((label, i) => {
     const cx = pipX0 + gap * i + 18;
     const lit = i <= milestone.index;
@@ -2959,15 +2959,14 @@ function drawCredentialCard(item) {
     }
     ctx.fillStyle = lit ? 'rgba(233,200,119,0.9)' : 'rgba(255,255,255,0.4)';
     ctx.font = '600 17px ' + sans;
-    ctx.fillText(label, cx - 12, pipY + 34);
+    ctx.fillText(label, cx - 12, pipY + 30);
   });
 
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.font = '400 24px ' + mono;
-  ctx.fillText(item.reference || '', 72, H - 76);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  // Single footer line: reference · date · site — one row keeps it clear of the
+  // rung labels above at every card size.
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = '400 22px ' + sans;
-  ctx.fillText(receiptDate(item.createdAt) + '   ·   covenda.app', 72, H - 44);
+  ctx.fillText([item.reference || '', receiptDate(item.createdAt), 'covenda.app'].filter(Boolean).join('   ·   '), 72, H - 50);
 }
 
 function openCredentialCard(item) {
