@@ -54,6 +54,10 @@ const trustedTalent = readFileSync(
   new URL('../supabase/migrations/20260726000000_trusted_talent_network.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const matchEvents = readFileSync(
+  new URL('../supabase/migrations/20260722212024_create_match_events.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -131,6 +135,19 @@ test('member portal migration creates private role-aware projects and applicatio
   assert.match(memberPortal, /alter table public\.member_projects force row level security/);
   assert.match(memberPortal, /revoke all on table public\.project_applications from public, anon, authenticated/);
   assert.match(memberPortal, /grant select, insert, update, delete on table public\.member_profiles to service_role/);
+});
+
+test('student matching events are append-only and bookmarks remain server-only', () => {
+  assert.match(matchEvents, /create table if not exists public\.match_events/);
+  assert.match(matchEvents, /create table if not exists public\.saved_projects/);
+  for(const event of ['surfaced','viewed','applied','accepted','declined','submitted','revision_requested','completed','cancelled']) assert.match(matchEvents,new RegExp(`'${event}'`));
+  assert.match(matchEvents, /fit_score smallint check \(fit_score between 0 and 100\)/);
+  assert.match(matchEvents, /alter table public\.match_events force row level security/);
+  assert.match(matchEvents, /revoke all on table public\.match_events from public, anon, authenticated/);
+  assert.match(matchEvents, /grant select, insert on table public\.match_events to service_role/);
+  assert.doesNotMatch(matchEvents, /grant[^;]*(update|delete)[^;]*on table public\.match_events/);
+  assert.match(matchEvents, /grant select, insert, delete on table public\.saved_projects to service_role/);
+  assert.match(matchEvents, /notify pgrst, 'reload schema'/);
 });
 
 test('project message migration keeps conversations server-only and indexed', () => {

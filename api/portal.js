@@ -327,7 +327,7 @@ export async function loadMemberDashboard(member) {
   }
 
   if (profile.role === 'student') {
-    const [projects, opportunities, applications] = await Promise.all([
+    const [projects, opportunities, applications, savedProjects] = await Promise.all([
       checked(
         supabase
           .from('member_projects')
@@ -353,6 +353,14 @@ export async function loadMemberDashboard(member) {
           .order('updated_at', { ascending: false })
           .limit(100),
       ),
+      checked(
+        supabase
+          .from('saved_projects')
+          .select('project_id')
+          .eq('student_user_id', user.id)
+          .order('created_at', { ascending: false })
+          .limit(200),
+      ),
     ]);
 
     const projectIds = projects.map(project => project.id);
@@ -372,7 +380,9 @@ export async function loadMemberDashboard(member) {
       project => project.status === 'complete',
     ).length;
 
-    const rankedOpportunities = rankOpportunities(opportunities, profile);
+    const rankedOpportunities = rankOpportunities(opportunities, profile, {
+      completedProjects: verifiedCount,
+    });
     const matchedCount = rankedOpportunities.filter(
       project => project.matched,
     ).length;
@@ -398,6 +408,7 @@ export async function loadMemberDashboard(member) {
       walletBalance,
       creditLedger,
       payoutRequests,
+      savedProjectIds: savedProjects.map(item => item.project_id),
     };
   }
 
@@ -701,20 +712,140 @@ function sanitizeBrief(brief) {
 // Rank open opportunities so ones matching the student's verticals/work types come
 // first, each tagged `matched` for the "Matched to your vertical" badge. A student who
 // picked "Not sure yet — show me everything" matches every vertical.
-export function rankOpportunities(opportunities, profile) {
-  const profileVerticals = new Set(profile?.verticals || []);
-  const profileWorkTypes = new Set(profile?.work_types || []);
-  const everything = profileVerticals.has('Not sure yet — show me everything');
-  const isMatch = project => {
-    const verticals = project.verticals || [];
-    const workTypes = project.work_types || [];
-    const verticalMatch = everything || verticals.some(value => profileVerticals.has(value));
-    const workTypeMatch = workTypes.some(value => profileWorkTypes.has(value));
-    return Boolean((verticals.length && verticalMatch) || (workTypes.length && workTypeMatch));
+export const PROJECT_FIT_WEIGHTS = Object.freeze({ vertical: 32, workType: 28, skills: 28, experience: 12 });
+
+function normalizedSet(values) {
+  return new Set((Array.isArray(values) ? values : []).map(value => cleanText(value, 80).toLowerCase()).filter(Boolean));
+}
+
+function fitLabel(value) {
+  return cleanText(value, 80).replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+// This score describes one project/student pairing. It is intentionally transparent,
+// uses only work-relevant inputs, and never reads school, name, photo, age, or another
+// protected/proxy attribute. Unknown fields are omitted instead of counting against a student.
+export function calculateProjectFit(project, profile, context = {}) {
+  const profileVerticals = normalizedSet(profile?.verticals);
+  const projectVerticals = normalizedSet(project?.verticals);
+  const profileWorkTypes = normalizedSet(profile?.work_types);
+  const projectWorkTypes = normalizedSet(project?.work_types);
+  const profileSkills = normalizedSet(profile?.skills);
+  const projectSkills = normalizedSet(project?.desired_skills);
+  const everything = profileVerticals.has('not sure yet — show me everything');
+  const overlap = (left, right) => [...left].filter(value => right.has(value));
+  const verticalMatches = everything ? [...projectVerticals] : overlap(profileVerticals, projectVerticals);
+  const workTypeMatches = overlap(profileWorkTypes, projectWorkTypes);
+  const skillMatches = overlap(profileSkills, projectSkills);
+  let available = 0;
+  let earned = 0;
+  const reasons = [];
+
+  if (profileVerticals.size && projectVerticals.size) {
+    available += PROJECT_FIT_WEIGHTS.vertical;
+    if (verticalMatches.length) {
+      earned += PROJECT_FIT_WEIGHTS.vertical;
+      reasons.push(everything ? 'Open to this industry' : fitLabel(verticalMatches[0]));
+    }
+  }
+  if (profileWorkTypes.size && projectWorkTypes.size) {
+    available += PROJECT_FIT_WEIGHTS.workType;
+    if (workTypeMatches.length) {
+      earned += PROJECT_FIT_WEIGHTS.workType;
+      reasons.push(fitLabel(workTypeMatches[0]));
+    }
+  }
+  if (profileSkills.size && projectSkills.size) {
+    available += PROJECT_FIT_WEIGHTS.skills;
+    const share = Math.min(1, skillMatches.length / Math.max(1, Math.min(3, projectSkills.size)));
+    earned += Math.round(PROJECT_FIT_WEIGHTS.skills * share);
+    if (skillMatches.length) reasons.push(`Skills: ${skillMatches.slice(0, 2).map(fitLabel).join(', ')}`);
+  }
+  if (Number(context.completedProjects) > 0) {
+    available += PROJECT_FIT_WEIGHTS.experience;
+    earned += PROJECT_FIT_WEIGHTS.experience;
+    reasons.push('Completed Covenda work');
+  }
+
+  const score = available ? Math.round(earned / available * 100) : 0;
+  return {
+    score,
+    matched: verticalMatches.length > 0 || workTypeMatches.length > 0 || skillMatches.length > 0,
+    reasons: [...new Set(reasons)].slice(0, 4),
+    features: {
+      verticalMatches: verticalMatches.length,
+      workTypeMatches: workTypeMatches.length,
+      skillMatches: skillMatches.length,
+      completedProjects: Math.max(0, Math.min(100, Number(context.completedProjects) || 0)),
+    },
   };
+}
+
+export function rankOpportunities(opportunities, profile, context = {}) {
   return (opportunities || [])
-    .map(project => ({ ...project, matched: isMatch(project) }))
-    .sort((a, b) => Number(b.matched) - Number(a.matched));
+    .map(project => {
+      const fit = calculateProjectFit(project, profile, context);
+      return { ...project, matched: fit.matched, fit_score: fit.score, fit_reasons: fit.reasons, fit_features: fit.features };
+    })
+    .sort((a, b) => b.fit_score - a.fit_score || String(b.created_at || '').localeCompare(String(a.created_at || '')));
+}
+
+const CLIENT_MATCH_EVENTS = new Set(['surfaced', 'viewed']);
+
+async function studentFitContext(member, projectId) {
+  const [profile, project, completed] = await Promise.all([
+    checked(member.supabase.from('member_profiles').select('*').eq('user_id', member.user.id).maybeSingle(), null),
+    checked(member.supabase.from('member_projects').select('*').eq('id', projectId).maybeSingle(), null),
+    checked(member.supabase.from('member_projects').select('id').eq('assigned_student_user_id', member.user.id).eq('status', 'complete').limit(100), []),
+  ]);
+  if (profile?.role !== 'student') throw new Error('Only student accounts can use project discovery.');
+  if (!project || project.status !== 'open' || !['members', 'open'].includes(project.visibility)) throw new Error('This project is not available in discovery.');
+  return { profile, project, fit: calculateProjectFit(project, profile, { completedProjects: completed.length }) };
+}
+
+async function appendMatchEvent(member, projectId, eventType, fit = null, studentUserId = member.user.id) {
+  const row = {
+    project_id: projectId,
+    student_user_id: studentUserId,
+    event_type: eventType,
+    features: fit?.features || {},
+    fit_score: Number.isFinite(fit?.score) ? fit.score : null,
+    fit_reasons: fit?.reasons || [],
+  };
+  return checked(member.supabase.from('match_events').insert(row).select('id,event_type,created_at').single(), null);
+}
+
+async function appendMatchEventSafely(member, projectId, eventType, fit = null, studentUserId = member.user.id) {
+  try {
+    await appendMatchEvent(member, projectId, eventType, fit, studentUserId);
+  } catch (error) {
+    // Instrumentation must never turn a successful application, review, or payout
+    // transition into an apparent failure that a member might repeat.
+    console.warn(JSON.stringify({ level:'warn', message:'Match event was not recorded', eventType, projectId, error:cleanText(error?.message, 500) }));
+  }
+}
+
+export async function recordMatchEvent(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  const eventType = cleanText(input.eventType, 30);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  if (!CLIENT_MATCH_EVENTS.has(eventType)) throw new Error('Choose a valid discovery event.');
+  const { fit } = await studentFitContext(member, projectId);
+  return appendMatchEvent(member, projectId, eventType, fit);
+}
+
+export async function toggleSavedProject(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  await studentFitContext(member, projectId);
+  const saved = input.saved === true;
+  if (saved) {
+    const existing = await checked(member.supabase.from('saved_projects').select('project_id').eq('student_user_id', member.user.id).eq('project_id', projectId).maybeSingle(), null);
+    if (!existing) await checked(member.supabase.from('saved_projects').insert({ student_user_id: member.user.id, project_id: projectId }).select('project_id').single(), null);
+  } else {
+    await checked(member.supabase.from('saved_projects').delete().eq('student_user_id', member.user.id).eq('project_id', projectId).select('project_id'), []);
+  }
+  return { projectId, saved };
 }
 
 export async function createMemberProject(member, input) {
@@ -781,9 +912,9 @@ export async function createMemberProject(member, input) {
 export async function applyToProject(member, input) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project.');
-  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  const profile = await checked(member.supabase.from('member_profiles').select('*').eq('user_id', member.user.id).maybeSingle(), null);
   if (profile?.role !== 'student') throw new Error('Only student accounts can apply to projects.');
-  const project = await checked(member.supabase.from('member_projects').select('id,status,visibility').eq('id', projectId).maybeSingle(), null);
+  const project = await checked(member.supabase.from('member_projects').select('*').eq('id', projectId).maybeSingle(), null);
   if (!project || project.status !== 'open' || !['members', 'open'].includes(project.visibility)) throw new Error('This project is not accepting applications.');
   const existing = await checked(
     member.supabase.from('project_applications').select('*').eq('project_id', projectId).eq('student_user_id', member.user.id).maybeSingle(),
@@ -791,7 +922,10 @@ export async function applyToProject(member, input) {
   );
   if (existing) return existing;
   const row = { project_id: projectId, student_user_id: member.user.id, note: cleanText(input.note, 2_000) || null, updated_at: new Date().toISOString() };
-  return checked(member.supabase.from('project_applications').insert(row).select('*').single(), null);
+  const application = await checked(member.supabase.from('project_applications').insert(row).select('*').single(), null);
+  const completed = await checked(member.supabase.from('member_projects').select('id').eq('assigned_student_user_id', member.user.id).eq('status', 'complete').limit(100), []);
+  await appendMatchEventSafely(member, projectId, 'applied', calculateProjectFit(project, profile, { completedProjects: completed.length }));
+  return application;
 }
 
 export async function sendProjectMessage(member, input) {
@@ -840,10 +974,12 @@ export async function acceptApplication(member, input) {
     null,
   );
   // Decline the remaining live applications so the pipeline is unambiguous (leave withdrawn ones as-is).
-  await checked(
-    member.supabase.from('project_applications').update({ status: 'declined', updated_at: now }).eq('project_id', project.id).neq('id', applicationId).neq('status', 'withdrawn').select('id'),
+  const declined = await checked(
+    member.supabase.from('project_applications').update({ status: 'declined', updated_at: now }).eq('project_id', project.id).neq('id', applicationId).neq('status', 'withdrawn').select('id,student_user_id'),
     [],
   );
+  await appendMatchEventSafely(member, project.id, 'accepted', null, application.student_user_id);
+  for (const item of declined) await appendMatchEventSafely(member, project.id, 'declined', null, item.student_user_id);
   return accepted;
 }
 
@@ -863,10 +999,12 @@ export async function submitDeliverable(member, input) {
   const body = links.length ? `${summary}\n\nLinks:\n${links.map(link => `- ${link}`).join('\n')}` : summary;
   const now = new Date().toISOString();
   // Clear any prior revision note so a stale "changes requested" message does not linger after resubmission.
-  return checked(
+  const updated = await checked(
     member.supabase.from('member_projects').update({ deliverable: body, status: 'review', deliverable_submitted_at: now, review_note: null, updated_at: now }).eq('id', projectId).select('*').single(),
     null,
   );
+  await appendMatchEventSafely(member, projectId, 'submitted');
+  return updated;
 }
 
 export async function reviewDeliverable(member, input) {
@@ -877,7 +1015,7 @@ export async function reviewDeliverable(member, input) {
   const note = cleanText(input.note, 2_000);
   if (decision === 'revise' && !note) throw new Error('Add a note so the student knows what to revise.');
   const project = await checked(
-    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', projectId).maybeSingle(),
+    member.supabase.from('member_projects').select('id,owner_user_id,assigned_student_user_id,status').eq('id', projectId).maybeSingle(),
     null,
   );
   if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can review a deliverable.');
@@ -886,10 +1024,12 @@ export async function reviewDeliverable(member, input) {
 
   if (decision === 'revise') {
     // No credit movement — the escrow stays held while the student reworks it.
-    return checked(
+    const revised = await checked(
       member.supabase.from('member_projects').update({ status: 'in_progress', review_note: note, updated_at: now }).eq('id', projectId).select('*').single(),
       null,
     );
+    if (project.assigned_student_user_id) await appendMatchEventSafely(member, projectId, 'revision_requested', null, project.assigned_student_user_id);
+    return revised;
   }
 
   // Accepting settles money, so the ledger writes and the status change must commit
@@ -899,6 +1039,7 @@ export async function reviewDeliverable(member, input) {
     await checked(member.supabase.from('member_projects').update({ review_note: note, updated_at: now }).eq('id', projectId).select('id').single(), null);
   }
   const released = await checked(member.supabase.rpc('release_project_escrow', { p_project_id: projectId, p_owner_id: member.user.id }), null);
+  if (project.assigned_student_user_id) await appendMatchEventSafely(member, projectId, 'completed', null, project.assigned_student_user_id);
   return Array.isArray(released) ? released[0] : released;
 }
 
@@ -908,19 +1049,20 @@ export async function cancelProject(member, input) {
   const projectId = cleanText(input.projectId, 50);
   if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
   const project = await checked(
-    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', projectId).maybeSingle(),
+    member.supabase.from('member_projects').select('id,owner_user_id,assigned_student_user_id,status').eq('id', projectId).maybeSingle(),
     null,
   );
   if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can cancel a project.');
   if (['complete', 'archived'].includes(project.status)) throw new Error('This project is already finished.');
   const refunded = await checked(member.supabase.rpc('refund_project_escrow', { p_project_id: projectId, p_owner_id: member.user.id }), null);
+  if (project.assigned_student_user_id) await appendMatchEventSafely(member, projectId, 'cancelled', null, project.assigned_student_user_id);
   return Array.isArray(refunded) ? refunded[0] : refunded;
 }
 
 function portalFailure(error) {
   if (error instanceof PortalOperationalError) return { status: 503, code: error.code, message: error.publicMessage };
   const message = cleanText(error?.message, 2_000);
-  if (/member_profiles|member_projects|project_applications|project_messages|student_endorsements|submissions|schema cache|relation .* does not exist/i.test(message)) {
+  if (/member_profiles|member_projects|project_applications|project_messages|student_endorsements|saved_projects|match_events|submissions|schema cache|relation .* does not exist/i.test(message)) {
     return { status: 503, code: 'PORTAL_SCHEMA_MISSING', message: 'Member sign-in worked, but the portal tables are not available. Apply the newest Supabase migration to the same project used by Vercel.' };
   }
   return { status: 503, code: 'PORTAL_UNAVAILABLE', message: 'The member portal is temporarily unavailable. Check the newest /api/portal entry in Vercel Runtime Logs.' };
@@ -956,6 +1098,8 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input) });
+    if (req.method === 'POST' && input.action === 'match-event') return res.status(201).json({ ok: true, event: await recordMatchEvent(member, input) });
+    if (req.method === 'POST' && input.action === 'toggle-save') return res.status(200).json({ ok: true, ...(await toggleSavedProject(member, input)) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });

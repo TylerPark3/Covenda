@@ -5,6 +5,7 @@ import {
   acceptApplication,
   authorizeMember,
   buyCredits,
+  calculateProjectFit,
   cancelProject,
   createMemberProject,
   creditBalance,
@@ -284,6 +285,18 @@ test('opportunities matching the student vertical or work type are flagged and s
 test('a show-me-everything student matches every open vertical', () => {
   const ranked = rankOpportunities([{ id: '1', verticals: ['Healthcare operations'], work_types: [] }], { verticals: ['Not sure yet — show me everything'], work_types: [] });
   assert.equal(ranked[0].matched, true);
+});
+
+test('project fit explains work-relevant overlap and ignores school prestige', () => {
+  const project = { verticals:['Software & AI'], work_types:['QA & testing'], desired_skills:['Python','Research'] };
+  const profile = { verticals:['Software & AI'], work_types:['QA & testing'], skills:['Python'], school_name:'Example University' };
+  const fit = calculateProjectFit(project, profile, { completedProjects:1 });
+  const sameFitAtAnotherSchool = calculateProjectFit(project, { ...profile, school_name:'Another School' }, { completedProjects:1 });
+  assert.equal(fit.score, sameFitAtAnotherSchool.score);
+  assert.equal(fit.matched, true);
+  assert.ok(fit.reasons.some(reason => /Software|QA|Skills/.test(reason)));
+  assert.deepEqual(Object.keys(fit.features), ['verticalMatches','workTypeMatches','skillMatches','completedProjects']);
+  assert.doesNotMatch(JSON.stringify(fit), /school|university|prestige/i);
 });
 
 test('project intake stores whitelisted targeting fields, secure attachments, and the AI brief', async () => {

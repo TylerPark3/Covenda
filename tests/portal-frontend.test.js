@@ -56,3 +56,16 @@ test('company portal includes a gated, filterable Trusted Talent marketplace',()
   assert.match(styles,/talent-flow/);
   assert.match(styles,/@keyframes talent-flow/);
 });
+
+test('student discovery includes explainable matching, bookmarks, filters, and mobile detail behavior',()=>{
+  for(const id of ['discoverSearch','discoverSort','discoverFilters','discoverFilterDialog','discoverDetail']) assert.match(html,new RegExp(`id="${id}"`));
+  assert.match(html,/data-discover-tab="best"/);
+  assert.match(html,/data-discover-tab="saved"/);
+  assert.match(html,/Fit is about this project—not a universal student score/);
+  assert.match(script,/action:'match-event'/);
+  assert.match(script,/action:'toggle-save'/);
+  assert.match(script,/fit_reasons/);
+  assert.match(styles,/\.discover-workspace/);
+  assert.match(styles,/\.discover-filter-dialog/);
+  assert.match(styles,/@media \(max-width:680px\)[\s\S]*?\.discover-detail/);
+});
