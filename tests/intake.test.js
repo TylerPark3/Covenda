@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { generateProjectBrief, IntakeConfigError, normalizeBrief } from '../api/project-intake.js';
-import { validateUpload } from '../api/project-upload.js';
+import { uploadPolicy, validateUpload } from '../api/project-upload.js';
 
 function anthropicResponse(object) {
   return { ok: true, async json() { return { content: [{ type: 'text', text: JSON.stringify(object) }] }; } };
@@ -61,4 +61,13 @@ test('upload validation rejects unsupported types and oversized files', () => {
   assert.equal(validateUpload('application/pdf', 20 * 1024 * 1024).status, 413);
   assert.equal(validateUpload('application/pdf', 0).status, 400);
   assert.equal(validateUpload('application/pdf', 1000).ok, true);
+});
+
+test('avatar uploads are image-only, capped at 5MB, and stored under their own prefix', () => {
+  assert.equal(validateUpload('image/png', 1000, 'avatar').ok, true);
+  assert.equal(validateUpload('application/pdf', 1000, 'avatar').status, 415); // a PDF is fine as an attachment, never as an avatar
+  assert.equal(validateUpload('image/png', 6 * 1024 * 1024, 'avatar').status, 413);
+  assert.equal(validateUpload('image/png', 6 * 1024 * 1024).ok, true); // same size is fine for a project attachment
+  assert.equal(uploadPolicy('avatar').prefix, 'avatars');
+  assert.equal(uploadPolicy('project').prefix, 'project-files');
 });

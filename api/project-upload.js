@@ -30,10 +30,26 @@ const EXTENSIONS = {
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
 };
 
-export function validateUpload(contentType, size) {
-  if (!ALLOWED.has(contentType)) return { ok: false, status: 415, error: 'Unsupported file type. Upload a PDF, document, spreadsheet, or image.' };
+const AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+
+// Two upload kinds share this endpoint because auth, validation, and the Blob write are
+// identical — only the accepted types, size ceiling, and key prefix differ.
+export function uploadPolicy(kind) {
+  return kind === 'avatar'
+    ? { allowed: AVATAR_TYPES, maxBytes: AVATAR_MAX_BYTES, prefix: 'avatars', basename: 'avatar' }
+    : { allowed: ALLOWED, maxBytes: MAX_BYTES, prefix: 'project-files', basename: 'attachment' };
+}
+
+export function validateUpload(contentType, size, kind = 'project') {
+  const policy = uploadPolicy(kind);
+  if (!policy.allowed.has(contentType)) {
+    return { ok: false, status: 415, error: kind === 'avatar' ? 'Unsupported image type. Use PNG, JPEG, WebP, or GIF.' : 'Unsupported file type. Upload a PDF, document, spreadsheet, or image.' };
+  }
   if (!size) return { ok: false, status: 400, error: 'The file is empty.' };
-  if (size > MAX_BYTES) return { ok: false, status: 413, error: 'File is too large. Keep each attachment under 15 MB.' };
+  if (size > policy.maxBytes) {
+    return { ok: false, status: 413, error: kind === 'avatar' ? 'Image is too large. Keep it under 5 MB.' : 'File is too large. Keep each attachment under 15 MB.' };
+  }
   return { ok: true };
 }
 
@@ -58,26 +74,29 @@ export default async function handler(req, res, dependencies = {}) {
   if (!member) return res.status(401).json({ error: 'Member authentication is required.' });
   if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(503).json({ error: 'File storage is not configured yet. Add BLOB_READ_WRITE_TOKEN in Vercel.' });
 
+  const kind = req.headers['x-upload-kind'] === 'avatar' ? 'avatar' : 'project';
+  const policy = uploadPolicy(kind);
   const contentType = (req.headers['content-type'] || '').split(';')[0].trim();
   const declaredName = safeName(req.headers['x-file-name']);
-  if (!ALLOWED.has(contentType)) return res.status(415).json({ error: 'Unsupported file type. Upload a PDF, document, spreadsheet, or image.' });
+  const typeCheck = validateUpload(contentType, 1, kind);
+  if (!typeCheck.ok && typeCheck.status === 415) return res.status(415).json({ error: typeCheck.error });
 
   const chunks = [];
   let size = 0;
   try {
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > MAX_BYTES) return res.status(413).json({ error: 'File is too large. Keep each attachment under 15 MB.' });
+      if (size > policy.maxBytes) return res.status(413).json({ error: validateUpload(contentType, policy.maxBytes + 1, kind).error });
       chunks.push(chunk);
     }
   } catch { return res.status(400).json({ error: 'Could not read the uploaded file.' }); }
 
-  const check = validateUpload(contentType, size);
+  const check = validateUpload(contentType, size, kind);
   if (!check.ok) return res.status(check.status).json({ error: check.error });
 
   try {
     const ext = EXTENSIONS[contentType] || 'bin';
-    const blob = await put(`project-files/${member.user.id}/attachment.${ext}`, Buffer.concat(chunks), {
+    const blob = await put(`${policy.prefix}/${member.user.id}/${policy.basename}.${ext}`, Buffer.concat(chunks), {
       access: 'public',
       contentType,
       addRandomSuffix: true,
