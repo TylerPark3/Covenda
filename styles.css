@@ -2415,6 +2415,39 @@ body[data-audience="university"] .stat-band { display: none; }
 .stat-note { display: flex; align-items: flex-start; gap: 9px; margin: 22px 0 0; color: var(--soft); font-size: 12px; line-height: 1.55; }
 .stat-note svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 1px; color: var(--gold-deep); }
 
+/* ---- Covenda tree: the model in one figure ----
+   Sizes off the container (cqw) so the figure and its cards scale together. Uses the
+   site tokens rather than its own font/colour stack so it sits inside the band. */
+.covenda-tree { container-type: inline-size; width: 100%; margin: clamp(34px, 4vw, 54px) 0 0; color: var(--ink); }
+.covenda-tree * { box-sizing: border-box; }
+.ct-inner { padding: clamp(18px, 3cqw, 40px) clamp(12px, 2cqw, 28px) clamp(14px, 2.5cqw, 30px); }
+.ct-head { text-align: center; margin-bottom: .6cqw; }
+.ct-eyebrow { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: clamp(9px, .85cqw, 12px); font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--gold-deep); }
+.ct-title { margin: clamp(4px, .5cqw, 10px) 0 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 3.3cqw, 54px); line-height: 1.08; letter-spacing: -.03em; }
+.ct-stage { position: relative; width: 100%; aspect-ratio: 1400 / 1000; margin: 0 auto; }
+.ct-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; }
+.ct-card { position: absolute; width: clamp(148px, 18cqw, 258px); padding: clamp(10px, 1.15cqw, 16px) clamp(11px, 1.25cqw, 17px); border: 1px solid var(--line); border-radius: clamp(10px, 1cqw, 15px); background: #fffdf8; box-shadow: 0 12px 34px rgba(60,45,10,.09); }
+.ct-k { font-size: clamp(8px, .8cqw, 11px); font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--gold-deep); }
+.ct-t { margin: .4cqw 0 .5cqw; font-family: var(--font-display); font-weight: 400; font-size: clamp(13px, 1.35cqw, 19px); color: var(--ink); }
+.ct-d { font-size: clamp(10px, .98cqw, 13.5px); line-height: 1.5; color: var(--muted); }
+.ct-chips { display: flex; flex-wrap: wrap; gap: clamp(4px, .45cqw, 7px); margin-top: .75cqw; }
+.ct-chip { padding: clamp(3px, .35cqw, 5px) clamp(6px, .7cqw, 10px); border: 1px solid var(--gold-light); border-radius: 999px; background: var(--gold-pale); color: var(--gold-deep); font-size: clamp(8px, .8cqw, 11px); white-space: nowrap; }
+.ct-card--canopy { top: 0; left: 0; }
+.ct-card--trunk { top: 38%; right: 0; }
+.ct-card--roots { bottom: 0; left: 0; }
+.ct-card--nutrients { bottom: 0; right: 0; }
+.ct-glow { animation: covendaShimmer 6s ease-in-out infinite; }
+@keyframes covendaShimmer { 0%, 100% { opacity: .48; } 50% { opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { .ct-glow { animation: none; opacity: .52; } }
+/* Narrow: corner-anchored cards would sit on top of the figure, so let the stage flow
+   and stack the cards underneath it instead. */
+@media (max-width: 760px) {
+  .ct-stage { position: static; aspect-ratio: auto; display: grid; gap: 12px; }
+  .ct-svg { position: static; width: 100%; height: auto; aspect-ratio: 1400 / 1000; }
+  .ct-card { position: static; width: 100%; }
+  .ct-leader { display: none; }
+}
+
 /* ---- Fix cramped dialogs -------------------------------------------------
    The single-step dialogs (quick join / request endorsement / role apply /
    credential) reuse .form-dialog but never got the body padding the multi-step
