@@ -1618,10 +1618,10 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12px; font-weight: 650;
   margin: 0 auto clamp(96px, 11vw, 168px);
   padding: 0;
 }
-/* Core story is the opening/default home view only — not repeated per audience. */
+/* Core story lives on HOME only (not per-audience). */
+body[data-audience="student"] #flowDemo,
 body[data-audience="company"] #flowDemo,
-body[data-audience="university"] #flowDemo,
-body[data-audience-switched] #flowDemo { display: none; }
+body[data-audience="university"] #flowDemo { display: none; }
 /* Extra breathing room below the core story, before "Real work becomes credible
    evidence". Uses #id so it beats `.how-section > div { margin: 0 auto }`. */
 #flowDemo { margin-bottom: clamp(96px, 11vw, 168px); }
@@ -2112,4 +2112,56 @@ html.js-reveal .reveal {
 html.js-reveal .reveal.is-revealed { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
   html.js-reveal .reveal { opacity: 1 !important; transform: none !important; transition: none; }
+}
+
+/* ===== HOME audience: brand story only (core story + "What Covenda is") ===== */
+.hero-home { display: none; }
+body[data-audience="home"] .hero-home { display: block; }
+body[data-audience="home"] .hero-student,
+body[data-audience="home"] .hero-company,
+body[data-audience="home"] .hero-university { display: none; }
+/* on home, hide every audience-specific block; keep only the brand narrative */
+body[data-audience="home"] .audience-content,
+body[data-audience="home"] .value-band,
+body[data-audience="home"] #why,
+body[data-audience="home"] .batches-section,
+body[data-audience="home"] .final-cta { display: none; }
+/* the core story + "What Covenda is" belong to home, not the student surface */
+body[data-audience="student"] .feature-band { display: none; }
+
+/* ---- Home hero: brand statement + path chooser ---- */
+.home-kicker {
+  margin: 0 0 16px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+}
+.home-paths {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  width: min(100%, 1040px);
+  margin: 48px auto 0;
+}
+.home-path {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  padding: 20px 22px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.home-path-icon { width: 26px; height: 26px; color: var(--gold-deep); flex: none; }
+.home-path span { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.home-path strong { font-size: 16px; letter-spacing: -.02em; }
+.home-path small { color: var(--muted); font-size: 12.5px; line-height: 1.4; }
+.home-path-go { width: 17px; height: 17px; color: var(--gold); flex: none; opacity: .55; transition: transform .2s ease, opacity .2s ease; }
+.home-path:hover { border-color: var(--gold); }
+.home-path:hover .home-path-go { transform: translateX(3px); opacity: 1; }
+
+@media (max-width: 760px) {
+  .home-paths { grid-template-columns: 1fr; width: min(100%, 460px); }
 }

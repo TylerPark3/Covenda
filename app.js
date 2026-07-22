@@ -2,7 +2,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 const state = {
-  audience: 'student',
+  audience: 'home',
   surface: 'site',
   workType: 'Research',
   toastTimer: null,
@@ -329,13 +329,14 @@ function showToast(message) {
 }
 
 const audienceTitles = {
+  home: 'Covenda · Real work becomes credible proof',
   student: 'Covenda · Real work becomes credible evidence',
   company: 'Covenda for companies · Turn delayed work into a project',
   university: 'Covenda for universities · Share your students with the pilot',
 };
 
 function setAudience(audience) {
-  if (!['student', 'company', 'university'].includes(audience)) return;
+  if (!['home', 'student', 'company', 'university'].includes(audience)) return;
   state.audience = audience;
   writeStorage(audienceStorageKey, audience);
   document.body.dataset.audience = audience;
@@ -1950,7 +1951,8 @@ $$('.form-dialog').forEach(dialog => dialog.addEventListener('click', event => {
 
 $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   const action = button.dataset.action;
-  if (action === 'home' || action === 'site') setSurface('site');
+  if (action === 'home') { setAudience('home'); setSurface('site'); window.scrollTo({ top: 0, behavior: 'instant' }); }
+  if (action === 'site') setSurface('site');
   if (action === 'workspace') setSurface('workspace');
   if (action === 'workspace-submissions') {
     setAudience('student');
@@ -2481,8 +2483,8 @@ $('#introScreen').addEventListener('cancel', event => {
   dismissIntro({ fast: true });
 });
 
-const restoredAudience = readStorage(audienceStorageKey, 'student');
-if (['student', 'company', 'university'].includes(restoredAudience)) state.audience = restoredAudience;
+const restoredAudience = readStorage(audienceStorageKey, 'home');
+if (['home', 'student', 'company', 'university'].includes(restoredAudience)) state.audience = restoredAudience;
 const restoredWorkTypes = checkedValues(studentForm, 'workType');
 const rememberedWorkType = readStorage(workTypeStorageKey, 'Research');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];

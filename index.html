@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
-<body data-audience="student" data-surface="site">
+<body data-audience="home" data-surface="site">
   <svg class="svg-library" aria-hidden="true">
     <defs>
       <symbol id="icon-student" viewBox="0 0 24 24"><path d="m3 9 9-5 9 5-9 5-9-5Z"/><path d="M7 12.2V17c2.8 2 7.2 2 10 0v-4.8M21 9v6"/></symbol>
@@ -83,6 +83,20 @@
     </header>
 
     <main>
+      <section class="hero hero-home" aria-labelledby="homeHeroTitle">
+        <div class="hero-copy">
+          <p class="home-kicker">Rethinking internships</p>
+          <h1 id="homeHeroTitle">Real work becomes<br>credible <span class="word-gold">proof</span>.</h1>
+          <p>Covenda turns a company’s delayed, low-risk work into a safe, paid project—and durable evidence of what a student can do. No posting. No guessing. See the work.</p>
+        </div>
+        <div class="home-paths" role="group" aria-label="Choose your path">
+          <button type="button" class="home-path glass-panel" data-audience-option="student"><svg class="home-path-icon"><use href="#icon-student"/></svg><span><strong>I’m a student</strong><small>Build proof through paid, reviewed work</small></span><svg class="home-path-go"><use href="#icon-arrow-right"/></svg></button>
+          <button type="button" class="home-path glass-panel" data-audience-option="company"><svg class="home-path-icon"><use href="#icon-company"/></svg><span><strong>I’m a company</strong><small>Turn delayed work into a safe project</small></span><svg class="home-path-go"><use href="#icon-arrow-right"/></svg></button>
+          <button type="button" class="home-path glass-panel" data-audience-option="university"><svg class="home-path-icon"><use href="#icon-building"/></svg><span><strong>I bring students</strong><small>Educators, clubs & career centers</small></span><svg class="home-path-go"><use href="#icon-arrow-right"/></svg></button>
+        </div>
+        <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
+      </section>
+
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
           <h1 id="studentHeroTitle">What kind of work do you want to <span class="word-gold">prove</span>?</h1>
