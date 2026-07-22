@@ -184,6 +184,7 @@ export function studentRecord(body) {
     interests: {
       workTypes: textArray(interests.workTypes),
       industries: textArray(interests.industries),
+      subIndustries: textArray(interests.subIndustries, { maxItems: 20, maxLength: 120 }),
       workStyle: text(interests.workStyle, 120),
       ambiguityComfort: text(interests.ambiguityComfort, 120),
       avoid: text(interests.avoid, 500),
@@ -206,6 +207,19 @@ export function studentRecord(body) {
     referral: {
       code: text(body.referral?.code, 40),
       via: text(body.referral?.via, 120),
+      verified: false,
+      verificationStatus: body.referral?.code || body.referral?.via ? 'pending verification' : 'not provided',
+    },
+    // Browser-provided verification flags are deliberately ignored. The handler
+    // replaces these fields only after a server-side approved-partner lookup.
+    affiliation: {
+      referrerName: text(body.affiliation?.referrerName, 120),
+      organization: text(body.affiliation?.organization, 160),
+      referralCode: text(body.affiliation?.referralCode, 40).toUpperCase(),
+      verified: false,
+      verificationStatus: body.affiliation?.referrerName || body.affiliation?.organization || body.affiliation?.referralCode
+        ? 'pending verification'
+        : 'not provided',
     },
     // Quick-join linkage: a completed full profile carries its stage + the SQ- ref of
     // the earlier quick join, so records match on email and completion is trackable.
@@ -448,6 +462,60 @@ export function supabaseDestination(url) {
 
 export function postgresConfiguration(env) {
   return env.POSTGRES_URL || env.DATABASE_URL || '';
+}
+
+function normalizedPartnerValue(value) {
+  return text(value, 200).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+export function partnerAffiliationMatch(rows, { code = '', organization = '' } = {}) {
+  const cleanCode = text(code, 40).toUpperCase();
+  const cleanOrganization = normalizedPartnerValue(organization);
+  return (Array.isArray(rows) ? rows : []).some(row => {
+    if (row?.status !== 'approved') return false;
+    if (!['university_partner', 'referrer_endorsement'].includes(row?.submission_type)) return false;
+    const details = row.details && typeof row.details === 'object' ? row.details : {};
+    const rowCode = text(details.attributionCode, 40).toUpperCase();
+    const reference = text(row.reference, 40).toUpperCase();
+    const rowOrganization = normalizedPartnerValue(
+      row.organization_name || details.contact?.company || '',
+    );
+    const codeMatches = Boolean(cleanCode && (cleanCode === rowCode || cleanCode === reference));
+    const organizationMatches = Boolean(cleanOrganization && cleanOrganization === rowOrganization);
+    return codeMatches || organizationMatches;
+  });
+}
+
+export async function verifyPartnerAffiliation({ code = '', organization = '' } = {}, {
+  env = process.env,
+  createSupabaseClient = createClient,
+} = {}) {
+  const cleanCode = text(code, 40).toUpperCase();
+  const cleanOrganization = text(organization, 160);
+  if (!cleanCode && !cleanOrganization) {
+    return { verified: false, verificationStatus: 'not provided' };
+  }
+  const configuration = supabaseConfiguration(env);
+  if (!configuration) return { verified: false, verificationStatus: 'pending verification' };
+
+  try {
+    const supabase = createSupabaseClient(configuration.url, configuration.secret, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('reference,submission_type,status,organization_name,details')
+      .eq('status', 'approved')
+      .in('submission_type', ['university_partner', 'referrer_endorsement'])
+      .limit(250);
+    if (error) throw error;
+    const verified = partnerAffiliationMatch(data, { code: cleanCode, organization: cleanOrganization });
+    return { verified, verificationStatus: verified ? 'verified' : 'pending verification' };
+  } catch {
+    // Verification is optional enrichment. A lookup failure must fail closed without
+    // blocking the student's interest submission.
+    return { verified: false, verificationStatus: 'pending verification' };
+  }
 }
 
 function storageErrorSummary(error) {
@@ -742,6 +810,15 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     if (!sameOrigin(req)) return res.status(403).json({ ok: false, error: 'Origin not allowed.' });
+    const requestUrl = new URL(req.url || '/api/submissions', `https://${req.headers.host || 'covenda.local'}`);
+    const action = text(req.query?.action || requestUrl.searchParams.get('action'), 40);
+    if (action === 'verify-affiliation') {
+      const affiliation = await verifyPartnerAffiliation({
+        code: req.query?.code || requestUrl.searchParams.get('code') || '',
+        organization: req.query?.organization || requestUrl.searchParams.get('organization') || '',
+      });
+      return res.status(200).json({ ok: true, affiliation });
+    }
     const primary = await primaryStorageHealth();
     return res.status(200).json({ ok: true, primary, checkedAt: new Date().toISOString() });
   }
@@ -767,6 +844,18 @@ export default async function handler(req, res) {
     if (isRateLimited(req)) return res.status(429).json({ ok: false, error: 'Too many requests. Please try again later.' });
 
     const details = submissionDetails(body);
+    if (body.type === 'student_interest') {
+      const affiliation = await verifyPartnerAffiliation({
+        code: details.affiliation.referralCode || details.referral.code,
+        organization: details.affiliation.organization || details.referral.via,
+      });
+      details.affiliation = { ...details.affiliation, ...affiliation };
+      details.referral = {
+        ...details.referral,
+        verified: affiliation.verified,
+        verificationStatus: affiliation.verificationStatus,
+      };
+    }
     const revisionOf = body.type === 'employer_intake' ? employerRevisionReference(body.revisionOf) : '';
     const readiness = body.type === 'employer_intake' ? employerReadiness(details) : null;
     const createdAt = new Date().toISOString();

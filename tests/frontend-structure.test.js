@@ -16,10 +16,12 @@ test('HTML ids remain unique', () => {
   assert.deepEqual([...new Set(duplicates)], []);
 });
 
-test('student-first hero offers five work paths and a scroll continuation', () => {
+test('student-first hero offers an industry-first pathfinder and a scroll continuation', () => {
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
-  assert.match(hero, /What kind of work do you want to <span class="word-gold">prove<\/span>\?/);
-  assert.equal((hero.match(/class="work-option/g) || []).length, 5);
+  assert.match(hero, /Where do you want to make an <span class="word-gold">impact<\/span>\?/);
+  assert.match(hero, /id="narrowFlow"/);
+  assert.doesNotMatch(hero, /Or pick a work type directly/);
+  assert.doesNotMatch(hero, /class="work-selector/);
   assert.match(hero, /Join the pilot list/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
@@ -39,16 +41,32 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
   assert.match(styles, /\.intro-statement/);
 });
 
-test('the initial path chooser uses a continuous responsive glass control', () => {
-  assert.match(styles, /\.work-selector[\s\S]*border-radius: 999px/);
-  assert.match(styles, /\.work-option\.is-selected[\s\S]*radial-gradient/);
-  assert.match(styles, /scroll-snap-type: x proximity/);
-  assert.match(html, /<\/div>\s*<button class="gold-button selector-submit"/);
+test('the initial path chooser uses interactive industry narrowing and ambient FX', () => {
+  assert.match(script, /const INDUSTRY_TREE =/);
+  for (const industry of ['Accounting & finance', 'Software & AI', 'Healthcare operations', 'Consumer & retail', 'Professional services']) {
+    assert.match(script, new RegExp(industry.replace('&', '\\&')));
+  }
+  assert.match(styles, /\.narrow-option/);
   assert.match(html, /id="selectorFxCanvas"/);
   assert.match(html, /class="student-journey"/);
   assert.match(script, /function initSelectorFx\(\)/);
   assert.match(script, /function initButtonFeedback\(\)/);
   assert.match(styles, /\.selector-fx/);
+});
+
+test('student questionnaire cascades from industries to focus areas and keeps verification server-owned', () => {
+  assert.match(html, /Where do you want to make an impact\?/);
+  assert.equal((html.match(/name="studentIndustry"/g) || []).length, 5);
+  assert.match(html, /id="studentSpecializations"/);
+  assert.match(html, /name="studentReferrer"/);
+  assert.match(html, /name="studentOrganization"/);
+  assert.match(html, /name="studentReferralCode"/);
+  assert.match(html, /Unverified claims never receive an endorsement or matching boost/);
+  assert.match(script, /function derivedStudentWorkTypes\(/);
+  assert.match(script, /subIndustries/);
+  assert.match(script, /verify-affiliation/);
+  assert.doesNotMatch(html, /name="workType"/);
+  assert.doesNotMatch(html, /id="workTypes"/);
 });
 
 test('audience switch supports student and company site states', () => {

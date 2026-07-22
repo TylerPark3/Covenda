@@ -25,6 +25,9 @@
       <symbol id="icon-file" viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 12h6m-6 4h6"/></symbol>
       <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5M8 8h5m-5 3h3"/></symbol>
       <symbol id="icon-data" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 4v16m6-16v16"/></symbol>
+      <symbol id="icon-code" viewBox="0 0 24 24"><path d="m8 5-6 7 6 7m8-14 6 7-6 7M14 3l-4 18"/></symbol>
+      <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M20.8 4.8a5.4 5.4 0 0 0-7.6 0L12 6l-1.2-1.2a5.4 5.4 0 0 0-7.6 7.6L12 21l8.8-8.6a5.4 5.4 0 0 0 0-7.6Z"/><path d="M7 12h3l1.2-3 2 6 1.2-3H18"/></symbol>
+      <symbol id="icon-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18m-11-1v2h4v-2"/></symbol>
       <symbol id="icon-operations" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.09a2 2 0 0 1 1 1.74v.5a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2Z"/><circle cx="12" cy="12" r="3"/></symbol>
       <symbol id="icon-shield" viewBox="0 0 24 24"><path d="M12 2 20 6v6c0 5-3.4 8.4-8 10-4.6-1.6-8-5-8-10V6z"/><path d="m8.5 12 2.3 2.3 4.8-5"/></symbol>
       <symbol id="icon-write" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5z"/><path d="M15 3v5h5M8 12h7m-7 4h5M19.5 12.5l2 2-5.5 5.5-2.5.5.5-2.5z"/></symbol>
@@ -99,11 +102,11 @@
 
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
-          <h1 id="studentHeroTitle">What kind of work do you want to <span class="word-gold">prove</span>?</h1>
-          <p>Choose a path. We’ll show you paid projects built to produce real evidence—not résumé filler.</p>
+          <h1 id="studentHeroTitle">Where do you want to make an <span class="word-gold">impact</span>?</h1>
+          <p>Start with an industry, then choose a concrete problem area. We’ll use both to route real work—not résumé filler.</p>
         </div>
-        <!-- F3: partner-referral landing. Populated + shown by app.js only when the
-             visitor arrives via a partner's ?ref= link. Not identity-verified. -->
+        <!-- Partner-referral landing. URL data starts pending; only a server-confirmed
+             approved partner record can turn it into a verified connection. -->
         <div class="referral-banner" id="referralBanner" role="status" hidden>
           <svg class="referral-banner-mark" aria-hidden="true"><use href="#icon-shield"/></svg>
           <p id="referralBannerText"></p>
@@ -118,22 +121,9 @@
             <i class="selector-fx-glow selector-fx-glow-a"></i>
             <i class="selector-fx-glow selector-fx-glow-b"></i>
           </div>
-          <!-- Vertical-first narrowing: industry → focus area → the specific work. Each
-               round is derived from the previous pick, so a student ends on something
-               concrete ("Month-end close · reconciliation cleanup") rather than a generic
-               skill. The final pick still calls selectWorkType(), so everything
-               downstream (detail panel, profile, submissions) is unchanged. -->
+          <!-- Industry-first narrowing. The visible choices stay concrete for students;
+               app.js derives the internal work types used by matching. -->
           <div class="narrow-flow" id="narrowFlow" data-narrow-flow></div>
-          <details class="narrow-fallback" id="narrowFallback">
-            <summary>Or pick a work type directly</summary>
-          <div class="work-selector glass-panel">
-            <button class="work-option is-selected" type="button" data-work-type="Research" aria-pressed="true"><svg><use href="#icon-search"/></svg><span>Research</span></button>
-            <button class="work-option" type="button" data-work-type="Data & spreadsheets" aria-pressed="false"><svg><use href="#icon-data"/></svg><span>Data &amp;<br>spreadsheets</span></button>
-            <button class="work-option" type="button" data-work-type="Operations" aria-pressed="false"><svg><use href="#icon-operations"/></svg><span>Operations</span></button>
-            <button class="work-option" type="button" data-work-type="QA & testing" aria-pressed="false"><svg><use href="#icon-shield"/></svg><span>QA &amp; testing</span></button>
-            <button class="work-option" type="button" data-work-type="Writing & documentation" aria-pressed="false"><svg><use href="#icon-write"/></svg><span>Writing &amp;<br>documentation</span></button>
-          </div>
-          </details>
           <div class="work-detail glass-panel" id="workDetail" hidden aria-live="polite">
             <div class="work-detail-top">
               <span class="work-detail-tag" id="workDetailTag"><svg><use href="#icon-search"/></svg><b>Research</b></span>
@@ -141,7 +131,7 @@
             </div>
             <p class="work-detail-desc" id="workDetailDesc"></p>
             <div class="work-detail-roles">
-              <span class="work-detail-label">Sample roles</span>
+              <span class="work-detail-label">Related project areas</span>
               <ul id="workDetailRoles"></ul>
             </div>
             <div class="work-detail-flow">
@@ -153,18 +143,18 @@
                 <button type="button" class="work-flow-next" data-action="flow-next" aria-label="Next step"><svg><use href="#icon-chevron"/></svg></button>
               </div>
             </div>
-            <button class="gold-button work-detail-cta" type="button" data-action="student-quick">This fits me → join<svg><use href="#icon-arrow-right"/></svg></button>
+            <button class="gold-button work-detail-cta" type="button" data-action="student-form">Add this to my profile<svg><use href="#icon-arrow-right"/></svg></button>
           </div>
           <button class="gold-button selector-submit" type="button" data-action="student-quick">Join the pilot list<svg><use href="#icon-arrow-right"/></svg></button>
           <p class="selector-explainer">Name and email, about 30 seconds. It puts you in the talent pool so we can reach you when a project fits.</p>
           <button class="quiet-link selector-secondary" type="button" data-action="student-form">Or build your full profile — that is what gets you matched<svg><use href="#icon-chevron"/></svg></button>
           <nav class="student-journey" aria-label="Student journey">
-            <button type="button" data-action="focus-pathfinder"><i>1</i><span><b>Explore</b><small>Choose a work path</small></span></button>
+            <button type="button" data-action="focus-pathfinder"><i>1</i><span><b>Explore</b><small>Choose an industry</small></span></button>
             <button type="button" data-action="student-form"><i>2</i><span><b>Profile</b><small>Tell us what fits</small></span></button>
             <button type="button" data-action="workspace-submissions"><i>3</i><span><b>Track</b><small>See every receipt</small></span></button>
           </nav>
         </div>
-        <button class="quiet-link" type="button" data-action="explore-work">Not sure yet? <span>Explore all project types</span><svg><use href="#icon-chevron"/></svg></button>
+        <button class="quiet-link" type="button" data-action="student-form">Not sure yet? <span>Start broad and refine later</span><svg><use href="#icon-chevron"/></svg></button>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
@@ -282,7 +272,7 @@
                  the partner details above; students who open it land pre-attributed. -->
             <div class="roster-section referral-link-section" id="referralLinkSection" hidden>
               <p class="roster-eyebrow"><svg class="referral-link-icon" aria-hidden="true"><use href="#icon-route"/></svg>Your referral link</p>
-              <p class="referral-link-help">Share this with your students. Anyone who opens it lands pre-tagged to you, and their proof profile carries your endorsement into the pilot.</p>
+              <p class="referral-link-help">Share this with your students. Anyone who opens it lands pre-tagged to your organization; Covenda confirms the partner record before showing an endorsement.</p>
               <div class="referral-link-row">
                 <input id="referralLinkInput" class="referral-link-input" type="text" readonly aria-label="Your referral link">
                 <button class="gold-button compact" type="button" data-action="referral-copy">Copy link<svg><use href="#icon-copy"/></svg></button>
@@ -564,12 +554,9 @@
       <section class="why-section" id="why">
         <div class="student-why audience-content" data-for-audience="student">
           <div class="why-copy"><h2>One profile. Evidence tied to the work.</h2><p>Covenda does not reduce you to one universal score. Each project can show the specific capabilities, inputs, review, revisions, and outcome behind it.</p><button class="outline-button" type="button" data-action="workspace">Preview what you would build<svg><use href="#icon-arrow-right"/></svg></button></div>
-          <div class="work-types" id="workTypes">
-            <button type="button" data-work-type="Research"><svg><use href="#icon-search"/></svg><span><strong>Research</strong><small>Source review, market maps, customer synthesis</small></span></button>
-            <button type="button" data-work-type="Data & spreadsheets"><svg><use href="#icon-data"/></svg><span><strong>Data &amp; spreadsheets</strong><small>Cleanup, validation, analysis, clear models</small></span></button>
-            <button type="button" data-work-type="Operations"><svg><use href="#icon-operations"/></svg><span><strong>Operations</strong><small>Workflow mapping, documentation, CRM hygiene</small></span></button>
-            <button type="button" data-work-type="QA & testing"><svg><use href="#icon-shield"/></svg><span><strong>QA &amp; testing</strong><small>Manual testing, test cases, issue reproduction</small></span></button>
-            <button type="button" data-work-type="Writing & documentation"><svg><use href="#icon-write"/></svg><span><strong>Writing &amp; documentation</strong><small>Knowledge bases, playbooks, structured briefs</small></span></button>
+          <div class="industry-proof-note glass-panel">
+            <svg aria-hidden="true"><use href="#icon-route"/></svg>
+            <p><strong>Start with an industry and a real problem area.</strong><span>Covenda translates those choices into matching signals behind the scenes, so you do not need to guess a generic work type.</span></p>
           </div>
         </div>
         <div class="credibility-ladder audience-content" data-for-audience="student">
@@ -871,7 +858,7 @@
     <form id="studentForm">
       <input type="hidden" name="studentBatch" id="studentBatch">
       <header class="dialog-header"><div><small>Student interest profile</small><h2 id="studentDialogTitle">Tell us what you want to <span class="word-gold">prove</span>.</h2></div><div class="dialog-tools"><span data-draft-status>Draft saves on this device</span><button type="button" class="draft-clear" data-clear-draft>Clear draft</button><button type="button" class="icon-button" data-close-dialog aria-label="Close student form"><svg><use href="#icon-close"/></svg></button></div></header>
-      <div class="form-progress" aria-label="Student form progress"><span class="is-active">1. You</span><span>2. Work</span><span>3. Fit</span><span>4. Review</span></div>
+      <div class="form-progress" aria-label="Student form progress"><span class="is-active">1. You</span><span>2. Interests</span><span>3. Fit</span><span>4. Review</span></div>
       <section class="form-step is-active" data-student-step="1">
         <div class="field-grid">
           <label>Full name<input name="studentName" autocomplete="name" required></label>
@@ -897,9 +884,35 @@
         </div>
       </section>
       <section class="form-step" data-student-step="2">
-        <fieldset><legend>What kind of work do you want to build proof in?</legend><div class="check-grid" id="studentWorkChoices"><label><input type="checkbox" name="workType" value="Research">Research</label><label><input type="checkbox" name="workType" value="Data & spreadsheets">Data &amp; spreadsheets</label><label><input type="checkbox" name="workType" value="Operations">Operations</label><label><input type="checkbox" name="workType" value="QA & testing">QA &amp; testing</label><label><input type="checkbox" name="workType" value="Writing & documentation">Writing &amp; documentation</label></div></fieldset>
-        <div class="field-grid">
-          <label>Industries you want to learn<select name="studentIndustry" required><option value="">Choose one</option><option>Small business operations</option><option>Accounting and finance operations</option><option>Software and AI</option><option>Healthcare operations</option><option>Consumer and services</option><option>Open to any safe project</option></select></label>
+        <div class="student-interest-intro">
+          <small>Interests</small>
+          <h3>Where do you want to make an impact?</h3>
+          <p>Choose one or more industries. We’ll use this to route real work.</p>
+        </div>
+        <fieldset class="industry-choice-fieldset">
+          <legend class="visually-hidden">Choose at least one industry</legend>
+          <div class="industry-card-grid" id="studentIndustryChoices">
+            <label><input type="checkbox" name="studentIndustry" value="Accounting & finance"><svg><use href="#icon-data"/></svg><span>Accounting &amp; finance</span><i aria-hidden="true"><svg><use href="#icon-check"/></svg></i></label>
+            <label><input type="checkbox" name="studentIndustry" value="Software & AI"><svg><use href="#icon-code"/></svg><span>Software &amp; AI</span><i aria-hidden="true"><svg><use href="#icon-check"/></svg></i></label>
+            <label><input type="checkbox" name="studentIndustry" value="Healthcare operations"><svg><use href="#icon-heart"/></svg><span>Healthcare operations</span><i aria-hidden="true"><svg><use href="#icon-check"/></svg></i></label>
+            <label><input type="checkbox" name="studentIndustry" value="Consumer & retail"><svg><use href="#icon-building"/></svg><span>Consumer &amp; retail</span><i aria-hidden="true"><svg><use href="#icon-check"/></svg></i></label>
+            <label><input type="checkbox" name="studentIndustry" value="Professional services"><svg><use href="#icon-briefcase"/></svg><span>Professional services</span><i aria-hidden="true"><svg><use href="#icon-check"/></svg></i></label>
+          </div>
+        </fieldset>
+        <div class="student-specializations" id="studentSpecializations" aria-live="polite"></div>
+        <section class="trusted-connection" aria-labelledby="trustedConnectionTitle">
+          <div class="trusted-connection-head">
+            <div><svg aria-hidden="true"><use href="#icon-user"/></svg><span><strong id="trustedConnectionTitle">Add a trusted connection</strong><small>Optional · we’ll confirm with your program.</small></span></div>
+            <span class="affiliation-status" id="affiliationStatus" data-status="empty"><svg><use href="#icon-clock"/></svg>Optional</span>
+          </div>
+          <div class="field-grid trusted-connection-fields">
+            <label>Professor or referrer <span>Optional</span><input name="studentReferrer" autocomplete="name" placeholder="Name or program contact"></label>
+            <label>Club or organization <span>Optional</span><input name="studentOrganization" autocomplete="organization" placeholder="Club, lab, or university program"></label>
+            <label class="wide">Referral code <span>Optional</span><input name="studentReferralCode" autocomplete="off" spellcheck="false" placeholder="REF-…" maxlength="40"></label>
+          </div>
+          <p class="affiliation-help" id="affiliationHelp">A connection is helpful context, not a guarantee. Unverified claims never receive an endorsement or matching boost.</p>
+        </section>
+        <div class="field-grid student-fit-fields">
           <label>Your strongest relevant skill<input name="studentSkill" placeholder="Research, spreadsheets, QA…" required></label>
           <label>Honest current level<select name="studentSkillLevel" required><option value="">Choose one</option><option>Learning the basics</option><option>Comfortable with guidance</option><option>Can work independently</option><option>Advanced, with work examples</option></select></label>
           <label>Preferred work style<select name="studentWorkStyle" required><option value="">Choose one</option><option>Independent with clear checkpoints</option><option>Collaborative with regular feedback</option><option>Either, if expectations are clear</option></select></label>

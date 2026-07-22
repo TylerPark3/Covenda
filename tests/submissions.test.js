@@ -10,6 +10,7 @@ import handler, {
   notifyOperator,
   networkAccessRecord,
   operatorNotification,
+  partnerAffiliationMatch,
   persistSubmission,
   postgresConfiguration,
   primaryStorageHealth,
@@ -22,6 +23,7 @@ import handler, {
   supabaseConfiguration,
   supabaseDestination,
   universityRecord,
+  verifyPartnerAffiliation,
 } from '../api/submissions.js';
 
 function responseRecorder() {
@@ -75,6 +77,7 @@ const validStudent = {
   interests: {
     workTypes: ['Accounting operations', 'Research'],
     industries: ['Accounting'],
+    subIndustries: ['Reconciliations & close prep'],
     workStyle: 'Independent with clear checkpoints',
     ambiguityComfort: 'I can clarify an incomplete brief',
     avoid: '',
@@ -156,6 +159,7 @@ test('employerRecord rejects non-http company links', () => {
 test('studentRecord preserves structured interests, skills, and working terms', () => {
   const record = studentRecord(validStudent);
   assert.deepEqual(record.interests.workTypes, ['Accounting operations', 'Research']);
+  assert.deepEqual(record.interests.subIndustries, ['Reconciliations & close prep']);
   assert.deepEqual(record.skills, [{ name: 'Spreadsheets', level: 'Comfortable' }]);
   assert.equal(record.links.portfolio, 'https://example.edu/work');
 });
@@ -189,16 +193,97 @@ test('studentRecord rejects a non-http video intro link', () => {
 
 test('studentRecord captures an optional partner referral attribution', () => {
   const referred = structuredClone(validStudent);
-  referred.referral = { code: 'REF-AB12CD', via: 'Riverton University · Robotics Lab' };
+  referred.referral = { code: 'REF-AB12CD', via: 'Riverton University · Robotics Lab', verified: true };
+  referred.affiliation = {
+    referrerName: 'Professor Rivera',
+    organization: 'Riverton University · Robotics Lab',
+    referralCode: 'REF-AB12CD',
+    verified: true,
+  };
   const record = studentRecord(referred);
   assert.equal(record.referral.code, 'REF-AB12CD');
   assert.equal(record.referral.via, 'Riverton University · Robotics Lab');
+  assert.equal(record.referral.verified, false);
+  assert.equal(record.affiliation.verified, false);
+  assert.equal(record.affiliation.verificationStatus, 'pending verification');
 });
 
 test('studentRecord stays valid with no referral (optional, defaults to empty)', () => {
   const record = studentRecord(validStudent);
   assert.equal(record.referral.code, '');
   assert.equal(record.referral.via, '');
+  assert.equal(record.affiliation.verificationStatus, 'not provided');
+});
+
+test('partner affiliation matching accepts only approved university or referrer records', () => {
+  const rows = [
+    {
+      reference: 'REF-APPROVED1',
+      submission_type: 'referrer_endorsement',
+      status: 'approved',
+      organization_name: 'Riverton Robotics Lab',
+      details: { attributionCode: 'REF-AB12CD' },
+    },
+    {
+      reference: 'UNI-PENDING1',
+      submission_type: 'university_partner',
+      status: 'received',
+      organization_name: 'Pending University',
+      details: {},
+    },
+  ];
+  assert.equal(partnerAffiliationMatch(rows, { code: 'ref-ab12cd' }), true);
+  assert.equal(partnerAffiliationMatch(rows, { organization: 'Riverton Robotics Lab' }), true);
+  assert.equal(partnerAffiliationMatch(rows, { organization: 'Pending University' }), false);
+});
+
+test('partner verification uses a server secret and fails closed to pending', async () => {
+  const calls = [];
+  const verified = await verifyPartnerAffiliation({ code: 'REF-AB12CD' }, {
+    env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_test' },
+    createSupabaseClient(url, secret, options) {
+      assert.equal(url, 'https://project.supabase.co');
+      assert.equal(secret, 'sb_secret_test');
+      assert.equal(options.auth.persistSession, false);
+      return {
+        from(table) {
+          calls.push(['from', table]);
+          return {
+            select(columns) {
+              calls.push(['select', columns]);
+              return {
+                eq(column, value) {
+                  calls.push(['eq', column, value]);
+                  return {
+                    in(inColumn, values) {
+                      calls.push(['in', inColumn, values]);
+                      return {
+                        async limit(valueLimit) {
+                          calls.push(['limit', valueLimit]);
+                          return { data: [{
+                            reference: 'REF-RECORD1',
+                            submission_type: 'referrer_endorsement',
+                            status: 'approved',
+                            organization_name: 'Riverton Robotics Lab',
+                            details: { attributionCode: 'REF-AB12CD' },
+                          }], error: null };
+                        },
+                      };
+                    },
+                  };
+                },
+              };
+            },
+          };
+        },
+      };
+    },
+  });
+  assert.deepEqual(verified, { verified: true, verificationStatus: 'verified' });
+  assert.deepEqual(calls[0], ['from', 'submissions']);
+
+  const unavailable = await verifyPartnerAffiliation({ organization: 'Any Lab' }, { env: {} });
+  assert.deepEqual(unavailable, { verified: false, verificationStatus: 'pending verification' });
 });
 
 test('callRecord requires a dated call request', () => {
