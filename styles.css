@@ -2012,6 +2012,21 @@ body[data-audience-switched] #flowDemo { display: none; }
   transition: opacity .5s ease;
 }
 .ico-hint.is-hidden { opacity: 0; }
+.ico-kicker {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  opacity: .72;
+  pointer-events: none;
+  white-space: nowrap;
+}
 @media (prefers-reduced-motion: reduce) { .ico-canvas { cursor: default; } }
 
 /* ---- Work-type explore: per-niche detail panel (explore before the form) ---- */

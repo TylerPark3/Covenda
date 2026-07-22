@@ -2714,13 +2714,15 @@ function initIcosahedron() {
     const cyr = Math.cos(rotY), syr = Math.sin(rotY);
     return { x: p.x * cyr + z1 * syr, y: y1, z: -p.x * syr + z1 * cyr };
   }
-  function draw() {
+  const activeNodes = new Set([0, 4, 8]); // a few "active" students that gently pulse
+  function draw(time = 0) {
     ctx.clearRect(0, 0, w, h);
-    const cx = w / 2, cy = h / 2, scale = Math.min(w, h) * 0.34, persp = 2.8;
+    const cx = w / 2, cy = h / 2, scale = Math.min(w, h) * 0.32, persp = 2.8;
     const pts = verts.map(v => {
       const r = rotate(v), f = persp / (persp - r.z);
       return { sx: cx + r.x * scale * f, sy: cy - r.y * scale * f, z: r.z };
     });
+    // edges = connections between students (thinner so the student nodes stand out)
     edges.map(([a, b]) => ({ a, b, z: (pts[a].z + pts[b].z) / 2 }))
       .sort((m, n) => m.z - n.z)
       .forEach(e => {
@@ -2728,16 +2730,26 @@ function initIcosahedron() {
         ctx.beginPath();
         ctx.moveTo(pts[e.a].sx, pts[e.a].sy);
         ctx.lineTo(pts[e.b].sx, pts[e.b].sy);
-        ctx.strokeStyle = `rgba(169,130,47,${(0.28 + depth * 0.64).toFixed(3)})`;
-        ctx.lineWidth = 0.9 + depth * 0.9;
+        ctx.strokeStyle = `rgba(169,130,47,${(0.20 + depth * 0.46).toFixed(3)})`;
+        ctx.lineWidth = 0.7 + depth * 0.7;
         ctx.stroke();
       });
-    pts.forEach(p => {
+    // vertices = students: all 12 as gold nodes (depth-scaled), a few gently pulsing
+    pts.map((p, i) => ({ p, i })).sort((a, b) => a.p.z - b.p.z).forEach(({ p, i }) => {
       const depth = (p.z + 1) / 2;
-      if (depth < 0.55) return;
+      const pulse = activeNodes.has(i) ? 0.5 + 0.5 * Math.sin(time * 0.0022 + i) : 0;
+      const nodeR = 1.7 + depth * 2.5;
       ctx.beginPath();
-      ctx.arc(p.sx, p.sy, 1.1 + depth * 1.4, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(201,162,75,${(0.35 + depth * 0.5).toFixed(3)})`;
+      ctx.arc(p.sx, p.sy, nodeR + 2.6 + pulse * 3.4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(201,162,75,${(0.05 + depth * 0.09 + pulse * 0.11).toFixed(3)})`;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, nodeR, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(169,130,47,${(0.5 + depth * 0.45).toFixed(3)})`;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(p.sx - nodeR * 0.28, p.sy - nodeR * 0.28, nodeR * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,250,238,${(0.45 * depth).toFixed(3)})`;
       ctx.fill();
     });
   }
@@ -2747,7 +2759,7 @@ function initIcosahedron() {
       velX += (autoX - velX) * 0.03;
       velY += (autoY - velY) * 0.03;
     }
-    draw();
+    draw(performance.now());
     raf = requestAnimationFrame(frame);
   }
   function start() { if (running) return; running = true; raf = requestAnimationFrame(frame); }
