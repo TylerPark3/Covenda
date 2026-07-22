@@ -197,6 +197,14 @@ export function studentRecord(body) {
     // batch + outcome data can become training data for a future per-function
     // capability assessment — no model or scoring exists yet (see prompt Part G).
     batch: text(body.batch, 120),
+    // Partner referral attribution: if the student arrived through a partner's
+    // referral link (?ref=CODE), the code + partner label ride along so an endorsement
+    // can later be matched to the student's own submission. Not identity-verified —
+    // informational for the pilot, stored structured in details jsonb like `batch`.
+    referral: {
+      code: text(body.referral?.code, 40),
+      via: text(body.referral?.via, 120),
+    },
     // Quick-join linkage: a completed full profile carries its stage + the SQ- ref of
     // the earlier quick join, so records match on email and completion is trackable.
     stage: text(body.stage, 40) || 'profile_completed',

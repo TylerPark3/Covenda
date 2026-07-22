@@ -102,6 +102,16 @@
           <h1 id="studentHeroTitle">What kind of work do you want to <span class="word-gold">prove</span>?</h1>
           <p>Choose a path. We’ll show you paid projects built to produce real evidence—not résumé filler.</p>
         </div>
+        <!-- F3: partner-referral landing. Populated + shown by app.js only when the
+             visitor arrives via a partner's ?ref= link. Not identity-verified. -->
+        <div class="referral-banner" id="referralBanner" role="status" hidden>
+          <svg class="referral-banner-mark" aria-hidden="true"><use href="#icon-shield"/></svg>
+          <p id="referralBannerText"></p>
+          <div class="referral-banner-actions">
+            <button class="gold-button compact" type="button" data-action="referral-start">Build my proof profile<svg><use href="#icon-arrow-right"/></svg></button>
+            <button class="referral-banner-dismiss" type="button" data-action="referral-dismiss" aria-label="Dismiss referral note"><svg><use href="#icon-close"/></svg></button>
+          </div>
+        </div>
         <div class="selector-orbit" aria-label="Choose a work path">
           <div class="selector-fx" aria-hidden="true">
             <canvas id="selectorFxCanvas"></canvas>
@@ -257,6 +267,16 @@
             <div class="roster-actions">
               <button class="gold-button roster-submit" type="button" data-action="roster-submit">Send roster to Covenda<svg><use href="#icon-arrow-right"/></svg></button>
               <button class="outline-button roster-endorse" type="button" data-action="roster-endorse">Endorse these students<svg><use href="#icon-shield"/></svg></button>
+            </div>
+            <!-- F3: the partner's own shareable referral link. app.js fills the URL from
+                 the partner details above; students who open it land pre-attributed. -->
+            <div class="roster-section referral-link-section" id="referralLinkSection" hidden>
+              <p class="roster-eyebrow"><svg class="referral-link-icon" aria-hidden="true"><use href="#icon-route"/></svg>Your referral link</p>
+              <p class="referral-link-help">Share this with your students. Anyone who opens it lands pre-tagged to you, and their proof profile carries your endorsement into the pilot.</p>
+              <div class="referral-link-row">
+                <input id="referralLinkInput" class="referral-link-input" type="text" readonly aria-label="Your referral link">
+                <button class="gold-button compact" type="button" data-action="referral-copy">Copy link<svg><use href="#icon-copy"/></svg></button>
+              </div>
             </div>
           </div>
         </div>
@@ -587,6 +607,23 @@
                 <footer><svg><use href="#icon-lock"/></svg><p><strong>No placement guarantee.</strong>Students still choose every project and keep their own evidence.</p></footer>
               </aside>
             </div>
+            <!-- F6: feeder cohort dashboard. Rendered by app.js from the live roster —
+                 counts, interest-area mix, and where the cohort sits on the ladder. -->
+            <section class="cohort-dashboard glass-panel" aria-labelledby="cohortHeading">
+              <header class="cohort-head">
+                <div><small>Cohort progress</small><h2 id="cohortHeading">Where your students stand</h2></div>
+                <span class="cohort-total" id="cohortTotal">0 students</span>
+              </header>
+              <p class="cohort-empty" id="cohortEmpty">Add students to your roster to see your cohort’s credibility progress here.</p>
+              <div class="cohort-body" id="cohortBody" hidden>
+                <div class="cohort-ladder" id="cohortLadder" aria-label="Credibility rungs"></div>
+                <div class="cohort-breakdown">
+                  <p class="cohort-subhead">By interest area</p>
+                  <ul class="cohort-bars" id="cohortBars"></ul>
+                </div>
+              </div>
+              <p class="cohort-note"><svg><use href="#icon-lock"/></svg>Endorsed students enter at the <b>Endorsed</b> rung. Verified rungs are earned through reviewed work — never assigned.</p>
+            </section>
           </div>
         </section>
 
@@ -701,6 +738,20 @@
       <div class="quick-join-actions"><button class="gold-button" type="submit">Join the list<svg><use href="#icon-arrow-right"/></svg></button></div>
     </form>
     <div class="quick-join-done" id="quickJoinDone" hidden></div>
+  </dialog>
+
+  <!-- F5: shareable milestone credential card. Opened from a student receipt; the
+       card is drawn to canvas by app.js so it can be downloaded as an image. -->
+  <dialog class="form-dialog credential-dialog" id="credentialDialog" aria-labelledby="credentialDialogTitle">
+    <header class="dialog-header"><div><small>Shareable credential</small><h2 id="credentialDialogTitle">Your proof credential</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close credential"><svg><use href="#icon-close"/></svg></button></header>
+    <p class="dialog-copy">A shareable snapshot of your Covenda proof record. It reflects your current pilot status — verified rungs are earned through reviewed work, never assigned.</p>
+    <div class="credential-preview"><canvas id="credentialCanvas" width="1200" height="675" role="img" aria-label="Credential card preview"></canvas></div>
+    <div class="form-message" id="credentialMessage" role="status" aria-live="polite"></div>
+    <div class="credential-actions">
+      <button class="gold-button" type="button" data-action="credential-image">Download image<svg><use href="#icon-download"/></svg></button>
+      <button class="outline-button" type="button" data-action="credential-copy">Copy share text<svg><use href="#icon-copy"/></svg></button>
+      <button class="outline-button" type="button" data-action="credential-json">Download receipt<svg><use href="#icon-file"/></svg></button>
+    </div>
   </dialog>
 
   <dialog class="form-dialog" id="companyDialog" aria-labelledby="companyDialogTitle">

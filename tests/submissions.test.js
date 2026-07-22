@@ -186,6 +186,20 @@ test('studentRecord rejects a non-http video intro link', () => {
   assert.throws(() => studentRecord(badVideo), /valid HTTP or HTTPS/i);
 });
 
+test('studentRecord captures an optional partner referral attribution', () => {
+  const referred = structuredClone(validStudent);
+  referred.referral = { code: 'REF-AB12CD', via: 'Riverton University · Robotics Lab' };
+  const record = studentRecord(referred);
+  assert.equal(record.referral.code, 'REF-AB12CD');
+  assert.equal(record.referral.via, 'Riverton University · Robotics Lab');
+});
+
+test('studentRecord stays valid with no referral (optional, defaults to empty)', () => {
+  const record = studentRecord(validStudent);
+  assert.equal(record.referral.code, '');
+  assert.equal(record.referral.via, '');
+});
+
 test('callRecord requires a dated call request', () => {
   const record = callRecord({
     contact: { name: 'Avery Owner', email: 'avery@example.com', company: 'Example Accounting' },
