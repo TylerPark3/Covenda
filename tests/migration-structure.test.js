@@ -50,6 +50,10 @@ const escrowFunctions = readFileSync(
   new URL('../supabase/migrations/20260725100000_escrow_release_functions.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const conversionTracking = readFileSync(
+  new URL('../supabase/migrations/20260726100000_project_conversion_tracking.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -201,6 +205,15 @@ test('escrow settlement runs in the database so payout and completion commit tog
   assert.match(escrowFunctions, /security definer/);
   assert.match(escrowFunctions, /set search_path = public, pg_temp/);
   assert.doesNotMatch(escrowFunctions, /grant [^;]* to (anon|authenticated)/);
+});
+
+test('conversion tracking migration adds outcome columns idempotently, whitelisted', () => {
+  for (const column of ['conversion_outcome text', 'conversion_note text', 'conversion_recorded_at timestamptz']) {
+    assert.match(conversionTracking, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(conversionTracking, /conversion_outcome in \('none', 'continued', 'interview', 'internship', 'full_time', 'referred_on'\)/);
+  assert.match(conversionTracking, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(conversionTracking, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
 });
 
 test('project targeting migration adds intake and file columns idempotently without loosening access', () => {

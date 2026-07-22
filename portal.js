@@ -165,6 +165,28 @@ function rungBadge(){
   const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent=label;const span=document.createElement('span');span.textContent=verified>=1?`${verified} verified work ${verified===1?'record':'records'} · your evidence is employer-accepted`:'Complete reviewed work to reach Employer-Verified.';box.append(strong,span);wrap.append(box);return wrap;
 }
 function actionButton(label,iconId,onClick){const b=document.createElement('button');b.type='button';b.className='portal-primary compact';const s=document.createElement('span');s.textContent=label;b.append(s,icon(iconId));b.addEventListener('click',onClick);return b;}
+// Did this project lead to more? Captured on completion so Covenda can price a placement
+// fee later on real conversion rates. No fee logic — recording only.
+const CONVERSION_OPTIONS=[['none','Not yet'],['continued','More work together'],['interview','Led to an interview'],['internship','Internship offer'],['full_time','Full-time hire'],['referred_on','Referred them onward']];
+const conversionLabels=Object.fromEntries(CONVERSION_OPTIONS);
+function conversionControl(project){
+  const wrap=document.createElement('div');wrap.className='conversion-control';
+  const label=document.createElement('label');label.className='conversion-label';
+  const span=document.createElement('span');span.textContent='Did working together lead to anything more?';
+  const select=document.createElement('select');
+  CONVERSION_OPTIONS.forEach(([value,text])=>{const o=document.createElement('option');o.value=value;o.textContent=text;if((project.conversion_outcome||'none')===value)o.selected=true;select.append(o);});
+  label.append(span,select);
+  const status=document.createElement('small');status.className='conversion-status';
+  status.textContent=project.conversion_recorded_at?`Saved · ${dateLabel(project.conversion_recorded_at)}`:'This helps Covenda place students like this — it is not shared publicly.';
+  select.addEventListener('change',async()=>{
+    select.disabled=true;status.textContent='Saving…';
+    try{await portalRequest({method:'POST',body:JSON.stringify({action:'record-conversion',projectId:project.id,outcome:select.value})});
+      project.conversion_outcome=select.value;status.textContent='Saved. Thank you — this shapes who we route to you next.';}
+    catch(error){status.textContent=error.message;}
+    finally{select.disabled=false;}
+  });
+  wrap.append(label,status);return wrap;
+}
 function loopNote(iconId,title,copy){const d=document.createElement('div');d.className='loop-note';d.append(icon(iconId));const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=copy;box.append(strong,small);d.append(box);return d;}
 function verifiedCard(project,{full=false}={}){const card=document.createElement('div');card.className='verified-record';const head=document.createElement('div');head.className='verified-head';head.append(icon('p-check'));const badge=document.createElement('span');badge.textContent='Verified work record';head.append(badge);const h=document.createElement('h3');h.textContent=project.title;card.append(head,h);if(full&&project.summary){const s=document.createElement('p');s.className='verified-summary';s.textContent=project.summary;card.append(s);}const p=document.createElement('p');p.textContent=`Reviewer accepted${project.completed_at?` · ${dateLabel(project.completed_at)}`:''}`;card.append(p);return card;}
 function projectActionNode(project){
@@ -174,7 +196,7 @@ function projectActionNode(project){
   if(isAssigned&&project.status==='review'){wrap.append(loopNote('p-clock','In review','Your work is with the reviewer. The decision will appear here.'));return wrap;}
   if(isAssigned&&project.status==='complete'){wrap.append(verifiedCard(project));return wrap;}
   if(isOwner&&project.status==='review'){wrap.append(loopNote('p-inbox','Deliverable submitted','A student submitted work for your review.'));wrap.append(actionButton('Review deliverable','p-check',()=>openReview(project)));return wrap;}
-  if(isOwner&&project.status==='complete'){wrap.append(loopNote('p-check','Accepted','You accepted this work — the student now holds a verified record, and the escrow has been released.'));return wrap;}
+  if(isOwner&&project.status==='complete'){wrap.append(loopNote('p-check','Accepted','You accepted this work — the student now holds a verified record, and the escrow has been released.'));wrap.append(conversionControl(project));return wrap;}
   // Cancelling is money-moving and irreversible, so it arms on the first click and only
   // sends on the second.
   if(isOwner&&!['complete','archived'].includes(project.status)&&((Number(project.credits_held)||0)+(Number(project.platform_fee_credits)||0))>0){

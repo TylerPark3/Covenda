@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, authorizeMember, buyCredits, cancelProject, createMemberProject, creditBalance, fulfilPayout, loadMemberIntakes, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+import { acceptApplication, authorizeMember, buyCredits, cancelProject, createMemberProject, creditBalance, fulfilPayout, loadMemberIntakes, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
@@ -237,6 +237,34 @@ test('only a listed operator can settle a payout', async () => {
   const settled = await fulfilPayout({ user: { id: 'op', email: 'ops@covenda.app' }, supabase }, { requestId: PROJECT_UUID }, { COVENDA_ADMIN_EMAILS: 'ops@covenda.app' });
   assert.equal(settled.status, 'paid');
   assert.equal(supabase.rpcCalls[0].name, 'fulfil_payout_request');
+});
+
+test('a completed project records a whitelisted conversion outcome, owner only', async () => {
+  let patch;
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'complete' } },
+    { result: { id: PROJECT_UUID, conversion_outcome: 'full_time' }, capture: value => { patch = value; } },
+  ]);
+  const project = await recordConversion({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, outcome: 'full_time', note: 'Hired onto the ops team.' });
+  assert.equal(project.conversion_outcome, 'full_time');
+  assert.equal(patch.conversion_outcome, 'full_time');
+  assert.equal(patch.conversion_note, 'Hired onto the ops team.');
+  assert.ok(patch.conversion_recorded_at);
+});
+
+test('conversion recording rejects unknown outcomes, non-owners, and unfinished projects', async () => {
+  await assert.rejects(
+    recordConversion({ user: { id: 'owner-1' }, supabase: queuedSupabase([]) }, { projectId: PROJECT_UUID, outcome: 'promoted' }),
+    /Choose what the project led to/,
+  );
+  await assert.rejects(
+    recordConversion({ user: { id: 'intruder' }, supabase: queuedSupabase([{ result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'complete' } }]) }, { projectId: PROJECT_UUID, outcome: 'interview' }),
+    /Only the project owner/,
+  );
+  await assert.rejects(
+    recordConversion({ user: { id: 'owner-1' }, supabase: queuedSupabase([{ result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'in_progress' } }]) }, { projectId: PROJECT_UUID, outcome: 'interview' }),
+    /once the work is accepted/,
+  );
 });
 
 test('opportunities matching the student vertical or work type are flagged and sorted first', () => {
