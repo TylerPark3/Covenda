@@ -1262,6 +1262,7 @@ function renderLocalSubmissionState() {
   renderSubmissionHistory();
   renderWorkspaceDrafts();
   renderUniversityWorkspace();
+  renderProofRecord();
 }
 
 function studentPayload(form) {
@@ -2113,6 +2114,12 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   if (action === 'credential-image' && credentialItem) downloadCredentialImage(credentialItem);
   if (action === 'credential-copy' && credentialItem) copyCredentialText(credentialItem);
   if (action === 'credential-json' && credentialItem) downloadReceipt(credentialItem);
+  // F4 student proof record → open the credential card for the latest receipt
+  if (action === 'proof-credential') {
+    const item = studentLatestReceipt();
+    if (item) openCredentialCard(item);
+    else showToast('Build your interest profile first to create a shareable credential.');
+  }
 }));
 
 $$('[data-prompt]').forEach(button => button.addEventListener('click', () => {
@@ -2824,15 +2831,18 @@ function renderReferralBanner() {
   const banner = $('#referralBanner');
   if (!banner) return;
   const ref = activeReferral();
-  if (!ref) { banner.hidden = true; return; }
+  if (!ref || ref.dismissed) { banner.hidden = true; return; }
   const text = $('#referralBannerText');
   if (text) text.textContent = 'Referred by ' + (ref.via || 'a Covenda partner')
     + '. Your partner endorsement is noted — build your proof profile to carry it into the pilot.';
   banner.hidden = false;
 }
 
+// Dismiss only hides the banner — the attribution is kept so the student's submission,
+// credential (F5), and proof record (F4) still reflect the partner endorsement.
 function dismissReferralBanner() {
-  removeStorage(referralStorageKey);
+  const stored = readStorage(referralStorageKey, null);
+  if (stored) { stored.dismissed = true; writeStorage(referralStorageKey, stored); }
   const banner = $('#referralBanner');
   if (banner) banner.hidden = true;
 }
@@ -2998,6 +3008,72 @@ async function copyCredentialText(item) {
     if (message) message.textContent = shareText;
     showToast('Copy is unavailable — the text is shown above.');
   }
+}
+
+// ============================================================================
+// F4 — Student proof record ("where you stand"): the student's own position on
+// the credibility ladder, endorsement status (from an F3 referral), and a
+// shortcut to their shareable credential (F5). Same ladder the educators see.
+// ============================================================================
+function studentLatestReceipt() {
+  return savedSubmissions().find(item => item.type === 'student_interest');
+}
+
+function studentStanding() {
+  const receipt = studentLatestReceipt();
+  if (receipt) {
+    const milestone = credentialMilestone(receipt); // honest: derived from receipt status
+    return { label: milestone.label, index: milestone.index, started: true, receipt };
+  }
+  // Referred but not yet submitted — a partner head-start still puts them at Endorsed.
+  if (activeReferral()) return { label: 'Endorsed', index: 0, started: false, receipt: null };
+  return { label: 'Not started', index: -1, started: false, receipt: null };
+}
+
+function renderProofRecord() {
+  const panel = $('#proofRecord');
+  if (!panel) return;
+  const ladder = $('#proofRecordLadder');
+  const standingEl = $('#proofRecordStanding');
+  const endorsementEl = $('#proofRecordEndorsement');
+  const shareBtn = $('#proofRecordShare');
+  const standing = studentStanding();
+  const ref = activeReferral();
+
+  if (standingEl) {
+    standingEl.textContent = standing.label;
+    standingEl.dataset.started = String(standing.started || standing.index >= 0);
+  }
+  if (endorsementEl) {
+    if (ref) {
+      endorsementEl.hidden = false;
+      endorsementEl.replaceChildren(
+        createIcon('icon-shield'),
+        document.createTextNode('Endorsed by ' + (ref.via || 'a Covenda partner') + ' — a partner referral head-start.'),
+      );
+    } else {
+      endorsementEl.hidden = true;
+    }
+  }
+  if (ladder) {
+    const rungs = ['Endorsed / Building proof', 'Role-Qualified', 'Employer-Verified', 'Proven'];
+    ladder.replaceChildren();
+    rungs.forEach((label, index) => {
+      const reached = standing.index >= 0 && standing.index >= index;
+      const current = standing.index === index;
+      const cell = document.createElement('div');
+      cell.className = 'proof-rung' + (reached ? ' is-reached' : '') + (current ? ' is-current' : '');
+      const dot = document.createElement('span');
+      dot.className = 'proof-rung-dot';
+      dot.append(reached ? createIcon('icon-check') : document.createTextNode(String(index + 1)));
+      const text = document.createElement('span');
+      text.className = 'proof-rung-label';
+      text.textContent = label;
+      cell.append(dot, text);
+      ladder.append(cell);
+    });
+  }
+  if (shareBtn) shareBtn.hidden = !standing.receipt;
 }
 
 // ============================================================================

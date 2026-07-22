@@ -564,6 +564,21 @@
                 <footer><svg><use href="#icon-lock"/></svg><p><strong>No universal score.</strong>Evidence stays tied to the work that produced it.</p></footer>
               </aside>
             </div>
+            <!-- F4: student proof record — your own standing on the credibility ladder,
+                 endorsement status (from an F3 referral), and a shortcut to your
+                 shareable credential (F5). Rendered by app.js. -->
+            <section class="proof-record glass-panel" id="proofRecord">
+              <header class="proof-record-head">
+                <div><small>Your proof record</small><h2>Where you stand</h2></div>
+                <span class="proof-record-standing" id="proofRecordStanding" data-started="false">Not started</span>
+              </header>
+              <p class="proof-record-endorsement" id="proofRecordEndorsement" hidden></p>
+              <div class="proof-record-ladder" id="proofRecordLadder" aria-label="Your position on the credibility ladder"></div>
+              <div class="proof-record-foot">
+                <p class="proof-record-note"><svg><use href="#icon-lock"/></svg>Verified rungs are earned through reviewed work — never assigned. Your evidence stays tied to the work that produced it.</p>
+                <button class="gold-button compact" type="button" id="proofRecordShare" data-action="proof-credential" hidden>Share your credential<svg><use href="#icon-shield"/></svg></button>
+              </div>
+            </section>
           </div>
 
           <div class="company-dashboard audience-content" data-for-audience="company">

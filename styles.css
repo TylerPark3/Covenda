@@ -2297,9 +2297,36 @@ body[data-audience="student"] .feature-band { display: none; }
 .cohort-note svg { flex: none; width: 15px; height: 15px; color: var(--gold-deep); margin-top: 1px; }
 .cohort-note b { color: var(--gold-deep); }
 
+/* ---- F4: student proof record ("where you stand") ---- */
+.proof-record { margin-top: 22px; padding: clamp(20px, 2.4vw, 28px); }
+.proof-record-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.proof-record-head small { display: block; color: var(--gold-deep); font-size: 12px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+.proof-record-head h2 { margin: 4px 0 0; font-size: clamp(20px, 2vw, 26px); letter-spacing: -.02em; }
+.proof-record-standing { flex: none; padding: 6px 14px; border-radius: 999px; background: var(--gold-pale); border: 1px solid var(--gold-light); color: var(--gold-deep); font-size: 13px; font-weight: 650; }
+.proof-record-standing[data-started="false"] { background: #fff; border-color: var(--line); color: var(--muted); }
+.proof-record-endorsement { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; padding: 10px 14px; border-radius: 12px; background: var(--gold-pale); border: 1px solid var(--gold-light); color: #4a4436; font-size: 13px; line-height: 1.45; }
+.proof-record-endorsement svg { flex: none; width: 16px; height: 16px; color: var(--gold-deep); }
+.proof-record-ladder { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.proof-rung { display: flex; flex-direction: column; gap: 8px; padding: 14px 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; }
+.proof-rung.is-reached { border-color: var(--gold-light); }
+.proof-rung.is-current { border-color: var(--gold-light); background: var(--gold-pale); }
+.proof-rung-dot { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line-strong); color: var(--muted); font-size: 13px; font-weight: 650; }
+.proof-rung.is-reached .proof-rung-dot { border-color: var(--gold); background: #fff; color: var(--gold-deep); }
+.proof-rung.is-current .proof-rung-dot { background: var(--gold); border-color: var(--gold); color: #fff; }
+.proof-rung-dot svg { width: 15px; height: 15px; }
+.proof-rung-label { font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+.proof-rung.is-current .proof-rung-label { color: var(--ink); font-weight: 600; }
+.proof-record-foot { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.proof-record-note { display: flex; align-items: flex-start; gap: 9px; margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.proof-record-note svg { flex: none; width: 15px; height: 15px; color: var(--gold-deep); margin-top: 1px; }
+.proof-record-foot .gold-button { flex: none; }
+
 @media (max-width: 620px) {
   .referral-banner { flex-wrap: wrap; }
   .referral-link-row { flex-direction: column; }
   .cohort-ladder { grid-template-columns: 1fr 1fr; }
   .cohort-head { flex-wrap: wrap; }
+  .proof-record-ladder { grid-template-columns: 1fr 1fr; }
+  .proof-record-head { flex-wrap: wrap; }
+  .proof-record-foot { flex-direction: column; }
 }
