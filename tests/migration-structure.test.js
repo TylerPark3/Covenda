@@ -26,6 +26,10 @@ const memberPortal = readFileSync(
   new URL('../supabase/migrations/20260721231522_create_member_portal.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const projectMessages = readFileSync(
+  new URL('../supabase/migrations/20260722003808_create_project_messages.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -103,4 +107,16 @@ test('member portal migration creates private role-aware projects and applicatio
   assert.match(memberPortal, /alter table public\.member_projects force row level security/);
   assert.match(memberPortal, /revoke all on table public\.project_applications from public, anon, authenticated/);
   assert.match(memberPortal, /grant select, insert, update, delete on table public\.member_profiles to service_role/);
+});
+
+test('project message migration keeps conversations server-only and indexed', () => {
+  assert.match(projectMessages, /create table public\.project_messages/);
+  assert.match(projectMessages, /references public\.member_projects\(id\) on delete cascade/);
+  assert.match(projectMessages, /char_length\(body\) between 1 and 4000/);
+  assert.match(projectMessages, /create index project_messages_project_created_idx/);
+  assert.match(projectMessages, /create index project_messages_author_idx/);
+  assert.match(projectMessages, /alter table public\.project_messages force row level security/);
+  assert.match(projectMessages, /revoke all on table public\.project_messages from public, anon, authenticated/);
+  assert.match(projectMessages, /grant select, insert on table public\.project_messages to service_role/);
+  assert.doesNotMatch(projectMessages, /create policy|grant [^;]* to (anon|authenticated)/);
 });
