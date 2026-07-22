@@ -80,7 +80,7 @@
         <button type="button" data-view="discover" data-student-only><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
         <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
         <button type="button" data-view="messages"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
-        <button type="button" data-view="wallet" data-org-only><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
+        <button type="button" data-view="wallet"><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
       </nav>
       <div class="member-identity"><span id="memberInitial">C</span><div><strong id="memberNavName">Member</strong><small id="memberNavRole">Covenda</small></div></div>
       <button class="member-signout" id="memberSignout" type="button"><svg><use href="#p-exit"/></svg>Sign out</button>
@@ -148,15 +148,20 @@
       </section>
 
       <section class="portal-view" data-portal-view="wallet">
-        <div class="page-heading"><div><p class="eyebrow">Credits</p><h1>Wallet</h1><p>1 credit = $1. Posting publicly is free; a hyper-narrow post routes to matched, referred students for 25 credits. Covenda’s fee is 10% of the listed amount, charged on top — the student always receives the full amount you list.</p></div></div>
+        <div class="page-heading"><div><p class="eyebrow">Credits</p><h1>Wallet</h1><p id="walletIntro">1 credit = $1.</p></div></div>
         <div class="wallet-grid">
           <section class="wallet-balance-card">
-            <p class="eyebrow">Available balance</p>
+            <p class="eyebrow" id="walletBalanceLabel">Available balance</p>
             <strong id="walletBalance">0</strong>
             <span>credits</span>
             <p class="wallet-held" id="walletHeld"></p>
           </section>
-          <section class="wallet-buy">
+          <section class="wallet-payout" data-student-only>
+            <div class="section-heading"><div><p class="eyebrow">Get paid</p><h2>Request a payout</h2></div></div>
+            <div id="payoutState"></div>
+            <p class="dialog-message" id="payoutMessage" aria-live="polite"></p>
+          </section>
+          <section class="wallet-buy" data-org-only>
             <div class="section-heading"><div><p class="eyebrow">Top up</p><h2>Buy credits</h2></div></div>
             <div class="wallet-bundles" id="walletBundles"></div>
             <p class="dialog-message" id="walletMessage" aria-live="polite"></p>

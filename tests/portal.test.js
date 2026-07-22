@@ -1,7 +1,29 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, authorizeMember, buyCredits, cancelProject, createMemberProject, creditBalance, loadMemberIntakes, memberAuthReadiness, projectCreditCost, rankOpportunities, requestGoogleLogin, requestMemberLink, requestTalentNetworkAccess, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable, summarizeTalentNetwork } from '../api/portal.js';
+import {
+  acceptApplication,
+  authorizeMember,
+  buyCredits,
+  cancelProject,
+  createMemberProject,
+  creditBalance,
+  fulfilPayout,
+  loadMemberIntakes,
+  looksLikeAccountNumber,
+  memberAuthReadiness,
+  projectCreditCost,
+  rankOpportunities,
+  requestGoogleLogin,
+  requestMemberLink,
+  requestPayout,
+  requestTalentNetworkAccess,
+  reviewDeliverable,
+  saveMemberProfile,
+  sendProjectMessage,
+  submitDeliverable,
+  summarizeTalentNetwork,
+} from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
@@ -182,6 +204,61 @@ test('credits cannot be minted unless the deployment enables it', async () => {
   assert.equal(result.balance, 100);
   // an operator on the allowlist can grant without the flag
   await buyCredits(member, { credits: 500 }, { COVENDA_ADMIN_EMAILS: 'ops@acme.com' });
+});
+
+test('a payout request is bounded by the balance and never stores an account number', async () => {
+  const ledger = credits => ({ select() { return this; }, eq() { return Promise.resolve({ data: [{ credits }], error: null }); } });
+  const db = (balance, existingOpen = null, capture) => ({
+    from(table) {
+      if (table === 'credit_ledger') return ledger(balance);
+      return {
+        select() { return this; }, eq() { return this; },
+        async maybeSingle() { return { data: existingOpen, error: null }; },
+        insert(value) { capture?.(value); return this; },
+        async single() { return { data: { id: 'req-1', ...value_ }, error: null }; },
+      };
+      function value_() {}
+    },
+  });
+  // over-drawing is rejected
+  await assert.rejects(
+    requestPayout({ user: { id: 'stu' }, supabase: db(50) }, { credits: 200, method: 'PayPal', handle: 'a@b.com' }),
+    /larger than your balance of 50/,
+  );
+  // a raw account number is refused rather than quietly stored
+  await assert.rejects(
+    requestPayout({ user: { id: 'stu' }, supabase: db(500) }, { credits: 100, method: 'PayPal', handle: '4111 1111 1111 1111' }),
+    /instead of an account number/,
+  );
+  // an unknown method is refused
+  await assert.rejects(
+    requestPayout({ user: { id: 'stu' }, supabase: db(500) }, { credits: 100, method: 'Crypto', handle: 'a@b.com' }),
+    /Choose how you would like to be paid/,
+  );
+  // one open request at a time
+  await assert.rejects(
+    requestPayout({ user: { id: 'stu' }, supabase: db(500, { id: 'existing' }) }, { credits: 100, method: 'PayPal', handle: 'a@b.com' }),
+    /already have a payout request/,
+  );
+});
+
+test('account-number detection catches raw numbers but allows emails and handles', () => {
+  assert.equal(looksLikeAccountNumber('4111111111111111'), true);
+  assert.equal(looksLikeAccountNumber('4111 1111 1111 1111'), true);
+  assert.equal(looksLikeAccountNumber('123-456-7890'), true);
+  assert.equal(looksLikeAccountNumber('maya@example.com'), false);
+  assert.equal(looksLikeAccountNumber('@maya'), false);
+});
+
+test('only a listed operator can settle a payout', async () => {
+  const supabase = queuedSupabase([{ result: { id: 'req-1', status: 'paid' } }]);
+  await assert.rejects(
+    fulfilPayout({ user: { id: 'stu', email: 'student@example.com' }, supabase }, { requestId: PROJECT_UUID }, { COVENDA_ADMIN_EMAILS: 'ops@covenda.app' }),
+    /Only a Covenda operator/,
+  );
+  const settled = await fulfilPayout({ user: { id: 'op', email: 'ops@covenda.app' }, supabase }, { requestId: PROJECT_UUID }, { COVENDA_ADMIN_EMAILS: 'ops@covenda.app' });
+  assert.equal(settled.status, 'paid');
+  assert.equal(supabase.rpcCalls[0].name, 'fulfil_payout_request');
 });
 
 test('opportunities matching the student vertical or work type are flagged and sorted first', () => {
