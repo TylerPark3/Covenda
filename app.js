@@ -2155,6 +2155,50 @@ $$('.form-dialog').forEach(dialog => dialog.addEventListener('click', event => {
   if (outside) dialog.close();
 }));
 
+// Step 2 — student requests an endorsement from a professor/club (stored locally;
+// Covenda facilitates the vouch). Honest: an endorsement is a signal, not a placement.
+const requestEndorseDialog = $('#requestEndorseDialog');
+const requestEndorseForm = $('#requestEndorseForm');
+function openRequestEndorse() {
+  if (!requestEndorseForm) return;
+  const done = $('#requestEndorseDone');
+  done.hidden = true; done.textContent = '';
+  requestEndorseForm.hidden = false;
+  $('#requestEndorseMessage').textContent = '';
+  requestEndorseDialog.showModal();
+  window.setTimeout(() => $('[name="endorserName"]', requestEndorseForm)?.focus(), 60);
+}
+if (requestEndorseForm) {
+  requestEndorseForm.addEventListener('submit', event => {
+    event.preventDefault();
+    if (formValue(requestEndorseForm, 'website')) { requestEndorseDialog.close(); return; }
+    const name = formValue(requestEndorseForm, 'endorserName');
+    const msg = $('#requestEndorseMessage');
+    if (!name) { msg.textContent = 'Please add who you’d like to endorse you.'; return; }
+    const list = readStorage('covendaEndorseRequests', []);
+    list.push({
+      name,
+      role: formValue(requestEndorseForm, 'endorserRole'),
+      email: formValue(requestEndorseForm, 'endorserEmail'),
+      note: formValue(requestEndorseForm, 'endorserNote'),
+      at: new Date().toISOString(),
+    });
+    writeStorage('covendaEndorseRequests', list);
+    requestEndorseForm.hidden = true;
+    const done = $('#requestEndorseDone');
+    done.hidden = false; done.innerHTML = '';
+    const h = document.createElement('p'); h.className = 'quick-done-prompt'; h.style.fontWeight = '640'; h.style.color = 'var(--ink)';
+    h.textContent = 'Request noted for ' + name + '.';
+    const p = document.createElement('p'); p.className = 'quick-done-prompt';
+    p.textContent = 'Covenda will help them add a vouch to your profile. You can also earn credibility through reviewed batch work in the meantime.';
+    const close = document.createElement('button'); close.type = 'button'; close.className = 'gold-button'; close.textContent = 'Done';
+    close.addEventListener('click', () => requestEndorseDialog.close());
+    const actions = document.createElement('div'); actions.className = 'quick-join-actions'; actions.append(close);
+    done.append(h, p, actions);
+    if (typeof showToast === 'function') showToast('Endorsement request noted.');
+  });
+}
+
 // Top-nav links work from EVERY audience: switch to the audience where the target
 // section lives (home for the brand story), then smooth-scroll to it. Fixes the dead
 // "How it works" / "Why Covenda" links on the company/university tabs.
@@ -2178,6 +2222,7 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     setWorkspaceTab('submissions');
   }
   if (action === 'student-quick') openQuickJoin();
+  if (action === 'request-endorsement') openRequestEndorse();
   if (action === 'refresh-delivery') {
     refreshDeliveryHealth({ force: true }).then(primary => {
       showToast(primary.status === 'ready' ? 'Primary inbox is connected.' : 'Primary inbox still needs attention.');
