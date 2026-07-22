@@ -88,7 +88,7 @@ async function loadDashboard() {
   showLoading();
   try {
     const dashboard=await portalRequest(); state.dashboard=dashboard; showMember(); renderDashboard();
-    if (!dashboard.profile) startOnboarding();
+    if (shouldOnboard(dashboard.profile)) startOnboarding();
   } catch(error) { if(session().accessToken) showAuth(error.message,true); }
 }
 
@@ -347,9 +347,28 @@ let onboardState={step:0,values:{role:'student',verticals:[],workTypes:[]},savin
 function onboardKey(){const d=state.dashboard;return 'covendaOnboard:'+(d?.user?.id||d?.user?.email||'anon');}
 function persistOnboard(){try{localStorage.setItem(onboardKey(),JSON.stringify({step:onboardState.step,values:onboardState.values}));}catch{}}
 function clearOnboard(){try{localStorage.removeItem(onboardKey());}catch{}}
+// A brand-new member, or a student who has a row but never finished onboarding.
+function shouldOnboard(profile){
+  if(!profile) return true;
+  return profile.role==='student' && profile.onboarding_complete===false;
+}
 function startOnboarding(){
   const meta=state.dashboard?.user?.metadata||{};
-  onboardState={step:0,values:{role:'student',verticals:[],workTypes:[],displayName:meta.full_name||meta.name||''},saving:false};
+  const profile=state.dashboard?.profile||null;
+  // Prefill from an existing profile so a half-finished student resumes rather than
+  // retyping, and skip the role screen when the role is already fixed.
+  onboardState={step:profile?.role?1:0,values:{
+    role:profile?.role||'student',
+    verticals:Array.isArray(profile?.verticals)?[...profile.verticals]:[],
+    workTypes:Array.isArray(profile?.work_types)?[...profile.work_types]:[],
+    displayName:profile?.display_name||meta.full_name||meta.name||'',
+    schoolName:profile?.school_name||'',
+    graduationYear:profile?.graduation_year||'',
+    headline:profile?.headline||'',
+    bio:profile?.bio||'',
+    skills:Array.isArray(profile?.skills)?profile.skills.join(', '):'',
+    avatarUrl:profile?.avatar_url||'',
+  },saving:false};
   try{const raw=localStorage.getItem(onboardKey());if(raw){const saved=JSON.parse(raw);onboardState.values={...onboardState.values,...saved.values};onboardState.step=Math.min(Math.max(saved.step||0,0),ONBOARD_SCREENS.length-1);}}catch{}
   $('#portalAuth').hidden=true;$('#portalLoading').hidden=true;$('#memberShell').hidden=true;$('#onboardFlow').hidden=false;
   renderOnboard();
