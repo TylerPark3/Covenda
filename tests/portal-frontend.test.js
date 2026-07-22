@@ -15,12 +15,15 @@ test('member portal exposes login, onboarding, role-aware navigation, and projec
   assert.match(html,/data-portal-view="overview"/);
   assert.match(html,/data-portal-view="projects"/);
   assert.match(html,/data-portal-view="discover"/);
+  assert.match(html,/data-portal-view="messages"/);
   assert.match(html,/id="projectForm"/);
   assert.match(html,/id="applyForm"/);
+  assert.match(html,/id="messageForm"/);
   assert.match(script,/action:'google-login'/);
   assert.match(script,/action:'save-profile'/);
   assert.match(script,/action:'create-project'/);
   assert.match(script,/action:'apply'/);
+  assert.match(script,/action:'send-message'/);
 });
 
 test('member portal is responsive, reduced-motion safe, and contains no server secret',()=>{
