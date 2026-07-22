@@ -174,8 +174,27 @@ function projectActionNode(project){
   if(isAssigned&&project.status==='review'){wrap.append(loopNote('p-clock','In review','Your work is with the reviewer. The decision will appear here.'));return wrap;}
   if(isAssigned&&project.status==='complete'){wrap.append(verifiedCard(project));return wrap;}
   if(isOwner&&project.status==='review'){wrap.append(loopNote('p-inbox','Deliverable submitted','A student submitted work for your review.'));wrap.append(actionButton('Review deliverable','p-check',()=>openReview(project)));return wrap;}
-  if(isOwner&&project.status==='complete'){wrap.append(loopNote('p-check','Accepted','You accepted this work — the student now holds a verified record.'));return wrap;}
+  if(isOwner&&project.status==='complete'){wrap.append(loopNote('p-check','Accepted','You accepted this work — the student now holds a verified record, and the escrow has been released.'));return wrap;}
+  // Cancelling is money-moving and irreversible, so it arms on the first click and only
+  // sends on the second.
+  if(isOwner&&!['complete','archived'].includes(project.status)&&((Number(project.credits_held)||0)+(Number(project.platform_fee_credits)||0))>0){
+    wrap.append(cancelProjectButton(project));
+    return wrap;
+  }
   return null;
+}
+function cancelProjectButton(project){
+  const refund=(Number(project.credits_held)||0)+(Number(project.platform_fee_credits)||0);
+  const label=`Cancel project · refund ${refund.toLocaleString()} credits`;
+  const b=document.createElement('button');b.type='button';b.className='portal-ghost cancel-project';b.textContent=label;
+  let armed=false,timer=0;
+  b.addEventListener('click',async()=>{
+    if(!armed){armed=true;b.textContent='Click again to confirm the refund';b.classList.add('is-armed');timer=window.setTimeout(()=>{armed=false;b.textContent=label;b.classList.remove('is-armed');},5000);return;}
+    window.clearTimeout(timer);b.disabled=true;b.textContent='Cancelling…';
+    try{await portalRequest({method:'POST',body:JSON.stringify({action:'cancel-project',projectId:project.id})});await loadDashboard();setView('projects');}
+    catch(error){b.textContent=error.message;b.disabled=false;armed=false;b.classList.remove('is-armed');}
+  });
+  return b;
 }
 async function runAcceptApplication(applicationId,button){button.disabled=true;const original=button.textContent;button.textContent='Accepting…';try{await portalRequest({method:'POST',body:JSON.stringify({action:'accept-application',applicationId})});await loadDashboard();setView('overview');}catch(error){button.textContent=error.message;button.disabled=false;setTimeout(()=>{button.textContent=original;},4000);}}
 
@@ -301,7 +320,12 @@ function openProfile({required=false}={}){const form=$('#profileForm');const p=s
 function openProject(){setDialogMessage('#projectMessage','');$('#projectForm').reset();$('#projectDialog').showModal();}
 function openApply(project){state.applyProject=project;$('#applyForm').reset();$('#applyForm').elements.projectId.value=project.id;$('#applyTitle').textContent=`Apply to ${project.title}.`;$('#applySummary').textContent=project.summary;setDialogMessage('#applyMessage','');$('#applyDialog').showModal();}
 function openSubmitWork(project){const form=$('#submitWorkForm');form.reset();form.elements.projectId.value=project.id;$('#submitWorkTitle').textContent=`Submit your work · ${project.title}`;setDialogMessage('#submitWorkMessage','');$('#submitWorkDialog').showModal();}
-function openReview(project){const form=$('#reviewForm');form.reset();form.elements.projectId.value=project.id;$('#reviewTitle').textContent=`Review · ${project.title}`;$('#reviewDeliverable').textContent=project.deliverable||'No deliverable text was provided.';$('#reviewSubmittedAt').textContent=project.deliverable_submitted_at?`Submitted ${dateLabel(project.deliverable_submitted_at)}`:'';setDialogMessage('#reviewMessage','');$('#reviewDialog').showModal();}
+function openReview(project){const form=$('#reviewForm');form.reset();form.elements.projectId.value=project.id;$('#reviewTitle').textContent=`Review · ${project.title}`;$('#reviewDeliverable').textContent=project.deliverable||'No deliverable text was provided.';const held=Number(project.credits_held)||0;
+  $('#reviewSubmittedAt').textContent=[
+    project.deliverable_submitted_at?`Submitted ${dateLabel(project.deliverable_submitted_at)}`:'',
+    held?`Accepting releases ${held.toLocaleString()} credits to the student`:'',
+  ].filter(Boolean).join(' · ');
+  setDialogMessage('#reviewMessage','');$('#reviewDialog').showModal();}
 
 // ===== Suno-style student onboarding: one question per screen (first-run students only). =====
 // Company/university keep the existing #profileDialog modal; "Edit profile" is unchanged.

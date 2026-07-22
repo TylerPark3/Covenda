@@ -1,14 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, authorizeMember, buyCredits, createMemberProject, creditBalance, loadMemberIntakes, memberAuthReadiness, projectCreditCost, rankOpportunities, requestGoogleLogin, requestMemberLink, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+import { acceptApplication, authorizeMember, buyCredits, cancelProject, createMemberProject, creditBalance, loadMemberIntakes, memberAuthReadiness, projectCreditCost, rankOpportunities, requestGoogleLogin, requestMemberLink, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
 // insert payload — enough to assert the close-the-loop state transitions.
 function queuedSupabase(steps) {
   let index = 0;
+  const rpcCalls = [];
   return {
+    rpcCalls,
+    rpc(name, args) {
+      const step = steps[index++] || { result: null };
+      rpcCalls.push({ name, args });
+      step.capture?.(args);
+      return Promise.resolve({ data: step.result, error: null });
+    },
     from() {
       const step = steps[index++] || { result: null };
       const query = {};
@@ -286,15 +294,46 @@ test('a non-assigned user cannot submit a deliverable', async () => {
   );
 });
 
-test('the owner accepts a deliverable, completing the project with a timestamp', async () => {
-  let patch;
+test('accepting a deliverable settles through the atomic database function, never a direct status write', async () => {
   const supabase = queuedSupabase([
     { result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'review' } },
-    { result: { id: PROJECT_UUID, status: 'complete' }, capture: value => { patch = value; } },
+    { result: { id: PROJECT_UUID, status: 'complete', credits_held: 0 } },
   ]);
-  await reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' });
-  assert.equal(patch.status, 'complete');
-  assert.ok(patch.completed_at);
+  const project = await reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' });
+  assert.equal(project.status, 'complete');
+  assert.equal(project.credits_held, 0);
+  // the payout and the completion happen inside one transaction, not as separate writes
+  assert.deepEqual(supabase.rpcCalls, [{ name: 'release_project_escrow', args: { p_project_id: PROJECT_UUID, p_owner_id: 'owner-1' } }]);
+});
+
+test('a failed settlement leaves the project incomplete rather than completing it unpaid', async () => {
+  const supabase = {
+    rpcCalls: [],
+    from() { return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'review' }, error: null }; } }; },
+    rpc() { return Promise.resolve({ data: null, error: new Error('duplicate key value violates unique constraint "credit_ledger_one_release_per_project"') }); },
+  };
+  await assert.rejects(
+    reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' }),
+    /credit_ledger_one_release_per_project/,
+  );
+});
+
+test('cancelling before completion refunds through the database function', async () => {
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'in_progress' } },
+    { result: { id: PROJECT_UUID, status: 'archived', credits_held: 0, platform_fee_credits: 0 } },
+  ]);
+  const project = await cancelProject({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID });
+  assert.equal(project.status, 'archived');
+  assert.equal(project.credits_held, 0);
+  assert.deepEqual(supabase.rpcCalls, [{ name: 'refund_project_escrow', args: { p_project_id: PROJECT_UUID, p_owner_id: 'owner-1' } }]);
+});
+
+test('only the owner can cancel, and a finished project cannot be cancelled', async () => {
+  const live = () => queuedSupabase([{ result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'in_progress' } }]);
+  await assert.rejects(cancelProject({ user: { id: 'intruder' }, supabase: live() }, { projectId: PROJECT_UUID }), /Only the project owner can cancel/);
+  const done = queuedSupabase([{ result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'complete' } }]);
+  await assert.rejects(cancelProject({ user: { id: 'owner-1' }, supabase: done }, { projectId: PROJECT_UUID }), /already finished/);
 });
 
 test('requesting changes sends the project back to in_progress with a required note', async () => {

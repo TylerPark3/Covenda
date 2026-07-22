@@ -520,10 +520,38 @@ export async function reviewDeliverable(member, input) {
   if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can review a deliverable.');
   if (project.status !== 'review') throw new Error('This project has no submitted deliverable to review.');
   const now = new Date().toISOString();
-  const patch = decision === 'accept'
-    ? { status: 'complete', completed_at: now, review_note: note || null, updated_at: now }
-    : { status: 'in_progress', review_note: note, updated_at: now };
-  return checked(member.supabase.from('member_projects').update(patch).eq('id', projectId).select('*').single(), null);
+
+  if (decision === 'revise') {
+    // No credit movement — the escrow stays held while the student reworks it.
+    return checked(
+      member.supabase.from('member_projects').update({ status: 'in_progress', review_note: note, updated_at: now }).eq('id', projectId).select('*').single(),
+      null,
+    );
+  }
+
+  // Accepting settles money, so the ledger writes and the status change must commit
+  // together. The database function does both under a row lock; if it fails, nothing
+  // moves and the project stays in review rather than completing unpaid.
+  if (note) {
+    await checked(member.supabase.from('member_projects').update({ review_note: note, updated_at: now }).eq('id', projectId).select('id').single(), null);
+  }
+  const released = await checked(member.supabase.rpc('release_project_escrow', { p_project_id: projectId, p_owner_id: member.user.id }), null);
+  return Array.isArray(released) ? released[0] : released;
+}
+
+// Cancelling before completion returns the held escrow to the company. Same atomicity
+// requirement as the release, so it also runs as a database function.
+export async function cancelProject(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', projectId).maybeSingle(),
+    null,
+  );
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can cancel a project.');
+  if (['complete', 'archived'].includes(project.status)) throw new Error('This project is already finished.');
+  const refunded = await checked(member.supabase.rpc('refund_project_escrow', { p_project_id: projectId, p_owner_id: member.user.id }), null);
+  return Array.isArray(refunded) ? refunded[0] : refunded;
 }
 
 function portalFailure(error) {
@@ -570,6 +598,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });
+    if (req.method === 'POST' && input.action === 'cancel-project') return res.status(200).json({ ok: true, project: await cancelProject(member, input) });
     return res.status(400).json({ ok: false, error: 'Unknown portal action.' });
   } catch (error) {
     const expected = error instanceof SyntaxError || /^(Enter|Choose|Only|Account|This|Please|Add|Describe|A refresh)/.test(error?.message || '');

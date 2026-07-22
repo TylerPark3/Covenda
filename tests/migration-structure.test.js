@@ -46,6 +46,10 @@ const creditLedger = readFileSync(
   new URL('../supabase/migrations/20260725000000_credit_ledger_and_project_credits.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const escrowFunctions = readFileSync(
+  new URL('../supabase/migrations/20260725100000_escrow_release_functions.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -176,6 +180,27 @@ test('credit ledger is append-only, guards double payouts, and stays server-only
   assert.match(creditLedger, /grant select, insert on table public\.credit_ledger to service_role/);
   assert.doesNotMatch(creditLedger, /grant[^;]*(update|delete)[^;]*on table public\.credit_ledger/);
   assert.doesNotMatch(creditLedger, /create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('escrow settlement runs in the database so payout and completion commit together', () => {
+  for (const fn of ['release_project_escrow', 'refund_project_escrow']) {
+    assert.match(escrowFunctions, new RegExp(`create or replace function public\\.${fn}`));
+    assert.match(escrowFunctions, new RegExp(`grant execute on function public\\.${fn}\\(uuid, uuid\\) to service_role`));
+    assert.match(escrowFunctions, new RegExp(`revoke all on function public\\.${fn}\\(uuid, uuid\\) from public, anon, authenticated`));
+  }
+  // the row lock is what serializes two concurrent accepts
+  assert.match(escrowFunctions, /for update/);
+  // ownership and state are re-checked inside the transaction, not just in the API
+  assert.match(escrowFunctions, /only the project owner can review a deliverable/);
+  assert.match(escrowFunctions, /no submitted deliverable to review/);
+  // the student is paid credits_held in full; the fee is booked to the platform (null user)
+  assert.match(escrowFunctions, /'escrow_release', proj\.credits_held/);
+  assert.match(escrowFunctions, /values \(null, 'platform_fee', proj\.platform_fee_credits/);
+  // cancelling returns the whole hold (listed + fee) to the company
+  assert.match(escrowFunctions, /coalesce\(proj\.credits_held, 0\) \+ coalesce\(proj\.platform_fee_credits, 0\)/);
+  assert.match(escrowFunctions, /security definer/);
+  assert.match(escrowFunctions, /set search_path = public, pg_temp/);
+  assert.doesNotMatch(escrowFunctions, /grant [^;]* to (anon|authenticated)/);
 });
 
 test('project targeting migration adds intake and file columns idempotently without loosening access', () => {

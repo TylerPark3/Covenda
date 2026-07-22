@@ -324,6 +324,11 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .verified-record .verified-summary { margin:0 0 7px; color:var(--muted); font-size:10px; }
 .project-list .verified-record { margin-bottom:14px; }
 
+.cancel-project { align-self:flex-start; padding:7px 12px; border:1px solid var(--line); border-radius:9px; font-size:10px; }
+.cancel-project:hover { border-color:var(--danger); color:var(--danger); }
+.cancel-project.is-armed { border-color:var(--danger); background:#fbf4f3; color:var(--danger); font-weight:700; }
+.cancel-project:disabled { opacity:.6; cursor:wait; }
+
 .row-action { margin-top:12px; min-height:34px; padding:8px 13px; border:1px solid var(--gold-deep); border-radius:9px; background:linear-gradient(#d8a541,#ab6d09); color:#fff; font-size:9px; font-weight:700; cursor:pointer; }
 .row-action:hover { box-shadow:0 8px 18px rgba(180,123,32,.22); }
 .row-action:disabled { opacity:.6; cursor:wait; }
