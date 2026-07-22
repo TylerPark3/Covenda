@@ -179,13 +179,119 @@ export async function loadMemberIntakes(member) {
   );
 }
 
+function publicEndorsement(row) {
+  return {
+    referrerName: row.referrer_name,
+    referrerType: row.referrer_type,
+    referrerOrganization: row.referrer_organization,
+    function: row.endorsed_function,
+    note: row.endorsement_note,
+    verifiedAt: row.updated_at,
+  };
+}
+
+export function summarizeTalentNetwork(profiles = [], endorsements = [], completedProjects = [], approved = false) {
+  const verifiedByEmail = new Map();
+  for (const endorsement of endorsements) {
+    const key = cleanEmail(endorsement.student_email);
+    if (!key || endorsement.status !== 'verified') continue;
+    const existing = verifiedByEmail.get(key) || [];
+    existing.push(publicEndorsement(endorsement));
+    verifiedByEmail.set(key, existing);
+  }
+  const workByStudent = new Map();
+  for (const project of completedProjects) {
+    if (!project.assigned_student_user_id || project.status !== 'complete') continue;
+    const existing = workByStudent.get(project.assigned_student_user_id) || [];
+    existing.push({ title: project.title, completedAt: project.completed_at });
+    workByStudent.set(project.assigned_student_user_id, existing);
+  }
+  const schools = new Set(profiles.map(profile => cleanText(profile.school_name, 160)).filter(Boolean));
+  const stats = {
+    visibleStudents: profiles.length,
+    verifiedReferrals: endorsements.filter(item => item.status === 'verified').length,
+    schoolsRepresented: schools.size,
+  };
+  if (!approved) return { stats, directory: [] };
+  const directory = profiles.map(profile => {
+    const email = cleanEmail(profile.contact_email);
+    const verifiedWork = workByStudent.get(profile.user_id) || [];
+    return {
+      user_id: profile.user_id,
+      display_name: profile.display_name,
+      school_name: profile.school_name,
+      headline: profile.headline,
+      bio: profile.bio,
+      skills: Array.isArray(profile.skills) ? profile.skills : [],
+      verticals: Array.isArray(profile.verticals) ? profile.verticals : [],
+      work_types: Array.isArray(profile.work_types) ? profile.work_types : [],
+      graduation_year: profile.graduation_year,
+      avatar_url: profile.avatar_url,
+      updated_at: profile.updated_at,
+      endorsements: verifiedByEmail.get(email) || [],
+      verified_work: verifiedWork,
+      verified_project_count: verifiedWork.length,
+    };
+  }).sort((a, b) => b.endorsements.length - a.endorsements.length || b.verified_project_count - a.verified_project_count || String(a.display_name).localeCompare(String(b.display_name)));
+  return { stats, directory };
+}
+
+async function loadTalentNetwork(member, profile) {
+  if (profile.role !== 'company') return null;
+  const request = member.user.email
+    ? await checked(
+      member.supabase.from('submissions')
+        .select('reference,status,created_at,updated_at')
+        .eq('submission_type', 'network_access_request')
+        .eq('submitter_email', member.user.email)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      null,
+    )
+    : null;
+  const approved = request?.status === 'approved';
+  const profiles = await checked(
+    member.supabase.from('member_profiles').select('*').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(200),
+    [],
+  );
+  let endorsements = [];
+  let schemaReady = true;
+  try {
+    endorsements = await checked(
+      member.supabase.from('student_endorsements').select('*').eq('status', 'verified').order('updated_at', { ascending: false }).limit(500),
+      [],
+    );
+  } catch (error) {
+    if (/student_endorsements|schema cache|relation .* does not exist/i.test(error?.message || '')) schemaReady = false;
+    else throw error;
+  }
+  const studentIds = approved ? profiles.map(item => item.user_id).filter(Boolean) : [];
+  const completedProjects = studentIds.length
+    ? await checked(
+      member.supabase.from('member_projects').select('assigned_student_user_id,title,status,completed_at').in('assigned_student_user_id', studentIds).eq('status', 'complete').limit(500),
+      [],
+    )
+    : [];
+  const { stats, directory } = summarizeTalentNetwork(profiles, endorsements, completedProjects, approved);
+  const status = approved ? 'approved' : request?.status === 'declined' ? 'declined' : request ? 'requested' : 'available';
+  return {
+    status,
+    schemaReady,
+    requestReference: request?.reference || null,
+    requestedAt: request?.created_at || null,
+    stats,
+    directory,
+  };
+}
+
 export async function loadMemberDashboard(member) {
   const { user, supabase } = member;
   const [profile, intakes] = await Promise.all([
     checked(supabase.from('member_profiles').select('*').eq('user_id', user.id).maybeSingle(), null),
     loadMemberIntakes(member),
   ]);
-  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [], verifiedCount: 0 };
+  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], talentNetwork: null, intakes, messages: [], verifiedCount: 0 };
 
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
@@ -203,7 +309,7 @@ export async function loadMemberDashboard(member) {
     // Students hold credits too once escrow is released, so they get a balance (the
     // Wallet view itself stays company/university only).
     const walletBalance = await creditBalance(member);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance };
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], talentNetwork: null, intakes, messages, verifiedCount, matchedCount, walletBalance };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -211,15 +317,14 @@ export async function loadMemberDashboard(member) {
   const applications = projectIds.length
     ? await checked(supabase.from('project_applications').select('*').in('project_id', projectIds).order('updated_at', { ascending: false }).limit(200))
     : [];
-  const studentDirectory = profile.role === 'company'
-    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
-    : [];
+  const talentNetwork = await loadTalentNetwork(member, profile);
+  const studentDirectory = talentNetwork?.directory || [];
   const messages = projectIds.length
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
     : [];
   const verifiedCount = projects.filter(project => project.status === 'complete').length;
   const [walletBalance, creditLedger] = await Promise.all([creditBalance(member), loadCreditLedger(member)]);
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger };
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, talentNetwork, intakes, messages, verifiedCount, walletBalance, creditLedger };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -243,6 +348,7 @@ export async function saveMemberProfile(member, input) {
     headline: cleanText(input.headline, 180) || null,
     bio: cleanText(input.bio, 2_000) || null,
     skills: cleanList(input.skills),
+    contact_email: user.email || null,
     graduation_year: graduationYear,
     portfolio_visibility: input.portfolioVisibility === 'private' ? 'private' : 'members',
     onboarding_complete: true,
@@ -253,7 +359,65 @@ export async function saveMemberProfile(member, input) {
   if (input.verticals !== undefined) row.verticals = cleanTaxonomy(input.verticals, VERTICALS);
   if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
   if (input.avatarUrl !== undefined) row.avatar_url = cleanText(input.avatarUrl, 500) || null;
-  return checked(supabase.from('member_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
+  try {
+    return await checked(supabase.from('member_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
+  } catch (error) {
+    if (!/contact_email|schema cache/i.test(error?.message || '')) throw error;
+    delete row.contact_email;
+    return checked(supabase.from('member_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
+  }
+}
+
+export async function requestTalentNetworkAccess(member, input) {
+  const profile = await checked(
+    member.supabase.from('member_profiles').select('role,display_name,organization_name').eq('user_id', member.user.id).maybeSingle(),
+    null,
+  );
+  if (profile?.role !== 'company') throw new Error('Only company accounts can request Trusted Talent access.');
+  if (!member.user.email) throw new Error('Account email is required before requesting access.');
+  const reason = cleanText(input.reason, 1_000);
+  if (reason.length < 10) throw new Error('Describe the kind of student talent your company needs.');
+  const rolesNeeded = cleanList(input.rolesNeeded, 12);
+  const hiringTimeline = cleanText(input.hiringTimeline, 120);
+  const existing = await checked(
+    member.supabase.from('submissions')
+      .select('reference,status,created_at,updated_at')
+      .eq('submission_type', 'network_access_request')
+      .eq('submitter_email', member.user.email)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    null,
+  );
+  if (existing && !['declined', 'archived'].includes(existing.status)) return existing;
+  const now = new Date().toISOString();
+  const reference = `NET-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
+  const organizationName = cleanText(profile.organization_name, 160) || 'Company member';
+  const row = {
+    reference,
+    submission_type: 'network_access_request',
+    status: 'received',
+    source: 'covenda-web',
+    revision_of: null,
+    submitter_name: cleanText(profile.display_name, 120),
+    submitter_email: member.user.email,
+    organization_name: organizationName,
+    summary: `Trusted Talent access request · ${rolesNeeded.join(', ') || 'general talent discovery'}.`,
+    ready_count: null,
+    readiness_total: null,
+    details: {
+      contact: { name: profile.display_name, email: member.user.email, company: organizationName, role: 'Company member' },
+      reason,
+      rolesNeeded,
+      hiringTimeline,
+      stage: 'access_requested',
+    },
+    readiness: null,
+    consent: true,
+    created_at: now,
+    updated_at: now,
+  };
+  return checked(member.supabase.from('submissions').insert(row).select('reference,status,created_at,updated_at').single(), null);
 }
 
 // ---- Credits. 1 credit = $1. Public posts are free; a hyper-narrow (vertical +
@@ -557,7 +721,7 @@ export async function cancelProject(member, input) {
 function portalFailure(error) {
   if (error instanceof PortalOperationalError) return { status: 503, code: error.code, message: error.publicMessage };
   const message = cleanText(error?.message, 2_000);
-  if (/member_profiles|member_projects|project_applications|project_messages|submissions|schema cache|relation .* does not exist/i.test(message)) {
+  if (/member_profiles|member_projects|project_applications|project_messages|student_endorsements|submissions|schema cache|relation .* does not exist/i.test(message)) {
     return { status: 503, code: 'PORTAL_SCHEMA_MISSING', message: 'Member sign-in worked, but the portal tables are not available. Apply the newest Supabase migration to the same project used by Vercel.' };
   }
   return { status: 503, code: 'PORTAL_UNAVAILABLE', message: 'The member portal is temporarily unavailable. Check the newest /api/portal entry in Vercel Runtime Logs.' };
@@ -598,6 +762,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });
+    if (req.method === 'POST' && input.action === 'request-network-access') return res.status(201).json({ ok: true, request: await requestTalentNetworkAccess(member, input) });
     if (req.method === 'POST' && input.action === 'cancel-project') return res.status(200).json({ ok: true, project: await cancelProject(member, input) });
     return res.status(400).json({ ok: false, error: 'Unknown portal action.' });
   } catch (error) {

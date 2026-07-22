@@ -15,6 +15,7 @@ export const REFERENCE_PREFIXES = {
   student_quick: 'SQ',
   referrer_endorsement: 'REF',
   role_application: 'APP',
+  network_access_request: 'NET',
 };
 export const SUBMISSION_TYPES = Object.keys(REFERENCE_PREFIXES);
 const TYPES = new Set(SUBMISSION_TYPES);
@@ -322,6 +323,20 @@ export function referrerRecord(body) {
   return record;
 }
 
+export function networkAccessRecord(body) {
+  const record = {
+    contact: contact(body.contact, { companyRequired: true }),
+    reason: text(body.reason, 1_000),
+    rolesNeeded: textArray(body.rolesNeeded, { maxItems: 12, maxLength: 80 }),
+    hiringTimeline: text(body.hiringTimeline, 120),
+    stage: 'access_requested',
+  };
+  if (record.reason.length < 10) {
+    throw new Error('Please describe the kind of student talent your company needs.');
+  }
+  return record;
+}
+
 export function submissionDetails(body) {
   if (!TYPES.has(body.type)) throw new Error('Please choose a valid submission type.');
   if (body.type === 'employer_intake') return employerRecord(body);
@@ -330,6 +345,7 @@ export function submissionDetails(body) {
   if (body.type === 'student_quick') return studentQuickRecord(body);
   if (body.type === 'referrer_endorsement') return referrerRecord(body);
   if (body.type === 'role_application') return roleApplicationRecord(body);
+  if (body.type === 'network_access_request') return networkAccessRecord(body);
   return callRecord(body);
 }
 
@@ -384,6 +400,9 @@ function submissionSummary(record) {
   }
   if (record.type === 'role_application') {
     return 'Applied to ' + (record.details.roleTitle || 'a role') + '.';
+  }
+  if (record.type === 'network_access_request') {
+    return `Trusted Talent access request · ${record.details.rolesNeeded.join(', ') || 'general talent discovery'}.`;
   }
   return record.details.topic || 'Call requested.';
 }
@@ -662,6 +681,8 @@ function submissionLabel(type) {
     student_interest: 'student submission',
     call_request: 'call request',
     university_partner: 'university roster',
+    referrer_endorsement: 'referrer endorsement',
+    network_access_request: 'Trusted Talent access request',
   }[type] || 'submission';
 }
 

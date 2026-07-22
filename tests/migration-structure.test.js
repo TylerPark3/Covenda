@@ -50,6 +50,10 @@ const escrowFunctions = readFileSync(
   new URL('../supabase/migrations/20260725100000_escrow_release_functions.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const trustedTalent = readFileSync(
+  new URL('../supabase/migrations/20260726000000_trusted_talent_network.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -210,4 +214,21 @@ test('project targeting migration adds intake and file columns idempotently with
   assert.match(projectTargeting, /jsonb_typeof\(attachments\) = 'array'/);
   assert.match(projectTargeting, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(projectTargeting, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('trusted talent normalizes operator-approved referrals without exposing student evidence to browsers', () => {
+  assert.match(trustedTalent, /'network_access_request'/);
+  assert.match(trustedTalent, /\|net\)-\[a-z0-9\]\{6,20\}/);
+  assert.match(trustedTalent, /add column if not exists contact_email text/);
+  assert.match(trustedTalent, /create unique index if not exists member_profiles_contact_email_unique_idx/);
+  assert.match(trustedTalent, /create table if not exists public\.student_endorsements/);
+  assert.match(trustedTalent, /alter table public\.student_endorsements force row level security/);
+  assert.match(trustedTalent, /revoke all on table public\.student_endorsements from public, anon, authenticated/);
+  assert.match(trustedTalent, /grant select, insert, update on table public\.student_endorsements to service_role/);
+  assert.doesNotMatch(trustedTalent, /grant delete on table public\.student_endorsements/);
+  assert.match(trustedTalent, /when new\.status = 'approved' then 'verified'/);
+  assert.match(trustedTalent, /create trigger submissions_sync_referrer_endorsements/);
+  assert.match(trustedTalent, /set search_path = public, pg_temp/);
+  assert.doesNotMatch(trustedTalent, /security definer/);
+  assert.doesNotMatch(trustedTalent, /create policy|grant [^;]* to (anon|authenticated)/);
 });

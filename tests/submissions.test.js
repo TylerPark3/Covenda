@@ -8,6 +8,7 @@ import handler, {
   employerRecord,
   employerRevisionReference,
   notifyOperator,
+  networkAccessRecord,
   operatorNotification,
   persistSubmission,
   postgresConfiguration,
@@ -220,7 +221,7 @@ test('API accepted types + reference prefixes stay in sync with the DB migration
   // mint a reference prefix) that the database's constraints would reject.
   // Read the most recent migration that (re)defines the full allowed set.
   const migration = readFileSync(
-    new URL('../supabase/migrations/20260723000000_allow_role_application.sql', import.meta.url),
+    new URL('../supabase/migrations/20260726000000_trusted_talent_network.sql', import.meta.url),
     'utf8',
   );
 
@@ -238,6 +239,22 @@ test('API accepted types + reference prefixes stay in sync with the DB migration
       `migration reference format is missing prefix ${REFERENCE_PREFIXES[type]} (for ${type})`,
     );
   }
+});
+
+test('network access requests require a company contact and a meaningful reason', () => {
+  const record = networkAccessRecord({
+    contact: { name: 'Avery Owner', email: 'avery@example.com', company: 'Strength Robotics' },
+    reason: 'We need students referred by robotics labs who can test a changing hardware workflow.',
+    rolesNeeded: ['Robotics', 'QA testing', 'Robotics'],
+    hiringTimeline: 'Within one month',
+  });
+  assert.equal(record.contact.company, 'Strength Robotics');
+  assert.deepEqual(record.rolesNeeded, ['Robotics', 'QA testing']);
+  assert.equal(record.stage, 'access_requested');
+  assert.throws(() => networkAccessRecord({
+    contact: { name: 'Avery', email: 'avery@example.com', company: 'Strength Robotics' },
+    reason: 'Too short',
+  }), /describe the kind of student talent/i);
 });
 
 test('referrerRecord keeps validated endorsements and requires a referrer role', () => {

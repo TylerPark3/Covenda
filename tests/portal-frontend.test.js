@@ -35,3 +35,15 @@ test('member portal is responsive, reduced-motion safe, and contains no server s
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
   assert.equal(new Set(ids).size,ids.length);
 });
+
+test('company portal includes a gated, filterable Trusted Talent marketplace',()=>{
+  assert.match(html,/id="networkAccessDialog"/);
+  assert.match(html,/id="talentProfileDialog"/);
+  assert.match(script,/Find students through people and institutions you already trust/);
+  assert.match(script,/action:'request-network-access'/);
+  assert.match(script,/Verified referral only/);
+  assert.match(script,/verified_project_count/);
+  assert.match(styles,/\.talent-network-visual/);
+  assert.match(styles,/talent-flow/);
+  assert.match(styles,/@keyframes talent-flow/);
+});
