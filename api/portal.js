@@ -248,6 +248,118 @@ export function summarizeTalentNetwork(profiles = [], endorsements = [], complet
   return { stats, directory };
 }
 
+function partnerSourceEntries(sources = []) {
+  const entries = [];
+  for (const source of sources) {
+    const details = source?.details && typeof source.details === 'object' ? source.details : {};
+    const students = source.submission_type === 'university_partner' ? details.roster : details.endorsements;
+    for (const student of Array.isArray(students) ? students : []) {
+      const studentEmail = cleanEmail(student?.email);
+      const studentName = cleanText(student?.name, 100);
+      if (!studentEmail || !studentName) continue;
+      entries.push({
+        studentEmail,
+        studentName,
+        interest: cleanText(student?.interest || student?.function, 80),
+        sourceReference: cleanText(source.reference, 40),
+        sourceType: source.submission_type,
+        sourceStatus: cleanText(source.status, 40),
+        referredAt: source.created_at,
+        sourceUpdatedAt: source.updated_at,
+      });
+    }
+  }
+  return entries;
+}
+
+export function summarizePartnerCohort(sources = [], profiles = [], projects = []) {
+  const sourceEntries = partnerSourceEntries(sources);
+  const latestByEmail = new Map();
+  for (const entry of sourceEntries) {
+    const existing = latestByEmail.get(entry.studentEmail);
+    if (!existing || String(entry.sourceUpdatedAt || entry.referredAt || '') > String(existing.sourceUpdatedAt || existing.referredAt || '')) latestByEmail.set(entry.studentEmail, entry);
+  }
+  const profileByEmail = new Map(profiles.map(profile => [cleanEmail(profile.contact_email), profile]).filter(([email]) => email));
+  const projectsByStudent = new Map();
+  for (const project of projects) {
+    if (!project.assigned_student_user_id) continue;
+    const current = projectsByStudent.get(project.assigned_student_user_id) || [];
+    current.push(project);
+    projectsByStudent.set(project.assigned_student_user_id, current);
+  }
+  const students = [...latestByEmail.values()].map(entry => {
+    const profile = profileByEmail.get(entry.studentEmail) || null;
+    const studentProjects = profile ? projectsByStudent.get(profile.user_id) || [] : [];
+    const completed = studentProjects.filter(project => project.status === 'complete');
+    const active = studentProjects.filter(project => ['matched', 'in_progress', 'review'].includes(project.status));
+    const projectStage = completed.length ? 'completed' : active.length ? 'active' : 'not_started';
+    const activityDates = [entry.sourceUpdatedAt, entry.referredAt, profile?.updated_at, ...studentProjects.map(project => project.completed_at || project.updated_at)].filter(Boolean).sort();
+    return {
+      display_name: profile?.display_name || entry.studentName,
+      user_id: profile?.user_id || null,
+      headline: profile?.headline || entry.interest || null,
+      avatar_url: profile?.avatar_url || null,
+      source_reference: entry.sourceReference,
+      referral_status: entry.sourceStatus === 'approved' ? 'verified' : entry.sourceStatus === 'declined' || entry.sourceStatus === 'archived' ? 'closed' : 'under_review',
+      profile_status: profile ? 'live' : 'invited',
+      project_stage: projectStage,
+      active_project_count: active.length,
+      completed_project_count: completed.length,
+      last_activity_at: activityDates.at(-1) || null,
+    };
+  }).sort((a, b) => String(b.last_activity_at || '').localeCompare(String(a.last_activity_at || '')) || String(a.display_name).localeCompare(String(b.display_name)));
+  const preferredSource = [...sources].sort((a, b) => Number(b.status === 'approved') - Number(a.status === 'approved') || String(b.updated_at || '').localeCompare(String(a.updated_at || '')))[0] || null;
+  const preferredDetails = preferredSource?.details && typeof preferredSource.details === 'object' ? preferredSource.details : {};
+  return {
+    stats: {
+      referredStudents: students.length,
+      liveProfiles: students.filter(student => student.profile_status === 'live').length,
+      activeProjects: students.reduce((sum, student) => sum + student.active_project_count, 0),
+      completedProjects: students.reduce((sum, student) => sum + student.completed_project_count, 0),
+    },
+    students,
+    referralCode: cleanText(preferredDetails.attributionCode, 40) || cleanText(preferredSource?.reference, 40) || null,
+    referralStatus: preferredSource?.status || 'not_started',
+  };
+}
+
+export async function loadPartnerCohort(member, profile) {
+  if (profile?.role !== 'university' || !member.user.email) return null;
+  const partnerEmail = cleanEmail(member.user.email);
+  const sources = await checked(
+    member.supabase.from('submissions')
+      .select('reference,submission_type,status,details,created_at,updated_at')
+      .eq('submitter_email', partnerEmail)
+      .in('submission_type', ['university_partner', 'referrer_endorsement'])
+      .order('updated_at', { ascending: false })
+      .limit(50),
+    [],
+  );
+  const studentEmails = [...new Set(partnerSourceEntries(sources).map(entry => entry.studentEmail))];
+  const profiles = studentEmails.length
+    ? await checked(
+      member.supabase.from('member_profiles')
+        .select('user_id,contact_email,display_name,headline,avatar_url,updated_at')
+        .eq('role', 'student')
+        .in('contact_email', studentEmails)
+        .limit(200),
+      [],
+    )
+    : [];
+  const studentIds = profiles.map(student => student.user_id).filter(Boolean);
+  const projects = studentIds.length
+    ? await checked(
+      member.supabase.from('member_projects')
+        .select('assigned_student_user_id,title,status,updated_at,completed_at')
+        .in('assigned_student_user_id', studentIds)
+        .order('updated_at', { ascending: false })
+        .limit(500),
+      [],
+    )
+    : [];
+  return summarizePartnerCohort(sources, profiles, projects);
+}
+
 async function loadTalentNetwork(member, profile) {
   if (profile.role !== 'company') return null;
   const request = member.user.email
@@ -321,6 +433,7 @@ export async function loadMemberDashboard(member) {
       applications: [],
       studentDirectory: [],
       talentNetwork: null,
+      partnerCohort: null,
       intakes,
       messages: [],
       projectRequests: [],
@@ -403,6 +516,7 @@ export async function loadMemberDashboard(member) {
       applications,
       studentDirectory: [],
       talentNetwork: null,
+      partnerCohort: null,
       intakes,
       messages,
       projectRequests: [],
@@ -449,6 +563,7 @@ export async function loadMemberDashboard(member) {
 
   const talentNetwork = await loadTalentNetwork(member, profile);
   const studentDirectory = talentNetwork?.directory || [];
+  const partnerCohort = await loadPartnerCohort(member, profile);
 
   const messages = projectIds.length
     ? await checked(
@@ -478,6 +593,7 @@ export async function loadMemberDashboard(member) {
     applications,
     studentDirectory,
     talentNetwork,
+    partnerCohort,
     intakes,
     messages,
     verifiedCount,

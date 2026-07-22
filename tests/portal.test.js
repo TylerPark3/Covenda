@@ -26,6 +26,7 @@ import {
   sendProjectMessage,
   submitDeliverable,
   summarizeTalentNetwork,
+  summarizePartnerCohort,
 } from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
@@ -557,4 +558,21 @@ test('a company can request human-reviewed network access using its authenticate
   assert.equal(inserted.organization_name, 'Strength Robotics');
   assert.deepEqual(inserted.details.rolesNeeded, ['Robotics', 'QA testing', 'technical writing']);
   assert.equal(inserted.consent, true);
+});
+
+test('a university cohort links its own referral roster to profiles and project progress without exposing email', () => {
+  const cohort=summarizePartnerCohort([
+    {reference:'UNI-ABC123',submission_type:'university_partner',status:'approved',created_at:'2026-07-01T00:00:00Z',updated_at:'2026-07-02T00:00:00Z',details:{roster:[{name:'Maya Patel',email:'maya@school.edu',interest:'Research'},{name:'Jordan Lee',email:'jordan@school.edu',interest:'Operations'}]}},
+  ],[
+    {user_id:'student-1',contact_email:'maya@school.edu',display_name:'Maya Patel',headline:'Researcher',updated_at:'2026-07-03T00:00:00Z'},
+  ],[
+    {assigned_student_user_id:'student-1',title:'Market scan',status:'in_progress',updated_at:'2026-07-04T00:00:00Z'},
+    {assigned_student_user_id:'student-1',title:'Pricing brief',status:'complete',updated_at:'2026-07-05T00:00:00Z',completed_at:'2026-07-05T00:00:00Z'},
+  ]);
+  assert.deepEqual(cohort.stats,{referredStudents:2,liveProfiles:1,activeProjects:1,completedProjects:1});
+  assert.equal(cohort.referralCode,'UNI-ABC123');
+  assert.equal(cohort.students[0].project_stage,'completed');
+  assert.equal(cohort.students[1].profile_status,'invited');
+  assert.equal('studentEmail' in cohort.students[0],false);
+  assert.doesNotMatch(JSON.stringify(cohort),/maya@school\.edu|jordan@school\.edu/);
 });

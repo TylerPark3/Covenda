@@ -3996,6 +3996,8 @@ if (incomingReferral) {
   writeStorage(referralStorageKey, incomingReferral);
   state.audience = 'student';
 }
+const requestedAudience = (() => { try { return new URLSearchParams(location.search).get('audience'); } catch { return ''; } })();
+if (!incomingReferral && ['student','company','university'].includes(requestedAudience)) state.audience = requestedAudience;
 
 // ---- Industry-first narrowing -----------------------------------------------
 // The public explorer and full profile use the same taxonomy. Work types remain an
@@ -4077,6 +4079,8 @@ hydrateStudentAffiliation();
 if (incomingReferral) verifyStudentAffiliation();
 selectWorkType(state.narrowPath.workType || state.workType);
 setAudience(state.audience);
+const requestedAction = (() => { try { return new URLSearchParams(location.search).get('action'); } catch { return ''; } })();
+if (state.audience === 'university' && requestedAction === 'roster') window.requestAnimationFrame(openUniversityRoster);
 renderReferralBanner();
 renderReferralLink();
 // Steps 5/6/3 + gold-tile motif — run here (not at definition time) so the referral

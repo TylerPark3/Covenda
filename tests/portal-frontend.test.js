@@ -91,6 +91,17 @@ test('company portal includes a gated, filterable Trusted Talent marketplace',()
   assert.match(styles,/@keyframes talent-flow/);
 });
 
+test('university partners receive a functional cohort and invitation workspace',()=>{
+  assert.match(script,/Your student cohort/);
+  assert.match(script,/Students referred/);
+  assert.match(script,/Copy invitation/);
+  assert.match(script,/No students linked yet/);
+  assert.match(script,/partnerCohort/);
+  assert.match(styles,/\.cohort-metrics/);
+  assert.match(styles,/\.cohort-table/);
+  assert.match(styles,/@media \(max-width:520px\)[\s\S]*?\.cohort-row/);
+});
+
 test('student discovery includes explainable matching, bookmarks, filters, and mobile detail behavior',()=>{
   for(const id of ['discoverSearch','discoverSort','discoverFilters','discoverFilterDialog','discoverDetail']) assert.match(html,new RegExp(`id="${id}"`));
   assert.match(html,/data-discover-tab="best"/);
