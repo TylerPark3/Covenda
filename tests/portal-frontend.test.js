@@ -21,9 +21,21 @@ test('member portal exposes login, onboarding, role-aware navigation, and projec
   assert.match(html,/id="messageForm"/);
   assert.match(script,/action:'google-login'/);
   assert.match(script,/action:'save-profile'/);
-  assert.match(script,/action:'create-project'/);
+  assert.match(html,/data-portal-view="requests"/);
+  assert.match(html,/Covenda scopes and packages every request before students see it/);
+  assert.match(script,/action:'create-request'/);
+  assert.doesNotMatch(script,/action:'create-project'/);
   assert.match(script,/action:'apply'/);
   assert.match(script,/action:'send-message'/);
+});
+
+test('organization requests cover every brokered work type and expose transparent lifecycle states',()=>{
+  for(const type of ['new_project','more_students','scope_change','revision','consult','question','specific_student']) assert.match(html,new RegExp(`value="${type}"`));
+  for(const status of ['Submitted','Covenda is packaging','Packaged &amp; live']) assert.match(html,new RegExp(status));
+  assert.match(html,/Do not include client or patient records/);
+  assert.match(script,/requestStatusLabels/);
+  assert.match(script,/operator_note/);
+  assert.match(styles,/\.request-workspace/);
 });
 
 test('member portal is responsive, reduced-motion safe, and contains no server secret',()=>{

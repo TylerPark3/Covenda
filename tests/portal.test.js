@@ -8,6 +8,7 @@ import {
   calculateProjectFit,
   cancelProject,
   createMemberProject,
+  createProjectRequest,
   creditBalance,
   fulfilPayout,
   loadMemberIntakes,
@@ -124,6 +125,26 @@ test('profile onboarding persists a fixed role and sanitized member fields', asy
   assert.deepEqual(profile.skills,['Research','Excel']);
   assert.equal(profile.school_name,'Columbia');
   assert.equal(profile.onboarding_complete,true);
+});
+
+test('organization work becomes a server-side project request, never a directly open project', async () => {
+  let inserted;
+  const supabase={from(table){
+    if(table==='member_profiles')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{role:'company'},error:null};}};
+    assert.equal(table,'project_requests');return {insert(value){inserted=value;return this;},select(){return this;},async single(){return {data:{id:'request-1',...inserted},error:null};}};
+  }};
+  const request=await createProjectRequest({user:{id:'company-1'},supabase},{requestType:'new_project',body:'We need a public-source pricing analysis.',packetDraft:{title:'Pricing analysis',verticals:['Software & AI','Unsafe value'],credits:200}});
+  assert.equal(request.status,'submitted');
+  assert.equal(request.requester_user_id,'company-1');
+  assert.equal(request.related_project_id,null);
+  assert.equal(request.project_id,null);
+  assert.deepEqual(request.packet_draft.verticals,['Software & AI']);
+  assert.equal(request.packet_draft.credits,200);
+});
+
+test('students cannot create brokered company requests', async () => {
+  const supabase={from(){return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{role:'student'},error:null};}};}};
+  await assert.rejects(createProjectRequest({user:{id:'student-1'},supabase},{requestType:'new_project',body:'A sufficiently detailed request.'}),/Only company and university/);
 });
 
 test('onboarding persists only whitelisted verticals and work types plus an avatar url', async () => {

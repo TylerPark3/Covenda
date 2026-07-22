@@ -3,6 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import { supabaseConfiguration } from './submissions.js';
 
 const ADMIN_STATUSES = new Set(['received', 'reviewing', 'needs_information', 'packet_proposed', 'approval_pending', 'approved', 'declined', 'archived']);
+const REQUEST_STATUSES = new Set(['submitted', 'in_packaging', 'packaged', 'declined', 'closed']);
+const VERTICALS = new Set(['Accounting & finance', 'Software & AI', 'Healthcare operations', 'Consumer & retail', 'Professional services', 'Not sure yet — show me everything']);
+const WORK_TYPES = new Set(['Research', 'Data & spreadsheets', 'Operations', 'QA & testing', 'Writing & documentation']);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const linkBuckets = new Map();
 
 export class AdminOperationalError extends Error {
@@ -232,6 +236,103 @@ export async function listAdminSubmissions(supabase) {
   return Array.isArray(data) ? data : [];
 }
 
+export async function listAdminProjectRequests(supabase) {
+  const { data, error } = await supabase
+    .from('project_requests')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return Array.isArray(data) ? data : [];
+}
+
+function list(value, maxItems = 20, allowed = null) {
+  const values = Array.isArray(value) ? value : text(value, 1_000).split(',');
+  return [...new Set(values.map(item => text(item, 80)).filter(item => item && (!allowed || allowed.has(item))))].slice(0, maxItems);
+}
+
+function cleanPacket(value = {}) {
+  const packet = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    title: text(packet.title, 160),
+    summary: text(packet.summary, 5_000),
+    deliverable: text(packet.deliverable, 2_000),
+    acceptanceCriteria: text(packet.acceptanceCriteria, 4_000),
+    safeInputs: text(packet.safeInputs, 4_000),
+    credits: Math.max(0, Math.min(100_000, Math.round(Number(packet.credits) || 0))),
+    verticals: list(packet.verticals, 8, VERTICALS),
+    workTypes: list(packet.workTypes, 8, WORK_TYPES),
+    desiredSkills: list(packet.desiredSkills),
+    targetDate: /^\d{4}-\d{2}-\d{2}$/.test(packet.targetDate || '') ? packet.targetDate : null,
+  };
+}
+
+async function requestById(supabase, requestId) {
+  const id = text(requestId, 50);
+  if (!UUID.test(id)) throw new Error('Choose a valid project request.');
+  const { data, error } = await supabase.from('project_requests').select('*').eq('id', id).maybeSingle();
+  if (error) throw error;
+  if (!data) throw new Error('Choose a project request that still exists.');
+  return data;
+}
+
+export async function saveProjectRequestPackaging(supabase, input, operatorEmail = '') {
+  const request = await requestById(supabase, input.requestId);
+  if (!['submitted', 'in_packaging'].includes(request.status)) throw new Error('Choose a request that is still being packaged.');
+  const changes = {
+    status: 'in_packaging',
+    packet_draft: cleanPacket(input.packet),
+    updated_at: new Date().toISOString(),
+  };
+  if (Object.hasOwn(input, 'operatorNote')) changes.operator_note = text(input.operatorNote, 2_000) || null;
+  const { data, error } = await supabase.from('project_requests').update(changes).eq('id', request.id).select('*').single();
+  if (error) throw error;
+  return data;
+}
+
+export async function declineProjectRequest(supabase, input) {
+  const request = await requestById(supabase, input.requestId);
+  if (!['submitted', 'in_packaging'].includes(request.status)) throw new Error('Choose a request that is still being packaged.');
+  const reason = text(input.reason, 2_000);
+  if (reason.length < 10) throw new Error('Enter a clear decline reason for the requester.');
+  const { data, error } = await supabase.from('project_requests').update({ status: 'declined', operator_note: reason, updated_at: new Date().toISOString() }).eq('id', request.id).select('*').single();
+  if (error) throw error;
+  return data;
+}
+
+export async function publishProjectRequest(supabase, input, operatorEmail = '') {
+  const request = await requestById(supabase, input.requestId);
+  if (!['submitted', 'in_packaging', 'packaged'].includes(request.status)) throw new Error('Choose a request that can be published.');
+  const packet = cleanPacket(input.packet);
+  if (packet.title.length < 3) throw new Error('Enter a packet title.');
+  if (packet.summary.length < 10) throw new Error('Enter a packet summary.');
+  if (packet.deliverable.length < 10) throw new Error('Define the useful deliverable.');
+  if (packet.acceptanceCriteria.length < 10) throw new Error('Define fair acceptance criteria.');
+  if (packet.safeInputs.length < 10) throw new Error('Define the safe inputs students may use.');
+  if (packet.credits < 1) throw new Error('Choose a positive student credit amount.');
+  const safety = input.safety && typeof input.safety === 'object' ? input.safety : {};
+  const requiredChecks = ['clientRecords', 'pii', 'productionAccess', 'regulatedDecisions'];
+  if (!requiredChecks.every(key => safety[key] === false)) {
+    throw new Error('Clear every safety boundary before publishing this packet.');
+  }
+  const { data, error } = await supabase.rpc('publish_project_request', {
+    p_request_id: request.id,
+    p_operator_email: email(operatorEmail) || 'Covenda operator',
+    p_title: packet.title,
+    p_summary: packet.summary,
+    p_deliverable: packet.deliverable,
+    p_acceptance_criteria: packet.acceptanceCriteria,
+    p_safe_inputs: packet.safeInputs,
+    p_credits: packet.credits,
+    p_verticals: packet.verticals,
+    p_work_types: packet.workTypes,
+    p_desired_skills: packet.desiredSkills,
+    p_target_date: packet.targetDate,
+  });
+  if (error) throw error;
+  return Array.isArray(data) ? data[0] : data;
+}
+
 export async function updateAdminSubmission(supabase, input, operatorEmail = '') {
   const reference = text(input.reference, 40).toUpperCase();
   if (!/^(EMP|STU|CALL|UNI)-[A-Z0-9]{6,20}$/.test(reference)) {
@@ -281,11 +382,11 @@ function adminFailure(error) {
     return { status: 503, code: error.code, message: error.publicMessage };
   }
   const internalMessage = text(error?.message, 2_000);
-  if (/submissions|schema cache|permission denied|relation .* does not exist/i.test(internalMessage)) {
+  if (/submissions|project_requests|member_projects|credit_ledger|publish_project_request|schema cache|permission denied|relation .* does not exist/i.test(internalMessage)) {
     return {
       status: 503,
       code: 'ADMIN_SUBMISSIONS_UNAVAILABLE',
-      message: 'The admin login worked, but Supabase could not use public.submissions. Apply the newest pending inbox migrations and confirm the Vercel Supabase variables point to the same project.',
+      message: 'The admin login worked, but the Covenda workflow tables are unavailable. Apply the newest pending Supabase migrations and confirm Vercel points to that same project.',
     };
   }
   return { status: 503, code: 'ADMIN_UNAVAILABLE', message: 'The operator inbox is temporarily unavailable. Check the newest /api/admin error in Vercel Runtime Logs.' };
@@ -312,9 +413,8 @@ export default async function handler(req, res, dependencies = {}) {
   if (!sameOrigin(req)) return res.status(403).json({ ok: false, error: 'Origin not allowed.' });
 
   try {
-    if (req.method === 'POST') {
+    if (req.method === 'POST' && body(req).action === 'request-link') {
       const input = body(req);
-      if (input.action !== 'request-link') return res.status(400).json({ ok: false, error: 'Unknown action.' });
       const result = await requestAdminLink(input.email, req, dependencies);
       const requestId = adminRequestId(req);
       logAdminLinkRequest(req, result, requestId, startedAt);
@@ -325,7 +425,7 @@ export default async function handler(req, res, dependencies = {}) {
       });
     }
 
-    if (!['GET', 'PATCH'].includes(req.method)) {
+    if (!['GET', 'PATCH', 'POST'].includes(req.method)) {
       res.setHeader('Allow', 'GET, POST, PATCH');
       return res.status(405).json({ ok: false, error: 'Method not allowed.' });
     }
@@ -334,14 +434,24 @@ export default async function handler(req, res, dependencies = {}) {
     if (!admin) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
 
     if (req.method === 'GET') {
-      const submissions = await listAdminSubmissions(admin.supabase);
-      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions });
+      const [submissions, projectRequests] = await Promise.all([
+        listAdminSubmissions(admin.supabase),
+        listAdminProjectRequests(admin.supabase),
+      ]);
+      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, projectRequests });
     }
 
-    const submission = await updateAdminSubmission(admin.supabase, body(req), admin.email);
-    return res.status(200).json({ ok: true, submission });
+    const input = body(req);
+    if (req.method === 'PATCH') {
+      const submission = await updateAdminSubmission(admin.supabase, input, admin.email);
+      return res.status(200).json({ ok: true, submission });
+    }
+    if (input.action === 'save-packaging') return res.status(200).json({ ok: true, request: await saveProjectRequestPackaging(admin.supabase, input, admin.email) });
+    if (input.action === 'decline-request') return res.status(200).json({ ok: true, request: await declineProjectRequest(admin.supabase, input) });
+    if (input.action === 'publish-request') return res.status(200).json({ ok: true, project: await publishProjectRequest(admin.supabase, input, admin.email) });
+    return res.status(400).json({ ok: false, error: 'Unknown action.' });
   } catch (error) {
-    const expected = error instanceof SyntaxError || /^(Enter|Choose|Keep|Please|Unknown)/.test(error?.message || '');
+    const expected = error instanceof SyntaxError || /^(Enter|Choose|Keep|Please|Unknown|Define|Clear|The requester)/.test(error?.message || '');
     if (expected) return res.status(400).json({ ok: false, code: 'ADMIN_INPUT_INVALID', error: error.message });
     const failure = adminFailure(error);
     logAdminFailure(req, error, failure, startedAt);

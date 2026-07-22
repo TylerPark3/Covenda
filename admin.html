@@ -25,6 +25,9 @@
     <symbol id="a-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8.5A7 7 0 0 1 18.7 7L20 12M4 12l1.3 5A7 7 0 0 0 17.9 15.5"/></symbol>
     <symbol id="a-exit" viewBox="0 0 24 24"><path d="M10 4H4v16h6m5-4 4-4-4-4m4 4H8"/></symbol>
     <symbol id="a-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="a-packet" viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8m-8 4h5m4-8v14"/></symbol>
+    <symbol id="a-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="a-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.4 3 8.2 7 9 4-.8 7-4.6 7-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
   </defs></svg>
 
   <main class="admin-login" id="adminLogin">
@@ -50,6 +53,7 @@
         <button type="button" data-admin-type="student_interest"><svg><use href="#a-user"/></svg><span>Students</span><b data-admin-count="student_interest">0</b></button>
         <button type="button" data-admin-type="employer_intake"><svg><use href="#a-company"/></svg><span>Companies</span><b data-admin-count="employer_intake">0</b></button>
         <button type="button" data-admin-type="university_partner"><svg><use href="#a-university"/></svg><span>Universities</span><b data-admin-count="university_partner">0</b></button>
+        <button type="button" id="adminPackagingNav"><svg><use href="#a-packet"/></svg><span>Packaging</span><b id="adminPackagingCount">0</b></button>
       </nav>
       <button class="admin-signout" id="adminSignout" type="button"><svg><use href="#a-exit"/></svg>Sign out</button>
     </aside>
@@ -59,7 +63,7 @@
       <span class="admin-sync-status" id="adminSyncStatus" aria-live="polite">Not synced</span>
       <button class="admin-refresh" id="adminRefresh" type="button"><svg><use href="#a-refresh"/></svg>Refresh inbox</button>
     </header>
-    <main class="admin-main">
+    <main class="admin-main" id="adminInboxMain">
       <section class="admin-queue">
         <div class="admin-queue-heading">
           <div><h1>Submission inbox</h1><p>Review new intake, find blocked records, and keep every lead moving.</p></div>
@@ -86,6 +90,15 @@
       <aside class="admin-detail" id="adminDetail" aria-live="polite">
         <div class="admin-detail-empty"><svg><use href="#a-inbox"/></svg><h2>Select a submission</h2><p>Choose a row to inspect its private intake details.</p></div>
       </aside>
+    </main>
+    <main class="packaging-main" id="adminPackagingMain" hidden>
+      <section class="packaging-queue">
+        <div class="packaging-heading"><div><p>Brokered work</p><h1>Packaging queue</h1><span>Turn company needs into safe, student-ready Project Packets.</span></div><strong id="packagingTotal">0 requests</strong></div>
+        <div class="packaging-tabs" role="tablist" aria-label="Packaging status"><button class="is-active" type="button" data-packaging-filter="submitted">Submitted</button><button type="button" data-packaging-filter="in_packaging">In packaging</button><button type="button" data-packaging-filter="packaged">Packaged</button><button type="button" data-packaging-filter="declined">Declined</button></div>
+        <div class="packaging-list-head"><span>Request</span><span>Type</span><span>Status</span><span>Received</span></div>
+        <div class="packaging-list" id="packagingList"></div>
+      </section>
+      <aside class="packet-editor" id="packetEditor"><div class="packet-editor-empty"><svg><use href="#a-packet"/></svg><h2>Select a request</h2><p>Choose a row to inspect the original need and build its Project Packet.</p></div></aside>
     </main>
   </div>
 </body>

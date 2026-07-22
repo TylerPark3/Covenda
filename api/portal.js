@@ -4,6 +4,7 @@ import { supabaseConfiguration } from './submissions.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
+export const PROJECT_REQUEST_TYPES = new Set(['new_project', 'more_students', 'scope_change', 'revision', 'consult', 'question', 'specific_student']);
 // Fixed taxonomies shared with the marketing site (BATCHES industries + work types).
 // The vertical project-matcher reads these exact strings, so onboarding must write them verbatim.
 export const VERTICALS = new Set(['Accounting & finance', 'Software & AI', 'Healthcare operations', 'Consumer & retail', 'Professional services', 'Not sure yet — show me everything']);
@@ -322,6 +323,7 @@ export async function loadMemberDashboard(member) {
       talentNetwork: null,
       intakes,
       messages: [],
+      projectRequests: [],
       verifiedCount: 0,
     };
   }
@@ -403,6 +405,7 @@ export async function loadMemberDashboard(member) {
       talentNetwork: null,
       intakes,
       messages,
+      projectRequests: [],
       verifiedCount,
       matchedCount,
       walletBalance,
@@ -412,14 +415,24 @@ export async function loadMemberDashboard(member) {
     };
   }
 
-  const projects = await checked(
-    supabase
-      .from('member_projects')
-      .select('*')
-      .eq('owner_user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(100),
-  );
+  const [projects, projectRequests] = await Promise.all([
+    checked(
+      supabase
+        .from('member_projects')
+        .select('*')
+        .eq('owner_user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(100),
+    ),
+    checked(
+      supabase
+        .from('project_requests')
+        .select('*')
+        .eq('requester_user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(100),
+    ),
+  ]);
 
   const projectIds = projects.map(project => project.id);
 
@@ -470,6 +483,7 @@ export async function loadMemberDashboard(member) {
     verifiedCount,
     walletBalance,
     creditLedger,
+    projectRequests,
   };
 }
 
@@ -707,6 +721,62 @@ function sanitizeBrief(brief) {
     safetyFlags: list(brief.safetyFlags, 8),
     safeToPost: brief.safeToPost === true,
   };
+}
+
+function sanitizePacketDraft(value = {}) {
+  const draft = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return {
+    title: cleanText(draft.title, 160),
+    summary: cleanText(draft.summary, 5_000),
+    deliverable: cleanText(draft.deliverable, 2_000),
+    acceptanceCriteria: cleanText(draft.acceptanceCriteria, 4_000),
+    safeInputs: cleanText(draft.safeInputs, 4_000),
+    desiredSkills: cleanList(draft.desiredSkills),
+    verticals: cleanTaxonomy(draft.verticals, VERTICALS),
+    workTypes: cleanTaxonomy(draft.workTypes, WORK_TYPES),
+    credits: Math.max(0, Math.min(100_000, Math.round(Number(draft.credits) || 0))),
+    targetDate: /^\d{4}-\d{2}-\d{2}$/.test(draft.targetDate || '') ? draft.targetDate : null,
+  };
+}
+
+export async function createProjectRequest(member, input) {
+  const profile = await checked(
+    member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(),
+    null,
+  );
+  if (!profile || !['company', 'university'].includes(profile.role)) {
+    throw new Error('Only company and university accounts can request project work.');
+  }
+  const requestType = cleanText(input.requestType, 40);
+  if (!PROJECT_REQUEST_TYPES.has(requestType)) throw new Error('Choose a valid request type.');
+  const requestBody = cleanText(input.body, 8_000);
+  if (requestBody.length < 10) throw new Error('Describe what you need in at least 10 characters.');
+
+  const projectId = cleanText(input.projectId, 50);
+  if (projectId) {
+    if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid related project.');
+    const project = await checked(
+      member.supabase.from('member_projects').select('id,owner_user_id').eq('id', projectId).maybeSingle(),
+      null,
+    );
+    if (!project || project.owner_user_id !== member.user.id) throw new Error('Choose a project owned by this workspace.');
+  }
+
+  const now = new Date().toISOString();
+  const row = {
+    requester_user_id: member.user.id,
+    related_project_id: projectId || null,
+    project_id: null,
+    request_type: requestType,
+    body: requestBody,
+    attachments: cleanAttachments(input.attachments),
+    status: 'submitted',
+    ai_brief: input.aiBrief && typeof input.aiBrief === 'object' ? sanitizeBrief(input.aiBrief) : {},
+    packet_draft: sanitizePacketDraft(input.packetDraft),
+    created_at: now,
+    updated_at: now,
+  };
+  return checked(member.supabase.from('project_requests').insert(row).select('*').single(), null);
 }
 
 // Rank open opportunities so ones matching the student's verticals/work types come
@@ -1062,7 +1132,7 @@ export async function cancelProject(member, input) {
 function portalFailure(error) {
   if (error instanceof PortalOperationalError) return { status: 503, code: error.code, message: error.publicMessage };
   const message = cleanText(error?.message, 2_000);
-  if (/member_profiles|member_projects|project_applications|project_messages|student_endorsements|saved_projects|match_events|submissions|schema cache|relation .* does not exist/i.test(message)) {
+  if (/member_profiles|member_projects|project_requests|project_applications|project_messages|student_endorsements|saved_projects|match_events|submissions|schema cache|relation .* does not exist/i.test(message)) {
     return { status: 503, code: 'PORTAL_SCHEMA_MISSING', message: 'Member sign-in worked, but the portal tables are not available. Apply the newest Supabase migration to the same project used by Vercel.' };
   }
   return { status: 503, code: 'PORTAL_UNAVAILABLE', message: 'The member portal is temporarily unavailable. Check the newest /api/portal entry in Vercel Runtime Logs.' };
@@ -1096,7 +1166,8 @@ export default async function handler(req, res, dependencies = {}) {
 
     const input = parseBody(req);
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
-    if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
+    if (req.method === 'POST' && input.action === 'create-request') return res.status(201).json({ ok: true, request: await createProjectRequest(member, input) });
+    if (req.method === 'POST' && input.action === 'create-project') return res.status(400).json({ ok: false, error: 'Covenda scopes and packages every request before students see it. Use Request work instead.' });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input) });
     if (req.method === 'POST' && input.action === 'match-event') return res.status(201).json({ ok: true, event: await recordMatchEvent(member, input) });
     if (req.method === 'POST' && input.action === 'toggle-save') return res.status(200).json({ ok: true, ...(await toggleSavedProject(member, input)) });

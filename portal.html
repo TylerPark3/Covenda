@@ -80,6 +80,7 @@
       <nav aria-label="Member workspace">
         <button class="is-active" type="button" data-view="overview"><svg><use href="#p-home"/></svg><span>Overview</span></button>
         <button type="button" data-view="projects"><svg><use href="#p-project"/></svg><span>My projects</span><b id="projectCount">0</b></button>
+        <button type="button" data-view="requests" data-org-only><svg><use href="#p-flow"/></svg><span>Requests</span><b id="requestCount">0</b></button>
         <button type="button" data-view="activity"><svg><use href="#p-inbox"/></svg><span>Submissions</span><b id="intakeCount">0</b></button>
         <button type="button" data-view="discover" data-student-only><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
         <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
@@ -112,8 +113,17 @@
       </section>
 
       <section class="portal-view" data-portal-view="projects">
-        <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every active and completed project in one place.</p></div><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Post a project</button></div>
+        <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every active and completed project in one place.</p></div><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Request work</button></div>
         <div class="project-list" id="projectList"></div>
+      </section>
+
+      <section class="portal-view" data-portal-view="requests" data-org-only>
+        <div class="page-heading request-page-heading"><div><p class="eyebrow">Brokered work</p><h1>Requests</h1><p>Covenda scopes and packages every request before students see it.</p></div><button class="portal-primary" id="newRequest" type="button"><svg><use href="#p-plus"/></svg>Request work</button></div>
+        <div class="request-lifecycle" aria-label="Request lifecycle"><div class="is-current"><span>1</span><strong>Submitted</strong><small>Your request reaches Covenda.</small></div><i></i><div><span>2</span><strong>Covenda is packaging</strong><small>We define scope and safety.</small></div><i></i><div><span>3</span><strong>Packaged &amp; live</strong><small>Reviewed work reaches students.</small></div></div>
+        <div class="request-workspace">
+          <section class="request-list-panel"><div class="request-panel-head"><div><h2>Your requests</h2><p id="requestSummary">0 requests</p></div><div class="request-filters" role="group" aria-label="Filter requests"><button class="is-active" type="button" data-request-filter="all">All</button><button type="button" data-request-filter="active">Active</button><button type="button" data-request-filter="packaged">Packaged</button></div></div><div id="requestList" class="request-list" aria-live="polite"></div></section>
+          <aside id="requestDetail" class="request-detail" aria-live="polite"></aside>
+        </div>
       </section>
 
       <section class="portal-view" data-portal-view="activity">
@@ -213,6 +223,29 @@
     <form method="dialog" id="projectForm"><header><div><p class="eyebrow">New project</p><h2>Start with a useful outcome.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>Project title<input name="title" maxlength="160" required placeholder="Customer research synthesis"></label><label>What needs to get done?<textarea name="summary" rows="5" minlength="10" maxlength="5000" required></textarea></label><label>Useful deliverable<input name="deliverable" maxlength="2000" placeholder="A cited summary with clear recommendations"></label><label>Desired skills <small>Separate with commas</small><input name="desiredSkills" placeholder="Research, spreadsheets, writing"></label><div class="form-grid"><label>Target date<input name="targetDate" type="date"></label><label>Visibility<select name="visibility"><option value="private">Private draft</option><option value="members">Covenda members</option><option value="open">Open opportunity</option></select></label></div><p class="dialog-message" id="projectMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Create project<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
+  <dialog class="member-dialog request-dialog" id="requestDialog">
+    <form method="dialog" id="requestForm">
+      <header><div><p class="eyebrow">Request work</p><h2>What can Covenda help move?</h2><p>Start in plain language. An operator turns approved work into a safe Project Packet.</p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="dialog-body">
+        <fieldset class="request-type-grid"><legend>Choose a request type</legend>
+          <label><input type="radio" name="requestType" value="new_project" checked><span><svg><use href="#p-plus"/></svg><b>New project</b><small>Package a new outcome.</small></span></label>
+          <label><input type="radio" name="requestType" value="more_students"><span><svg><use href="#p-user"/></svg><b>More students</b><small>Expand an existing team.</small></span></label>
+          <label><input type="radio" name="requestType" value="scope_change"><span><svg><use href="#p-flow"/></svg><b>Scope change</b><small>Adjust a live packet.</small></span></label>
+          <label><input type="radio" name="requestType" value="revision"><span><svg><use href="#p-write"/></svg><b>Revision</b><small>Request another pass.</small></span></label>
+          <label><input type="radio" name="requestType" value="consult"><span><svg><use href="#p-message"/></svg><b>Consult</b><small>Shape an unclear need.</small></span></label>
+          <label><input type="radio" name="requestType" value="question"><span><svg><use href="#p-compass"/></svg><b>Question</b><small>Ask the operator team.</small></span></label>
+          <label><input type="radio" name="requestType" value="specific_student"><span><svg><use href="#p-spark"/></svg><b>Specific student</b><small>Ask about a known fit.</small></span></label>
+        </fieldset>
+        <label id="requestProjectField" hidden>Related project<select name="projectId"><option value="">Choose a project</option></select></label>
+        <label>What do you need?<textarea name="body" rows="6" minlength="10" maxlength="8000" required placeholder="Tell us what is not getting done, what a useful result looks like, and when it matters."></textarea></label>
+        <div class="request-upload"><label class="intake-file-btn"><svg><use href="#p-paperclip"/></svg>Attach context · 4 MB each<input type="file" id="requestFileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.webp,.gif" hidden></label><div class="intake-chips" id="requestChips"></div></div>
+        <p class="request-boundary"><svg><use href="#p-shield"/></svg>Do not include client or patient records, personal data, production access, or regulated decisions.</p>
+        <p class="dialog-message" id="requestMessage" aria-live="polite"></p>
+      </div>
+      <footer><p><strong>Human reviewed.</strong> Nothing is published from this form. <button class="request-guided-link" id="requestGuided" type="button">Use the guided brief</button></p><button class="portal-primary" type="submit">Send to Covenda<svg><use href="#p-arrow"/></svg></button></footer>
+    </form>
+  </dialog>
+
   <dialog class="member-dialog compact-dialog" id="applyDialog">
     <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="5" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
@@ -223,7 +256,7 @@
 
   <dialog class="member-dialog" id="intakeDialog">
     <form method="dialog" id="intakeForm">
-      <header><div><p class="eyebrow">Post a project</p><h2>Turn a real problem into a scoped project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <header><div><p class="eyebrow">Guided work request</p><h2>Turn a real problem into a packet Covenda can review.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
       <div class="intake-progress" id="intakeProgress"><span class="is-active">1. Describe</span><span>2. Understand</span><span>3. Target</span><span>4. Consult &amp; post</span></div>
       <div class="dialog-body">
         <section class="intake-step is-active" data-intake-step="1">
@@ -259,7 +292,7 @@
           <p class="dialog-message" id="intakeMessage" aria-live="polite"></p>
         </section>
       </div>
-      <footer><button class="portal-secondary" type="button" id="intakeBack" hidden>Back</button><button class="portal-primary" type="button" id="intakeNext">Continue<svg><use href="#p-arrow"/></svg></button><button class="portal-primary" type="button" id="intakePost" hidden>Post project<svg><use href="#p-arrow"/></svg></button></footer>
+      <footer><button class="portal-secondary" type="button" id="intakeBack" hidden>Back</button><button class="portal-primary" type="button" id="intakeNext">Continue<svg><use href="#p-arrow"/></svg></button><button class="portal-primary" type="button" id="intakePost" hidden>Send to Covenda<svg><use href="#p-arrow"/></svg></button></footer>
     </form>
   </dialog>
 

@@ -30,6 +30,10 @@ const projectMessages = readFileSync(
   new URL('../supabase/migrations/20260722003808_create_project_messages.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const projectRequests = readFileSync(
+  new URL('../supabase/migrations/20260727000000_create_project_requests.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 const projectReview = readFileSync(
   new URL('../supabase/migrations/20260724000000_add_project_review_fields.sql', import.meta.url),
   'utf8',
@@ -160,6 +164,22 @@ test('project message migration keeps conversations server-only and indexed', ()
   assert.match(projectMessages, /revoke all on table public\.project_messages from public, anon, authenticated/);
   assert.match(projectMessages, /grant select, insert on table public\.project_messages to service_role/);
   assert.doesNotMatch(projectMessages, /create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('project requests are brokered server-only records with atomic operator publishing', () => {
+  assert.match(projectRequests, /create table public\.project_requests/);
+  assert.match(projectRequests, /related_project_id uuid references public\.member_projects/);
+  for (const type of ['new_project','more_students','scope_change','revision','consult','question','specific_student']) assert.match(projectRequests,new RegExp(`'${type}'`));
+  for (const status of ['submitted','in_packaging','packaged','declined','closed']) assert.match(projectRequests,new RegExp(`'${status}'`));
+  assert.match(projectRequests, /force row level security/);
+  assert.match(projectRequests, /revoke all on table public\.project_requests from public, anon, authenticated/);
+  assert.match(projectRequests, /grant select, insert, update on table public\.project_requests to service_role/);
+  assert.match(projectRequests, /create or replace function public\.publish_project_request/);
+  assert.match(projectRequests, /for update/);
+  assert.match(projectRequests, /insert into public\.credit_ledger/);
+  assert.match(projectRequests, /request_type not in \('scope_change', 'revision'\)/);
+  assert.match(projectRequests, /security definer[\s\S]*?set search_path = ''/);
+  assert.doesNotMatch(projectRequests, /grant [^;]* to (anon|authenticated)/);
 });
 
 test('project review migration adds close-the-loop fields idempotently without loosening access', () => {

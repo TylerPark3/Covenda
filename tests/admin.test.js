@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminSubmissions, requestAdminLink, updateAdminSubmission } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminProjectRequests, listAdminSubmissions, publishProjectRequest, requestAdminLink, saveProjectRequestPackaging, updateAdminSubmission } from '../api/admin.js';
 
 function authClient({ user, authError = null } = {}) {
   return {
@@ -167,6 +167,22 @@ test('admin list is bounded and status update accepts only lifecycle states', as
   const updated = await updateAdminSubmission({ from() { return updateQuery; } }, { reference: 'stu-ab12cd34', status: 'reviewing' });
   assert.equal(updated.status, 'reviewing');
   await assert.rejects(() => updateAdminSubmission({ from() { throw new Error('must not query'); } }, { reference: 'STU-AB12CD34', status: 'deleted' }), /valid submission status/);
+});
+
+test('operator packaging is bounded and publishing requires every safety clearance', async () => {
+  const request={id:'123e4567-e89b-12d3-a456-426614174000',status:'submitted'};
+  let updateValue;
+  const supabase={from(table){assert.equal(table,'project_requests');return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:request,error:null};},update(value){updateValue=value;return this;},async single(){return {data:{...request,...updateValue},error:null};}};}};
+  const saved=await saveProjectRequestPackaging(supabase,{requestId:request.id,packet:{title:'Research packet',credits:200}},'operator@covenda.com');
+  assert.equal(saved.status,'in_packaging');
+  assert.equal(saved.packet_draft.title,'Research packet');
+  await assert.rejects(publishProjectRequest(supabase,{requestId:request.id,packet:{title:'Research packet',summary:'A useful public-source research summary.',deliverable:'A cited comparison and recommendation.',acceptanceCriteria:'All requested companies are cited.',safeInputs:'Only public websites and the supplied template.',credits:200},safety:{clientRecords:false,pii:false,productionAccess:false}}),/Clear every safety boundary/);
+});
+
+test('project request listing is bounded for the operator queue', async () => {
+  const query={select(value){assert.equal(value,'*');return this;},order(column,options){assert.equal(column,'created_at');assert.equal(options.ascending,false);return this;},async limit(value){assert.equal(value,200);return {data:[{id:'r1'}],error:null};}};
+  const result=await listAdminProjectRequests({from(table){assert.equal(table,'project_requests');return query;}});
+  assert.equal(result.length,1);
 });
 
 test('admin workflow update validates and records private follow-up context', async () => {
