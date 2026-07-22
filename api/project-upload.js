@@ -81,28 +81,48 @@ export default async function handler(req, res, dependencies = {}) {
   const typeCheck = validateUpload(contentType, 1, kind);
   if (!typeCheck.ok && typeCheck.status === 415) return res.status(415).json({ error: typeCheck.error });
 
-  const chunks = [];
-  let size = 0;
-  try {
-    for await (const chunk of req) {
-      size += chunk.length;
-      if (size > policy.maxBytes) return res.status(413).json({ error: validateUpload(contentType, policy.maxBytes + 1, kind).error });
-      chunks.push(chunk);
-    }
-  } catch { return res.status(400).json({ error: 'Could not read the uploaded file.' }); }
+  // Depending on the runtime the body may arrive as a stream OR already buffered into
+  // req.body. Handle both, otherwise a pre-buffered request reads as an empty file.
+  let body;
+  if (Buffer.isBuffer(req.body)) {
+    body = req.body;
+    if (body.length > policy.maxBytes) return res.status(413).json({ error: validateUpload(contentType, policy.maxBytes + 1, kind).error });
+  } else {
+    const chunks = [];
+    let streamed = 0;
+    try {
+      for await (const chunk of req) {
+        streamed += chunk.length;
+        if (streamed > policy.maxBytes) return res.status(413).json({ error: validateUpload(contentType, policy.maxBytes + 1, kind).error });
+        chunks.push(chunk);
+      }
+    } catch { return res.status(400).json({ error: 'Could not read the uploaded file.' }); }
+    body = Buffer.concat(chunks);
+  }
+  const size = body.length;
 
   const check = validateUpload(contentType, size, kind);
   if (!check.ok) return res.status(check.status).json({ error: check.error });
 
   try {
     const ext = EXTENSIONS[contentType] || 'bin';
-    const blob = await put(`${policy.prefix}/${member.user.id}/${policy.basename}.${ext}`, Buffer.concat(chunks), {
+    const blob = await put(`${policy.prefix}/${member.user.id}/${policy.basename}.${ext}`, body, {
       access: 'public',
       contentType,
       addRandomSuffix: true,
     });
     return res.status(200).json({ name: declaredName, blobUrl: blob.url, contentType, sizeBytes: size });
-  } catch {
-    return res.status(500).json({ error: 'Upload failed. Please try again.' });
+  } catch (error) {
+    // Swallowing this made "Upload failed" undiagnosable. Log the real cause for the
+    // Vercel runtime log, and tell the caller which class of failure it was.
+    const message = String(error?.message || error);
+    console.error(JSON.stringify({ level: 'error', message: 'Blob upload failed', route: '/api/project-upload', kind, contentType, sizeBytes: size, error: message.slice(0, 500) }));
+    if (/token|unauthorized|forbidden|invalid/i.test(message)) {
+      return res.status(503).json({ error: 'File storage rejected the upload — the Blob token looks invalid or has no store attached. Check BLOB_READ_WRITE_TOKEN in Vercel.' });
+    }
+    if (/store|not found|no such/i.test(message)) {
+      return res.status(503).json({ error: 'No Blob store is connected to this project yet. Create one in Vercel → Storage, then redeploy.' });
+    }
+    return res.status(500).json({ error: `Upload failed: ${message.slice(0, 140)}` });
   }
 }
