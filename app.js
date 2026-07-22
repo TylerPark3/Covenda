@@ -2360,22 +2360,25 @@ function renderVideoIntroCard(container, rawUrl, opts = {}) {
 })();
 
 // ---- Student batches -----------------------------------------------------
-// Themed pilot cohorts by function. SINGLE editable source — add/remove/edit
-// entries here to control which batches appear. A batch is an interest signal and
-// a way to build a track record through completed reviewed work, NOT a placement,
-// job, ranking, or guarantee. NOTE: the batch a student joins is captured on the
-// student submission (details.batch) — this structured batch + outcome data is the
-// intended future training-data source for a per-function capability assessment
-// (see the Litmus/batches prompt, Part G — no model or scoring is built yet).
+// Pilot cohorts by INDUSTRY (not function): anyone can run a test or clean a
+// sheet, so credibility is industry-specific — a batch builds a track record in
+// one industry, the same reason a professor's endorsement matters. SINGLE editable
+// source — add/remove/edit entries here to control which batches appear. A batch
+// is an interest + credibility signal built through completed reviewed work, NOT a
+// placement, job, ranking, or guarantee. NOTE: the batch a student joins is
+// captured on the student submission (details.batch) — this structured batch +
+// outcome data is the intended future training-data source for a per-industry
+// capability assessment (no model or scoring is built yet).
 const BATCHES = [
-  { id: 'acct-ops', function: 'Accounting Operations', title: 'Accounting Operations — pilot cohort', description: 'Reconciliations, cleanups, and workflow docs from real, de-identified finance work.', status: 'Pilot cohort · limited seats' },
-  { id: 'research', function: 'Research & Synthesis', title: 'Research & Synthesis', description: 'Public-source market maps, competitor scans, and customer synthesis briefs.', status: 'Pilot cohort · limited seats' },
-  { id: 'qa-testing', function: 'QA & Testing', title: 'QA & Testing', description: 'Manual test passes, reproducible bug reports, and structured test cases.', status: 'Forming' },
-  { id: 'data-spreadsheets', function: 'Data & Spreadsheets', title: 'Data & Spreadsheets', description: 'Cleanup, validation, and clear models on approved datasets.', status: 'Forming' },
+  { id: 'accounting-finance', industry: 'Accounting & finance', title: 'Accounting & finance', description: 'Reconciliations, close-prep checklists, cleanups, and workflow docs from real, de-identified finance work.', status: 'Pilot cohort · limited seats' },
+  { id: 'software-ai', industry: 'Software & AI', title: 'Software & AI', description: 'QA passes, reproducible bug reports, docs, and data cleanups for software and AI teams.', status: 'Pilot cohort · limited seats' },
+  { id: 'healthcare-ops', industry: 'Healthcare operations', title: 'Healthcare operations', description: 'Process mapping, documentation, and public-source research — never any patient records.', status: 'Forming' },
+  { id: 'consumer-retail', industry: 'Consumer & retail', title: 'Consumer & retail', description: 'Customer-research synthesis, competitor scans, and approved catalog/data cleanups.', status: 'Forming' },
+  { id: 'professional-services', industry: 'Professional services', title: 'Professional services', description: 'Research briefs, playbooks, and operations docs for consulting, legal, and agency teams.', status: 'Forming' },
 ];
 function joinBatch(batch) {
   const field = $('#studentBatch');
-  if (field) field.value = batch.id + ' · ' + batch.function;
+  if (field) field.value = batch.id + ' · ' + batch.industry;
   openDialog(studentDialog, studentForm);
   if (field) saveDraft(studentForm);
 }
@@ -2386,7 +2389,7 @@ function joinBatch(batch) {
   for (const batch of BATCHES) {
     const card = document.createElement('article');
     card.className = 'batch-card glass-panel';
-    const fn = document.createElement('p'); fn.className = 'batch-function'; fn.textContent = batch.function;
+    const fn = document.createElement('p'); fn.className = 'batch-function'; fn.textContent = batch.industry;
     const title = document.createElement('h3'); title.className = 'batch-title'; title.textContent = batch.title;
     const desc = document.createElement('p'); desc.className = 'batch-desc'; desc.textContent = batch.description;
     const status = document.createElement('span'); status.className = 'batch-status'; status.textContent = batch.status;
