@@ -1957,8 +1957,8 @@ body[data-audience="university"] #flowDemo { display: none; }
 .word-gold {
   font-style: italic;
   color: var(--gold-deep); /* fallback if background-clip:text is unsupported */
-  padding-right: 0.16em;
-  margin-right: -0.14em;
+  padding-right: 0.26em;
+  margin-right: -0.2em;
   background-image:
     linear-gradient(102deg, transparent 40%, rgba(255,251,240,.9) 50%, transparent 60%),
     linear-gradient(96deg, #8A6A2F 0%, #A9822F 42%, #C9A24B 66%, #A9822F 88%);
