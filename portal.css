@@ -333,6 +333,52 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .review-actions { display:flex; gap:10px; justify-content:flex-end; }
 .review-actions .portal-primary,.review-actions .portal-secondary { min-width:0; }
 
+/* ---- Wallet & credits ---- */
+.wallet-grid { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr); gap:22px; align-items:start; }
+.wallet-balance-card { padding:26px; border:1px solid #eadfca; border-radius:20px; background:linear-gradient(160deg,var(--gold-pale),#fff); }
+.wallet-balance-card strong { display:block; margin-top:6px; font-size:56px; line-height:1; letter-spacing:-.05em; font-variant-numeric:tabular-nums; }
+.wallet-balance-card > span { color:var(--soft); font-size:11px; font-weight:650; letter-spacing:.06em; text-transform:uppercase; }
+.wallet-held { margin:16px 0 0; color:var(--muted); font-size:10px; line-height:1.55; }
+.wallet-buy { padding:24px; border:1px solid var(--line); border-radius:20px; }
+.wallet-bundles { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; }
+.wallet-bundle { display:grid; gap:3px; padding:16px; border:1px solid var(--line-strong); border-radius:14px; background:#fff; cursor:pointer; font-family:inherit; text-align:left; }
+.wallet-bundle:hover { border-color:var(--gold); box-shadow:0 10px 24px rgba(180,123,32,.12); }
+.wallet-bundle:disabled { opacity:.55; cursor:wait; }
+.wallet-bundle strong { font-size:14px; font-variant-numeric:tabular-nums; }
+.wallet-bundle span { color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; }
+.wallet-bundle em { justify-self:start; margin-top:4px; padding:2px 8px; border-radius:999px; background:var(--gold-pale); color:var(--gold-deep); font-size:9px; font-style:normal; font-weight:700; }
+.wallet-note { display:flex; align-items:flex-start; gap:8px; margin:16px 0 0; color:var(--soft); font-size:10px; line-height:1.55; }
+.wallet-note svg { flex:0 0 auto; width:14px; height:14px; color:var(--gold-deep); }
+.wallet-ledger { margin-top:30px; }
+.ledger-table { border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+.ledger-row { display:grid; grid-template-columns:minmax(88px,.7fr) minmax(96px,.8fr) minmax(0,1.4fr) minmax(70px,.5fr) minmax(70px,.5fr); gap:12px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--line); font-size:11px; }
+.ledger-row:last-child { border-bottom:0; }
+.ledger-head { background:var(--gold-pale); color:var(--soft); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.ledger-project { color:var(--muted); overflow-wrap:anywhere; }
+.ledger-amount, .ledger-balance { text-align:right; font-variant-numeric:tabular-nums; font-weight:650; }
+.ledger-amount.is-negative { color:var(--danger); }
+.ledger-amount.is-positive { color:var(--success); }
+.ledger-balance { color:var(--ink); }
+.status-pill[data-status="escrow_release"], .status-pill[data-status="purchase"] { border-color:rgba(36,117,58,.25); background:#f4faf5; color:var(--success); }
+.status-pill[data-status="escrow_hold"], .status-pill[data-status="reach_fee"], .status-pill[data-status="platform_fee"] { border-color:rgba(180,123,32,.3); background:var(--gold-pale); color:var(--gold-deep); }
+
+/* Live cost breakdown in the posting form */
+.intake-cost { margin-top:16px; padding:16px; border:1px solid #eadfca; border-radius:14px; background:var(--gold-pale); }
+.cost-list { margin:0; display:grid; gap:7px; }
+.cost-list > div { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.cost-list dt { margin:0; color:var(--muted); font-size:11px; }
+.cost-list dd { margin:0; font-size:11px; font-variant-numeric:tabular-nums; }
+.cost-total { margin-top:4px; padding-top:9px; border-top:1px solid rgba(180,123,32,.28); }
+.cost-total dt { color:var(--ink)!important; font-weight:650; }
+.cost-total dd { font-weight:700; color:var(--gold-deep); }
+.cost-note { margin:12px 0 0; color:var(--soft); font-size:10px; line-height:1.55; }
+.cost-note.is-short { color:var(--danger); font-weight:600; }
+@media (max-width: 900px) {
+  .wallet-grid { grid-template-columns:1fr; }
+  .ledger-row { grid-template-columns:1fr auto; gap:6px 10px; }
+  .ledger-row > .ledger-project, .ledger-head { display:none; }
+}
+
 /* ---- Vertical-matched discovery ---- */
 .discover-highlight { display:flex; align-items:flex-start; gap:11px; margin-bottom:16px; padding:14px 16px; border:1px solid #eadfca; border-radius:14px; background:linear-gradient(100deg,var(--gold-pale),#fff); }
 .discover-highlight svg { width:18px; height:18px; flex:0 0 auto; color:var(--gold-deep); }

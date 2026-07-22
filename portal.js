@@ -101,7 +101,7 @@ function profileCompletion(profile) {
 }
 
 function setView(view) {
-  const allowed=['overview','projects','activity','discover','portfolio','messages'];
+  const allowed=['overview','projects','activity','discover','portfolio','messages','wallet'];
   state.view=allowed.includes(view)?view:'overview';
   $$('[data-portal-view]').forEach(section=>section.classList.toggle('is-active',section.dataset.portalView===state.view));
   $$('[data-view]').forEach(button=>button.classList.toggle('is-active',button.closest('.member-nav')&&button.dataset.view===state.view));
@@ -130,6 +130,7 @@ function renderDashboard() {
   renderIdentity(profile);
   const role=profile?.role;
   $$('[data-student-only]').forEach(el=>el.hidden=role!=='student');
+  $$('[data-org-only]').forEach(el=>el.hidden=!['company','university'].includes(role));
   $('#portfolioNavLabel').textContent=role==='company'?'Student portfolios':'Portfolio';
   $('#projectCount').textContent=projects.length;
   $('#intakeCount').textContent=intakes.length;
@@ -141,7 +142,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderActivity(); renderDiscover(); renderPortfolio(); renderMessages();
+  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderActivity(); renderDiscover(); renderPortfolio(); renderMessages(); renderWallet();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -201,6 +202,69 @@ function renderActivity(){
   if(!applications.length){emptyList(applicationRoot,'p-compass',d.profile?.role==='student'?'No project applications yet.':'No student applications yet.',d.profile?.role==='student'?'When you send interest in a project, its review status will appear here.':'Applications will appear after students express interest in your open projects.');return;}
   const knownProjects=[...(d.projects||[]),...(d.opportunities||[])];
   for(const application of applications){const project=knownProjects.find(item=>item.id===application.project_id);const row=document.createElement('article');row.className='activity-row';const marker=document.createElement('span');marker.className='activity-marker';marker.append(icon('p-project'));const main=document.createElement('div');const meta=document.createElement('div');meta.className='activity-meta';meta.append(pill(applicationStatusLabels[application.status]||titleCase(application.status),'status-pill',application.status));const h=document.createElement('h3');h.textContent=project?.title||'Covenda project application';const details=document.createElement('p');details.textContent=`Updated ${dateLabel(application.updated_at||application.created_at)}`;main.append(meta,h,details);if(d.profile?.role!=='student'&&project&&['open','matched'].includes(project.status)&&['submitted','reviewing','shortlisted'].includes(application.status)){const accept=document.createElement('button');accept.type='button';accept.className='row-action';accept.textContent='Accept applicant';accept.addEventListener('click',()=>runAcceptApplication(application.id,accept));main.append(accept);}row.append(marker,main);applicationRoot.append(row);}
+}
+
+// ===== Wallet & credits (company/university) =====
+// 1 credit = $1. The cost model mirrors projectCreditCost() on the server exactly — if
+// one changes, change both.
+const REACH_FEE_TARGETED=25;
+const PLATFORM_FEE_RATE=0.10;
+const CREDIT_BUNDLES=[[100,100],[500,475],[1000,900]];
+const ledgerLabels={purchase:'Purchase',reach_fee:'Reach fee',escrow_hold:'Escrow held',escrow_release:'Paid to student',platform_fee:'Platform fee',refund:'Refund',adjustment:'Adjustment'};
+function projectCreditCost(creditsListed,targeting){
+  const listed=Math.max(0,Math.round(Number(creditsListed)||0));
+  const reachFee=targeting==='targeted'?REACH_FEE_TARGETED:0;
+  const platformFee=Math.round(listed*PLATFORM_FEE_RATE);
+  return {listed,reachFee,platformFee,total:listed+reachFee+platformFee};
+}
+function projectTitleFor(projectId){return (state.dashboard.projects||[]).find(p=>p.id===projectId)?.title||'';}
+function renderWallet(){
+  const d=state.dashboard;const balance=Number(d.walletBalance)||0;
+  const nav=$('#walletNavBalance');if(nav)nav.textContent=balance.toLocaleString();
+  const balanceEl=$('#walletBalance');if(!balanceEl)return;
+  balanceEl.textContent=balance.toLocaleString();
+  const held=(d.projects||[]).reduce((sum,p)=>sum+(Number(p.credits_held)||0),0);
+  $('#walletHeld').textContent=held?`${held.toLocaleString()} credits held in escrow across active projects.`:'No credits held in escrow right now.';
+  const bundles=$('#walletBundles');bundles.replaceChildren();
+  CREDIT_BUNDLES.forEach(([credits,price])=>{
+    const b=document.createElement('button');b.type='button';b.className='wallet-bundle';
+    const c=document.createElement('strong');c.textContent=`${credits.toLocaleString()} credits`;
+    const p=document.createElement('span');p.textContent=`$${price.toLocaleString()}`;
+    b.append(c,p);
+    if(price<credits){const save=document.createElement('em');save.textContent=`Save ${Math.round((1-price/credits)*100)}%`;b.append(save);}
+    b.addEventListener('click',()=>runBuyCredits(credits,b));
+    bundles.append(b);
+  });
+  renderWalletLedger();
+}
+function renderWalletLedger(){
+  const rows=state.dashboard.creditLedger||[];const root=$('#walletLedger');if(!root)return;
+  root.replaceChildren();
+  $('#walletLedgerCount').textContent=`${rows.length} ${rows.length===1?'entry':'entries'}`;
+  if(!rows.length){emptyList(root,'p-inbox','No credit activity yet.','Buying credits or posting a project will show up here.');return;}
+  // rows arrive newest-first; walk oldest-first to build the running balance, then flip back
+  let running=0;
+  const withRunning=[...rows].reverse().map(row=>{running+=Number(row.credits)||0;return {...row,running};}).reverse();
+  const table=document.createElement('div');table.className='ledger-table';
+  const head=document.createElement('div');head.className='ledger-row ledger-head';
+  ['Date','Type','Project','Credits','Balance'].forEach(label=>{const s=document.createElement('span');s.textContent=label;head.append(s);});
+  table.append(head);
+  withRunning.forEach(row=>{
+    const tr=document.createElement('div');tr.className='ledger-row';
+    const date=document.createElement('span');date.textContent=dateLabel(row.created_at);
+    const type=document.createElement('span');type.append(pill(ledgerLabels[row.entry_type]||titleCase(row.entry_type),'status-pill',row.entry_type));
+    const proj=document.createElement('span');proj.className='ledger-project';proj.textContent=projectTitleFor(row.project_id)||'—';
+    const amt=document.createElement('span');amt.className='ledger-amount'+(row.credits<0?' is-negative':' is-positive');amt.textContent=(row.credits>0?'+':'')+row.credits.toLocaleString();
+    const bal=document.createElement('span');bal.className='ledger-balance';bal.textContent=row.running.toLocaleString();
+    tr.append(date,type,proj,amt,bal);table.append(tr);
+  });
+  root.append(table);
+}
+async function runBuyCredits(credits,button){
+  button.disabled=true;setDialogMessage('#walletMessage','Adding credits…');
+  try{await portalRequest({method:'POST',body:JSON.stringify({action:'buy-credits',credits})});await loadDashboard();setView('wallet');setDialogMessage('#walletMessage','');}
+  catch(error){setDialogMessage('#walletMessage',error.message,true);}
+  finally{button.disabled=false;}
 }
 
 function selectMessageProject(projectId){state.messageProjectId=projectId;renderMessages();}
@@ -371,10 +435,27 @@ async function finishOnboarding(){
 }
 
 // ===== Company/university AI-assisted project intake (multi-step) =====
-let intakeState={step:1,attachments:[],brief:null,verticals:[],workTypes:[],consultBooked:false,editedSummary:''};
+let intakeState={step:1,attachments:[],brief:null,verticals:[],workTypes:[],consultBooked:false,editedSummary:'',targeting:'public'};
 function portalCalendlyUrl(){const raw=document.querySelector('meta[name="covenda-calendly-url"]')?.content?.trim()||'';try{const u=new URL(raw);if(u.protocol==='https:'&&/(^|\.)calendly\.com$/.test(u.hostname))return u.toString();}catch{}return '';}
-function openIntake(){intakeState={step:1,attachments:[],brief:null,verticals:[],workTypes:[],consultBooked:false,editedSummary:''};const form=$('#intakeForm');form.reset();$('#intakeChips').replaceChildren();const brief=$('#intakeBrief');brief.replaceChildren();brief.hidden=true;$('#intakeConsultCard').classList.remove('is-booked');setDialogMessage('#intakeMessage','');setDialogMessage('#intakeStepMessage','');renderIntakeStep();$('#intakeDialog').showModal();}
-function renderIntakeStep(){const s=intakeState.step;$$('.intake-step').forEach(el=>el.classList.toggle('is-active',Number(el.dataset.intakeStep)===s));$$('#intakeProgress span').forEach((el,i)=>el.classList.toggle('is-active',i===s-1));$('#intakeBack').hidden=s===1;$('#intakeNext').hidden=s===4;$('#intakePost').hidden=s!==4;if(s===3)renderIntakeTargets();if(s===4)renderIntakeReview();}
+function openIntake(){intakeState={step:1,attachments:[],brief:null,verticals:[],workTypes:[],consultBooked:false,editedSummary:'',targeting:'public'};const form=$('#intakeForm');form.reset();$('#intakeChips').replaceChildren();const brief=$('#intakeBrief');brief.replaceChildren();brief.hidden=true;$('#intakeConsultCard').classList.remove('is-booked');setDialogMessage('#intakeMessage','');setDialogMessage('#intakeStepMessage','');renderIntakeStep();$('#intakeDialog').showModal();}
+function renderIntakeStep(){const s=intakeState.step;$$('.intake-step').forEach(el=>el.classList.toggle('is-active',Number(el.dataset.intakeStep)===s));$$('#intakeProgress span').forEach((el,i)=>el.classList.toggle('is-active',i===s-1));$('#intakeBack').hidden=s===1;$('#intakeNext').hidden=s===4;$('#intakePost').hidden=s!==4;if(s===3){renderIntakeTargets();renderIntakeCost();}if(s===4)renderIntakeReview();}
+function renderIntakeCost(){
+  const form=$('#intakeForm');const root=$('#intakeCost');if(!root||!form)return;
+  const cost=projectCreditCost(form.elements.creditsListed?.value,intakeState.targeting);
+  const balance=Number(state.dashboard?.walletBalance)||0;
+  root.replaceChildren();
+  if(!cost.total){const hint=document.createElement('p');hint.className='intake-hint';hint.textContent='Add a listed amount to see what gets held.';root.append(hint);return;}
+  const rows=[['Listed for the student',cost.listed],['Covenda fee (10%, on top)',cost.platformFee]];
+  if(cost.reachFee)rows.push(['Hyper-narrow reach fee',cost.reachFee]);
+  const dl=document.createElement('dl');dl.className='cost-list';
+  rows.forEach(([label,value])=>{const w=document.createElement('div');const dt=document.createElement('dt');dt.textContent=label;const dd=document.createElement('dd');dd.textContent=value.toLocaleString();w.append(dt,dd);dl.append(w);});
+  const total=document.createElement('div');total.className='cost-total';const dt=document.createElement('dt');dt.textContent='Held from your balance now';const dd=document.createElement('dd');dd.textContent=`${cost.total.toLocaleString()} credits`;total.append(dt,dd);dl.append(total);
+  root.append(dl);
+  const note=document.createElement('p');note.className='cost-note';
+  if(balance<cost.total){note.classList.add('is-short');note.textContent=`Your balance is ${balance.toLocaleString()} — ${(cost.total-balance).toLocaleString()} short. Top up in Wallet.`;}
+  else note.textContent=`Balance after posting: ${(balance-cost.total).toLocaleString()}. The student receives all ${cost.listed.toLocaleString()} credits on acceptance.`;
+  root.append(note);
+}
 function intakeToggle(list,option,button){const i=list.indexOf(option);if(i>=0)list.splice(i,1);else list.push(option);const now=i<0;button.classList.toggle('is-selected',now);button.setAttribute('aria-pressed',now?'true':'false');}
 function renderIntakeTargets(){const vRoot=$('#intakeVerticals');vRoot.replaceChildren();ONBOARD_VERTICALS.forEach(opt=>{const on=intakeState.verticals.includes(opt);const b=document.createElement('button');b.type='button';b.className='intake-toggle'+(on?' is-selected':'');b.setAttribute('aria-pressed',on?'true':'false');b.textContent=opt;b.addEventListener('click',()=>intakeToggle(intakeState.verticals,opt,b));vRoot.append(b);});const wRoot=$('#intakeWorkTypes');wRoot.replaceChildren();ONBOARD_WORK_TYPES.forEach(opt=>{const on=intakeState.workTypes.includes(opt);const b=document.createElement('button');b.type='button';b.className='intake-toggle'+(on?' is-selected':'');b.setAttribute('aria-pressed',on?'true':'false');b.textContent=opt;b.addEventListener('click',()=>intakeToggle(intakeState.workTypes,opt,b));wRoot.append(b);});}
 function renderIntakeReview(){const root=$('#intakeReview');root.replaceChildren();const form=$('#intakeForm');const title=$('[name="title"]',form).value.trim()||'Untitled project';const rows=[['Title',title],['Verticals',intakeState.verticals.join(', ')||'—'],['Work types',intakeState.workTypes.join(', ')||'—'],['Files',intakeState.attachments.length?`${intakeState.attachments.length} attached`:'None'],['20-min consult',intakeState.consultBooked?'Booked':'Not yet — you can book later']];const dl=document.createElement('dl');dl.className='intake-review-list';rows.forEach(([k,v])=>{const wrap=document.createElement('div');const dt=document.createElement('dt');dt.textContent=k;const dd=document.createElement('dd');dd.textContent=v;wrap.append(dt,dd);dl.append(wrap);});root.append(dl);}
@@ -391,9 +472,18 @@ $('#intakeFileInput')?.addEventListener('change',async event=>{const files=[...e
 $('#intakeUnderstand')?.addEventListener('click',async()=>{const problem=$('[name="problem"]',$('#intakeForm')).value.trim();if(problem.length<10){setDialogMessage('#intakeStepMessage','Add a problem description on the first step.',true);return;}const btn=$('#intakeUnderstand');btn.disabled=true;setDialogMessage('#intakeStepMessage','Reading your description'+(intakeState.attachments.length?' and files':'')+'…');try{const res=await fetch('/api/project-intake',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({problemText:problem,attachments:intakeState.attachments})});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'AI intake failed.');intakeState.brief=data.brief;intakeState.verticals=[...(data.brief.suggestedVerticals||[])];intakeState.workTypes=[...(data.brief.suggestedWorkTypes||[])];renderIntakeBrief();setDialogMessage('#intakeStepMessage','');}catch(error){setDialogMessage('#intakeStepMessage',error.message,true);}finally{btn.disabled=false;}});
 $('#intakeNext')?.addEventListener('click',()=>{const s=intakeState.step;const form=$('#intakeForm');if(s===1){if($('[name="problem"]',form).value.trim().length<10){setDialogMessage('#intakeStepMessage','Describe the problem in a bit more detail.',true);return;}if(!$('[name="aiConsent"]',form).checked){setDialogMessage('#intakeStepMessage','Please consent to AI processing to continue.',true);return;}setDialogMessage('#intakeStepMessage','');}intakeState.step=Math.min(4,s+1);renderIntakeStep();});
 $('#intakeBack')?.addEventListener('click',()=>{intakeState.step=Math.max(1,intakeState.step-1);renderIntakeStep();});
+$$('#intakeTargeting .intake-toggle').forEach(button=>button.addEventListener('click',()=>{
+  intakeState.targeting=button.dataset.targeting;
+  $$('#intakeTargeting .intake-toggle').forEach(other=>{const on=other===button;other.classList.toggle('is-selected',on);other.setAttribute('aria-pressed',on?'true':'false');});
+  renderIntakeCost();
+}));
+$('#intakeForm')?.elements?.creditsListed?.addEventListener('input',renderIntakeCost);
 $('#intakeBookConsult')?.addEventListener('click',()=>{const url=portalCalendlyUrl();if(url)window.open(url,'_blank','noopener');intakeState.consultBooked=true;$('#intakeConsultCard').classList.add('is-booked');renderIntakeReview();});
 $('#intakeConsultLater')?.addEventListener('click',()=>{intakeState.consultBooked=false;$('#intakeConsultCard').classList.remove('is-booked');renderIntakeReview();});
-$('#intakePost')?.addEventListener('click',async()=>{const form=$('#intakeForm');const btn=$('#intakePost');const title=$('[name="title"]',form).value.trim();const problem=$('[name="problem"]',form).value.trim();const summary=(intakeState.editedSummary||problem).trim();if(title.length<3){setDialogMessage('#intakeMessage','Add a project title on the Target step.',true);intakeState.step=3;renderIntakeStep();return;}if(summary.length<10){setDialogMessage('#intakeMessage','The project needs a longer description.',true);return;}if(intakeState.brief&&intakeState.brief.safeToPost===false){setDialogMessage('#intakeMessage','This is outside the safe boundary — please book the consult instead of posting.',true);return;}btn.disabled=true;setDialogMessage('#intakeMessage','Posting your project…');const budget=Number($('[name="budget"]',form).value)||0;try{await portalRequest({method:'POST',body:JSON.stringify({action:'create-project',title,summary,deliverable:(intakeState.brief?.candidateDeliverables||[]).join(' · '),desiredSkills:$('[name="skills"]',form).value,targetDate:$('[name="targetDate"]',form).value,visibility:'members',verticals:intakeState.verticals,workTypes:intakeState.workTypes,attachments:intakeState.attachments,aiBrief:intakeState.brief||undefined,problemText:problem,consultBooked:intakeState.consultBooked,budgetCents:budget?budget*100:undefined})});$('#intakeDialog').close();await loadDashboard();setView('projects');}catch(error){setDialogMessage('#intakeMessage',error.message,true);}finally{btn.disabled=false;}});
+$('#intakePost')?.addEventListener('click',async()=>{const form=$('#intakeForm');const btn=$('#intakePost');const title=$('[name="title"]',form).value.trim();const problem=$('[name="problem"]',form).value.trim();const summary=(intakeState.editedSummary||problem).trim();if(title.length<3){setDialogMessage('#intakeMessage','Add a project title on the Target step.',true);intakeState.step=3;renderIntakeStep();return;}if(summary.length<10){setDialogMessage('#intakeMessage','The project needs a longer description.',true);return;}if(intakeState.brief&&intakeState.brief.safeToPost===false){setDialogMessage('#intakeMessage','This is outside the safe boundary — please book the consult instead of posting.',true);return;}const cost=projectCreditCost(form.elements.creditsListed?.value,intakeState.targeting);
+  const balance=Number(state.dashboard?.walletBalance)||0;
+  if(cost.total>balance){setDialogMessage('#intakeMessage',`This post holds ${cost.total.toLocaleString()} credits but your balance is ${balance.toLocaleString()}. Top up in Wallet first.`,true);return;}
+  btn.disabled=true;setDialogMessage('#intakeMessage','Posting your project…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'create-project',title,summary,deliverable:(intakeState.brief?.candidateDeliverables||[]).join(' · '),desiredSkills:$('[name="skills"]',form).value,targetDate:$('[name="targetDate"]',form).value,visibility:'members',verticals:intakeState.verticals,workTypes:intakeState.workTypes,attachments:intakeState.attachments,aiBrief:intakeState.brief||undefined,problemText:problem,consultBooked:intakeState.consultBooked,creditsListed:cost.listed,targeting:intakeState.targeting})});$('#intakeDialog').close();await loadDashboard();setView('projects');}catch(error){setDialogMessage('#intakeMessage',error.message,true);}finally{btn.disabled=false;}});
 
 $('#googleLogin').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;setLoginMessage('Opening Google sign-in…');try{const response=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'google-login'})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Google sign-in could not start.');location.assign(result.url);}catch(error){setLoginMessage(error.message,true);button.disabled=false;}});
 $('#memberEmailForm').addEventListener('submit',async event=>{event.preventDefault();const button=$('button',event.currentTarget);button.disabled=true;setLoginMessage('Requesting a secure sign-in link…');try{const response=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request-link',email:event.currentTarget.elements.email.value})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Could not request a sign-in link.');setLoginMessage(result.message);}catch(error){setLoginMessage(error.message,true);}finally{button.disabled=false;}});

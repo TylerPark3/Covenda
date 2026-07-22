@@ -30,6 +30,7 @@
     <symbol id="p-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
     <symbol id="p-exit" viewBox="0 0 24 24"><path d="M10 4H4v16h6m5-4 4-4-4-4m4 4H8"/></symbol>
     <symbol id="p-close" viewBox="0 0 24 24"><path d="m5 5 14 14M19 5 5 19"/></symbol>
+    <symbol id="p-wallet" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h12v4"/><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-8H7a2 2 0 0 1-4 0"/><circle cx="16.5" cy="13.5" r="1.2"/></symbol>
     <symbol id="p-chart" viewBox="0 0 24 24"><path d="M3 20h18"/><path d="M6 20v-6M11 20v-11M16 20v-8"/></symbol>
     <symbol id="p-cpu" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/></symbol>
     <symbol id="p-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2.5-7 4 14 2.5-7H21"/></symbol>
@@ -79,6 +80,7 @@
         <button type="button" data-view="discover" data-student-only><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
         <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
         <button type="button" data-view="messages"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
+        <button type="button" data-view="wallet" data-org-only><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
       </nav>
       <div class="member-identity"><span id="memberInitial">C</span><div><strong id="memberNavName">Member</strong><small id="memberNavRole">Covenda</small></div></div>
       <button class="member-signout" id="memberSignout" type="button"><svg><use href="#p-exit"/></svg>Sign out</button>
@@ -144,6 +146,28 @@
           </section>
         </div>
       </section>
+
+      <section class="portal-view" data-portal-view="wallet">
+        <div class="page-heading"><div><p class="eyebrow">Credits</p><h1>Wallet</h1><p>1 credit = $1. Posting publicly is free; a hyper-narrow post routes to matched, referred students for 25 credits. Covenda’s fee is 10% of the listed amount, charged on top — the student always receives the full amount you list.</p></div></div>
+        <div class="wallet-grid">
+          <section class="wallet-balance-card">
+            <p class="eyebrow">Available balance</p>
+            <strong id="walletBalance">0</strong>
+            <span>credits</span>
+            <p class="wallet-held" id="walletHeld"></p>
+          </section>
+          <section class="wallet-buy">
+            <div class="section-heading"><div><p class="eyebrow">Top up</p><h2>Buy credits</h2></div></div>
+            <div class="wallet-bundles" id="walletBundles"></div>
+            <p class="dialog-message" id="walletMessage" aria-live="polite"></p>
+            <p class="wallet-note"><svg><use href="#p-settings"/></svg>Payments are not live yet. Credits are granted for the pilot, and every movement is recorded in the ledger below.</p>
+          </section>
+        </div>
+        <section class="wallet-ledger">
+          <div class="section-heading"><div><p class="eyebrow">Every movement</p><h2>Ledger</h2></div><span id="walletLedgerCount"></span></div>
+          <div id="walletLedger"></div>
+        </section>
+      </section>
     </main>
   </div>
 
@@ -197,7 +221,16 @@
           <div class="intake-target"><p class="intake-label">Target verticals <small>Students in these industries see it first</small></p><div class="intake-select" id="intakeVerticals"></div></div>
           <div class="intake-target"><p class="intake-label">Work types</p><div class="intake-select" id="intakeWorkTypes"></div></div>
           <label>Desired skills <small>Separate with commas</small><input name="skills" placeholder="Research, spreadsheets, writing"></label>
-          <div class="form-grid"><label>Budget (USD) <small>Optional</small><input name="budget" type="number" min="0" max="100000" placeholder="500"></label><label>Useful by <small>Optional</small><input name="targetDate" type="date"></label></div>
+          <div class="intake-target">
+            <p class="intake-label">Reach <small>How this project finds students</small></p>
+            <div class="intake-select" id="intakeTargeting">
+              <button type="button" class="intake-toggle is-selected" data-targeting="public" aria-pressed="true">Public · free</button>
+              <button type="button" class="intake-toggle" data-targeting="targeted" aria-pressed="false">Hyper-narrow · 25 credits</button>
+            </div>
+            <p class="intake-hint">Public is visible to every member. Hyper-narrow routes to students matched on your verticals and work types, prioritising referred and partner-endorsed students.</p>
+          </div>
+          <div class="form-grid"><label>Listed amount <small>Credits · 1 credit = $1, and the student receives this in full</small><input name="creditsListed" type="number" min="0" max="100000" placeholder="200"></label><label>Useful by <small>Optional</small><input name="targetDate" type="date"></label></div>
+          <div class="intake-cost" id="intakeCost"></div>
         </section>
         <section class="intake-step" data-intake-step="4">
           <div class="intake-consult" id="intakeConsultCard"><div><strong>Book a 20-minute consult</strong><p>The consult and founder review are where scope is finalized. The AI brief is a starting draft, not approval.</p></div><div class="intake-consult-actions"><button class="portal-primary" type="button" id="intakeBookConsult">Book the consult<svg><use href="#p-arrow"/></svg></button><button class="portal-ghost" type="button" id="intakeConsultLater">I'll book later</button></div></div>
