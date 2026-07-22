@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { authorizeMember, createMemberProject, createProjectMilestone, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, reviewProjectApplication, saveMemberProfile, sendProjectMessage, updateProjectStatus } from '../api/portal.js';
+import { authorizeMember, createMemberProject, createProjectDeliverable, createProjectMilestone, loadMemberIntakes, memberAuthReadiness, requestGoogleLogin, requestMemberLink, reviewProjectApplication, reviewProjectDeliverable, reviseProjectDeliverable, saveMemberProfile, sendProjectMessage, updateProjectStatus } from '../api/portal.js';
 
 const authEnv = { SUPABASE_URL:'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY:'publishable', SUPABASE_SECRET_KEY:'secret' };
 
@@ -114,6 +114,56 @@ test('project lifecycle allows a matched participant to request review with an o
   const project=await updateProjectStatus({user:{id:'student-1'},supabase},{projectId,status:'review'});
   assert.equal(project.status,'review');
   assert.match(updated.updated_at,/^\d{4}-\d{2}-\d{2}T/);
+});
+
+test('matched students submit bounded deliverable links tied to their project', async () => {
+  let inserted;
+  const projectId='f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  const milestoneId='0a59a442-3799-4c45-9268-3bc26de672f8';
+  const supabase={from(table){
+    if(table==='member_projects')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{id:projectId,status:'in_progress',owner_user_id:'company-1',assigned_student_user_id:'student-1'},error:null};}};
+    if(table==='project_milestones')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{id:milestoneId,project_id:projectId},error:null};}};
+    assert.equal(table,'project_deliverables');return {insert(value){inserted=value;return this;},select(){return this;},async single(){return {data:{id:'deliverable-1',status:'submitted',revision:1,...inserted},error:null};}};
+  }};
+  const result=await createProjectDeliverable({user:{id:'student-1'},supabase},{projectId,milestoneId,title:' Evidence map ',artifactType:'document',artifactUrl:'https://example.com/evidence',notes:'Ready for review.'});
+  assert.equal(result.title,'Evidence map');
+  assert.equal(result.artifact_url,'https://example.com/evidence');
+  assert.equal(result.submitted_by_user_id,'student-1');
+  assert.equal(result.milestone_id,milestoneId);
+});
+
+test('project owners can request deliverable changes with a concrete review note', async () => {
+  let updated;
+  const projectId='f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  const deliverableId='4c9dd3b8-797d-4390-9366-3b3c2bfcac1a';
+  const deliverable={id:deliverableId,project_id:projectId,status:'submitted',submitted_by_user_id:'student-1'};
+  const deliverableQuery={select(){return this;},eq(){return this;},update(value){updated=value;return this;},async maybeSingle(){return {data:updated?{...deliverable,...updated}:deliverable,error:null};}};
+  const supabase={from(table){if(table==='member_projects')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{id:projectId,status:'review',owner_user_id:'company-1',assigned_student_user_id:'student-1'},error:null};}};assert.equal(table,'project_deliverables');return deliverableQuery;}};
+  const result=await reviewProjectDeliverable({user:{id:'company-1'},supabase},{deliverableId,status:'changes_requested',reviewNote:'Add citations to the source notes.'});
+  assert.equal(result.status,'changes_requested');
+  assert.equal(updated.reviewed_by_user_id,'company-1');
+  assert.equal(updated.review_note,'Add citations to the source notes.');
+});
+
+test('students can resubmit a requested deliverable as a clean new revision', async () => {
+  let updated;
+  const projectId='f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  const deliverableId='4c9dd3b8-797d-4390-9366-3b3c2bfcac1a';
+  const deliverable={id:deliverableId,project_id:projectId,status:'changes_requested',revision:1,artifact_type:'document',submitted_by_user_id:'student-1'};
+  const deliverableQuery={select(){return this;},eq(){return this;},update(value){updated=value;return this;},async maybeSingle(){return {data:updated?{...deliverable,...updated}:deliverable,error:null};}};
+  const supabase={from(table){if(table==='member_projects')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{id:projectId,status:'review',owner_user_id:'company-1',assigned_student_user_id:'student-1'},error:null};}};assert.equal(table,'project_deliverables');return deliverableQuery;}};
+  const result=await reviseProjectDeliverable({user:{id:'student-1'},supabase},{deliverableId,title:'Evidence map with citations',artifactType:'document',artifactUrl:'https://example.com/evidence-v2',notes:'Added source notes.'});
+  assert.equal(result.status,'submitted');
+  assert.equal(result.revision,2);
+  assert.equal(updated.review_note,null);
+  assert.equal(updated.reviewed_at,null);
+});
+
+test('project completion requires an accepted deliverable', async () => {
+  const projectId='f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  const emptyQuery={select(){return this;},eq(){return this;},neq(){return this;},limit(){return this;},async maybeSingle(){return {data:null,error:null};}};
+  const supabase={from(table){if(table==='member_projects')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{id:projectId,status:'review',owner_user_id:'company-1',assigned_student_user_id:'student-1'},error:null};}};assert.ok(['project_milestones','project_deliverables'].includes(table));return emptyQuery;}};
+  await assert.rejects(()=>updateProjectStatus({user:{id:'company-1'},supabase},{projectId,status:'complete'}),/Accept at least one deliverable/);
 });
 
 test('project messages require project membership and store only bounded text', async () => {

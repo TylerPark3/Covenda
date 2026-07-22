@@ -38,6 +38,10 @@ const projectMilestones = readFileSync(
   new URL('../supabase/migrations/20260722031619_create_project_milestones.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const projectDeliverables = readFileSync(
+  new URL('../supabase/migrations/20260722041319_create_project_deliverables.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
   assert.match(migration, /create table public\.submissions/);
@@ -153,4 +157,20 @@ test('project milestone migration creates a constrained server-only delivery pla
   assert.match(projectMilestones, /revoke delete on table public\.project_milestones from service_role/);
   assert.match(projectMilestones, /grant select, insert, update on table public\.project_milestones to service_role/);
   assert.doesNotMatch(projectMilestones, /grant delete|create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('project deliverable migration creates versioned server-only evidence review', () => {
+  assert.match(projectDeliverables, /create table if not exists public\.project_deliverables/);
+  assert.match(projectDeliverables, /references public\.member_projects\(id\) on delete cascade/);
+  assert.match(projectDeliverables, /references public\.project_milestones\(id\) on delete set null/);
+  assert.match(projectDeliverables, /artifact_type in \('document', 'presentation', 'dashboard', 'repository', 'other'\)/);
+  assert.match(projectDeliverables, /artifact_url ~\* '\^https\?:\/\/'/);
+  assert.match(projectDeliverables, /status in \('submitted', 'changes_requested', 'accepted'\)/);
+  assert.match(projectDeliverables, /project_deliverables_review_consistent/);
+  assert.match(projectDeliverables, /create index if not exists project_deliverables_project_created_idx/);
+  assert.match(projectDeliverables, /alter table public\.project_deliverables force row level security/);
+  assert.match(projectDeliverables, /revoke all on table public\.project_deliverables from public, anon, authenticated/);
+  assert.match(projectDeliverables, /revoke delete on table public\.project_deliverables from service_role/);
+  assert.match(projectDeliverables, /grant select, insert, update on table public\.project_deliverables to service_role/);
+  assert.doesNotMatch(projectDeliverables, /grant delete|create policy|grant [^;]* to (anon|authenticated)/);
 });

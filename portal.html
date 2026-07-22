@@ -117,6 +117,17 @@
               <div class="workspace-next"><p class="eyebrow">Lifecycle control</p><h3 id="workspaceNextTitle">Ready for the next stage?</h3><p id="workspaceNextCopy"></p><button class="portal-primary" id="workspaceStatusAction" type="button"></button><p id="workspaceStatusMessage" aria-live="polite"></p></div>
             </aside>
           </div>
+          <section class="deliverable-panel">
+            <div class="section-heading"><div><p class="eyebrow">Evidence review</p><h2>Deliverables</h2><p>Share the real work product, keep revision notes attached, and record acceptance.</p></div><span id="deliverableCount">0 deliverables</span></div>
+            <div class="deliverable-list" id="deliverableList"></div>
+            <form class="deliverable-form" id="deliverableForm" hidden>
+              <input name="projectId" type="hidden"><input name="deliverableId" type="hidden">
+              <div class="deliverable-fields"><label>Title<input name="title" maxlength="160" placeholder="Onboarding evidence map" required></label><label>Evidence type<select name="artifactType"><option value="document">Document</option><option value="presentation">Presentation</option><option value="dashboard">Dashboard</option><option value="repository">Repository</option><option value="other">Other</option></select></label></div>
+              <div class="deliverable-fields"><label>Shareable link<input name="artifactUrl" type="url" maxlength="2048" placeholder="https://…" required></label><label>Linked milestone <small>Optional</small><select name="milestoneId"><option value="">No linked milestone</option></select></label></div>
+              <label>Submission note <small>Optional</small><textarea name="notes" rows="3" maxlength="2000" placeholder="Explain what changed or what the reviewer should look for."></textarea></label>
+              <footer><p id="deliverableFormStatus" aria-live="polite"></p><div><button class="portal-secondary" id="cancelDeliverableEdit" type="button" hidden>Cancel revision</button><button class="portal-primary" id="deliverableSubmit" type="submit"><svg><use href="#p-arrow"/></svg>Submit deliverable</button></div></footer>
+            </form>
+          </section>
         </section>
       </section>
 
@@ -179,6 +190,10 @@
 
   <dialog class="member-dialog compact-dialog" id="applyDialog">
     <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="5" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
+  </dialog>
+
+  <dialog class="member-dialog compact-dialog" id="deliverableReviewDialog">
+    <form method="dialog" id="deliverableReviewForm"><header><div><p class="eyebrow">Deliverable review</p><h2 id="deliverableReviewTitle">Review submitted evidence.</h2><p id="deliverableReviewCopy"></p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="deliverableId" type="hidden"><input name="status" type="hidden"><label>Review note <small id="deliverableReviewRequirement">Optional</small><textarea name="reviewNote" rows="5" maxlength="2000" placeholder="Leave clear feedback for the student."></textarea></label><p class="dialog-message" id="deliverableReviewMessage" aria-live="polite"></p></div><footer><button class="portal-primary" id="deliverableReviewSubmit" type="submit">Save review<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 </body>
 </html>

@@ -6,6 +6,8 @@ const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
 const APPLICATION_REVIEW_STATUSES = new Set(['reviewing', 'shortlisted', 'accepted', 'declined']);
 const MILESTONE_STATUSES = new Set(['planned', 'in_progress', 'blocked', 'complete']);
+const DELIVERABLE_TYPES = new Set(['document', 'presentation', 'dashboard', 'repository', 'other']);
+const DELIVERABLE_REVIEW_STATUSES = new Set(['changes_requested', 'accepted']);
 const emailBuckets = new Map();
 
 export class PortalOperationalError extends Error {
@@ -29,6 +31,16 @@ function cleanEmail(value) {
 function cleanList(value, maxItems = 20) {
   const items = Array.isArray(value) ? value : cleanText(value, 1_000).split(',');
   return [...new Set(items.map(item => cleanText(item, 80)).filter(Boolean))].slice(0, maxItems);
+}
+
+function cleanWebUrl(value) {
+  const result = cleanText(value, 2_048);
+  try {
+    const url = new URL(result);
+    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : '';
+  } catch {
+    return '';
+  }
 }
 
 function parseBody(req) {
@@ -178,7 +190,7 @@ export async function loadMemberDashboard(member) {
     checked(supabase.from('member_profiles').select('*').eq('user_id', user.id).maybeSingle(), null),
     loadMemberIntakes(member),
   ]);
-  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], applicantProfiles: [], studentDirectory: [], intakes, messages: [], milestones: [] };
+  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], applicantProfiles: [], studentDirectory: [], intakes, messages: [], milestones: [], deliverables: [] };
 
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
@@ -187,13 +199,14 @@ export async function loadMemberDashboard(member) {
       checked(supabase.from('project_applications').select('*').eq('student_user_id', user.id).order('updated_at', { ascending: false }).limit(100)),
     ]);
     const projectIds = projects.map(project => project.id);
-    const [messages, milestones] = projectIds.length
+    const [messages, milestones, deliverables] = projectIds.length
       ? await Promise.all([
         checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500)),
         checked(supabase.from('project_milestones').select('*').in('project_id', projectIds).order('position', { ascending: true }).order('created_at', { ascending: true }).limit(500)),
+        checked(supabase.from('project_deliverables').select('*').in('project_id', projectIds).order('created_at', { ascending: false }).limit(500)),
       ])
-      : [[], []];
-    return { user, profile, projects, opportunities, applications, applicantProfiles: [], studentDirectory: [], intakes, messages, milestones };
+      : [[], [], []];
+    return { user, profile, projects, opportunities, applications, applicantProfiles: [], studentDirectory: [], intakes, messages, milestones, deliverables };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -208,13 +221,14 @@ export async function loadMemberDashboard(member) {
   const studentDirectory = profile.role === 'company'
     ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
     : [];
-  const [messages, milestones] = projectIds.length
+  const [messages, milestones, deliverables] = projectIds.length
     ? await Promise.all([
       checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500)),
       checked(supabase.from('project_milestones').select('*').in('project_id', projectIds).order('position', { ascending: true }).order('created_at', { ascending: true }).limit(500)),
+      checked(supabase.from('project_deliverables').select('*').in('project_id', projectIds).order('created_at', { ascending: false }).limit(500)),
     ])
-    : [[], []];
-  return { user, profile, projects, opportunities: [], applications, applicantProfiles, studentDirectory, intakes, messages, milestones };
+    : [[], [], []];
+  return { user, profile, projects, opportunities: [], applications, applicantProfiles, studentDirectory, intakes, messages, milestones, deliverables };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -354,6 +368,101 @@ export async function updateProjectMilestone(member, input) {
   return checked(member.supabase.from('project_milestones').update(row).eq('id', milestoneId).select('*').single(), null);
 }
 
+export async function createProjectDeliverable(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  const project = await participantProject(member, projectId);
+  if (project.assigned_student_user_id !== member.user.id) throw new Error('Only the matched student can submit project evidence.');
+  if (!['matched', 'in_progress', 'review'].includes(project.status)) throw new Error('This project is not accepting deliverables.');
+  const title = cleanText(input.title, 160);
+  const artifactUrl = cleanWebUrl(input.artifactUrl);
+  if (title.length < 3) throw new Error('Enter a deliverable title.');
+  if (!artifactUrl) throw new Error('Enter a valid http or https evidence link.');
+  const artifactType = DELIVERABLE_TYPES.has(input.artifactType) ? input.artifactType : 'other';
+  const milestoneId = cleanText(input.milestoneId, 50);
+  if (milestoneId) {
+    if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(milestoneId)) throw new Error('Choose a valid linked milestone.');
+    const milestone = await checked(member.supabase.from('project_milestones').select('id,project_id').eq('id', milestoneId).maybeSingle(), null);
+    if (!milestone || milestone.project_id !== projectId) throw new Error('The linked milestone is not part of this project.');
+  }
+  const row = {
+    project_id: projectId,
+    milestone_id: milestoneId || null,
+    submitted_by_user_id: member.user.id,
+    title,
+    artifact_type: artifactType,
+    artifact_url: artifactUrl,
+    notes: cleanText(input.notes, 2_000) || null,
+  };
+  return checked(member.supabase.from('project_deliverables').insert(row).select('*').single(), null);
+}
+
+export async function reviewProjectDeliverable(member, input) {
+  const deliverableId = cleanText(input.deliverableId, 50);
+  const status = cleanText(input.status, 30);
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(deliverableId)) throw new Error('Choose a valid deliverable.');
+  if (!DELIVERABLE_REVIEW_STATUSES.has(status)) throw new Error('Choose a valid deliverable review status.');
+  const deliverable = await checked(member.supabase.from('project_deliverables').select('*').eq('id', deliverableId).maybeSingle(), null);
+  if (!deliverable) throw new Error('This deliverable is no longer available.');
+  const project = await participantProject(member, deliverable.project_id);
+  if (project.owner_user_id !== member.user.id) throw new Error('Only the project owner can review deliverables.');
+  if (!['matched', 'in_progress', 'review'].includes(project.status)) throw new Error('This completed project is read-only.');
+  if (deliverable.status !== 'submitted') throw new Error('This deliverable has already been reviewed.');
+  const reviewNote = cleanText(input.reviewNote, 2_000);
+  if (status === 'changes_requested' && reviewNote.length < 3) throw new Error('Explain what needs to change.');
+  const row = {
+    status,
+    review_note: reviewNote || null,
+    reviewed_by_user_id: member.user.id,
+    reviewed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  const updated = await checked(
+    member.supabase.from('project_deliverables').update(row).eq('id', deliverableId).eq('status', 'submitted').select('*').maybeSingle(),
+    null,
+  );
+  if (!updated) throw new Error('This deliverable changed while you were viewing it. Refresh and try again.');
+  return updated;
+}
+
+export async function reviseProjectDeliverable(member, input) {
+  const deliverableId = cleanText(input.deliverableId, 50);
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(deliverableId)) throw new Error('Choose a valid deliverable.');
+  const deliverable = await checked(member.supabase.from('project_deliverables').select('*').eq('id', deliverableId).maybeSingle(), null);
+  if (!deliverable) throw new Error('This deliverable is no longer available.');
+  const project = await participantProject(member, deliverable.project_id);
+  if (project.assigned_student_user_id !== member.user.id || deliverable.submitted_by_user_id !== member.user.id) throw new Error('Only the submitting student can revise this evidence.');
+  if (deliverable.status !== 'changes_requested') throw new Error('Only a deliverable with requested changes can be revised.');
+  const title = cleanText(input.title, 160);
+  const artifactUrl = cleanWebUrl(input.artifactUrl);
+  if (title.length < 3) throw new Error('Enter a deliverable title.');
+  if (!artifactUrl) throw new Error('Enter a valid http or https evidence link.');
+  const milestoneId = cleanText(input.milestoneId, 50);
+  if (milestoneId) {
+    if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(milestoneId)) throw new Error('Choose a valid linked milestone.');
+    const milestone = await checked(member.supabase.from('project_milestones').select('id,project_id').eq('id', milestoneId).maybeSingle(), null);
+    if (!milestone || milestone.project_id !== project.id) throw new Error('The linked milestone is not part of this project.');
+  }
+  const row = {
+    title,
+    artifact_type: DELIVERABLE_TYPES.has(input.artifactType) ? input.artifactType : deliverable.artifact_type,
+    artifact_url: artifactUrl,
+    milestone_id: milestoneId || null,
+    notes: cleanText(input.notes, 2_000) || null,
+    status: 'submitted',
+    revision: Math.min(Number(deliverable.revision || 1) + 1, 50),
+    review_note: null,
+    reviewed_by_user_id: null,
+    reviewed_at: null,
+    updated_at: new Date().toISOString(),
+  };
+  const updated = await checked(
+    member.supabase.from('project_deliverables').update(row).eq('id', deliverableId).eq('status', 'changes_requested').select('*').maybeSingle(),
+    null,
+  );
+  if (!updated) throw new Error('This deliverable changed while you were editing it. Refresh and try again.');
+  return updated;
+}
+
 export async function updateProjectStatus(member, input) {
   const projectId = cleanText(input.projectId, 50);
   const status = cleanText(input.status, 20);
@@ -370,6 +479,11 @@ export async function updateProjectStatus(member, input) {
       null,
     );
     if (incomplete) throw new Error('Complete every milestone before closing the project.');
+    const accepted = await checked(
+      member.supabase.from('project_deliverables').select('id').eq('project_id', projectId).eq('status', 'accepted').limit(1).maybeSingle(),
+      null,
+    );
+    if (!accepted) throw new Error('Accept at least one deliverable before closing the project.');
   }
   const updated = await checked(
     member.supabase.from('member_projects').update({ status, updated_at: new Date().toISOString() }).eq('id', projectId).eq('status', project.status).select('*').maybeSingle(),
@@ -397,7 +511,7 @@ export async function sendProjectMessage(member, input) {
 function portalFailure(error) {
   if (error instanceof PortalOperationalError) return { status: 503, code: error.code, message: error.publicMessage };
   const message = cleanText(error?.message, 2_000);
-  if (/member_profiles|member_projects|project_applications|project_messages|project_milestones|review_project_application|submissions|schema cache|relation .* does not exist/i.test(message)) {
+  if (/member_profiles|member_projects|project_applications|project_messages|project_milestones|project_deliverables|review_project_application|submissions|schema cache|relation .* does not exist/i.test(message)) {
     return { status: 503, code: 'PORTAL_SCHEMA_MISSING', message: 'Member sign-in worked, but the portal tables are not available. Apply the newest Supabase migration to the same project used by Vercel.' };
   }
   return { status: 503, code: 'PORTAL_UNAVAILABLE', message: 'The member portal is temporarily unavailable. Check the newest /api/portal entry in Vercel Runtime Logs.' };
@@ -433,8 +547,11 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'PATCH' && input.action === 'update-project-status') return res.status(200).json({ ok: true, project: await updateProjectStatus(member, input) });
     if (req.method === 'PATCH' && input.action === 'update-milestone') return res.status(200).json({ ok: true, milestone: await updateProjectMilestone(member, input) });
+    if (req.method === 'PATCH' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, deliverable: await reviewProjectDeliverable(member, input) });
+    if (req.method === 'PATCH' && input.action === 'revise-deliverable') return res.status(200).json({ ok: true, deliverable: await reviseProjectDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
     if (req.method === 'POST' && input.action === 'create-milestone') return res.status(201).json({ ok: true, milestone: await createProjectMilestone(member, input) });
+    if (req.method === 'POST' && input.action === 'create-deliverable') return res.status(201).json({ ok: true, deliverable: await createProjectDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input) });
     if (req.method === 'POST' && input.action === 'review-application') return res.status(200).json({ ok: true, application: await reviewProjectApplication(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
