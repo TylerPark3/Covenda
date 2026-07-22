@@ -2856,7 +2856,48 @@ function initIcosahedron() {
   });
 }
 
+// ---- Site-wide scroll reveal: sections/cards animate in as you scroll down ----
+function initScrollReveal() {
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Bail (leave everything visible) for reduced-motion, no-IO, or a glitched/tiny
+  // viewport — never risk hiding content when we can't reliably reveal it.
+  if (reduce || !('IntersectionObserver' in window) || window.innerHeight < 300) return;
+  const selector = [
+    '.how-section .section-heading',
+    '.proof-rail > li', '.company-rail > li',
+    '.work-record', '.packet', '.risk-note',
+    '.feature-copy', '.feature-panel',
+    '.value-col',
+    '.why-section .why-copy', '.why-section .fit-table', '.why-section .work-types',
+    '.batches-section .section-heading', '.batch-card',
+    '.final-cta .audience-content',
+  ].join(',');
+  document.documentElement.classList.add('js-reveal');
+  const revealed = new WeakSet();
+  const reveal = el => { el.classList.add('is-revealed'); revealed.add(el); };
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); } });
+  }, { threshold: 0.1, rootMargin: '0px 0px -5% 0px' });
+  const vh = window.innerHeight;
+  const targets = [];
+  [...document.querySelectorAll(selector)].forEach(el => {
+    const r = el.getBoundingClientRect();
+    // leave anything already in view visible (no flash); only reveal what's below.
+    if (r.bottom > 0 && r.top < vh * 0.85) return;
+    el.classList.add('reveal');
+    const sibs = [...el.parentElement.children].filter(c => c.matches(selector));
+    const i = sibs.indexOf(el);
+    if (i > 0) el.style.setProperty('--reveal-i', String(Math.min(i, 6)));
+    io.observe(el);
+    targets.push(el);
+  });
+  // Safety net: if the observer never fires for something, reveal it anyway so
+  // content can never stay permanently hidden.
+  window.setTimeout(() => targets.forEach(el => { if (!revealed.has(el)) reveal(el); }), 4000);
+}
+
 initCovendaMotion();
 initFlowDemo();
 initIcosahedron();
+initScrollReveal();
 window.requestAnimationFrame(() => openIntro());
