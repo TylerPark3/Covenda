@@ -4,6 +4,10 @@ import { supabaseConfiguration } from './submissions.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
+// Fixed taxonomies shared with the marketing site (BATCHES industries + work types).
+// The vertical project-matcher reads these exact strings, so onboarding must write them verbatim.
+const VERTICALS = new Set(['Accounting & finance', 'Software & AI', 'Healthcare operations', 'Consumer & retail', 'Professional services', 'Not sure yet — show me everything']);
+const WORK_TYPES = new Set(['Research', 'Data & spreadsheets', 'Operations', 'QA & testing', 'Writing & documentation']);
 const emailBuckets = new Map();
 
 export class PortalOperationalError extends Error {
@@ -27,6 +31,11 @@ function cleanEmail(value) {
 function cleanList(value, maxItems = 20) {
   const items = Array.isArray(value) ? value : cleanText(value, 1_000).split(',');
   return [...new Set(items.map(item => cleanText(item, 80)).filter(Boolean))].slice(0, maxItems);
+}
+
+// Keep only values that exactly match a fixed taxonomy (verticals / work types).
+function cleanTaxonomy(value, allowed, maxItems = 8) {
+  return cleanList(value, maxItems).filter(item => allowed.has(item));
 }
 
 function parseBody(req) {
@@ -233,6 +242,11 @@ export async function saveMemberProfile(member, input) {
     onboarding_complete: true,
     updated_at: new Date().toISOString(),
   };
+  // Additive onboarding/matching fields — only written when the caller supplies them,
+  // so the existing profile modal keeps saving even before the migration is applied.
+  if (input.verticals !== undefined) row.verticals = cleanTaxonomy(input.verticals, VERTICALS);
+  if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
+  if (input.avatarUrl !== undefined) row.avatar_url = cleanText(input.avatarUrl, 500) || null;
   return checked(supabase.from('member_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
 }
 

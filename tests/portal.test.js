@@ -86,6 +86,32 @@ test('profile onboarding persists a fixed role and sanitized member fields', asy
   assert.equal(profile.onboarding_complete,true);
 });
 
+test('onboarding persists only whitelisted verticals and work types plus an avatar url', async () => {
+  let saved;
+  const supabase={from(table){assert.equal(table,'member_profiles');return {
+    select(){return this;},eq(){return this;},async maybeSingle(){return {data:null,error:null};},
+    upsert(value){saved=value;return this;},async single(){return {data:saved,error:null};},
+  };}};
+  const profile=await saveMemberProfile({user:{id:'user-1'},supabase},{
+    role:'student',displayName:'Maya',
+    verticals:['Software & AI','Not a real vertical','Accounting & finance'],
+    workTypes:['Research','Nonsense','QA & testing'],
+    avatarUrl:'https://blob.example/a.png',portfolioVisibility:'members',
+  });
+  assert.deepEqual(profile.verticals,['Software & AI','Accounting & finance']);
+  assert.deepEqual(profile.work_types,['Research','QA & testing']);
+  assert.equal(profile.avatar_url,'https://blob.example/a.png');
+});
+
+test('the existing profile modal save omits onboarding columns so it works before the migration', async () => {
+  let saved;
+  const supabase={from(){return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:null,error:null};},upsert(value){saved=value;return this;},async single(){return {data:saved,error:null};}};}};
+  await saveMemberProfile({user:{id:'user-1'},supabase},{role:'student',displayName:'Maya',portfolioVisibility:'members'});
+  assert.equal('verticals' in saved,false);
+  assert.equal('work_types' in saved,false);
+  assert.equal('avatar_url' in saved,false);
+});
+
 test('only organization roles can create projects', async () => {
   let inserted;
   const supabase={from(table){if(table==='member_profiles')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{role:'company'},error:null};}};return {insert(value){inserted=value;return this;},select(){return this;},async single(){return {data:{id:'project-1',...inserted},error:null};}};}};

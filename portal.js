@@ -88,7 +88,7 @@ async function loadDashboard() {
   showLoading();
   try {
     const dashboard=await portalRequest(); state.dashboard=dashboard; showMember(); renderDashboard();
-    if (!dashboard.profile) openProfile({ required:true });
+    if (!dashboard.profile) startOnboarding();
   } catch(error) { if(session().accessToken) showAuth(error.message,true); }
 }
 
@@ -220,6 +220,99 @@ function openProject(){setDialogMessage('#projectMessage','');$('#projectForm').
 function openApply(project){state.applyProject=project;$('#applyForm').reset();$('#applyForm').elements.projectId.value=project.id;$('#applyTitle').textContent=`Apply to ${project.title}.`;$('#applySummary').textContent=project.summary;setDialogMessage('#applyMessage','');$('#applyDialog').showModal();}
 function openSubmitWork(project){const form=$('#submitWorkForm');form.reset();form.elements.projectId.value=project.id;$('#submitWorkTitle').textContent=`Submit your work · ${project.title}`;setDialogMessage('#submitWorkMessage','');$('#submitWorkDialog').showModal();}
 function openReview(project){const form=$('#reviewForm');form.reset();form.elements.projectId.value=project.id;$('#reviewTitle').textContent=`Review · ${project.title}`;$('#reviewDeliverable').textContent=project.deliverable||'No deliverable text was provided.';$('#reviewSubmittedAt').textContent=project.deliverable_submitted_at?`Submitted ${dateLabel(project.deliverable_submitted_at)}`:'';setDialogMessage('#reviewMessage','');$('#reviewDialog').showModal();}
+
+// ===== Suno-style student onboarding: one question per screen (first-run students only). =====
+// Company/university keep the existing #profileDialog modal; "Edit profile" is unchanged.
+const ONBOARD_VERTICALS=['Accounting & finance','Software & AI','Healthcare operations','Consumer & retail','Professional services','Not sure yet — show me everything'];
+const ONBOARD_WORK_TYPES=['Research','Data & spreadsheets','Operations','QA & testing','Writing & documentation'];
+const ONBOARD_SCREENS=[
+  {id:'role',kind:'role',headline:'How are you joining Covenda?',sub:'This sets up the right workspace for you.'},
+  {id:'profile',kind:'profile',headline:"Let's set up your profile.",sub:'You can edit this at any time.'},
+  {id:'verticals',kind:'multi',field:'verticals',options:ONBOARD_VERTICALS,headline:'What do you want to work on?',sub:"We'll use this to show you the right paid projects."},
+  {id:'workTypes',kind:'multi',field:'workTypes',options:ONBOARD_WORK_TYPES,headline:'What kind of work fits you?',sub:'Pick the formats you want to be known for.'},
+  {id:'school',kind:'text',field:'schoolName',type:'text',autocomplete:'organization',headline:'Where do you study?',sub:'Your school or university.',placeholder:'Columbia University'},
+  {id:'grad',kind:'text',field:'graduationYear',type:'number',headline:'When do you graduate?',sub:'Your expected graduation year.',placeholder:'2027'},
+  {id:'headline',kind:'text',field:'headline',type:'text',headline:'One line about you.',sub:'How you want to be introduced.',placeholder:'Researcher who turns messy questions into clear decisions'},
+  {id:'skills',kind:'text',field:'skills',type:'text',headline:'What are you good at?',sub:'A few skills, separated by commas.',placeholder:'Research, Excel, writing'},
+  {id:'about',kind:'textarea',field:'bio',headline:'Anything else worth knowing?',sub:'A short intro — optional, but it helps.',placeholder:'What you are learning, building, or looking for next.'},
+  {id:'handoff',kind:'handoff',headline:"Let's find your first project.",sub:"Takes about 3 minutes. We'll guide you through it."},
+];
+let onboardState={step:0,values:{role:'student',verticals:[],workTypes:[]},saving:false};
+function onboardKey(){const d=state.dashboard;return 'covendaOnboard:'+(d?.user?.id||d?.user?.email||'anon');}
+function persistOnboard(){try{localStorage.setItem(onboardKey(),JSON.stringify({step:onboardState.step,values:onboardState.values}));}catch{}}
+function clearOnboard(){try{localStorage.removeItem(onboardKey());}catch{}}
+function startOnboarding(){
+  const meta=state.dashboard?.user?.metadata||{};
+  onboardState={step:0,values:{role:'student',verticals:[],workTypes:[],displayName:meta.full_name||meta.name||''},saving:false};
+  try{const raw=localStorage.getItem(onboardKey());if(raw){const saved=JSON.parse(raw);onboardState.values={...onboardState.values,...saved.values};onboardState.step=Math.min(Math.max(saved.step||0,0),ONBOARD_SCREENS.length-1);}}catch{}
+  $('#portalAuth').hidden=true;$('#portalLoading').hidden=true;$('#memberShell').hidden=true;$('#onboardFlow').hidden=false;
+  renderOnboard();
+}
+function onboardNext(){if(onboardState.step<ONBOARD_SCREENS.length-1){onboardState.step++;persistOnboard();renderOnboard();}}
+function onboardBack(){if(onboardState.step>0){onboardState.step--;persistOnboard();renderOnboard();}}
+function exitOnboardToModal(role){clearOnboard();$('#onboardFlow').hidden=true;showMember();renderDashboard();openProfile({required:true});const form=$('#profileForm');form.elements.role.value=role;$$('[name="role"]',form).forEach(i=>i.disabled=true);updateProfileFields();}
+function onboardCta(label,onClick,{disabled=false}={}){const b=document.createElement('button');b.type='button';b.className='onboard-cta';const s=document.createElement('span');s.textContent=label;b.append(s,icon('p-arrow'));b.disabled=disabled;b.addEventListener('click',onClick);return b;}
+function procAvatar(seed){let h=2166136261;const s=String(seed||'covenda');for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}h>>>=0;const hue1=32+(h%22),hue2=38+((h>>4)%18),x1=18+(h%50),y1=20+((h>>5)%50),x2=62-((h>>7)%40),y2=68-((h>>9)%38);const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 100 100');svg.setAttribute('class','onboard-avatar-img');svg.setAttribute('aria-hidden','true');svg.innerHTML=`<defs><radialGradient id="oa1" cx="${x1}%" cy="${y1}%" r="72%"><stop offset="0%" stop-color="hsl(${hue1},72%,84%)"/><stop offset="100%" stop-color="hsl(${hue1},58%,60%)"/></radialGradient><radialGradient id="oa2" cx="${x2}%" cy="${y2}%" r="60%"><stop offset="0%" stop-color="hsl(${hue2},78%,72%)" stop-opacity=".9"/><stop offset="100%" stop-color="hsl(${hue2},64%,54%)" stop-opacity="0"/></radialGradient></defs><rect width="100" height="100" fill="url(#oa1)"/><rect width="100" height="100" fill="url(#oa2)"/>`;return svg;}
+function renderOnboard(){
+  const screen=ONBOARD_SCREENS[onboardState.step];const v=onboardState.values;const d=state.dashboard;
+  const inner=$('#onboardInner');inner.replaceChildren();
+  const top=document.createElement('div');top.className='onboard-top';
+  if(onboardState.step>0){const back=document.createElement('button');back.type='button';back.className='onboard-back';back.textContent='← Back';back.addEventListener('click',onboardBack);top.append(back);}else{top.append(document.createElement('span'));}
+  const prog=document.createElement('div');prog.className='onboard-progress';prog.setAttribute('aria-hidden','true');
+  ONBOARD_SCREENS.forEach((_,i)=>{const dot=document.createElement('span');dot.className='onboard-dot'+(i<onboardState.step?' is-done':i===onboardState.step?' is-current':'');prog.append(dot);});
+  top.append(prog);inner.append(top);
+  const body=document.createElement('div');body.className='onboard-screen';body.dataset.kind=screen.kind;
+  const h=document.createElement('h1');h.className='onboard-headline';h.textContent=screen.headline;
+  const sub=document.createElement('p');sub.className='onboard-sub';sub.textContent=screen.sub;body.append(h,sub);
+  const controls=document.createElement('div');controls.className='onboard-controls';body.append(controls);
+  const msg=document.createElement('p');msg.className='onboard-message';msg.id='onboardMessage';msg.setAttribute('aria-live','polite');
+  let focusEl=null;
+  if(screen.kind==='role'){
+    const roles=[['student','Student','Find projects and build proof.','p-user'],['company','Company','Post work and discover talent.','p-project'],['university','University','Support students and projects.','p-compass']];
+    const grid=document.createElement('div');grid.className='onboard-cards';
+    roles.forEach(([value,title,copy,ic],idx)=>{const card=document.createElement('button');card.type='button';card.className='onboard-card'+(v.role===value?' is-selected':'');card.append(icon(ic));const b=document.createElement('strong');b.textContent=title;const p=document.createElement('span');p.textContent=copy;card.append(b,p);card.addEventListener('click',()=>{onboardState.values.role=value;persistOnboard();if(value==='student')onboardNext();else exitOnboardToModal(value);});grid.append(card);if(idx===0)focusEl=card;});
+    controls.append(grid);body.append(msg);
+  }else if(screen.kind==='profile'){
+    const avatarWrap=document.createElement('div');avatarWrap.className='onboard-avatar';avatarWrap.append(procAvatar(v.displayName||d.user.email));
+    const caption=document.createElement('p');caption.className='onboard-avatar-note';caption.textContent='Your avatar is generated from your name.';
+    const label=document.createElement('label');label.className='onboard-field';const span=document.createElement('span');span.textContent='Display name';const input=document.createElement('input');input.type='text';input.autocomplete='name';input.placeholder='Your name';input.value=v.displayName||'';label.append(span,input);
+    const cta=onboardCta('Continue',()=>{if(input.value.trim())onboardNext();},{disabled:!(v.displayName||'').trim()});
+    input.addEventListener('input',()=>{onboardState.values.displayName=input.value;persistOnboard();cta.disabled=!input.value.trim();avatarWrap.replaceChildren(procAvatar(input.value||d.user.email));});
+    input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if(input.value.trim())onboardNext();}});
+    controls.append(avatarWrap,caption,label);body.append(msg,cta);focusEl=input;
+  }else if(screen.kind==='multi'){
+    const selected=new Set(v[screen.field]||[]);
+    const grid=document.createElement('div');grid.className='onboard-cards onboard-cards-multi';
+    const cta=onboardCta('Continue',()=>{if(selected.size)onboardNext();},{disabled:!selected.size});
+    screen.options.forEach((opt,idx)=>{const card=document.createElement('button');card.type='button';card.className='onboard-card onboard-chip'+(selected.has(opt)?' is-selected':'');card.setAttribute('aria-pressed',selected.has(opt)?'true':'false');const b=document.createElement('strong');b.textContent=opt;card.append(b);card.addEventListener('click',()=>{if(selected.has(opt))selected.delete(opt);else selected.add(opt);card.classList.toggle('is-selected');card.setAttribute('aria-pressed',selected.has(opt)?'true':'false');onboardState.values[screen.field]=[...selected];persistOnboard();cta.disabled=!selected.size;});grid.append(card);if(idx===0)focusEl=card;});
+    controls.append(grid);body.append(msg,cta);
+  }else if(screen.kind==='text'||screen.kind==='textarea'){
+    const label=document.createElement('label');label.className='onboard-field';const span=document.createElement('span');span.className='sr-only';span.textContent=screen.headline;
+    let input;
+    if(screen.kind==='textarea'){input=document.createElement('textarea');input.rows=4;input.maxLength=2000;}
+    else{input=document.createElement('input');input.type=screen.type||'text';if(screen.type==='number'){input.min='2020';input.max='2100';input.inputMode='numeric';}if(screen.autocomplete)input.autocomplete=screen.autocomplete;input.maxLength=180;}
+    input.placeholder=screen.placeholder||'';input.value=v[screen.field]||'';label.append(span,input);
+    const cta=onboardCta('Continue',()=>onboardNext());
+    input.addEventListener('input',()=>{onboardState.values[screen.field]=input.value;persistOnboard();});
+    if(screen.kind!=='textarea')input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();onboardNext();}});
+    controls.append(label);body.append(msg,cta);focusEl=input;
+  }else if(screen.kind==='handoff'){
+    const pill=document.createElement('div');pill.className='onboard-social';const blobs=document.createElement('div');blobs.className='onboard-social-blobs';['a','b','c'].forEach(seed=>{const wrap=document.createElement('span');wrap.append(procAvatar((v.displayName||'covenda')+seed));blobs.append(wrap);});const t=document.createElement('span');t.textContent='Join the first cohort of Covenda students';pill.append(blobs,t);
+    controls.append(pill);const cta=onboardCta("I'm ready",()=>finishOnboarding());body.append(msg,cta);focusEl=cta;
+  }
+  inner.append(body);
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(!reduce){body.classList.add('onboard-enter');requestAnimationFrame(()=>body.classList.add('onboard-enter-active'));}
+  if(focusEl)setTimeout(()=>focusEl.focus?.(),reduce?0:70);
+}
+async function finishOnboarding(){
+  if(onboardState.saving)return;onboardState.saving=true;const v=onboardState.values;const msg=$('#onboardMessage');
+  if(msg){msg.textContent='Saving your profile…';msg.classList.remove('is-error');}
+  try{
+    await portalRequest({method:'PATCH',body:JSON.stringify({action:'save-profile',role:'student',displayName:v.displayName||'',schoolName:v.schoolName||'',graduationYear:v.graduationYear||'',headline:v.headline||'',bio:v.bio||'',skills:v.skills||'',portfolioVisibility:'members',verticals:v.verticals||[],workTypes:v.workTypes||[],avatarUrl:v.avatarUrl||''})});
+    clearOnboard();$('#onboardFlow').hidden=true;await loadDashboard();setView('discover');
+  }catch(error){onboardState.saving=false;if(msg){msg.textContent=error.message;msg.classList.add('is-error');}}
+}
 
 $('#googleLogin').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;setLoginMessage('Opening Google sign-in…');try{const response=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'google-login'})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Google sign-in could not start.');location.assign(result.url);}catch(error){setLoginMessage(error.message,true);button.disabled=false;}});
 $('#memberEmailForm').addEventListener('submit',async event=>{event.preventDefault();const button=$('button',event.currentTarget);button.disabled=true;setLoginMessage('Requesting a secure sign-in link…');try{const response=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request-link',email:event.currentTarget.elements.email.value})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Could not request a sign-in link.');setLoginMessage(result.message);}catch(error){setLoginMessage(error.message,true);}finally{button.disabled=false;}});
