@@ -2342,3 +2342,11 @@ body[data-audience="student"] .feature-band { display: none; }
 .profile-cred-card > * + * { margin-top: 8px; }
 .profile-cred-who { font-size: 15px; color: var(--ink); }
 .profile-cred-note { font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+
+/* Step 1 — profile work-history evidence rows */
+.profile-evidence-list { margin: 0; display: grid; gap: 10px; }
+.profile-evidence-list > div { display: grid; grid-template-columns: 132px 1fr; gap: 12px; }
+.profile-evidence-list dt { margin: 0; font-size: 12px; font-weight: 640; color: var(--gold-deep); }
+.profile-evidence-list dd { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+.profile-credibility + .profile-credibility { margin-top: 14px; }
+@media (max-width: 560px) { .profile-evidence-list > div { grid-template-columns: 1fr; gap: 2px; } }

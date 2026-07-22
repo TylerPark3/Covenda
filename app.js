@@ -705,6 +705,75 @@ function renderProfileCredibility() {
   host.append(card);
 }
 
+// Step 1 — club affiliations (with company track record) on the student profile.
+// Illustrative until real club track records exist.
+function renderProfileAffiliations() {
+  const host = $('#profileAffiliations');
+  if (!host) return;
+  host.innerHTML = '';
+  const kicker = document.createElement('p');
+  kicker.className = 'profile-cred-kicker';
+  kicker.textContent = 'Clubs & affiliations';
+  host.append(kicker);
+  const ref = activeReferral();
+  const card = document.createElement('div');
+  card.className = 'profile-cred-card' + (ref && ref.via ? ' is-endorsed' : '');
+  if (ref && ref.via) {
+    const who = document.createElement('p');
+    who.className = 'profile-cred-who';
+    who.append(document.createTextNode('Member · '));
+    const b = document.createElement('b');
+    b.textContent = ref.via;
+    who.append(b);
+    const note = document.createElement('p');
+    note.className = 'profile-cred-note';
+    note.textContent = 'A club’s track record grows as it places students with companies — its trust indicator ("worked with …") shows here once verified.';
+    card.append(who, note);
+  } else {
+    const who = document.createElement('p');
+    who.className = 'profile-cred-who';
+    who.textContent = 'No club affiliations yet.';
+    const note = document.createElement('p');
+    note.className = 'profile-cred-note';
+    note.textContent = 'Join a club or get referred by one — clubs that have worked with companies lend their track record to your profile.';
+    card.append(who, note);
+  }
+  host.append(card);
+}
+
+// Step 1 — work history / objective evidence on the student profile.
+function renderProfileEvidence() {
+  const host = $('#profileEvidence');
+  if (!host) return;
+  host.innerHTML = '';
+  const kicker = document.createElement('p');
+  kicker.className = 'profile-cred-kicker';
+  kicker.textContent = 'Work history & evidence';
+  host.append(kicker);
+  const draft = readStorage(draftKeys.studentForm, null);
+  const skill = draftValue(draft, 'studentSkill');
+  const level = draftValue(draft, 'studentSkillLevel');
+  const card = document.createElement('div');
+  card.className = 'profile-cred-card';
+  const dl = document.createElement('dl');
+  dl.className = 'profile-evidence-list';
+  const rows = [];
+  if (skill) rows.push(['Declared skill', skill + (level ? ' · ' + level : '') + ' (self-reported)']);
+  rows.push(['Reviewed work', 'None yet — join a batch to complete bounded, reviewed projects.']);
+  rows.push(['Verified record', 'Earned when an employer reviewer accepts your work.']);
+  for (const [k, v] of rows) {
+    const wrap = document.createElement('div');
+    const dt = document.createElement('dt');
+    dt.textContent = k;
+    const dd = document.createElement('dd');
+    dd.textContent = v;
+    wrap.append(dt, dd);
+    dl.append(wrap);
+  }
+  card.append(dl);
+  host.append(card);
+}
+
 function renderWorkspaceDrafts() {
   const studentDraft = readStorage(draftKeys.studentForm, null);
   const companyDraft = readStorage(draftKeys.companyForm, null);
@@ -745,6 +814,8 @@ function renderWorkspaceDrafts() {
     if (workspaceCard) workspaceCard.hidden = true;
   }
   renderProfileCredibility();
+  renderProfileAffiliations();
+  renderProfileEvidence();
 
   if (hasCompanyDraft) {
     const deliverable = draftValue(companyDraft, 'companyDeliverable', 'Working Project Packet');
