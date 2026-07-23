@@ -3586,6 +3586,13 @@ function dismissReferralBanner() {
   if (banner) banner.hidden = true;
 }
 
+function partnerCohortLink() {
+  const partner = partnerFieldValues();
+  const org = (partner.orgName || '').trim();
+  if (!org) return '';
+  return referralBaseUrl() + 'cohort.html?ref=' + makeReferralCode(org, partner.contactEmail) + '&via=' + encodeURIComponent(org);
+}
+
 function renderReferralLink() {
   const section = $('#referralLinkSection');
   const input = $('#referralLinkInput');
@@ -3593,6 +3600,11 @@ function renderReferralLink() {
   const link = partnerReferralLink();
   if (!link) { section.hidden = true; return; }
   input.value = link;
+  const cohortInput = $('#cohortLinkInput');
+  const cohortOpen = $('#cohortLinkOpen');
+  const cohortLink = partnerCohortLink();
+  if (cohortInput) cohortInput.value = cohortLink;
+  if (cohortOpen) cohortOpen.href = cohortLink || '#';
   section.hidden = false;
 }
 

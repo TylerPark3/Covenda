@@ -2323,6 +2323,34 @@ body[data-audience="student"] .feature-band { display: none; }
 .cohort-note svg { flex: none; width: 15px; height: 15px; color: var(--gold-deep); margin-top: 1px; }
 .cohort-note b { color: var(--gold-deep); }
 
+/* ---- §9 public partner cohort page (cohort.html) ---- */
+.cohort-page { max-width: 860px; margin: 0 auto; padding: 28px clamp(18px, 5vw, 40px) 64px; }
+.cohort-page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: clamp(30px, 6vw, 60px); }
+.cohort-brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 22px; font-weight: 500; letter-spacing: -.02em; color: var(--ink); text-decoration: none; }
+.cohort-back { color: var(--gold-deep); font-size: 13px; font-weight: 650; text-decoration: none; }
+.cohort-back:hover { text-decoration: underline; }
+.cohort-hero { margin-bottom: clamp(24px, 4vw, 40px); }
+.cohort-hero h1 { margin: 8px 0 0; font-size: clamp(30px, 5.5vw, 50px); line-height: 1.05; letter-spacing: -.03em; }
+.cohort-hero-sub { margin: 14px 0 0; max-width: 60ch; color: var(--muted); font-size: clamp(15px, 1.6vw, 17px); line-height: 1.55; }
+.cohort-panel { padding: 0; }
+.cohort-funnel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.cohort-stat { display: flex; flex-direction: column; gap: 6px; padding: clamp(18px, 2.4vw, 26px); border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.cohort-stat.is-active { border-color: var(--gold-light); background: var(--gold-pale); }
+.cohort-stat-count { font-size: clamp(30px, 4.5vw, 42px); font-weight: 700; letter-spacing: -.03em; line-height: 1; color: var(--ink); }
+.cohort-stat.is-active .cohort-stat-count { color: var(--gold-deep); }
+.cohort-stat-label { font-size: 14px; font-weight: 650; color: var(--ink); }
+.cohort-stat-note { color: var(--muted); font-size: 12px; line-height: 1.45; }
+.cohort-breakdown { margin-top: clamp(28px, 4vw, 44px); }
+.cohort-breakdown h2 { margin: 0 0 16px; font-size: clamp(18px, 2vw, 22px); letter-spacing: -.02em; }
+.cohort-empty { margin: clamp(30px, 6vw, 56px) 0; padding: clamp(28px, 4vw, 44px); border: 1px dashed var(--line-strong); border-radius: 18px; text-align: center; }
+.cohort-empty-mark { font-size: 34px; color: var(--gold-light); }
+.cohort-empty h2 { margin: 10px 0 0; font-size: clamp(20px, 2.4vw, 26px); letter-spacing: -.02em; }
+.cohort-empty p { margin: 12px auto 22px; max-width: 52ch; color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+.cohort-foot { margin-top: clamp(40px, 6vw, 64px); padding-top: clamp(24px, 4vw, 36px); border-top: 1px solid var(--line); text-align: center; }
+.cohort-foot p { margin: 0 auto 22px; max-width: 56ch; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.cohort-foot p strong { color: var(--ink); }
+@media (max-width: 620px) { .cohort-funnel { grid-template-columns: 1fr; } }
+
 /* ---- F4: student proof record ("where you stand") ---- */
 .proof-record { margin-top: 22px; padding: clamp(20px, 2.4vw, 28px); }
 .proof-record-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 14px; }

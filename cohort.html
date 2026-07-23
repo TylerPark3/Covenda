@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="A Covenda partner cohort — students endorsed by a professor, club, or career center, tracing their path from endorsement to employer-verified work.">
+  <meta name="robots" content="noindex">
+  <title>Covenda · Partner cohort</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,400;6..72,500&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="type.css">
+  <link rel="stylesheet" href="styles.css">
+  <script src="cohort.js" defer></script>
+</head>
+<body data-surface="site">
+  <main class="cohort-page">
+    <header class="cohort-page-head">
+      <a class="cohort-brand" href="/"><img class="brand-mark-img" src="/assets/covenda-mark.svg" alt="" width="30" height="30">Covenda</a>
+      <a class="cohort-back" href="/">About Covenda →</a>
+    </header>
+
+    <section class="cohort-hero">
+      <p class="eyebrow" id="cohortEyebrow">Partner cohort</p>
+      <h1 id="cohortOrg">A Covenda cohort</h1>
+      <p class="cohort-hero-sub" id="cohortSub">Loading this cohort…</p>
+    </section>
+
+    <section class="cohort-panel" id="cohortPanel" hidden>
+      <div class="cohort-funnel" id="cohortFunnel"></div>
+      <div class="cohort-breakdown" id="cohortBreakdown" hidden>
+        <h2>Where they focus</h2>
+        <ul class="cohort-bars" id="cohortBars"></ul>
+      </div>
+    </section>
+
+    <section class="cohort-empty" id="cohortEmptyState" hidden>
+      <div class="cohort-empty-mark" aria-hidden="true">◇</div>
+      <h2>No cohort here yet</h2>
+      <p>This partner hasn't endorsed students under this link yet — or the link is incomplete. When a professor, club, or career center vouches for students and they start real work, their progress shows up here.</p>
+      <a class="ghost-button" href="/">See how Covenda works</a>
+    </section>
+
+    <footer class="cohort-foot">
+      <p><strong>Every number here is earned.</strong> Covenda never assigns credibility — a student moves up only by completing real, reviewed work. Endorsements are a starting signal, not a placement.</p>
+      <a class="gold-button" href="/">Bring your students to Covenda</a>
+    </footer>
+  </main>
+</body>
+</html>
