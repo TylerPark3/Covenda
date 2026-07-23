@@ -104,7 +104,32 @@ Before deploying it:
 4. For email sign-in, configure custom SMTP in Supabase. Google sign-in is the recommended first production path while SMTP is being configured.
 5. Confirm Vercel has the same Supabase URL, publishable key, and server-only secret used by the project where the migration was applied. Redeploy after every variable change.
 
-Google and email callbacks return to `/portal.html`; the browser stores the short-lived session only in the current tab's session storage. The API revalidates the access token with Supabase on every protected request and refreshes expired sessions with the Supabase refresh token. Member tables have no anonymous or direct authenticated-browser grants.
+Google and email callbacks return to `/portal.html`; the browser stores the session in `localStorage` so it persists across browser restarts (a standard "remember me" — persisting the refresh token in `localStorage` is the accepted tradeoff; an httpOnly-cookie migration is a someday item). The marketing site (same origin) reads a non-sensitive cached summary (`covendaMemberSummary`: name/avatar/role) to paint a "Signed in" state instantly, then verifies/refreshes in the background and reverts to "Member sign in" if the session is dead. The API revalidates the access token with Supabase on every protected request and refreshes expired sessions with the Supabase refresh token. Member tables have no anonymous or direct authenticated-browser grants.
+
+## Authentication redirects and branding (env-driven)
+
+Auth redirects are derived from the incoming request host, never hardcoded. `portalRedirectUrl(req)` in `api/portal.js` builds `${proto}://${host}/portal.html` from `x-forwarded-host`/`host` (validated), and both the magic-link (`emailRedirectTo`) and Google OAuth (`redirectTo`) flows use it. This means the same code works on `covenda.app`, on Vercel preview URLs, and on `localhost` with no `supabase.co` or domain literal in the source. A frontend test asserts no user-facing "ProofPath" strings remain.
+
+Founder tasks (dashboard-only, cannot be coded), which also escape Supabase's low default email rate limits that testing has repeatedly hit:
+
+1. Supabase → Authentication → URL Configuration: set the Site URL to `https://covenda.app` and add the `/portal.html` + `/admin.html` production and preview redirect URLs.
+2. Google OAuth consent screen: app name **Covenda**, upload the mark from `assets/covenda-mark.svg`, authorized domain `covenda.app`.
+3. Supabase → Custom Domain: set `auth.covenda.app` so magic links and OAuth come from the Covenda domain.
+4. Supabase → Authentication → Email: connect **custom SMTP via Resend** (`no-reply@covenda.app`) and rebrand the magic-link templates. This is what lifts the shared-SMTP rate limit.
+
+## Payments, AI intake, and feature flags
+
+Additional server-only Vercel environment variables introduced after the submission MVP:
+
+| Variable | Purpose |
+| --- | --- |
+| `STRIPE_SECRET_KEY` | Stripe API key (test `sk_test_…`, later live `sk_live_…`). Powers Checkout (money-in) and Identity. Trimmed defensively in code. |
+| `STRIPE_WEBHOOK_SECRET` | Signing secret (`whsec_…`) for the `/api/stripe-webhook` event destination. Required or the webhook 503s. Create a separate one in Stripe **live** mode when going live. |
+| `ANTHROPIC_API_KEY` | Server-only key for the AI project intake (`api/project-intake.js`), model `claude-opus-4-8`. |
+| `COVENDA_CREDIT_GRANTS_ENABLED` | When `true`, allows the internal (non-Stripe) `buy-credits` grant. Keep off in production once Stripe Checkout is live so credits can only come from a paid, signature-verified webhook. |
+| `COVENDA_IDENTITY_ENABLED` | Gates the Stripe Identity ID check **off by default**. Do NOT set `true` until the legal prerequisites (privacy policy + consent, F-1/work-auth, manual appeal path) are met — collecting a real government ID triggers biometric/privacy-law duties the instant a real student verifies. |
+
+Money-in is verified working in Stripe **test** mode on `covenda.app`. To go live: verify the business in Stripe, swap test keys for live keys, create a live-mode webhook, and redeploy. Student payouts (money-out) remain stubbed pending legal (1099s, worker classification, F-1). Run migrations `20260726200000_stripe_purchase_ledger.sql` and `20260726210000_identity_verification.sql` in Supabase.
 
 An alert contains only the submission type, receipt reference, company Project Packet readiness count when applicable, revision reference when applicable, and the protected admin link when configured. It excludes names, email addresses, company problems, student profiles, and other private answers.
 
