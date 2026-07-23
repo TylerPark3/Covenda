@@ -586,19 +586,21 @@ export async function applyToProject(member, input) {
   if (existing) return existing;
   // Snapshot the fit at apply time so the reviewer and the audit log agree.
   const fit = computeFitScore(project, profile);
-  const row = {
-    project_id: projectId,
-    student_user_id: member.user.id,
-    note: cleanText(input.note, 2_000) || null,
+  const baseRow = { project_id: projectId, student_user_id: member.user.id, note: cleanText(input.note, 2_000) || null, updated_at: new Date().toISOString() };
+  const richRow = {
+    ...baseRow,
     video_url: cleanUrl(input.videoUrl),
     skills: cleanList(input.skills, 20),
     demonstration: cleanUrl(input.demonstration) || cleanText(input.demonstration, 500) || null,
     referral: cleanReferral(input.referral),
     fit_score: fit.score,
     fit_reasons: fit.reasons,
-    updated_at: new Date().toISOString(),
   };
-  const application = await checked(member.supabase.from('project_applications').insert(row).select('*').single(), null);
+  // If the rich-application migration hasn't been applied yet, the extra columns don't exist —
+  // fall back to the base insert so a student can always apply; the fields fill in once it runs.
+  let { data: application, error } = await member.supabase.from('project_applications').insert(richRow).select('*').single();
+  if (error) ({ data: application, error } = await member.supabase.from('project_applications').insert(baseRow).select('*').single());
+  if (error) throw error;
   await logMatchEvent(member, { projectId, studentUserId: member.user.id, eventType: 'applied', fit, features: { project: pick(project, ['verticals', 'work_types', 'desired_skills', 'credits_listed']), student: pick(profile, ['verticals', 'work_types', 'skills']) } });
   return application;
 }
