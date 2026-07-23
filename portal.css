@@ -109,11 +109,16 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .empty-line p { margin:8px 0 15px; color:var(--muted); font-size:10px; line-height:1.6; }
 .empty-line button { padding:0; border:0; background:transparent; color:var(--gold-deep); font-size:9px; font-weight:700; cursor:pointer; }
 .metrics-row { display:grid; grid-template-columns:repeat(3,1fr); border-bottom:1px solid var(--line); }
-.metric { padding:24px 18px 24px 0; border-right:1px solid var(--line); }
+.metric { display:block; width:100%; padding:24px 18px 24px 0; border:0; border-right:1px solid var(--line); background:transparent; color:inherit; font:inherit; text-align:left; cursor:pointer; transition:background .15s ease; }
 .metric + .metric { padding-left:18px; }
 .metric:last-child { border-right:0; }
-.metric strong { display:block; font-size:30px; letter-spacing:-.06em; }
+.metric:hover { background:linear-gradient(90deg,var(--gold-pale),transparent); }
+.metric:focus-visible { outline:2px solid var(--gold); outline-offset:-2px; }
+.metric strong { display:block; font-size:27px; letter-spacing:-.05em; }
 .metric span { color:var(--soft); font-size:9px; }
+.is-highlighted { animation:highlightPulse 1.5s ease; }
+@keyframes highlightPulse { 0%,100%{ background:transparent; } 30%{ background:var(--gold-pale); } }
+@media (prefers-reduced-motion:reduce){ .is-highlighted { animation:none; } }
 .overview-rail { padding-top:9px; }
 .profile-progress { display:grid; gap:20px; padding:0 0 32px; border-bottom:1px solid var(--line); grid-template-columns:92px 1fr; }
 .progress-ring { --progress:0deg; display:grid; width:92px; height:92px; place-items:center; border-radius:50%; background:conic-gradient(var(--gold) var(--progress),#eeeae2 0); }

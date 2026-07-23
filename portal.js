@@ -254,7 +254,20 @@ function applicantCard(application,project){
   return card;
 }
 
-function renderMetrics(){const root=$('#memberMetrics');root.replaceChildren();const d=state.dashboard;const role=d.profile?.role;const values=role==='student'?[[d.projects.length,'Current projects'],[d.verifiedCount||0,'Verified records'],[d.applications.length,'Applications']]:[[d.projects.length,'Posted projects'],[d.applications.length,'Student applications'],[(d.intakes||[]).length,'Form submissions']];for(const [value,label] of values){const item=document.createElement('div');item.className='metric';const strong=document.createElement('strong');strong.textContent=value;const span=document.createElement('span');span.textContent=label;item.append(strong,span);root.append(item);}}
+// §11: metric tiles are real buttons that jump to the matching view and scroll-highlight it.
+function pulse(selector){const el=selector&&$(selector);if(!el)return;el.classList.add('is-highlighted');el.scrollIntoView({behavior:'smooth',block:'nearest'});setTimeout(()=>el.classList.remove('is-highlighted'),1500);}
+function renderMetrics(){
+  const root=$('#memberMetrics');root.replaceChildren();const d=state.dashboard;const role=d.profile?.role;
+  const values=role==='student'
+    ?[[d.projects.length,'Current projects','projects','#projectList'],[d.verifiedCount||0,'Verified records','projects','#projectList'],[d.applications.length,'Applications','activity','#applicationList']]
+    :[[d.projects.length,'Posted projects','projects','#projectList'],[d.applications.length,'Student applications','activity','#applicationList'],[(d.intakes||[]).length,'Form submissions','activity','#intakeList']];
+  for(const [value,label,target,highlight] of values){
+    const item=document.createElement('button');item.type='button';item.className='metric';item.setAttribute('aria-label',`${value} ${label} — open`);
+    const strong=document.createElement('strong');strong.textContent=value;const span=document.createElement('span');span.textContent=label;item.append(strong,span);
+    item.addEventListener('click',()=>{setView(target);pulse(highlight);});
+    root.append(item);
+  }
+}
 
 function renderProgress(){const profile=state.dashboard.profile;const score=profileCompletion(profile);$('#profileRing').style.setProperty('--progress',`${score*3.6}deg`);$('strong',$('#profileRing')).textContent=`${score}%`;$('#profileProgressTitle').textContent=score===100?'Your profile is ready':score>=60?'Add the finishing details':'Make a strong first impression';$('#profileProgressCopy').textContent=profile?.role==='student'?'Companies see only portfolios you choose to share.':'A complete organization profile adds context to every project.';}
 
