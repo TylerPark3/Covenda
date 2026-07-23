@@ -722,7 +722,7 @@ async function uploadAvatar(file){
   if(!/^image\//.test(file.type||''))throw new Error('Choose an image file (PNG, JPEG, WebP, or GIF).');
   const prepared=await downscaleImage(file,512,'image/webp',0.9);
   if(prepared.size>DIRECT_UPLOAD_LIMIT)throw new Error('That image is too large to process here. Try a JPEG or PNG under 4 MB.');
-  const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':prepared.type,'x-file-name':prepared.name,'x-upload-kind':'avatar'},body:prepared});
+  const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':prepared.type,'x-file-name':encodeURIComponent(prepared.name),'x-upload-kind':'avatar'},body:prepared});
   const data=await res.json().catch(()=>({}));
   if(!res.ok)throw new Error(data.error||'Upload failed.');
   return data.blobUrl;
@@ -847,7 +847,7 @@ async function uploadIntakeFile(file){
   const prepared=/^image\//.test(file.type||'')?await downscaleImage(file,1600,'image/webp',0.85):file;
   if(prepared.size>DIRECT_UPLOAD_LIMIT){setDialogMessage('#intakeStepMessage',`${file.name} is too large to upload directly (over ~4 MB). Compress it or share a link instead.`,true);return;}
   const chip=addIntakeChip(prepared.name,'Uploading…');
-  try{const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':prepared.type||'application/octet-stream','x-file-name':prepared.name},body:prepared});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Upload failed.');intakeState.attachments.push(data);$('small',chip).textContent='Attached';}catch(error){$('small',chip).textContent=error.message;chip.classList.add('is-error');}
+  try{const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':prepared.type||'application/octet-stream','x-file-name':encodeURIComponent(prepared.name)},body:prepared});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Upload failed.');intakeState.attachments.push(data);$('small',chip).textContent='Attached';}catch(error){$('small',chip).textContent=error.message;chip.classList.add('is-error');}
 }
 // Auto-grow a textarea to fit its content so the summary is never clipped in a fixed box.
 function autoGrow(ta){ta.style.height='auto';ta.style.height=(ta.scrollHeight+2)+'px';}

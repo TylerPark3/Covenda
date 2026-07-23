@@ -63,6 +63,13 @@ function sameOrigin(req) {
   try { return new URL(origin).host === host; } catch { return false; }
 }
 
+// The client sends x-file-name percent-encoded because HTTP headers are Latin-1 only — a raw
+// filename with any Unicode/emoji/accented char (common on phones/Macs) would otherwise make
+// the browser's fetch throw before the request is even sent. Decode defensively here.
+function decodeName(value) {
+  const raw = typeof value === 'string' ? value : '';
+  try { return decodeURIComponent(raw); } catch { return raw; }
+}
 function safeName(value) {
   return String(value || 'file').replace(/[^\w.\- ]+/g, '').trim().slice(0, 120) || 'file';
 }
@@ -80,7 +87,7 @@ export default async function handler(req, res, dependencies = {}) {
   const kind = req.headers['x-upload-kind'] === 'avatar' ? 'avatar' : 'project';
   const policy = uploadPolicy(kind);
   const contentType = (req.headers['content-type'] || '').split(';')[0].trim();
-  const declaredName = safeName(req.headers['x-file-name']);
+  const declaredName = safeName(decodeName(req.headers['x-file-name']));
   const typeCheck = validateUpload(contentType, 1, kind);
   if (!typeCheck.ok && typeCheck.status === 415) return res.status(415).json({ error: typeCheck.error });
 
