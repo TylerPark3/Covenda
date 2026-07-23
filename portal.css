@@ -188,7 +188,17 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .message-compose p.is-error { color:var(--danger); }
 .message-compose .portal-primary { min-height:42px; }
 .portfolio-profile { display:grid; grid-template-columns:220px 1fr; gap:50px; padding:36px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
-.portfolio-avatar { display:grid; width:128px; height:128px; place-items:center; border-radius:50%; background:linear-gradient(145deg,#f5e4bb,#af7214); color:#fff; font-size:42px; font-weight:700; }
+.portfolio-avatar { display:grid; width:128px; height:128px; place-items:center; border-radius:50%; background:var(--gold); background-size:cover; background-position:center; color:#fff; font-size:42px; font-weight:700; }
+.portfolio-avatar.is-editable { position:relative; overflow:hidden; padding:0; border:1px solid rgba(180,123,32,.4); cursor:pointer; font-family:inherit; }
+.portfolio-avatar.has-avatar { color:transparent; }
+.portfolio-avatar.is-busy { opacity:.6; pointer-events:none; }
+.avatar-overlay { position:absolute; left:0; right:0; bottom:0; padding:8px 0; background:rgba(17,17,15,.62); color:#fff; font-size:10px; font-weight:650; letter-spacing:.02em; text-align:center; opacity:0; transition:opacity .15s ease; }
+.portfolio-avatar.is-editable:hover .avatar-overlay,.portfolio-avatar.is-editable:focus-visible .avatar-overlay { opacity:1; }
+.avatar-note { margin:2px 0 0; color:var(--muted); font-size:10px; line-height:1.5; }
+.avatar-note:empty { margin:0; }
+.avatar-note.is-error { color:var(--danger); }
+.visually-hidden { position:absolute!important; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+@media (prefers-reduced-motion: reduce){ .avatar-overlay { transition:none; } }
 .portfolio-profile h2 { margin:0; font-size:30px; letter-spacing:-.055em; }
 .portfolio-profile > div > p { max-width:680px; margin:10px 0 18px; color:var(--muted); font-size:11px; line-height:1.7; }
 .skills { display:flex; flex-wrap:wrap; gap:7px; }
