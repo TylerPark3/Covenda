@@ -4,6 +4,9 @@ const TOKEN_KEY = 'covendaAdminAccessToken';
 const statusLabels = { received:'Received', reviewing:'In human review', needs_information:'Needs information', packet_proposed:'Packet proposed', approval_pending:'Approval pending', approved:'Approved', declined:'Closed', archived:'Archived' };
 const typeLabels = { student_interest:'Student', employer_intake:'Company', university_partner:'University', call_request:'Call request' };
 let submissions = [];
+let requests = [];
+const requestTypeLabels = { new_project:'New project', more_students:'More students', scope_change:'Scope change', revision:'Revision', consult:'Consult', question:'Question', specific_student:'Specific student' };
+const requestStatusLabels = { submitted:'Submitted', in_packaging:'Being packaged', packaged:'Packaged', declined:'Declined', closed:'Closed' };
 let selectedReference = '';
 let activeType = 'all';
 const attentionOrder = { needs_information:0, received:1, reviewing:2, approval_pending:3, packet_proposed:4, approved:5, declined:6, archived:7 };
@@ -153,15 +156,47 @@ function renderDetail(item) {
   events.forEach(([name,date])=>{ const li=document.createElement('li'); const strong=document.createElement('strong'); const span=document.createElement('span'); strong.textContent=name; span.textContent=dateLabel(date,true); li.append(strong,span); list.append(li); }); timeline.append(timelineTitle,list); detail.append(timeline);
 }
 
+// §6 slice B: operator triage of company brokered requests — set status + reply the company sees.
+function renderRequests() {
+  const root = $('#adminRequests'); if (!root) return; root.replaceChildren();
+  const count = $('#adminRequestsCount'); if (count) count.textContent = requests.length;
+  if (!requests.length) { const p = document.createElement('p'); p.className = 'admin-requests-empty'; p.textContent = 'No brokered work requests yet.'; root.append(p); return; }
+  for (const r of requests) {
+    const card = document.createElement('article'); card.className = 'admin-request-card';
+    const head = document.createElement('div'); head.className = 'admin-request-head';
+    const who = document.createElement('strong'); who.textContent = (r.company && (r.company.organization_name || r.company.display_name)) || 'Company';
+    const type = document.createElement('span'); type.className = 'admin-request-type'; type.textContent = requestTypeLabels[r.request_type] || r.request_type;
+    head.append(who, type); card.append(head);
+    if (r.subject) { const s = document.createElement('h3'); s.textContent = r.subject; card.append(s); }
+    const details = document.createElement('p'); details.className = 'admin-request-details'; details.textContent = r.details; card.append(details);
+    const time = document.createElement('small'); time.className = 'admin-request-time'; time.textContent = `Requested ${dateLabel(r.created_at, true)}`; card.append(time);
+    const controls = document.createElement('div'); controls.className = 'admin-request-controls';
+    const select = document.createElement('select');
+    Object.entries(requestStatusLabels).forEach(([val, label]) => { const o = document.createElement('option'); o.value = val; o.textContent = label; if (val === r.status) o.selected = true; select.append(o); });
+    const note = document.createElement('textarea'); note.rows = 2; note.placeholder = 'Reply the company will see…'; note.value = r.resolution_note || '';
+    const save = document.createElement('button'); save.type = 'button'; save.className = 'admin-request-save'; save.textContent = 'Save';
+    save.addEventListener('click', async () => {
+      const original = save.textContent; save.disabled = true; save.textContent = 'Saving…';
+      try {
+        const result = await adminRequest({ method: 'PATCH', body: JSON.stringify({ action: 'update-request', id: r.id, status: select.value, resolution_note: note.value }) });
+        const i = requests.findIndex(x => x.id === r.id); if (i >= 0) requests[i] = { ...requests[i], ...result.request };
+        save.textContent = 'Saved'; setTimeout(() => renderRequests(), 800);
+      } catch (error) { save.textContent = error.message; setTimeout(() => { save.textContent = original; save.disabled = false; }, 3000); }
+    });
+    controls.append(select, note, save); card.append(controls);
+    root.append(card);
+  }
+}
+
 async function loadInbox({ announce = false } = {}) {
   showInbox();
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {
-    const result=await adminRequest(); submissions=result.submissions; $('#operatorEmail').textContent=result.operator.email;
+    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; $('#operatorEmail').textContent=result.operator.email;
     if (!selectedReference && submissions[0]) selectedReference=submissions[0].reference;
     if (selectedReference && !submissions.some(item=>item.reference===selectedReference)) selectedReference=submissions[0]?.reference || '';
-    updateQueueSummary(); renderRows();
+    updateQueueSummary(); renderRows(); renderRequests();
     $('#adminSyncStatus').textContent=`Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }

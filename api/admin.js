@@ -265,6 +265,41 @@ export async function updateAdminSubmission(supabase, input, operatorEmail = '')
   return data;
 }
 
+// §6 slice B: the operator's view of company brokered requests. Degrades to [] if the
+// project_requests table isn't migrated yet, so the inbox never breaks.
+export async function listAdminRequests(supabase) {
+  const { data, error } = await supabase.from('project_requests').select('*').order('created_at', { ascending: false }).limit(100);
+  if (error) return [];
+  const requests = Array.isArray(data) ? data : [];
+  const companyIds = [...new Set(requests.map(r => r.company_user_id).filter(Boolean))];
+  if (!companyIds.length) return requests;
+  const { data: profiles } = await supabase.from('member_profiles').select('user_id,display_name,organization_name').in('user_id', companyIds);
+  const byId = new Map((profiles || []).map(p => [p.user_id, p]));
+  return requests.map(r => ({ ...r, company: byId.get(r.company_user_id) || null }));
+}
+
+const REQUEST_STATUSES = new Set(['submitted', 'in_packaging', 'packaged', 'declined', 'closed']);
+export async function updateAdminRequest(supabase, input, operatorEmail = '') {
+  const id = text(input.id, 50);
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(id)) throw new Error('Choose a valid request.');
+  const changes = { updated_at: new Date().toISOString() };
+  if (Object.hasOwn(input, 'status')) {
+    const status = text(input.status, 40);
+    if (!REQUEST_STATUSES.has(status)) throw new Error('Choose a valid request status.');
+    changes.status = status;
+  }
+  if (Object.hasOwn(input, 'resolution_note')) {
+    if (typeof input.resolution_note !== 'string') throw new Error('Enter a valid resolution note.');
+    const note = text(input.resolution_note, 2_001);
+    if (note.length > 2_000) throw new Error('Keep the resolution note under 2,000 characters.');
+    changes.resolution_note = note || null;
+  }
+  if (Object.keys(changes).length === 1) throw new Error('Choose a change to save.');
+  const { data, error } = await supabase.from('project_requests').update(changes).eq('id', id).select('*').single();
+  if (error) throw error;
+  return data;
+}
+
 function adminFailure(error) {
   if (error instanceof AdminOperationalError) {
     return { status: 503, code: error.code, message: error.publicMessage };
@@ -323,11 +358,15 @@ export default async function handler(req, res, dependencies = {}) {
     if (!admin) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
 
     if (req.method === 'GET') {
-      const submissions = await listAdminSubmissions(admin.supabase);
-      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions });
+      const [submissions, requests] = await Promise.all([listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase)]);
+      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests });
     }
 
-    const submission = await updateAdminSubmission(admin.supabase, body(req), admin.email);
+    const patchInput = body(req);
+    if (patchInput.action === 'update-request') {
+      return res.status(200).json({ ok: true, request: await updateAdminRequest(admin.supabase, patchInput, admin.email) });
+    }
+    const submission = await updateAdminSubmission(admin.supabase, patchInput, admin.email);
     return res.status(200).json({ ok: true, submission });
   } catch (error) {
     const expected = error instanceof SyntaxError || /^(Enter|Choose|Keep|Please|Unknown)/.test(error?.message || '');

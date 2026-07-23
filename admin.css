@@ -150,4 +150,22 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
   .workflow-actions { align-items: stretch; flex-direction: column-reverse; }
   .workflow-actions button { width: 100%; }
 }
+/* §6 slice B: brokered-request triage queue */
+.admin-requests-section { max-width: 1240px; margin: 0 auto; padding: 8px 26px 48px; }
+.admin-requests-section h2 { margin: 0; font-size: 20px; letter-spacing: -.03em; }
+.admin-requests-section h2 b { display: inline-grid; min-width: 22px; height: 22px; margin-left: 6px; place-items: center; padding: 0 6px; border-radius: 999px; background: var(--pale); color: var(--gold-deep); font-size: 12px; vertical-align: middle; }
+.admin-requests-section .admin-queue-heading p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.admin-requests { display: grid; gap: 14px; margin-top: 18px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
+.admin-requests-empty { color: var(--soft); font-size: 13px; }
+.admin-request-card { display: flex; flex-direction: column; gap: 8px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.admin-request-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.admin-request-head strong { font-size: 14px; }
+.admin-request-type { padding: 3px 9px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--gold-deep); font-size: 10px; font-weight: 650; white-space: nowrap; }
+.admin-request-card h3 { margin: 0; font-size: 13px; }
+.admin-request-details { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.admin-request-time { color: var(--soft); font-size: 10px; }
+.admin-request-controls { display: grid; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); }
+.admin-request-controls select, .admin-request-controls textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--line-strong); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; outline: 0; }
+.admin-request-controls select:focus, .admin-request-controls textarea:focus { border-color: var(--gold); outline: 3px solid rgba(180,123,32,.11); }
+.admin-request-save { justify-self: start; min-height: 34px; padding: 7px 16px; border: 1px solid var(--gold-deep); border-radius: 9px; background: linear-gradient(#d6a33f,#ab6c08); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; } }

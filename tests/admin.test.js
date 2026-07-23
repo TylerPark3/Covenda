@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminSubmissions, requestAdminLink, updateAdminSubmission } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminRequests, listAdminSubmissions, requestAdminLink, updateAdminRequest, updateAdminSubmission } from '../api/admin.js';
 
 function authClient({ user, authError = null } = {}) {
   return {
@@ -156,6 +156,18 @@ test('admin list is bounded and status update accepts only lifecycle states', as
   const updated = await updateAdminSubmission({ from() { return updateQuery; } }, { reference: 'stu-ab12cd34', status: 'reviewing' });
   assert.equal(updated.status, 'reviewing');
   await assert.rejects(() => updateAdminSubmission({ from() { throw new Error('must not query'); } }, { reference: 'STU-AB12CD34', status: 'deleted' }), /valid submission status/);
+});
+
+test('admin request triage validates and updates status + resolution, and lists degrade if unmigrated', async () => {
+  const REQ = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  const updateQuery = { update(v) { this._v = v; return this; }, eq() { return this; }, select() { return this; }, async single() { return { data: { id: REQ, status: 'in_packaging', resolution_note: 'packaging now' }, error: null }; } };
+  const updated = await updateAdminRequest({ from() { return updateQuery; } }, { id: REQ, status: 'in_packaging', resolution_note: 'packaging now' });
+  assert.equal(updated.status, 'in_packaging');
+  await assert.rejects(() => updateAdminRequest({ from() { throw new Error('must not query'); } }, { id: REQ, status: 'nope' }), /valid request status/);
+  await assert.rejects(() => updateAdminRequest({ from() { throw new Error('must not query'); } }, { id: 'not-a-uuid', status: 'closed' }), /valid request/);
+  // listAdminRequests returns [] when the table isn't there yet, so the inbox never breaks.
+  const rows = await listAdminRequests({ from() { return { select() { return this; }, order() { return this; }, async limit() { return { data: null, error: { message: 'relation "project_requests" does not exist' } }; } }; } });
+  assert.deepEqual(rows, []);
 });
 
 test('admin workflow update validates and records private follow-up context', async () => {
