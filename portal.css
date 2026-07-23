@@ -426,8 +426,9 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
   .message-conversation > header { padding-left:3px; padding-right:3px; }
   .message-thread { max-height:450px; padding:20px 3px; }
   .message-compose { padding-left:3px; padding-right:3px; }
-  .message-compose > div { align-items:flex-end; flex-direction:column; }
-  .message-compose .portal-primary { width:100%; }
+  /* Keep the compose controls a single row (Attach left, Send right); the staged-file chips
+     (.message-attach-pending) keep their own left-aligned wrap. */
+  .message-compose-bar { flex-wrap:wrap; }
   .member-dialog header,.dialog-body,.member-dialog footer { padding-left:20px; padding-right:20px; }
 }
 /* ---- Close-the-loop UI (accept → submit → review → verified) ---- */
