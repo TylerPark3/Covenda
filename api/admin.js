@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 import { supabaseConfiguration } from './submissions.js';
+import { sendPartnerDigests } from './digest.js';
 
 const ADMIN_STATUSES = new Set(['received', 'reviewing', 'needs_information', 'packet_proposed', 'approval_pending', 'approved', 'declined', 'archived']);
 const linkBuckets = new Map();
@@ -454,6 +455,12 @@ export default async function handler(req, res, dependencies = {}) {
       if (!operator) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
       if (input.action === 'create-batch') {
         return res.status(201).json({ ok: true, batch: await createBatch(operator.supabase, input, operator.email) });
+      }
+      if (input.action === 'partner-digests') {
+        // Operator-triggered. send:false is a dry-run preview; send:true only mails when Resend
+        // + COVENDA_DIGEST_ENABLED are configured (enforced inside sendPartnerDigests).
+        const digest = await sendPartnerDigests(operator.supabase, { env: process.env, send: input.send === true });
+        return res.status(200).json({ ok: true, digest });
       }
       return res.status(400).json({ ok: false, error: 'Unknown action.' });
     }

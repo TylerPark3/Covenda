@@ -296,6 +296,43 @@ $('#adminRefresh').addEventListener('click',()=>loadInbox({ announce:true }).cat
 $('#adminClearFilters').addEventListener('click',()=>{ activeType='all'; $('#adminTypeFilter').value='all'; $('#adminStatusFilter').value='all'; $('#adminSort').value='newest'; $('#adminSearch').value=''; $$('[data-admin-type]').forEach(button=>button.classList.toggle('is-active',button.dataset.adminType==='all')); renderRows(); });
 $$('[data-summary-status]').forEach(button=>button.addEventListener('click',()=>{ $('#adminStatusFilter').value=button.dataset.summaryStatus; renderRows(); $('#adminRows').closest('.admin-table-wrap').scrollIntoView({ behavior:'smooth', block:'start' }); }));
 $('#adminSignout').addEventListener('click',()=>{ sessionStorage.removeItem(TOKEN_KEY); selectedReference=''; submissions=[]; batches=[]; showLogin('Signed out of this browser.'); });
+// §9 partner digests: operator-triggered preview + send.
+function renderDigests(result){
+  const root=$('#adminDigests');if(!root)return;root.replaceChildren();
+  const rows=result?.results||[];
+  const send=$('#digestSendBtn');if(send)send.disabled=!result?.configured;
+  const status=$('#digestStatus');
+  if(status){
+    if(!rows.length)status.textContent='No partner cohorts to summarize yet.';
+    else if(result.sent)status.textContent=`Sent ${result.sent} of ${rows.length}.`;
+    else status.textContent=result.configured?`${rows.length} ready to send.`:`${rows.length} previewed · sending is off until Resend + COVENDA_DIGEST_ENABLED are set.`;
+  }
+  if(!rows.length){const p=document.createElement('p');p.className='admin-requests-empty';p.textContent='No referral partners with a cohort yet. Partners appear here after they endorse students.';root.append(p);return;}
+  for(const r of rows){
+    const card=document.createElement('article');card.className='admin-digest-card';
+    const head=document.createElement('div');head.className='admin-digest-head';
+    const who=document.createElement('strong');who.textContent=r.orgName||r.code;
+    const to=document.createElement('span');to.className='admin-digest-to';to.textContent=r.to||'no partner email';if(!r.to)to.classList.add('is-missing');
+    head.append(who,to);card.append(head);
+    const subject=document.createElement('p');subject.className='admin-digest-subject';subject.textContent=r.subject;card.append(subject);
+    const stats=document.createElement('div');stats.className='admin-digest-stats';
+    const c=r.cohort||{};const n=r.newThisPeriod||{};
+    stats.textContent=`${c.endorsedCount||0} endorsed · ${c.appliedCount||0} applied · ${c.verifiedCount||0} verified   —   this month: +${n.endorsed||0} / +${n.applied||0} / +${n.verified||0}`;
+    card.append(stats);
+    if(r.reason&&r.reason!=='dry-run'&&r.reason!=='sent'&&r.reason!=='ready'){const tag=document.createElement('span');tag.className='admin-digest-reason'+(r.sent?' is-sent':'');tag.textContent=r.reason;card.append(tag);}
+    if(r.sent){const tag=document.createElement('span');tag.className='admin-digest-reason is-sent';tag.textContent='sent';card.append(tag);}
+    root.append(card);
+  }
+}
+async function runDigests(send){
+  const status=$('#digestStatus');const pv=$('#digestPreviewBtn');const sd=$('#digestSendBtn');
+  pv.disabled=true;sd.disabled=true;if(status)status.textContent=send?'Sending…':'Building preview…';
+  try{const result=await adminRequest({method:'POST',body:JSON.stringify({action:'partner-digests',send})});renderDigests(result.digest);}
+  catch(error){if(status)status.textContent=error.message;}
+  finally{pv.disabled=false;}
+}
+$('#digestPreviewBtn')?.addEventListener('click',()=>runDigests(false));
+$('#digestSendBtn')?.addEventListener('click',()=>{if(confirm('Send the monthly digest to every partner with an email on file?'))runDigests(true);});
 $('#adminBatchForm')?.addEventListener('submit',async event=>{
   event.preventDefault(); const form=event.currentTarget; const button=$('button[type="submit"]',form); const message=$('#adminBatchFormMessage');
   button.disabled=true; const original=button.textContent; button.textContent='Creating…'; if (message) { message.textContent=''; message.classList.remove('is-error'); }

@@ -116,6 +116,15 @@
       </datalist>
       <div class="admin-batches" id="adminBatches"></div>
     </section>
+    <section class="admin-digest-section">
+      <div class="admin-queue-heading"><div><h2>Partner monthly digests</h2><p>A once-a-month email to each referral partner summarizing their own cohort (endorsed → applied → verified). Preview first — sending only works once Resend + <code>COVENDA_DIGEST_ENABLED</code> are set.</p></div></div>
+      <div class="admin-digest-actions">
+        <button type="button" class="portal-ghost" id="digestPreviewBtn">Preview digests</button>
+        <button type="button" id="digestSendBtn" disabled>Send all</button>
+        <span id="digestStatus" aria-live="polite"></span>
+      </div>
+      <div class="admin-digests" id="adminDigests"></div>
+    </section>
   </div>
 </body>
 </html>

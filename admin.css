@@ -209,4 +209,25 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .admin-batch-app-controls select { padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 9px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; }
 .admin-batch-app-controls select[data-status="accepted"] { border-color: rgba(36,117,58,.4); color: #24753a; }
 .admin-batch-app-controls select[data-status="declined"] { color: var(--soft); }
+/* §9 partner digest operator tools */
+.admin-digest-section { max-width: 1240px; margin: 0 auto; padding: 8px 26px 64px; }
+.admin-digest-section h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 20px; letter-spacing: -.03em; }
+.admin-digest-section .admin-queue-heading p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.admin-digest-section code { padding: 1px 5px; border-radius: 5px; background: var(--pale); font-size: 11px; }
+.admin-digest-actions { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+.admin-digest-actions button { min-height: 36px; padding: 8px 16px; border-radius: 9px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.admin-digest-actions #digestPreviewBtn { border: 1px solid var(--line-strong); background: #fff; color: var(--ink); }
+.admin-digest-actions #digestSendBtn { border: 1px solid var(--gold-deep); background: var(--gold); color: #fff; }
+.admin-digest-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.admin-digest-actions #digestStatus { color: var(--muted); font-size: 12px; }
+.admin-digests { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.admin-digest-card { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.admin-digest-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.admin-digest-head strong { font-size: 14px; }
+.admin-digest-to { color: var(--muted); font-size: 11px; }
+.admin-digest-to.is-missing { color: #b4231f; }
+.admin-digest-subject { margin: 8px 0 0; color: var(--ink); font-size: 12px; font-weight: 600; }
+.admin-digest-stats { margin-top: 8px; color: var(--muted); font-size: 11px; }
+.admin-digest-reason { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 999px; background: var(--pale); color: var(--soft); font-size: 10px; }
+.admin-digest-reason.is-sent { background: #f4faf5; color: var(--success); }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; } }
