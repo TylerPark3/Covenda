@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, creditBalance, declineApplication, fulfilPayout, loadMemberIntakes, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, creditBalance, declineApplication, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
@@ -317,6 +317,19 @@ test('applying stores skills, links, a referral and a snapshotted fit score, and
   assert.ok(captured.application.fit_score >= 65);
   assert.equal(captured.events[0].event_type, 'applied');
   assert.equal(captured.events[0].student_user_id, 'stu');
+});
+
+test('get-messages returns messages across the caller\'s owned and assigned projects since a timestamp', async () => {
+  let sinceUsed = null;
+  const supabase = { from(table) {
+    if (table === 'member_projects') return { select() { return this; }, eq(col) { return Promise.resolve({ data: col === 'owner_user_id' ? [{ id: 'p1' }] : [{ id: 'p2' }], error: null }); } };
+    if (table === 'project_messages') return { select() { return this; }, in() { return this; }, order() { return this; }, limit() { return this; }, gt(_col, val) { sinceUsed = val; return Promise.resolve({ data: [{ id: 'm1', project_id: 'p1', body: 'hi', created_at: '2026-07-22T10:00:00Z' }], error: null }); } };
+    throw new Error('unexpected table ' + table);
+  } };
+  const result = await loadNewMessages({ user: { id: 'u1' }, supabase }, { since: '2026-07-22T09:00:00Z' });
+  assert.equal(sinceUsed, '2026-07-22T09:00:00Z');
+  assert.equal(result.messages.length, 1);
+  assert.equal(result.messages[0].id, 'm1');
 });
 
 test('only the project owner can decline an applicant', async () => {

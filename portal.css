@@ -65,6 +65,8 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .member-nav nav svg,.member-signout svg { width:19px; height:19px; }
 .member-nav nav b,.member-nav nav i { margin-left:auto; font-size:8px; font-style:normal; font-weight:650; }
 .member-nav nav b { min-width:23px; padding:3px 6px; border-radius:99px; background:#f3f1ec; text-align:center; }
+.member-nav nav button.has-unread b { background:var(--gold); color:#fff; }
+.member-nav nav button.has-unread { color:var(--gold-deep); }
 .member-nav nav i { color:var(--soft); }
 .member-identity { display:flex; align-items:center; gap:10px; margin-top:auto; padding:14px 10px; border-top:1px solid var(--line); }
 .member-identity > span,.header-profile > span:first-child { display:grid; width:34px; height:34px; place-items:center; border-radius:50%; background:linear-gradient(145deg,#f3dfad,#b77917); color:#fff; font-size:12px; font-weight:700; }

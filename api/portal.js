@@ -620,6 +620,21 @@ export async function sendProjectMessage(member, input) {
   return checked(member.supabase.from('project_messages').insert(row).select('*').single(), null);
 }
 
+// §4c live messages: return messages across the caller's projects (owner or assigned) newer
+// than `since`. Lightweight enough to poll every ~9s; the client merges/dedupes by id.
+export async function loadNewMessages(member, input) {
+  const [owned, assigned] = await Promise.all([
+    checked(member.supabase.from('member_projects').select('id').eq('owner_user_id', member.user.id), []),
+    checked(member.supabase.from('member_projects').select('id').eq('assigned_student_user_id', member.user.id), []),
+  ]);
+  const projectIds = [...new Set([...owned, ...assigned].map(p => p.id))];
+  if (!projectIds.length) return { messages: [] };
+  let query = member.supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(200);
+  const since = cleanText(input.since, 40);
+  if (since && !Number.isNaN(new Date(since).getTime())) query = query.gt('created_at', since);
+  return { messages: await checked(query, []) };
+}
+
 const PROJECT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
 
 // Close-the-loop transitions. Every one re-reads the project and verifies the caller
@@ -810,6 +825,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
+    if (req.method === 'POST' && input.action === 'get-messages') return res.status(200).json({ ok: true, ...(await loadNewMessages(member, input)) });
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
     if (req.method === 'POST' && input.action === 'decline-application') return res.status(200).json({ ok: true, application: await declineApplication(member, input) });
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });

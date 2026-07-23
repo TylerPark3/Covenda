@@ -94,7 +94,7 @@ function showMember() { $('#portalAuth').hidden=true; $('#portalLoading').hidden
 async function loadDashboard() {
   showLoading();
   try {
-    const dashboard=await portalRequest(); state.dashboard=dashboard; showMember(); renderDashboard();
+    const dashboard=await portalRequest(); state.dashboard=dashboard; showMember(); renderDashboard(); startMessagePolling();
     if (shouldOnboard(dashboard.profile)) startOnboarding();
     else handleCheckoutReturn();
   } catch(error) { if(session().accessToken) showAuth(error.message,true); }
@@ -115,6 +115,8 @@ function setView(view) {
   $$('[data-view]').forEach(button=>button.classList.toggle('is-active',button.closest('.member-nav')&&button.dataset.view===state.view));
   $('#memberBreadcrumb').textContent=`Workspace / ${titleCase(state.view)}`;
   $('.member-nav').classList.remove('is-open');
+  // Opening Messages clears the unread indicator and pulls the latest immediately.
+  if(state.view==='messages'){state.unreadMessages=0;paintUnread();pollMessages();}
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
@@ -457,6 +459,23 @@ async function runVerifyIdentity(button){
 }
 
 function selectMessageProject(projectId){state.messageProjectId=projectId;renderMessages();}
+// §4c live messages: poll for new messages across the caller's projects and merge them in.
+function latestMessageTimestamp(){let latest='';for(const m of (state.dashboard?.messages||[])){if(!latest||new Date(m.created_at)>new Date(latest))latest=m.created_at;}return latest;}
+let messagePollTimer=null;
+async function pollMessages(){
+  if(!session().accessToken||!state.dashboard)return;
+  let result;try{result=await portalRequest({method:'POST',body:JSON.stringify({action:'get-messages',since:latestMessageTimestamp()})});}catch{return;}
+  const incoming=result.messages||[];if(!incoming.length)return;
+  const seen=new Set((state.dashboard.messages||[]).map(m=>m.id));
+  const fresh=incoming.filter(m=>m.id&&!seen.has(m.id));
+  if(!fresh.length)return;
+  state.dashboard.messages.push(...fresh);
+  const fromOthers=fresh.filter(m=>m.author_user_id!==state.dashboard.user.id);
+  if(state.view==='messages')renderMessages();
+  if(fromOthers.length&&state.view!=='messages'){state.unreadMessages=(state.unreadMessages||0)+fromOthers.length;paintUnread();}
+}
+function paintUnread(){const btn=$('.member-nav [data-view="messages"]');if(btn)btn.classList.toggle('has-unread',(state.unreadMessages||0)>0);}
+function startMessagePolling(){if(messagePollTimer)return;messagePollTimer=setInterval(()=>{if(document.visibilityState==='visible')pollMessages();},9000);}
 
 function renderMessages(){
   const d=state.dashboard;const projects=d.projects||[];const messages=d.messages||[];const projectRoot=$('#messageProjects');const thread=$('#messageThread');const form=$('#messageForm');
@@ -464,11 +483,15 @@ function renderMessages(){
   if(!projects.length){state.messageProjectId=null;$('#messageProjectTitle').textContent='No project conversations yet';$('#messageProjectStatus').textContent='';form.hidden=true;emptyList(thread,'p-message','Messages begin with a project.','Once a project is posted or assigned, its private thread will appear here.');return;}
   if(!projects.some(project=>project.id===state.messageProjectId))state.messageProjectId=projects[0].id;
   for(const project of projects){const projectMessages=messages.filter(message=>message.project_id===project.id);const button=document.createElement('button');button.type='button';button.className=project.id===state.messageProjectId?'is-active':'';const title=document.createElement('strong');title.textContent=project.title;const meta=document.createElement('span');meta.textContent=`${statusLabels[project.status]||titleCase(project.status)} · ${projectMessages.length} ${projectMessages.length===1?'message':'messages'}`;button.append(title,meta);button.addEventListener('click',()=>selectMessageProject(project.id));projectRoot.append(button);}
-  const project=projects.find(item=>item.id===state.messageProjectId);$('#messageProjectTitle').textContent=project.title;$('#messageProjectStatus').textContent=statusLabels[project.status]||titleCase(project.status);form.hidden=false;thread.replaceChildren();
+  const project=projects.find(item=>item.id===state.messageProjectId);$('#messageProjectTitle').textContent=project.title;$('#messageProjectStatus').textContent=statusLabels[project.status]||titleCase(project.status);form.hidden=false;
+  // Only auto-scroll to the newest message if the reader was already at the bottom (or just
+  // switched threads), so a poll can't yank them away from something they're reading.
+  const wasAtBottom=thread.scrollHeight-thread.scrollTop-thread.clientHeight<40;const switched=state._lastMsgProject!==state.messageProjectId;state._lastMsgProject=state.messageProjectId;
+  thread.replaceChildren();
   const projectMessages=messages.filter(message=>message.project_id===project.id);
   if(!projectMessages.length){emptyList(thread,'p-message','Start the project thread.','Share a scope question, milestone, or review note. It will remain attached to this project.');return;}
   for(const message of projectMessages){const own=message.author_user_id===d.user.id;const article=document.createElement('article');article.className=`message-bubble${own?' is-own':''}`;const author=document.createElement('strong');author.textContent=own?'You':'Project participant';const body=document.createElement('p');body.textContent=message.body;const time=document.createElement('time');time.dateTime=message.created_at;time.textContent=new Date(message.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});article.append(author,body,time);thread.append(article);}
-  thread.scrollTop=thread.scrollHeight;
+  if(wasAtBottom||switched)thread.scrollTop=thread.scrollHeight;
 }
 
 // §3 discovery: tabs (best match / all open / saved), a filter rail, fit-scored cards, and a
@@ -840,7 +863,9 @@ $('#applyForm').addEventListener('submit',async event=>{event.preventDefault();c
 
 $('#submitWorkForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#submitWorkMessage','Submitting your work…');const notes=form.elements.workNotes.value.trim();const summary=[form.elements.workSummary.value.trim(),notes&&`\n\nNotes for the reviewer: ${notes}`].filter(Boolean).join('');const links=form.elements.workLinks.value.split(/\n/).map(link=>link.trim()).filter(Boolean);try{await portalRequest({method:'POST',body:JSON.stringify({action:'submit-deliverable',projectId:form.elements.projectId.value,deliverable:summary,deliverableLinks:links})});$('#submitWorkDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#submitWorkMessage',error.message,true);}finally{button.disabled=false;}});
 $$('#reviewForm [data-decision]').forEach(button=>button.addEventListener('click',async()=>{const form=$('#reviewForm');const decision=button.dataset.decision;const note=form.elements.note.value.trim();if(decision==='revise'&&!note){setDialogMessage('#reviewMessage','Add a note so the student knows what to revise.',true);return;}const buttons=$$('#reviewForm [data-decision]');buttons.forEach(b=>b.disabled=true);setDialogMessage('#reviewMessage',decision==='accept'?'Accepting the deliverable…':'Sending the change request…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'review-deliverable',projectId:form.elements.projectId.value,decision,note})});$('#reviewDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#reviewMessage',error.message,true);}finally{buttons.forEach(b=>b.disabled=false);}}));
-$('#messageForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const status=$('#messageFormStatus');button.disabled=true;status.textContent='Sending…';status.classList.remove('is-error');try{const result=await portalRequest({method:'POST',body:JSON.stringify({action:'send-message',projectId:state.messageProjectId,message:form.elements.message.value})});state.dashboard.messages.push(result.message);form.reset();status.textContent='Sent securely.';renderMessages();}catch(error){status.textContent=error.message;status.classList.add('is-error');}finally{button.disabled=false;}});
+$('#messageForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const status=$('#messageFormStatus');button.disabled=true;status.textContent='Sending…';status.classList.remove('is-error');try{const result=await portalRequest({method:'POST',body:JSON.stringify({action:'send-message',projectId:state.messageProjectId,message:form.elements.message.value})});state.dashboard.messages.push(result.message);form.reset();status.textContent='Sent securely.';renderMessages();$('#messageThread').scrollTop=$('#messageThread').scrollHeight;}catch(error){status.textContent=error.message;status.classList.add('is-error');}finally{button.disabled=false;}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pollMessages();});
+window.addEventListener('focus',pollMessages);
 
 $$('[data-view]').forEach(button=>button.addEventListener('click',()=>setView(button.dataset.view)));
 $$('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>{const dialog=button.closest('dialog');if(dialog.id==='profileDialog'&&$('#profileForm').dataset.required==='true')return;dialog.close();}));
