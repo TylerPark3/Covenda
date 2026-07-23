@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, creditBalance, fulfilPayout, loadMemberIntakes, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, creditBalance, declineApplication, fulfilPayout, loadMemberIntakes, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
@@ -297,6 +297,35 @@ test('fit score reflects vertical, work-type, skill and pay overlap, with explai
   assert.ok(strong.score >= 65); // at least vertical (35) + work type (30)
   assert.ok(strong.reasons.some(r => /skill/i.test(r)));
   assert.equal(weak.score, 0); // no overlap on any legitimate signal
+});
+
+test('applying stores skills, links, a referral and a snapshotted fit score, and logs a match event', async () => {
+  const captured = { application: null, events: [] };
+  const supabase = { from(table) {
+    if (table === 'member_profiles') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { role: 'student', verticals: ['Software & AI'], work_types: ['Research'], skills: ['Python'] }, error: null }; } };
+    if (table === 'member_projects') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { id: PROJECT_UUID, status: 'open', visibility: 'members', verticals: ['Software & AI'], work_types: ['Research'], desired_skills: 'Python, R', credits_listed: 200 }, error: null }; } };
+    if (table === 'project_applications') return { select() { return this; }, eq() { return this; }, insert(row) { captured.application = row; return this; }, async maybeSingle() { return { data: null, error: null }; }, async single() { return { data: { id: 'app-1', ...captured.application }, error: null }; } };
+    if (table === 'match_events') return { insert(row) { captured.events.push(row); return Promise.resolve({ error: null }); } };
+    throw new Error('unexpected table ' + table);
+  } };
+  await applyToProject({ user: { id: 'stu' }, supabase }, { projectId: PROJECT_UUID, note: 'keen', skills: ['Python', 'SQL'], demonstration: 'https://github.com/x', videoUrl: 'https://loom.com/y', referral: { name: 'Prof. Lee', code: 'REF-1' } });
+  assert.deepEqual(captured.application.skills, ['Python', 'SQL']);
+  assert.equal(captured.application.video_url, 'https://loom.com/y');
+  assert.equal(captured.application.demonstration, 'https://github.com/x');
+  assert.equal(captured.application.referral.name, 'Prof. Lee');
+  assert.equal(captured.application.referral.verified, false); // never claims an unverified referral is certified
+  assert.ok(captured.application.fit_score >= 65);
+  assert.equal(captured.events[0].event_type, 'applied');
+  assert.equal(captured.events[0].student_user_id, 'stu');
+});
+
+test('only the project owner can decline an applicant', async () => {
+  const supabase = { from(table) {
+    if (table === 'project_applications') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { id: 'app-1', project_id: PROJECT_UUID, student_user_id: 'stu', status: 'submitted', fit_score: 80, fit_reasons: [] }, error: null }; } };
+    if (table === 'member_projects') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { id: PROJECT_UUID, owner_user_id: 'other-owner' }, error: null }; } };
+    throw new Error('unexpected table ' + table);
+  } };
+  await assert.rejects(declineApplication({ user: { id: 'not-owner' }, supabase }, { applicationId: PROJECT_UUID }), /Only the project owner/);
 });
 
 test('a show-me-everything student matches every open vertical', () => {

@@ -217,9 +217,20 @@ export async function loadMemberDashboard(member, env = process.env) {
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
   const projectIds = projects.map(project => project.id);
-  const applications = projectIds.length
+  let applications = projectIds.length
     ? await checked(supabase.from('project_applications').select('*').in('project_id', projectIds).order('updated_at', { ascending: false }).limit(200))
     : [];
+  // Join each application to its applicant's profile so the owner can actually review
+  // candidates (the "can't see applicants" gap). Applying is consent to share the profile +
+  // materials with THIS project's owner; only students who applied here are exposed.
+  if (applications.length) {
+    const applicantIds = [...new Set(applications.map(a => a.student_user_id).filter(Boolean))];
+    const applicantProfiles = applicantIds.length
+      ? await checked(supabase.from('member_profiles').select('user_id,display_name,headline,school_name,graduation_year,skills,avatar_url,identity_verified').in('user_id', applicantIds))
+      : [];
+    const byId = new Map(applicantProfiles.map(p => [p.user_id, p]));
+    applications = applications.map(a => ({ ...a, applicant: byId.get(a.student_user_id) || null }));
+  }
   const studentDirectory = profile.role === 'company'
     ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
     : [];
@@ -526,20 +537,70 @@ export async function createMemberProject(member, input) {
   return project;
 }
 
+// Accept only an http(s) URL (for video/demonstration links); reject anything else so a
+// stored "link" can never be a javascript:/data: surprise.
+function cleanUrl(value) {
+  const s = cleanText(value, 500);
+  if (!s) return null;
+  try { const u = new URL(s); return (u.protocol === 'http:' || u.protocol === 'https:') ? u.toString() : null; } catch { return null; }
+}
+// A professor/partner referral. Stored pending; real verification against partner orgs +
+// REF- codes is a later step (§9), so this never fabricates an endorsed/certified status.
+function cleanReferral(value) {
+  const r = value && typeof value === 'object' ? value : {};
+  const name = cleanText(r.name, 160);
+  const code = cleanText(r.code, 60);
+  if (!name && !code) return {};
+  return { name: name || null, code: code || null, verified: false };
+}
+const pick = (obj, keys) => Object.fromEntries(keys.map(k => [k, obj?.[k]]));
+
+// Append a lifecycle event to match_events (§5). Best-effort — a logging failure must never
+// break the user's action. Runs with the service role (authorizeMember's client).
+export async function logMatchEvent(member, { projectId, studentUserId, eventType, fit, features }) {
+  try {
+    await member.supabase.from('match_events').insert({
+      project_id: projectId || null,
+      student_user_id: studentUserId || null,
+      event_type: eventType,
+      features: features || {},
+      fit_score: fit && Number.isFinite(fit.score) ? fit.score : null,
+      fit_reasons: (fit && fit.reasons) || [],
+    });
+  } catch (error) {
+    console.error(JSON.stringify({ level: 'error', message: 'match_event log failed', eventType, error: String(error?.message || error).slice(0, 200) }));
+  }
+}
+
 export async function applyToProject(member, input) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project.');
-  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  const profile = await checked(member.supabase.from('member_profiles').select('role,verticals,work_types,skills').eq('user_id', member.user.id).maybeSingle(), null);
   if (profile?.role !== 'student') throw new Error('Only student accounts can apply to projects.');
-  const project = await checked(member.supabase.from('member_projects').select('id,status,visibility').eq('id', projectId).maybeSingle(), null);
+  const project = await checked(member.supabase.from('member_projects').select('id,status,visibility,verticals,work_types,desired_skills,credits_listed,target_date').eq('id', projectId).maybeSingle(), null);
   if (!project || project.status !== 'open' || !['members', 'open'].includes(project.visibility)) throw new Error('This project is not accepting applications.');
   const existing = await checked(
     member.supabase.from('project_applications').select('*').eq('project_id', projectId).eq('student_user_id', member.user.id).maybeSingle(),
     null,
   );
   if (existing) return existing;
-  const row = { project_id: projectId, student_user_id: member.user.id, note: cleanText(input.note, 2_000) || null, updated_at: new Date().toISOString() };
-  return checked(member.supabase.from('project_applications').insert(row).select('*').single(), null);
+  // Snapshot the fit at apply time so the reviewer and the audit log agree.
+  const fit = computeFitScore(project, profile);
+  const row = {
+    project_id: projectId,
+    student_user_id: member.user.id,
+    note: cleanText(input.note, 2_000) || null,
+    video_url: cleanUrl(input.videoUrl),
+    skills: cleanList(input.skills, 20),
+    demonstration: cleanUrl(input.demonstration) || cleanText(input.demonstration, 500) || null,
+    referral: cleanReferral(input.referral),
+    fit_score: fit.score,
+    fit_reasons: fit.reasons,
+    updated_at: new Date().toISOString(),
+  };
+  const application = await checked(member.supabase.from('project_applications').insert(row).select('*').single(), null);
+  await logMatchEvent(member, { projectId, studentUserId: member.user.id, eventType: 'applied', fit, features: { project: pick(project, ['verticals', 'work_types', 'desired_skills', 'credits_listed']), student: pick(profile, ['verticals', 'work_types', 'skills']) } });
+  return application;
 }
 
 export async function sendProjectMessage(member, input) {
@@ -592,7 +653,27 @@ export async function acceptApplication(member, input) {
     member.supabase.from('project_applications').update({ status: 'declined', updated_at: now }).eq('project_id', project.id).neq('id', applicationId).neq('status', 'withdrawn').select('id'),
     [],
   );
+  await logMatchEvent(member, { projectId: project.id, studentUserId: application.student_user_id, eventType: 'accepted', fit: { score: accepted.fit_score, reasons: accepted.fit_reasons } });
   return accepted;
+}
+
+export async function declineApplication(member, input) {
+  const applicationId = cleanText(input.applicationId, 50);
+  if (!PROJECT_ID_PATTERN.test(applicationId)) throw new Error('Choose a valid application.');
+  const application = await checked(
+    member.supabase.from('project_applications').select('id,project_id,student_user_id,status,fit_score,fit_reasons').eq('id', applicationId).maybeSingle(),
+    null,
+  );
+  if (!application) throw new Error('This application is no longer available.');
+  const project = await checked(member.supabase.from('member_projects').select('id,owner_user_id').eq('id', application.project_id).maybeSingle(), null);
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can decline an applicant.');
+  if (!['submitted', 'reviewing', 'shortlisted'].includes(application.status)) throw new Error('This application has already been resolved.');
+  const declined = await checked(
+    member.supabase.from('project_applications').update({ status: 'declined', updated_at: new Date().toISOString() }).eq('id', applicationId).select('*').single(),
+    null,
+  );
+  await logMatchEvent(member, { projectId: project.id, studentUserId: application.student_user_id, eventType: 'declined', fit: { score: application.fit_score, reasons: application.fit_reasons } });
+  return declined;
 }
 
 export async function submitDeliverable(member, input) {
@@ -728,6 +809,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
+    if (req.method === 'POST' && input.action === 'decline-application') return res.status(200).json({ ok: true, application: await declineApplication(member, input) });
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });

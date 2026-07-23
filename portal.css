@@ -185,6 +185,22 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .detail-pay { font-size:13px; font-weight:700; color:var(--ink); }
 .dialog-scroll { display:flex; max-height:88vh; flex-direction:column; }
 @media (max-width:820px){ .discover-body { grid-template-columns:1fr; } .discover-filters { position:static; } }
+/* §4b applicant (candidate) cards */
+.applicant-card { padding:18px; margin-bottom:12px; border:1px solid var(--line); border-radius:14px; background:#fff; }
+.applicant-head { display:flex; align-items:center; gap:12px; }
+.applicant-avatar { flex:0 0 auto; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-strong); background:var(--gold-pale); background-size:cover; background-position:center; color:var(--gold-deep); font-size:16px; font-weight:700; }
+.applicant-id { flex:1; min-width:0; }
+.applicant-id h3 { margin:0; font-size:14px; letter-spacing:-.02em; }
+.applicant-id p { margin:2px 0 0; color:var(--muted); font-size:10px; line-height:1.5; }
+.applicant-card .activity-meta { margin:12px 0 0; }
+.applicant-skills { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.skill-pill.is-matched { border-color:rgba(36,117,58,.3); background:#f4faf5; color:var(--success); }
+.applicant-note { margin:12px 0 0; color:#31312e; font-size:11px; line-height:1.6; }
+.applicant-referral { margin:10px 0 0; color:var(--gold-deep); font-size:10px; font-weight:650; }
+.applicant-links { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; }
+.applicant-links a { color:var(--gold-deep); font-size:11px; font-weight:700; text-decoration:underline; }
+.applicant-actions { display:flex; gap:8px; margin-top:16px; }
+.applicant-actions .portal-primary,.applicant-actions .portal-secondary { min-height:34px; padding:7px 16px; font-size:11px; }
 .activity-grid { display:grid; max-width:1240px; margin:auto; gap:48px; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .activity-section { min-width:0; }
 .activity-section .section-heading > span { color:var(--soft); font-size:9px; }
