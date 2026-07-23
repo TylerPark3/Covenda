@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 
-import { authorizeMember, CREDIT_BUNDLES } from './portal.js';
+import { authorizeMember, creditPriceCents } from './portal.js';
 
 // Money in: a company/university buys a credit bundle. Stripe Checkout hosts the card
 // form, so Covenda never touches card data. Credits are NOT granted here — they are
@@ -21,9 +21,8 @@ function baseUrl(req) {
 // Build (but do not send) the Checkout session. Injectable stripe client keeps it testable.
 export async function createCheckoutSession({ member, credits, origin, env = process.env, stripe }) {
   const amount = Math.round(Number(credits) || 0);
-  if (!CREDIT_BUNDLES.has(amount)) throw new Error('Choose one of the available credit bundles.');
+  const unitAmountCents = creditPriceCents(amount); // throws (user-facing) if out of range
   if (!env.STRIPE_SECRET_KEY) throw new StripeNotConfiguredError();
-  const priceUsd = CREDIT_BUNDLES.get(amount);
   // Trim the key: a stray space or newline pasted into the env var makes an invalid HTTP
   // auth header, which Stripe's SDK surfaces as a confusing "connection" error, not "bad key".
   const client = stripe || new Stripe(env.STRIPE_SECRET_KEY.trim());
@@ -41,7 +40,7 @@ export async function createCheckoutSession({ member, credits, origin, env = pro
       quantity: 1,
       price_data: {
         currency: 'usd',
-        unit_amount: priceUsd * 100,
+        unit_amount: unitAmountCents,
         product_data: { name: `${amount.toLocaleString()} Covenda credits` },
       },
     }],

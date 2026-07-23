@@ -289,9 +289,27 @@ export const REACH_FEE_TARGETED = 25;
 // with the code default as the fallback. Exposed to the client via the dashboard payload so
 // the cost the buyer sees can never drift from what the server charges.
 export const PLATFORM_FEE_RATE = (() => { const r = Number(process.env.COVENDA_PLATFORM_FEE_RATE); return Number.isFinite(r) && r >= 0 && r <= 1 ? r : 0.10; })();
-// Payments are stubbed in v1: bundles record what the company *would* pay, and the
-// discount lives in the price, not in extra credits (1 credit stays $1 of value).
-export const CREDIT_BUNDLES = new Map([[100, 100], [500, 475], [1000, 900]]);
+// Credits are bought in any amount the buyer chooses (min/max bounded). 1 credit = $1 of value;
+// the volume discount lives in the price, never in extra credits. Tiers match the old bundles:
+// under 500 = full price, 500+ = 5% off, 1000+ = 10% off. One source of truth for the UI, the
+// checkout, the webhook, and the tests.
+export const CREDIT_MIN = 50;
+export const CREDIT_MAX = 100_000;
+export function creditUnitRate(credits) {
+  const n = Number(credits) || 0;
+  if (n >= 1000) return 0.90;
+  if (n >= 500) return 0.95;
+  return 1.00;
+}
+// Price in whole cents for a given credit count. Throws (user-facing) if out of range so the
+// checkout/webhook/grant all reject the same way and never charge an unbounded amount.
+export function creditPriceCents(credits) {
+  const n = Math.round(Number(credits) || 0);
+  if (!Number.isFinite(n) || n < CREDIT_MIN || n > CREDIT_MAX) {
+    throw new Error(`Choose between ${CREDIT_MIN} and ${CREDIT_MAX.toLocaleString()} credits.`);
+  }
+  return Math.round(n * creditUnitRate(n) * 100);
+}
 
 // Pure cost model — the UI, the server, and the tests all read from this one function.
 export function projectCreditCost(creditsListed, targeting) {
@@ -325,8 +343,7 @@ export async function buyCredits(member, input, env = process.env) {
   const enabled = env.COVENDA_CREDIT_GRANTS_ENABLED === 'true' || operatorEmails(env).includes(member.user.email || '');
   if (!enabled) throw new Error('This deployment does not have credit purchases enabled yet.');
   const bundle = Math.round(Number(input.credits) || 0);
-  if (!CREDIT_BUNDLES.has(bundle)) throw new Error('Choose one of the available credit bundles.');
-  const priceUsd = CREDIT_BUNDLES.get(bundle);
+  const priceUsd = creditPriceCents(bundle) / 100;
   await checked(
     member.supabase.from('credit_ledger').insert({
       user_id: member.user.id,

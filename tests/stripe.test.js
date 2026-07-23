@@ -28,10 +28,22 @@ test('checkout charges the bundle price in cents and stamps identity in metadata
   assert.equal(args.metadata.credits, '500');
 });
 
-test('checkout rejects an off-menu credit amount', async () => {
+test('checkout allows any in-range amount and applies the volume tier', async () => {
+  const stripe = fakeStripe();
+  // 750 credits: >=500 so 5% off -> $712.50 -> 71250 cents.
+  await createCheckoutSession({ member, credits: 750, origin: 'https://covenda.app', env: { STRIPE_SECRET_KEY: 'sk_test' }, stripe });
+  assert.equal(stripe.calls[0].line_items[0].price_data.unit_amount, 71250);
+  assert.equal(stripe.calls[0].metadata.credits, '750');
+});
+
+test('checkout rejects an out-of-range credit amount', async () => {
   await assert.rejects(
-    () => createCheckoutSession({ member, credits: 750, origin: 'https://covenda.app', env: { STRIPE_SECRET_KEY: 'sk_test' }, stripe: fakeStripe() }),
-    /Choose one of the available credit bundles/,
+    () => createCheckoutSession({ member, credits: 10, origin: 'https://covenda.app', env: { STRIPE_SECRET_KEY: 'sk_test' }, stripe: fakeStripe() }),
+    /Choose between 50 and/,
+  );
+  await assert.rejects(
+    () => createCheckoutSession({ member, credits: 250000, origin: 'https://covenda.app', env: { STRIPE_SECRET_KEY: 'sk_test' }, stripe: fakeStripe() }),
+    /Choose between 50 and/,
   );
 });
 
@@ -82,7 +94,8 @@ test('a duplicate session is treated as success, not an error', async () => {
 
 test('an unrecognised amount grants nothing', async () => {
   const supabase = fakeSupabase();
-  const result = await recordStripePurchase({ id: 'cs_test_bad', metadata: { userId: 'user-9', credits: '333' } }, supabase);
+  // Below the minimum → out of range → grant nothing.
+  const result = await recordStripePurchase({ id: 'cs_test_bad', metadata: { userId: 'user-9', credits: '10' } }, supabase);
   assert.deepEqual(result, { ok: false, reason: 'unrecognised-session' });
   assert.equal(supabase.inserts.length, 0);
 });

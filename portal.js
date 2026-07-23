@@ -319,7 +319,11 @@ function renderActivity(){
 // one changes, change both.
 const REACH_FEE_TARGETED=25;
 const PLATFORM_FEE_RATE=0.10;
-const CREDIT_BUNDLES=[[100,100],[500,475],[1000,900]];
+// Mirror of the server pricing (api/portal.js creditPriceCents): 1 credit = $1, 5% off at 500,
+// 10% off at 1000. The server re-validates + re-prices, so this is only for the live display.
+const CREDIT_MIN=50,CREDIT_MAX=100000;
+function creditRate(n){return n>=1000?0.90:n>=500?0.95:1.00;}
+function creditPriceUsd(n){return Math.round(n*creditRate(n)*100)/100;}
 const ledgerLabels={purchase:'Purchase',reach_fee:'Reach fee',escrow_hold:'Escrow held',escrow_release:'Paid to student',platform_fee:'Platform fee',refund:'Refund',adjustment:'Adjustment',payout:'Payout',ai_brief:'AI brief',promo:'Welcome bonus'};
 function projectCreditCost(creditsListed,targeting){
   const listed=Math.max(0,Math.round(Number(creditsListed)||0));
@@ -415,17 +419,38 @@ function renderWallet(){
     : (held?`${held.toLocaleString()} credits held in escrow across active projects.`:'No credits held in escrow right now.');
   renderPayout();
   const bundles=$('#walletBundles');if(!bundles){renderWalletLedger();return;}
-  bundles.replaceChildren();
-  CREDIT_BUNDLES.forEach(([credits,price])=>{
-    const b=document.createElement('button');b.type='button';b.className='wallet-bundle';
-    const c=document.createElement('strong');c.textContent=`${credits.toLocaleString()} credits`;
-    const p=document.createElement('span');p.textContent=`$${price.toLocaleString()}`;
-    b.append(c,p);
-    if(price<credits){const save=document.createElement('em');save.textContent=`Save ${Math.round((1-price/credits)*100)}%`;b.append(save);}
-    b.addEventListener('click',()=>runBuyCredits(credits,b));
-    bundles.append(b);
-  });
+  renderCreditPicker(bundles);
   renderWalletLedger();
+}
+// Choose-your-own credit amount with live, volume-discounted pricing.
+function renderCreditPicker(root){
+  root.replaceChildren();
+  const wrap=document.createElement('div');wrap.className='credit-picker';
+  const label=document.createElement('label');label.className='credit-picker-label';label.setAttribute('for','creditAmountInput');label.textContent='How many credits?';
+  const inputRow=document.createElement('div');inputRow.className='credit-input-row';
+  const input=document.createElement('input');input.type='number';input.id='creditAmountInput';input.min=String(CREDIT_MIN);input.max=String(CREDIT_MAX);input.step='50';input.value='500';input.setAttribute('inputmode','numeric');
+  const unit=document.createElement('span');unit.className='credit-input-unit';unit.textContent='credits';
+  inputRow.append(input,unit);
+  const chips=document.createElement('div');chips.className='credit-chips';
+  [250,500,1000,2500].forEach(v=>{const c=document.createElement('button');c.type='button';c.className='credit-chip';c.textContent=v.toLocaleString();c.addEventListener('click',()=>{input.value=String(v);update();input.focus();});chips.append(c);});
+  const price=document.createElement('div');price.className='credit-price';
+  const buy=document.createElement('button');buy.type='button';buy.className='wallet-buy-btn';buy.textContent='Buy credits';
+  const hint=document.createElement('p');hint.className='credit-hint';hint.textContent='1 credit = $1. 500+ save 5% · 1,000+ save 10%.';
+  const currentAmount=()=>Math.round(Number(input.value)||0);
+  function update(){
+    const n=currentAmount();
+    price.replaceChildren();
+    if(!Number.isFinite(n)||n<CREDIT_MIN||n>CREDIT_MAX){const warn=document.createElement('span');warn.className='credit-price-warn';warn.textContent=`Enter ${CREDIT_MIN.toLocaleString()}–${CREDIT_MAX.toLocaleString()} credits.`;price.append(warn);buy.disabled=true;return;}
+    buy.disabled=false;
+    const usd=creditPriceUsd(n);const save=Math.round((1-creditRate(n))*100);
+    const amt=document.createElement('strong');amt.textContent=`$${usd.toLocaleString(undefined,{minimumFractionDigits:usd%1?2:0,maximumFractionDigits:2})}`;price.append(amt);
+    if(save>0){const em=document.createElement('em');em.textContent=`Save ${save}%`;price.append(em);}
+  }
+  input.addEventListener('input',update);
+  buy.addEventListener('click',()=>{const n=currentAmount();if(!Number.isFinite(n)||n<CREDIT_MIN||n>CREDIT_MAX){setDialogMessage('#walletMessage',`Choose between ${CREDIT_MIN} and ${CREDIT_MAX.toLocaleString()} credits.`,true);return;}runBuyCredits(n,buy);});
+  wrap.append(label,inputRow,chips,price,buy,hint);
+  root.append(wrap);
+  update();
 }
 function renderWalletLedger(){
   const rows=state.dashboard.creditLedger||[];const root=$('#walletLedger');if(!root)return;

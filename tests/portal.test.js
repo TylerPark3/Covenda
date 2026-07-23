@@ -177,7 +177,7 @@ test('credits cannot be minted unless the deployment enables it', async () => {
   const supabase = { from() { return { insert() { return this; }, select() { return this; }, async single() { return { data: { id: 'l1' }, error: null }; }, eq() { return Promise.resolve({ data: [{ credits: 100 }], error: null }); } }; } };
   const member = { user: { id: 'company-1', email: 'ops@acme.com' }, supabase };
   await assert.rejects(buyCredits(member, { credits: 100 }, {}), /does not have credit purchases enabled/);
-  await assert.rejects(buyCredits(member, { credits: 7 }, { COVENDA_CREDIT_GRANTS_ENABLED: 'true' }), /Choose one of the available/);
+  await assert.rejects(buyCredits(member, { credits: 7 }, { COVENDA_CREDIT_GRANTS_ENABLED: 'true' }), /Choose between 50 and/);
   const result = await buyCredits(member, { credits: 100 }, { COVENDA_CREDIT_GRANTS_ENABLED: 'true' });
   assert.equal(result.balance, 100);
   // an operator on the allowlist can grant without the flag

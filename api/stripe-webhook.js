@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-import { CREDIT_BUNDLES } from './portal.js';
+import { creditPriceCents } from './portal.js';
 import { supabaseConfiguration } from './submissions.js';
 
 // Stripe -> Covenda. This is the ONLY place a real credit purchase is granted, so it is
@@ -64,8 +64,11 @@ export async function recordIdentityVerification(session, supabase, { stripe } =
 export async function recordStripePurchase(session, supabase) {
   const userId = session?.metadata?.userId;
   const credits = Math.round(Number(session?.metadata?.credits) || 0);
-  if (!userId || !CREDIT_BUNDLES.has(credits)) return { ok: false, reason: 'unrecognised-session' };
-  const priceUsd = CREDIT_BUNDLES.get(credits);
+  // Re-derive the price from our own pricing function (never trust the request). An out-of-range
+  // amount throws → treat as an unrecognised session and grant nothing.
+  let priceUsd;
+  try { priceUsd = creditPriceCents(credits) / 100; } catch { priceUsd = null; }
+  if (!userId || priceUsd == null) return { ok: false, reason: 'unrecognised-session' };
   const { error } = await supabase.from('credit_ledger').insert({
     user_id: userId,
     entry_type: 'purchase',
