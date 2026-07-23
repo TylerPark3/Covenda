@@ -897,9 +897,19 @@
         </div>
       </section>
       <section class="form-step" data-student-step="2">
-        <fieldset><legend>What kind of work do you want to build proof in?</legend><div class="check-grid" id="studentWorkChoices"><label><input type="checkbox" name="workType" value="Research">Research</label><label><input type="checkbox" name="workType" value="Data & spreadsheets">Data &amp; spreadsheets</label><label><input type="checkbox" name="workType" value="Operations">Operations</label><label><input type="checkbox" name="workType" value="QA & testing">QA &amp; testing</label><label><input type="checkbox" name="workType" value="Writing & documentation">Writing &amp; documentation</label></div></fieldset>
+        <fieldset class="industry-fieldset">
+          <legend>Which industries do you want to build proof in? <span>Pick one or more</span></legend>
+          <div class="industry-grid" id="studentIndustryGrid">
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Accounting & finance"><span>Accounting &amp; finance</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Software & AI"><span>Software &amp; AI</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Healthcare operations"><span>Healthcare operations</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Consumer & retail"><span>Consumer &amp; retail</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Professional services"><span>Professional services</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Not sure yet — show me everything"><span>Not sure yet — show me everything</span></label>
+          </div>
+          <p class="industry-specializations" id="studentSpecializations" aria-live="polite"></p>
+        </fieldset>
         <div class="field-grid">
-          <label>Industries you want to learn<select name="studentIndustry" required><option value="">Choose one</option><option>Small business operations</option><option>Accounting and finance operations</option><option>Software and AI</option><option>Healthcare operations</option><option>Consumer and services</option><option>Open to any safe project</option></select></label>
           <label>Your strongest relevant skill<input name="studentSkill" placeholder="Research, spreadsheets, QA…" required></label>
           <label>Honest current level<select name="studentSkillLevel" required><option value="">Choose one</option><option>Learning the basics</option><option>Comfortable with guidance</option><option>Can work independently</option><option>Advanced, with work examples</option></select></label>
           <label>Preferred work style<select name="studentWorkStyle" required><option value="">Choose one</option><option>Independent with clear checkpoints</option><option>Collaborative with regular feedback</option><option>Either, if expectations are clear</option></select></label>

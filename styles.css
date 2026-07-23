@@ -1337,6 +1337,17 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12px; font-weight: 650;
 }
 .check-grid input, .consent-row input { flex: 0 0 auto; width: 16px; min-height: 16px; height: 16px; margin: 1px 0 0; accent-color: var(--gold); }
 .check-grid label.is-blocked, label:has(> [name="companyAccess"][aria-invalid="true"]) { border-color: rgba(155,46,34,.48); background: rgba(155,46,34,.045); color: #84291f; }
+/* §8 industry-first cards (multi-select) + derived specialization line */
+.industry-fieldset { border: 0; margin: 0 0 18px; padding: 0; }
+.industry-fieldset legend { padding: 0; margin-bottom: 12px; font-size: 13px; font-weight: 650; color: #31312e; }
+.industry-fieldset legend span { color: var(--soft); font-weight: 500; }
+.industry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.industry-card { display: flex; align-items: center; gap: 10px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 11px; background: #fff; font-size: 12px; font-weight: 550; cursor: pointer; transition: border-color .12s ease, background .12s ease; }
+.industry-card:hover { border-color: var(--gold); }
+.industry-card input { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--gold); }
+.industry-card:has(input:checked) { border-color: var(--gold); background: var(--gold-pale); }
+.industry-specializations { min-height: 16px; margin: 12px 0 0; color: var(--gold-deep); font-size: 11px; line-height: 1.55; }
+@media (max-width: 620px) { .industry-grid { grid-template-columns: 1fr; } }
 .boundary-guidance {
   display: flex;
   align-items: flex-start;

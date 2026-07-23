@@ -503,8 +503,8 @@ function validateStep(form) {
     }
   }
   if (form.id === 'studentForm' && step.dataset.studentStep === '2') {
-    if (!$$('input[name="workType"]:checked', form).length) {
-      message.textContent = 'Choose at least one type of work.';
+    if (!$$('input[name="studentIndustry"]:checked', form).length) {
+      message.textContent = 'Choose at least one industry.';
       return false;
     }
   }
@@ -701,9 +701,9 @@ function renderReview(form) {
   if (form.id === 'studentForm') {
     renderDefinitionList($('#studentReviewSummary'), [
       ['Student', [formValue(form, 'studentName'), formValue(form, 'studentSchool')].filter(Boolean).join(' · ')],
-      ['Work paths', checkedValues(form, 'workType').join(', ')],
+      ['Industries', studentIndustries(form).join(', ')],
+      ['Work paths', derivedWorkTypes(form).join(', ')],
       ['Strongest skill', [formValue(form, 'studentSkill'), formValue(form, 'studentSkillLevel')].filter(Boolean).join(' · ')],
-      ['Industry interest', formValue(form, 'studentIndustry')],
       ['Availability', [formValue(form, 'studentAvailability'), formValue(form, 'studentHours'), formValue(form, 'studentDuration')].filter(Boolean).join(' · ')],
       ['Project terms', [formValue(form, 'studentCompensation'), formValue(form, 'studentPriority')].filter(Boolean).join(' · ')],
       ['Video intro', videoIntroReviewLabel(formValue(form, 'studentVideoIntro'))],
@@ -1454,8 +1454,60 @@ function renderLocalSubmissionState() {
   renderProofRecord();
 }
 
+// §8 industry-first cascading. Canonical verticals (matching the portal/matching taxonomy) →
+// specializations, each mapped to a work type so work_types stay DERIVABLE for matching even
+// though students no longer pick them directly. One editable source of truth.
+const INDUSTRY_TREE = {
+  'Accounting & finance': [
+    { label: 'Month-end close & reconciliation', workType: 'Data & spreadsheets' },
+    { label: 'Financial modeling & analysis', workType: 'Data & spreadsheets' },
+    { label: 'Bookkeeping & AP/AR cleanup', workType: 'Operations' },
+    { label: 'Market & pricing research', workType: 'Research' },
+  ],
+  'Software & AI': [
+    { label: 'Product & market research', workType: 'Research' },
+    { label: 'QA & test cases', workType: 'QA & testing' },
+    { label: 'Data cleanup & analysis', workType: 'Data & spreadsheets' },
+    { label: 'Docs & knowledge base', workType: 'Writing & documentation' },
+  ],
+  'Healthcare operations': [
+    { label: 'Process & workflow mapping', workType: 'Operations' },
+    { label: 'Research & literature synthesis', workType: 'Research' },
+    { label: 'SOPs & documentation', workType: 'Writing & documentation' },
+  ],
+  'Consumer & retail': [
+    { label: 'Customer & market research', workType: 'Research' },
+    { label: 'Operations & CRM hygiene', workType: 'Operations' },
+    { label: 'Reporting & data cleanup', workType: 'Data & spreadsheets' },
+  ],
+  'Professional services': [
+    { label: 'Research & briefs', workType: 'Research' },
+    { label: 'Process documentation', workType: 'Writing & documentation' },
+    { label: 'Operations support', workType: 'Operations' },
+  ],
+  'Not sure yet — show me everything': [
+    { label: 'Open to any safe project', workType: 'Research' },
+  ],
+};
+function studentIndustries(form) { return checkedValues(form, 'studentIndustry'); }
+function derivedWorkTypes(form) {
+  const set = new Set();
+  for (const industry of studentIndustries(form)) for (const spec of (INDUSTRY_TREE[industry] || [])) set.add(spec.workType);
+  return [...set];
+}
+// Show, derived from the picked industries, the concrete work a student would end up on — the
+// "cascade" without a second required input, so drafts stay simple to restore.
+function renderStudentSpecializations(form) {
+  const el = $('#studentSpecializations', form) || $('#studentSpecializations');
+  if (!el) return;
+  const specs = [];
+  for (const industry of studentIndustries(form)) for (const spec of (INDUSTRY_TREE[industry] || [])) if (!specs.includes(spec.label)) specs.push(spec.label);
+  el.textContent = specs.length ? `We’ll surface projects like: ${specs.slice(0, 6).join(' · ')}` : '';
+}
+
 function studentPayload(form) {
-  const workTypes = checkedValues(form, 'workType');
+  const industries = studentIndustries(form);
+  const workTypes = derivedWorkTypes(form);
   return {
     type: 'student_interest',
     startedAt: Number(form.dataset.startedAt),
@@ -1470,10 +1522,10 @@ function studentPayload(form) {
     graduationYear: Number(formValue(form, 'studentGraduation')),
     major: formValue(form, 'studentMajor'),
     timezone: formValue(form, 'studentTimezone'),
-    interest: workTypes.join(', '),
+    interest: (industries.length ? industries : workTypes).join(', '),
     interests: {
       workTypes,
-      industries: [formValue(form, 'studentIndustry')],
+      industries,
       workStyle: formValue(form, 'studentWorkStyle'),
       ambiguityComfort: formValue(form, 'studentAmbiguity'),
       avoid: '',
@@ -1558,8 +1610,13 @@ const companyDialog = $('#companyDialog');
 initSteppedForm(studentForm);
 initSteppedForm(companyForm);
 
+// §8: reflect the picked industries as a derived specialization line, and keep it in sync.
+studentForm.addEventListener('change', event => { if (event.target && event.target.name === 'studentIndustry') renderStudentSpecializations(studentForm); });
+renderStudentSpecializations(studentForm);
+
 for (const form of [studentForm, companyForm]) {
   restoreDraft(form);
+  if (form === studentForm) renderStudentSpecializations(form);
   form.addEventListener('input', () => saveDraft(form));
   form.addEventListener('change', () => saveDraft(form));
   $('[data-clear-draft]', form).addEventListener('click', () => {
