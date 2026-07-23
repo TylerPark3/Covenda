@@ -459,6 +459,23 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .intake-warn strong { display:block; font-size:12px; color:var(--danger); }
 .intake-warn li { font-size:11px; color:var(--muted); line-height:1.55; margin-top:4px; }
 .intake-warn p { margin:8px 0 0; font-size:11px; color:var(--muted); line-height:1.55; }
+/* §2 sectioned brief document — flat, editorial, nothing clipped */
+.brief-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:8px; }
+.brief-reset { padding:0; border:0; background:transparent; color:var(--gold-deep); font-size:10px; font-weight:700; cursor:pointer; }
+.brief-reset:hover { text-decoration:underline; }
+.brief-section { padding:14px 0; border-top:1px solid var(--line); }
+.brief-section:first-of-type { border-top:0; padding-top:0; }
+.brief-section-title { margin:0 0 8px; color:var(--gold-deep); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.brief-subtitle { margin:10px 0 4px; font-size:10px; font-weight:650; color:var(--soft); }
+.brief-text { margin:0; font-size:12px; color:#31312e; line-height:1.6; }
+.brief-textarea { width:100%; min-height:64px; padding:11px 13px; border:1px solid var(--line-strong); border-radius:11px; background:#fff; color:var(--ink); font:inherit; font-size:12px; line-height:1.6; resize:vertical; overflow:hidden; outline:0; }
+.brief-textarea:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(180,123,32,.1); }
+.brief-bullets { margin:0; padding-left:16px; }
+.brief-bullets li { font-size:11px; color:var(--muted); line-height:1.6; }
+.deliverable-card { padding:12px 14px; margin-top:8px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.deliverable-card strong { display:block; font-size:12px; color:var(--ink); }
+.deliverable-card p { margin:4px 0 0; font-size:11px; color:var(--muted); line-height:1.55; }
+.deliverable-ac span { color:var(--gold-deep); font-weight:650; }
 .intake-target { margin-bottom:16px; }
 .intake-label { margin:0 0 8px; font-size:11px; font-weight:650; color:#31312e; }
 .intake-label small { color:var(--soft); font-weight:500; margin-left:6px; }

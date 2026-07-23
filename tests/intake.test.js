@@ -75,6 +75,59 @@ test('generateProjectBrief requires an Anthropic key and a real description', as
   await assert.rejects(generateProjectBrief({ problemText: 'too short', env: { ANTHROPIC_API_KEY: 'sk' }, fetchImpl: async () => anthropicResponse({}) }), /Describe the problem/);
 });
 
+test('the intake request uses Structured Outputs (opus-4-8, schema, >=4000 tokens)', async () => {
+  let body;
+  await generateProjectBrief({
+    problemText: 'We need a competitor pricing scan from public sources.',
+    env: { ANTHROPIC_API_KEY: 'sk-test' },
+    fetchImpl: async (url, options) => { body = JSON.parse(options.body); return anthropicResponse({ title: 't', summary: 's', context: 'c', objective: 'o', scopeInclusions: [], scopeExclusions: [], candidateDeliverables: [], approvedInputs: [], suggestedVerticals: [], suggestedWorkTypes: [], estimatedEffort: '', safetyFlags: [], safeToPost: true }); },
+  });
+  assert.equal(body.model, 'claude-opus-4-8');
+  assert.ok(body.max_tokens >= 4000);
+  assert.equal(body.output_config.format.type, 'json_schema');
+  assert.equal(body.output_config.format.schema.additionalProperties, false);
+});
+
+test('normalizeBrief shapes the BCG fields including deliverable cards', () => {
+  const brief = normalizeBrief({
+    title: 'Competitor pricing scan', summary: 's', context: 'ctx', objective: 'obj',
+    scopeInclusions: ['a'], scopeExclusions: ['b'], approvedInputs: ['public pages'],
+    candidateDeliverables: [{ title: 'Comparison sheet', description: 'd', acceptanceCriteria: 'cited' }, 'bare string'],
+    suggestedVerticals: ['Software & AI'], suggestedWorkTypes: ['Research'], estimatedEffort: '~20 hours', safetyFlags: [], safeToPost: true,
+  });
+  assert.equal(brief.title, 'Competitor pricing scan');
+  assert.equal(brief.context, 'ctx');
+  assert.equal(brief.objective, 'obj');
+  assert.deepEqual(brief.scopeInclusions, ['a']);
+  assert.equal(brief.candidateDeliverables[0].acceptanceCriteria, 'cited');
+  assert.equal(brief.candidateDeliverables[1].title, 'bare string'); // a bare string coerces to a card
+  assert.equal(brief.estimatedEffort, '~20 hours');
+});
+
+test('a model refusal is surfaced as a safety message, not a crash', async () => {
+  await assert.rejects(
+    generateProjectBrief({ problemText: 'A description long enough to pass the gate', env: { ANTHROPIC_API_KEY: 'sk-test' }, fetchImpl: async () => ({ ok: true, async json() { return { stop_reason: 'refusal', content: [] }; } }) }),
+    /declined to draft/,
+  );
+});
+
+test('a 4xx rejection of Structured Outputs falls back to a plain call', async () => {
+  const bodies = [];
+  const brief = await generateProjectBrief({
+    problemText: 'We need a competitor pricing scan from public sources.',
+    env: { ANTHROPIC_API_KEY: 'sk-test' },
+    fetchImpl: async (url, options) => {
+      const body = JSON.parse(options.body); bodies.push(body);
+      if (body.output_config) return { ok: false, status: 400, async json() { return { error: 'unknown param' }; } };
+      return anthropicResponse({ title: 't', summary: 's', context: '', objective: '', scopeInclusions: [], scopeExclusions: [], candidateDeliverables: [], approvedInputs: [], suggestedVerticals: [], suggestedWorkTypes: [], estimatedEffort: '', safetyFlags: [], safeToPost: true });
+    },
+  });
+  assert.equal(bodies.length, 2);
+  assert.equal(bodies[0].output_config.format.type, 'json_schema');
+  assert.equal(bodies[1].output_config, undefined);
+  assert.equal(brief.safeToPost, true);
+});
+
 test('upload validation rejects unsupported types and oversized files', () => {
   assert.equal(validateUpload('application/x-msdownload', 100).ok, false);
   assert.equal(validateUpload('application/pdf', 20 * 1024 * 1024).status, 413);

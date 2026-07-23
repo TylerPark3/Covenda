@@ -8,32 +8,58 @@ import { authorizeMember, VERTICALS, WORK_TYPES } from './portal.js';
 // never approves anything; the founder consult finalizes scope. If the work crosses
 // Covenda's safety boundary the brief sets safeToPost=false and the portal blocks it.
 
-const MODEL = 'claude-sonnet-5';
+const MODEL = 'claude-opus-4-8';
+
+// Structured Outputs schema: the model is constrained to return exactly this shape, so we no
+// longer parse loose text / recover braces. additionalProperties:false + every field required
+// standardizes every project document. Taxonomy fields are enum-locked to the student-matching
+// strings. Deliverables are titled cards with acceptance criteria (BCG-style, terse).
+const BRIEF_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['title', 'summary', 'context', 'objective', 'scopeInclusions', 'scopeExclusions', 'candidateDeliverables', 'approvedInputs', 'suggestedVerticals', 'suggestedWorkTypes', 'estimatedEffort', 'safetyFlags', 'safeToPost'],
+  properties: {
+    title: { type: 'string', description: 'A short, specific project title (max ~8 words).' },
+    summary: { type: 'string', description: '2-3 sentence plain-language summary of the work.' },
+    context: { type: 'string', description: 'Why this work matters / the situation, in 1-2 sentences.' },
+    objective: { type: 'string', description: 'The single useful outcome, in one sentence.' },
+    scopeInclusions: { type: 'array', items: { type: 'string' }, description: 'Terse bullets: what IS in scope.' },
+    scopeExclusions: { type: 'array', items: { type: 'string' }, description: 'Terse bullets: what is explicitly OUT of scope.' },
+    candidateDeliverables: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['title', 'description', 'acceptanceCriteria'],
+        properties: {
+          title: { type: 'string' },
+          description: { type: 'string' },
+          acceptanceCriteria: { type: 'string', description: 'How a reviewer decides it is done and correct.' },
+        },
+      },
+      description: '2 to 4 concrete, reviewable deliverables.',
+    },
+    approvedInputs: { type: 'array', items: { type: 'string' }, description: 'The public / de-identified / approved inputs a student may use.' },
+    suggestedVerticals: { type: 'array', items: { type: 'string', enum: [...VERTICALS] } },
+    suggestedWorkTypes: { type: 'array', items: { type: 'string', enum: [...WORK_TYPES] } },
+    estimatedEffort: { type: 'string', description: 'A rough effort estimate, e.g. "~15-25 hours".' },
+    safetyFlags: { type: 'array', items: { type: 'string' }, description: 'Boundary concerns to confirm at the consult; empty if none.' },
+    safeToPost: { type: 'boolean' },
+  },
+};
 
 const SYSTEM_PROMPT = `You are Covenda's project intake analyst. Covenda turns a company's delayed, low-risk work into a scoped, paid, student-completed project with a reviewable deliverable.
 
-Read the company's description (and any attached files) and produce a structured, HONEST draft understanding. You are assistive only: a human founder reviews every project and a consultation finalizes scope. Never approve anything.
+Read the company's description (and any attached files) and produce a structured, HONEST, BCG-grade draft understanding. Be terse and concrete: short bullets, no filler, no invented facts. You are assistive only — a human founder reviews every project and a consultation finalizes scope. Never approve anything, and never fabricate context, numbers, or requirements that were not stated.
 
 Covenda's hard safety boundary — the work is NOT safe to post if it involves any of:
 - client, patient, or customer records, or any personal/identifying data (PII or PHI)
 - access to production systems, live credentials, or internal restricted systems
 - regulated or licensed decisions (legal, medical, or financial advice, etc.)
 - confidential or proprietary material a student should not hold
-If any of these are present or implied, set "safeToPost" to false and explain why in "safetyFlags". Covenda prefers public sources, de-identified examples, and approved copies.
+If any of these are present or implied, set safeToPost to false and explain why in safetyFlags. Covenda prefers public sources, de-identified examples, and approved copies — put those in approvedInputs.
 
-Respond with ONLY a JSON object — no prose, no markdown, no code fences — matching exactly this shape:
-{
-  "summary": "2-3 sentence plain-language summary of the work",
-  "structuredProblem": "a short structured brief: the context, the useful outcome, and what a good finish looks like",
-  "candidateDeliverables": ["2 to 4 concrete, reviewable deliverables"],
-  "suggestedVerticals": ["subset of the allowed verticals"],
-  "suggestedWorkTypes": ["subset of the allowed work types"],
-  "safetyFlags": ["any boundary concerns; use an empty array if none"],
-  "safeToPost": true
-}
-Allowed verticals: ${[...VERTICALS].join('; ')}.
-Allowed work types: ${[...WORK_TYPES].join('; ')}.
-Use those exact strings. If you are unsure of a vertical, use "Not sure yet — show me everything".`;
+For suggestedVerticals use only: ${[...VERTICALS].join('; ')}. For suggestedWorkTypes use only: ${[...WORK_TYPES].join('; ')}. Use those exact strings; if unsure of a vertical, use "Not sure yet — show me everything".`;
 
 export class IntakeConfigError extends Error {
   constructor(message) { super(message); this.name = 'IntakeConfigError'; }
@@ -43,30 +69,43 @@ function buildUserPrompt(problemText) {
   return `A company described work they hope to turn into a scoped, student-completed Covenda project:\n\n"""\n${problemText}\n"""\n\nReview the description and any attached files, then return ONLY the JSON object described in your instructions.`;
 }
 
-function extractJson(raw) {
+// With Structured Outputs the model returns valid JSON, so this is a strict parse with a
+// single brace-slice as a last resort for the (rare) non-structured fallback path.
+function parseBriefJson(raw) {
   if (!raw) return null;
-  const cleaned = raw.replace(/^```(?:json)?/i, '').replace(/```\s*$/, '').trim();
-  try { return JSON.parse(cleaned); } catch { /* fall through to brace slice */ }
-  const start = cleaned.indexOf('{');
-  const end = cleaned.lastIndexOf('}');
-  if (start >= 0 && end > start) { try { return JSON.parse(cleaned.slice(start, end + 1)); } catch { /* give up */ } }
+  try { return JSON.parse(raw); } catch { /* fall through */ }
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start >= 0 && end > start) { try { return JSON.parse(raw.slice(start, end + 1)); } catch { /* give up */ } }
   return null;
 }
 
 // Shape + sanitize the model output. Verticals/work types are filtered to the fixed
 // taxonomy so they line up exactly with the student-matching fields. safeToPost is
-// treated conservatively: only an explicit true allows posting.
+// treated conservatively: only an explicit true allows posting. Deliverables tolerate both
+// the object shape and a bare string (older responses / fallback).
 export function normalizeBrief(input) {
   const obj = input && typeof input === 'object' ? input : {};
   const str = (value, max) => (typeof value === 'string' ? value.replace(/\0/g, '').trim().slice(0, max) : '');
-  const list = (value, max) => (Array.isArray(value) ? value.map(item => str(item, 300)).filter(Boolean).slice(0, max) : []);
+  const list = (value, max) => (Array.isArray(value) ? value.map(item => str(item, 400)).filter(Boolean).slice(0, max) : []);
   const fromSet = (value, set, max) => (Array.isArray(value) ? value.map(item => str(item, 120)).filter(item => set.has(item)) : []).slice(0, max);
+  const deliverables = (Array.isArray(obj.candidateDeliverables) ? obj.candidateDeliverables : []).slice(0, 4).map(d => {
+    if (typeof d === 'string') return { title: str(d, 200), description: '', acceptanceCriteria: '' };
+    const o = d && typeof d === 'object' ? d : {};
+    return { title: str(o.title, 200), description: str(o.description, 800), acceptanceCriteria: str(o.acceptanceCriteria, 600) };
+  }).filter(d => d.title || d.description);
   return {
+    title: str(obj.title, 160),
     summary: str(obj.summary, 1200),
-    structuredProblem: str(obj.structuredProblem, 3000),
-    candidateDeliverables: list(obj.candidateDeliverables, 5),
+    context: str(obj.context, 1600),
+    objective: str(obj.objective, 800),
+    scopeInclusions: list(obj.scopeInclusions, 8),
+    scopeExclusions: list(obj.scopeExclusions, 8),
+    candidateDeliverables: deliverables,
+    approvedInputs: list(obj.approvedInputs, 8),
     suggestedVerticals: fromSet(obj.suggestedVerticals, VERTICALS, 6),
     suggestedWorkTypes: fromSet(obj.suggestedWorkTypes, WORK_TYPES, 5),
+    estimatedEffort: str(obj.estimatedEffort, 120),
     safetyFlags: list(obj.safetyFlags, 8),
     safeToPost: obj.safeToPost === true,
   };
@@ -112,15 +151,26 @@ export async function generateProjectBrief({ problemText, attachments = [], env 
       ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } }
       : { type: 'image', source: { type: 'base64', media_type: attachment.contentType, data: base64 } });
   }
-  const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
+  const base = { model: MODEL, max_tokens: 4096, system: SYSTEM_PROMPT, messages: [{ role: 'user', content }] };
+  const structured = { ...base, output_config: { format: { type: 'json_schema', schema: BRIEF_SCHEMA } } };
+  const call = payload => fetchImpl('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: MODEL, max_tokens: 1600, system: SYSTEM_PROMPT, messages: [{ role: 'user', content }] }),
+    body: JSON.stringify(payload),
   });
+  // Prefer Structured Outputs. If this deployment's API rejects the output_config param
+  // (4xx), fall back once to a plain call so a working feature is never broken by the flag.
+  let response = await call(structured);
+  if (response && !response.ok && response.status >= 400 && response.status < 500) {
+    response = await call(base);
+  }
   if (!response || !response.ok) throw new Error('The AI intake service could not be reached. Try again, or book the consult and describe it there.');
   const data = await response.json();
+  // The model can decline work that crosses the safety boundary — treat that as a blocked
+  // (not errored) result the caller can surface, rather than a mysterious failure.
+  if (data?.stop_reason === 'refusal') throw new Error('The AI declined to draft this — it may cross a safety boundary. Book the consult to talk it through.');
   const raw = (data?.content || []).filter(block => block && block.type === 'text').map(block => block.text).join('').trim();
-  const parsed = extractJson(raw);
+  const parsed = parseBriefJson(raw);
   if (!parsed) throw new Error('The AI intake returned an unreadable response. Try again.');
   return normalizeBrief(parsed);
 }
