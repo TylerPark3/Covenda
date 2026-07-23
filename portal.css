@@ -282,6 +282,24 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .talent-row:nth-child(even) { padding-left:22px; }
 .talent-row h3 { margin:0 0 5px; font-size:15px; }
 .talent-row p { margin:0 0 13px; color:var(--muted); font-size:9px; line-height:1.6; }
+/* §3 company talent directory: filter bar + candidate cards */
+.talent-bar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; max-width:1240px; margin:0 auto 18px; }
+.talent-search { flex:1; min-width:220px; min-height:40px; padding:9px 13px; border:1px solid var(--line-strong); border-radius:10px; background:#fff; color:var(--ink); font:inherit; font-size:12px; outline:0; }
+.talent-vsel { min-height:40px; padding:9px 12px; border:1px solid var(--line-strong); border-radius:10px; background:#fff; color:var(--ink); font:inherit; font-size:12px; outline:0; }
+.talent-search:focus,.talent-vsel:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(180,123,32,.1); }
+.talent-check { display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size:11px; font-weight:600; cursor:pointer; }
+.talent-check input { width:15px; height:15px; accent-color:var(--gold); }
+.talent-count { margin-left:auto; color:var(--soft); font-size:11px; }
+.talent-grid { display:grid; gap:12px; max-width:1240px; margin:0 auto; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+.talent-card { padding:18px; border:1px solid var(--line); border-radius:14px; background:#fff; }
+.talent-card-head { display:flex; align-items:center; gap:12px; }
+.talent-avatar { flex:0 0 auto; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-strong); background:var(--gold-pale); background-size:cover; background-position:center; color:var(--gold-deep); font-size:16px; font-weight:700; }
+.talent-card-id { min-width:0; }
+.talent-card-id h3 { margin:0; font-size:14px; letter-spacing:-.02em; }
+.talent-card-id p { margin:2px 0 0; color:var(--muted); font-size:10px; line-height:1.5; }
+.talent-verticals { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.talent-bio { margin:12px 0 0; color:#31312e; font-size:11px; line-height:1.6; }
+.talent-card .skills { margin-top:12px; }
 .coming-soon { display:grid; max-width:650px; min-height:calc(100vh - 190px); place-content:center; justify-items:start; margin:auto; }
 .coming-soon > span { display:grid; width:55px; height:55px; place-items:center; margin-bottom:27px; border:1px solid var(--line); border-radius:50%; color:var(--gold-deep); }
 .coming-soon h1 { margin:0; font-size:clamp(38px,5vw,62px); line-height:1; letter-spacing:-.065em; }

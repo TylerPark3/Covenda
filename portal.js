@@ -625,7 +625,44 @@ function portfolioAvatar(profile,note){
   });
   return btn;
 }
-function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){$('#portfolioEyebrow').textContent='Member talent';$('#portfolioTitle').textContent='Student portfolios';$('#portfolioIntro').textContent='Discover students who chose to share their profile with signed-in company members.';$('#editProfile').hidden=false;if(!studentDirectory.length){emptyList(root,'p-user','No visible student portfolios yet.','Students will appear here after they finish onboarding and opt into member discovery.');return;}const list=document.createElement('div');list.className='talent-list';for(const student of studentDirectory){const row=document.createElement('article');row.className='talent-row';const h=document.createElement('h3');h.textContent=student.display_name;if(student.identity_verified)h.append(identityBadge());const p=document.createElement('p');p.textContent=[student.headline,student.school_name,student.graduation_year&&`Class of ${student.graduation_year}`].filter(Boolean).join(' · ')||'Student member';const skills=document.createElement('div');skills.className='skills';(student.skills||[]).forEach(skill=>skills.append(pill(skill)));row.append(h,p,skills);list.append(row);}root.append(list);return;}
+// §0/§3: the company's primary surface — a curated, searchable talent directory of vetted
+// students. Filter state lives module-level so only the card list re-renders on a keystroke
+// (keeps the search input focused). Hiring still flows through projects (§6 anti-bypass).
+const talentFilters={query:'',vertical:'',verifiedOnly:false};
+const TALENT_VERTICALS=['Accounting & finance','Software & AI','Healthcare operations','Consumer & retail','Professional services'];
+function talentCard(s){
+  const card=document.createElement('article');card.className='talent-card';
+  const head=document.createElement('div');head.className='talent-card-head';
+  const av=document.createElement('div');av.className='talent-avatar';paintAvatarSlot(av,s.avatar_url,initial(s.display_name||'C'));head.append(av);
+  const id=document.createElement('div');id.className='talent-card-id';const h=document.createElement('h3');h.textContent=s.display_name||'Student member';if(s.identity_verified)h.append(identityBadge());const sub=document.createElement('p');sub.textContent=[s.headline,s.school_name,s.graduation_year&&`Class of ${s.graduation_year}`].filter(Boolean).join(' · ')||'Student member';id.append(h,sub);head.append(id);card.append(head);
+  if((s.verticals||[]).length){const v=document.createElement('div');v.className='talent-verticals';s.verticals.forEach(x=>v.append(pill(x,'status-pill')));card.append(v);}
+  if(s.bio){const b=document.createElement('p');b.className='talent-bio';b.textContent=s.bio;card.append(b);}
+  if((s.skills||[]).length){const sk=document.createElement('div');sk.className='skills';s.skills.forEach(x=>sk.append(pill(x)));card.append(sk);}
+  return card;
+}
+function renderTalentCards(){
+  const root=$('#talentResults');if(!root)return;root.replaceChildren();
+  const f=talentFilters;const dir=state.dashboard?.studentDirectory||[];
+  const filtered=dir.filter(s=>{
+    if(f.query){const hay=[s.display_name,s.headline,s.school_name,...(s.skills||[]),...(s.verticals||[])].join(' ').toLowerCase();if(!hay.includes(f.query))return false;}
+    if(f.vertical&&!(s.verticals||[]).includes(f.vertical))return false;
+    if(f.verifiedOnly&&!s.identity_verified)return false;
+    return true;
+  });
+  const count=$('#talentCount');if(count)count.textContent=`${filtered.length} ${filtered.length===1?'student':'students'}`;
+  if(!filtered.length){emptyList(root,'p-user',dir.length?'No students match your filters.':'No students in the directory yet.',dir.length?'Try clearing a filter.':'Students appear here after they finish onboarding and opt into discovery.');return;}
+  for(const s of filtered)root.append(talentCard(s));
+}
+function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
+  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent directory';$('#portfolioIntro').textContent='Browse students who opted into discovery — startup-fit, building real evidence. Hire by inviting them to a scoped project.';$('#editProfile').hidden=true;
+  const bar=document.createElement('div');bar.className='talent-bar';
+  const search=document.createElement('input');search.type='search';search.className='talent-search';search.placeholder='Search name, skill, school…';search.value=talentFilters.query;search.addEventListener('input',()=>{talentFilters.query=search.value.trim().toLowerCase();renderTalentCards();});
+  const vsel=document.createElement('select');vsel.className='talent-vsel';const anyOpt=document.createElement('option');anyOpt.value='';anyOpt.textContent='Any vertical';vsel.append(anyOpt);TALENT_VERTICALS.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;if(v===talentFilters.vertical)o.selected=true;vsel.append(o);});vsel.addEventListener('change',()=>{talentFilters.vertical=vsel.value;renderTalentCards();});
+  const vchk=document.createElement('label');vchk.className='talent-check';const cb=document.createElement('input');cb.type='checkbox';cb.checked=talentFilters.verifiedOnly;cb.addEventListener('change',()=>{talentFilters.verifiedOnly=cb.checked;renderTalentCards();});const cbt=document.createElement('span');cbt.textContent='Identity-verified only';vchk.append(cb,cbt);
+  const count=document.createElement('span');count.className='talent-count';count.id='talentCount';
+  bar.append(search,vsel,vchk,count);
+  const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
+  root.append(bar,results);renderTalentCards();return;}
   $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);}
 
 function updateProfileFields(){const role=$('[name="role"]:checked',$('#profileForm'))?.value||state.dashboard?.profile?.role||'student';$$('[data-profile-field="organization"]').forEach(el=>el.hidden=role==='student');$$('[data-profile-field="school"],[data-profile-field="graduation"],[data-student-profile]').forEach(el=>el.hidden=role!=='student');}
