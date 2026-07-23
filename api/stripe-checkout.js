@@ -29,6 +29,10 @@ export async function createCheckoutSession({ member, credits, origin, env = pro
   const client = stripe || new Stripe(env.STRIPE_SECRET_KEY.trim());
   const session = await client.checkout.sessions.create({
     mode: 'payment',
+    // Explicitly request card so the session doesn't depend on the account's "automatic payment
+    // methods" being configured (a fresh account otherwise 400s with "no valid payment method
+    // types"). Checkout still surfaces Apple/Google Pay through the card method.
+    payment_method_types: ['card'],
     // client_reference_id + metadata are what the webhook trusts to credit the right
     // account for the right amount — never the (spoofable) request body.
     client_reference_id: member.user.id,
