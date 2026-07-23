@@ -62,7 +62,20 @@ test('summarizeCohort counts distinct referred firms (GTM Move 3) without leakin
   ];
   const cohort = summarizeCohort({ code: 'REF-ABC123', employerSubs });
   assert.equal(cohort.referredFirms, 2, 'distinct firm emails, case-insensitive');
+  assert.equal(cohort.payingFirms, 0, 'no paying set → zero');
   assert.equal(cohort.isEmpty, false, 'a referred firm alone makes the cohort non-empty');
   const serialized = JSON.stringify(cohort);
   assert.ok(!serialized.includes('acme.com') && !serialized.includes('Acme LLC'), 'no firm PII in the public payload');
+});
+
+test('summarizeCohort counts referred firms that became paying clients', () => {
+  const employerSubs = [
+    { details: { referral: { code: 'REF-ABC123' }, contact: { email: 'cfo@acme.com' } } },
+    { details: { referral: { code: 'REF-ABC123' } }, submitter_email: 'owner@beta.co' },
+  ];
+  // acme paid; beta didn't. Case-insensitive match.
+  const payingFirmEmails = new Set(['cfo@acme.com', 'someone@else.com']);
+  const cohort = summarizeCohort({ code: 'REF-ABC123', employerSubs, payingFirmEmails });
+  assert.equal(cohort.referredFirms, 2);
+  assert.equal(cohort.payingFirms, 1, 'only the referred firm that also paid counts');
 });

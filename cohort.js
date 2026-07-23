@@ -85,8 +85,10 @@
     const firmsEl = $('#cohortFirms');
     if (firmsEl) {
       const n = Number(cohort.referredFirms) || 0;
+      const paid = Number(cohort.payingFirms) || 0;
       if (n > 0) {
-        firmsEl.textContent = '🏢 ' + n + (n === 1 ? ' firm' : ' firms') + ' introduced to Covenda through ' + (org || 'this partner') + '.';
+        const paidNote = paid > 0 ? ' — ' + paid + ' became ' + (paid === 1 ? 'a paying client' : 'paying clients') : '';
+        firmsEl.textContent = '🏢 ' + n + (n === 1 ? ' firm' : ' firms') + ' introduced to Covenda through ' + (org || 'this partner') + paidNote + '.';
         firmsEl.hidden = false;
       } else { firmsEl.hidden = true; }
     }

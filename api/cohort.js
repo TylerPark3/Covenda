@@ -22,7 +22,7 @@ function sameOrigin(req) {
 
 // Pure, testable aggregation. Takes the raw rows already narrowed to this code and produces the
 // public shape. Kept free of I/O so the funnel logic can be unit-tested deterministically.
-export function summarizeCohort({ code, endorsementSubs = [], codedApplications = [], completedStudentIds = new Set(), employerSubs = [] }) {
+export function summarizeCohort({ code, endorsementSubs = [], codedApplications = [], completedStudentIds = new Set(), employerSubs = [], payingFirmEmails = new Set() }) {
   let orgName = '';
   const rosterEmails = new Set();
   const industries = {};
@@ -50,6 +50,9 @@ export function summarizeCohort({ code, endorsementSubs = [], codedApplications 
     if (email) firmEmails.add(email);
   }
   const referredFirms = firmEmails.size;
+  // Of those firms, how many became PAYING clients (their email matches a member who bought
+  // credits). The strongest "the intro paid off" signal for the partner. Still a count only.
+  const payingFirms = [...firmEmails].filter(email => payingFirmEmails.has(email)).length;
   const industryList = Object.entries(industries)
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
@@ -60,6 +63,7 @@ export function summarizeCohort({ code, endorsementSubs = [], codedApplications 
     appliedCount,
     verifiedCount,
     referredFirms,
+    payingFirms,
     industries: industryList,
     // A partner-friendly funnel. Every rung is a real count; higher rungs are earned, never assigned.
     funnel: [
@@ -69,6 +73,22 @@ export function summarizeCohort({ code, endorsementSubs = [], codedApplications 
     ],
     isEmpty: endorsedCount === 0 && appliedCount === 0 && referredFirms === 0,
   };
+}
+
+// Emails of members who have bought credits (paying clients). Resolves the small set of buyer
+// user-ids to emails via the admin API — bounded by the number of PAYING accounts, not all users.
+export async function loadPayingFirmEmails(supabase) {
+  const { data } = await supabase.from('credit_ledger').select('user_id').eq('entry_type', 'purchase').limit(5000);
+  const ids = [...new Set((data || []).map(r => r.user_id).filter(Boolean))];
+  const emails = new Set();
+  for (const id of ids) {
+    try {
+      const { data: u } = await supabase.auth.admin.getUserById(id);
+      const email = String(u?.user?.email || '').trim().toLowerCase();
+      if (email) emails.add(email);
+    } catch { /* skip unresolved ids */ }
+  }
+  return emails;
 }
 
 async function loadCohort(supabase, code) {
@@ -107,7 +127,10 @@ async function loadCohort(supabase, code) {
       .eq('status', 'complete');
     completedStudentIds = new Set((projects || []).map(p => p.assigned_student_user_id).filter(Boolean));
   }
-  return summarizeCohort({ code, endorsementSubs, codedApplications, completedStudentIds, employerSubs });
+  // Only resolve paying emails if there are referred firms to match against (skips the work entirely
+  // for cohorts with no employer referrals).
+  const payingFirmEmails = employerSubs.length ? await loadPayingFirmEmails(supabase) : new Set();
+  return summarizeCohort({ code, endorsementSubs, codedApplications, completedStudentIds, employerSubs, payingFirmEmails });
 }
 
 export default async function handler(req, res, dependencies = {}) {
