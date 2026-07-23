@@ -214,7 +214,7 @@ export async function loadMemberDashboard(member) {
     ? await checked(supabase.from('project_applications').select('*').in('project_id', projectIds).order('updated_at', { ascending: false }).limit(200))
     : [];
   const studentDirectory = profile.role === 'company'
-    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
+    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
     : [];
   const messages = projectIds.length
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
@@ -332,6 +332,14 @@ export async function loadPayoutRequests(member) {
 }
 
 export async function requestPayout(member, input) {
+  // Payout eligibility gate: only identity-verified members who are 18+ can receive money.
+  // Messages start with "Please"/"Only" so the handler surfaces them as user-facing 400s.
+  const identity = await checked(
+    member.supabase.from('member_profiles').select('identity_verified,identity_18plus').eq('user_id', member.user.id).maybeSingle(),
+    null,
+  );
+  if (!identity?.identity_verified) throw new Error('Please verify your identity before requesting a payout.');
+  if (!identity.identity_18plus) throw new Error('Only verified members who are 18 or older can receive payouts.');
   const credits = Math.round(Number(input.credits) || 0);
   if (credits <= 0) throw new Error('Enter how many credits you want paid out.');
   const balance = await creditBalance(member);

@@ -281,6 +281,22 @@ function renderPayout(){
     empty.textContent='Complete a reviewed project and your earnings will appear here, ready to request.';
     root.append(empty);return;
   }
+  // Payout eligibility gate: a student with earnings must pass identity verification (and be
+  // 18+) before they can request a payout. Show the verify CTA in place of the form.
+  const profile=d.profile||{};
+  if(profile.role==='student'&&!profile.identity_verified){
+    const gate=document.createElement('div');gate.className='payout-gate';
+    const g=document.createElement('strong');g.textContent='Verify your identity to receive payouts';
+    const gs=document.createElement('small');gs.textContent='A quick ID check (photo of your ID + a selfie) confirms you’re a real, 18+ student. Covenda never sees your ID — Stripe handles it securely.';
+    const gb=document.createElement('button');gb.type='button';gb.className='portal-primary compact';gb.textContent='Verify identity';
+    gb.addEventListener('click',()=>runVerifyIdentity(gb));
+    gate.append(g,gs,gb);root.append(gate);return;
+  }
+  if(profile.role==='student'&&profile.identity_verified&&!profile.identity_18plus){
+    const note=document.createElement('p');note.className='payout-empty';
+    note.textContent='Payouts are available to verified members who are 18 or older.';
+    root.append(note);return;
+  }
   const form=document.createElement('div');form.className='payout-form';
   const amount=document.createElement('label');amount.className='payout-field';
   const amountLabel=document.createElement('span');amountLabel.textContent='Amount (credits)';
@@ -376,16 +392,30 @@ async function runBuyCredits(credits,button){
   catch(error){setDialogMessage('#walletMessage',error.message,true);button.disabled=false;}
 }
 
-// After returning from Stripe Checkout the URL carries ?wallet=paid|cancelled. Surface a
-// status, then strip the param so a refresh doesn't replay it. The credit grant lands
-// asynchronously via the webhook, so on success we tell the buyer it may take a moment.
+// After returning from Stripe (Checkout or Identity) the URL carries a status param. Surface
+// it, then strip the param so a refresh doesn't replay it. Both the credit grant and the
+// identity result land asynchronously via the webhook, so we tell the member it may take a moment.
 function handleCheckoutReturn(){
   const params=new URLSearchParams(location.search);
-  const wallet=params.get('wallet');
-  if(!wallet)return;
+  const wallet=params.get('wallet');const identity=params.get('identity');
+  if(!wallet&&!identity)return;
   history.replaceState(null,'',location.pathname);
   if(wallet==='paid'){setView('wallet');setDialogMessage('#walletMessage','Payment received — your credits will appear here within a few seconds.');}
   else if(wallet==='cancelled'){setView('wallet');setDialogMessage('#walletMessage','Checkout cancelled — no charge was made.',true);}
+  else if(identity==='submitted'){setView('wallet');setDialogMessage('#payoutMessage','Thanks — your ID was submitted. Your verified badge appears once Stripe approves it (usually under a minute).');}
+}
+
+// Start Stripe Identity: photograph an ID + selfie on Stripe's hosted page. Covenda never
+// sees the document — we only learn the result later, via the webhook.
+async function runVerifyIdentity(button){
+  button.disabled=true;setDialogMessage('#payoutMessage','Opening secure identity check…');
+  try{
+    const res=await fetch('/api/stripe-identity',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({})});
+    const data=await res.json().catch(()=>({}));
+    if(res.ok&&data.url){location.assign(data.url);return;}
+    if(data.code==='STRIPE_NOT_CONFIGURED'){setDialogMessage('#payoutMessage','Identity verification isn’t switched on yet.',true);button.disabled=false;return;}
+    throw new Error(data.error||'Could not start identity verification.');
+  }catch(error){setDialogMessage('#payoutMessage',error.message,true);button.disabled=false;}
 }
 
 function selectMessageProject(projectId){state.messageProjectId=projectId;renderMessages();}
@@ -414,8 +444,10 @@ function renderDiscover(){
   for(const project of items){const row=document.createElement('article');row.className='list-row'+(project.matched?' is-matched':'');const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;main.append(h);if(project.matched)main.append(pill('Matched to your vertical','match-pill'));const p=document.createElement('p');p.textContent=project.summary;main.append(p);const skills=cell('Skills',(project.desired_skills||[]).join(', ')||'Open fit');const due=cell('Target',project.target_date?dateLabel(project.target_date):'Flexible');const applied=d.applications.some(app=>app.project_id===project.id);const button=document.createElement('button');button.type='button';button.textContent=applied?'Interest sent':'View & apply';button.disabled=applied;button.addEventListener('click',()=>openApply(project));row.append(main,skills,due,button);root.append(row);}
 }
 
-function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){$('#portfolioEyebrow').textContent='Member talent';$('#portfolioTitle').textContent='Student portfolios';$('#portfolioIntro').textContent='Discover students who chose to share their profile with signed-in company members.';$('#editProfile').hidden=false;if(!studentDirectory.length){emptyList(root,'p-user','No visible student portfolios yet.','Students will appear here after they finish onboarding and opt into member discovery.');return;}const list=document.createElement('div');list.className='talent-list';for(const student of studentDirectory){const row=document.createElement('article');row.className='talent-row';const h=document.createElement('h3');h.textContent=student.display_name;const p=document.createElement('p');p.textContent=[student.headline,student.school_name,student.graduation_year&&`Class of ${student.graduation_year}`].filter(Boolean).join(' · ')||'Student member';const skills=document.createElement('div');skills.className='skills';(student.skills||[]).forEach(skill=>skills.append(pill(skill)));row.append(h,p,skills);list.append(row);}root.append(list);return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatar=document.createElement('div');avatar.className='portfolio-avatar';paintAvatarSlot(avatar,profile?.avatar_url,initial(profile?.display_name));const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills);article.append(avatar,details);root.append(article);}
+// "Identity verified ✓" credibility badge — shown wherever a verified member's name appears.
+function identityBadge(){const b=document.createElement('span');b.className='identity-badge';b.title='Identity verified with a government ID via Stripe';b.append(icon('p-check'));const t=document.createElement('span');t.textContent='Identity verified';b.append(t);return b;}
+function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){$('#portfolioEyebrow').textContent='Member talent';$('#portfolioTitle').textContent='Student portfolios';$('#portfolioIntro').textContent='Discover students who chose to share their profile with signed-in company members.';$('#editProfile').hidden=false;if(!studentDirectory.length){emptyList(root,'p-user','No visible student portfolios yet.','Students will appear here after they finish onboarding and opt into member discovery.');return;}const list=document.createElement('div');list.className='talent-list';for(const student of studentDirectory){const row=document.createElement('article');row.className='talent-row';const h=document.createElement('h3');h.textContent=student.display_name;if(student.identity_verified)h.append(identityBadge());const p=document.createElement('p');p.textContent=[student.headline,student.school_name,student.graduation_year&&`Class of ${student.graduation_year}`].filter(Boolean).join(' · ')||'Student member';const skills=document.createElement('div');skills.className='skills';(student.skills||[]).forEach(skill=>skills.append(pill(skill)));row.append(h,p,skills);list.append(row);}root.append(list);return;}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatar=document.createElement('div');avatar.className='portfolio-avatar';paintAvatarSlot(avatar,profile?.avatar_url,initial(profile?.display_name));const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills);article.append(avatar,details);root.append(article);}
 
 function updateProfileFields(){const role=$('[name="role"]:checked',$('#profileForm'))?.value||state.dashboard?.profile?.role||'student';$$('[data-profile-field="organization"]').forEach(el=>el.hidden=role==='student');$$('[data-profile-field="school"],[data-profile-field="graduation"],[data-student-profile]').forEach(el=>el.hidden=role!=='student');}
 function openProfile({required=false}={}){const form=$('#profileForm');const p=state.dashboard?.profile;form.reset();if(p){form.elements.role.value=p.role;form.elements.displayName.value=p.display_name||'';form.elements.organizationName.value=p.organization_name||'';form.elements.schoolName.value=p.school_name||'';form.elements.graduationYear.value=p.graduation_year||'';form.elements.headline.value=p.headline||'';form.elements.bio.value=p.bio||'';form.elements.skills.value=(p.skills||[]).join(', ');form.elements.portfolioVisibility.checked=p.portfolio_visibility!=='private';$$('[name="role"]',form).forEach(input=>input.disabled=true);}else{$$('[name="role"]',form).forEach(input=>input.disabled=false);const inferred=state.dashboard?.user?.metadata?.full_name||state.dashboard?.user?.metadata?.name||'';form.elements.displayName.value=inferred;}form.dataset.required=required?'true':'false';$$('[data-close-dialog]',form).forEach(button=>button.hidden=required);updateProfileFields();setDialogMessage('#profileMessage','');$('#profileDialog').showModal();}

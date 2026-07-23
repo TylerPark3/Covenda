@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { createCheckoutSession, StripeNotConfiguredError } from '../api/stripe-checkout.js';
-import { recordStripePurchase } from '../api/stripe-webhook.js';
+import { createVerificationSession } from '../api/stripe-identity.js';
+import { isAdult, recordIdentityVerification, recordStripePurchase } from '../api/stripe-webhook.js';
 
 // A minimal fake Stripe client that captures the args createCheckoutSession sends.
 function fakeStripe() {
@@ -75,6 +76,81 @@ test('an unrecognised amount grants nothing', async () => {
   const result = await recordStripePurchase({ id: 'cs_test_bad', metadata: { userId: 'user-9', credits: '333' } }, supabase);
   assert.deepEqual(result, { ok: false, reason: 'unrecognised-session' });
   assert.equal(supabase.inserts.length, 0);
+});
+
+// ---- Stripe Identity (driver's-license / ID check) ----
+
+function fakeIdentityStripe() {
+  const calls = [];
+  return {
+    calls,
+    identity: { verificationSessions: { create: async (args) => { calls.push(args); return { id: 'vs_test_1', url: 'https://verify.stripe.test/vs_test_1' }; } } },
+  };
+}
+
+// A profiles fake that records the update payload and which row it targeted.
+function fakeProfiles() {
+  const updates = [];
+  return {
+    updates,
+    from() { return this; },
+    update(row) { this._row = row; return this; },
+    eq(col, val) { updates.push({ row: this._row, col, val }); return { error: null }; },
+  };
+}
+
+const nowYear = new Date().getUTCFullYear();
+
+test('identity verification opens a document check stamped with the member id', async () => {
+  const stripe = fakeIdentityStripe();
+  const result = await createVerificationSession({ member, origin: 'https://covenda.app', env: { STRIPE_SECRET_KEY: 'sk_test' }, stripe });
+  assert.equal(result.url, 'https://verify.stripe.test/vs_test_1');
+  const args = stripe.calls[0];
+  assert.equal(args.type, 'document');
+  assert.equal(args.metadata.userId, 'user-1');
+  assert.equal(args.return_url, 'https://covenda.app/portal.html?identity=submitted');
+});
+
+test('identity verification throws StripeNotConfiguredError without a secret key', async () => {
+  await assert.rejects(
+    () => createVerificationSession({ member, origin: 'https://covenda.app', env: {}, stripe: fakeIdentityStripe() }),
+    (error) => error instanceof StripeNotConfiguredError,
+  );
+});
+
+test('isAdult is true for an adult DOB and false for a minor or unknown', () => {
+  assert.equal(isAdult({ day: 1, month: 1, year: nowYear - 20 }), true);
+  assert.equal(isAdult({ day: 1, month: 1, year: nowYear - 10 }), false);
+  assert.equal(isAdult(null), false);
+});
+
+test('a verified adult session marks the profile verified and 18+', async () => {
+  const supabase = fakeProfiles();
+  const session = { id: 'vs_1', metadata: { userId: 'user-5' }, verified_outputs: { dob: { day: 1, month: 1, year: nowYear - 25 } } };
+  const result = await recordIdentityVerification(session, supabase);
+  assert.deepEqual(result, { ok: true, adult: true });
+  const { row, col, val } = supabase.updates[0];
+  assert.equal(col, 'user_id');
+  assert.equal(val, 'user-5');
+  assert.equal(row.identity_verified, true);
+  assert.equal(row.identity_18plus, true);
+  assert.equal(row.identity_session_id, 'vs_1');
+});
+
+test('a verified under-18 session is verified but not payout-eligible', async () => {
+  const supabase = fakeProfiles();
+  const session = { id: 'vs_2', metadata: { userId: 'user-6' }, verified_outputs: { dob: { day: 1, month: 1, year: nowYear - 15 } } };
+  const result = await recordIdentityVerification(session, supabase);
+  assert.deepEqual(result, { ok: true, adult: false });
+  assert.equal(supabase.updates[0].row.identity_verified, true);
+  assert.equal(supabase.updates[0].row.identity_18plus, false);
+});
+
+test('an identity session with no member id changes nothing', async () => {
+  const supabase = fakeProfiles();
+  const result = await recordIdentityVerification({ id: 'vs_3', metadata: {} }, supabase);
+  assert.deepEqual(result, { ok: false, reason: 'unrecognised-session' });
+  assert.equal(supabase.updates.length, 0);
 });
 
 test('the webhook rejects a request with a bad signature', async () => {

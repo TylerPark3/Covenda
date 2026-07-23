@@ -186,18 +186,29 @@ test('credits cannot be minted unless the deployment enables it', async () => {
 
 test('a payout request is bounded by the balance and never stores an account number', async () => {
   const ledger = credits => ({ select() { return this; }, eq() { return Promise.resolve({ data: [{ credits }], error: null }); } });
-  const db = (balance, existingOpen = null, capture) => ({
+  // identity defaults to a verified adult so the eligibility gate lets these cases through.
+  const db = (balance, existingOpen = null, identity = { identity_verified: true, identity_18plus: true }) => ({
     from(table) {
       if (table === 'credit_ledger') return ledger(balance);
+      if (table === 'member_profiles') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: identity, error: null }; } };
       return {
         select() { return this; }, eq() { return this; },
         async maybeSingle() { return { data: existingOpen, error: null }; },
-        insert(value) { capture?.(value); return this; },
-        async single() { return { data: { id: 'req-1', ...value_ }, error: null }; },
+        insert() { return this; },
+        async single() { return { data: { id: 'req-1' }, error: null }; },
       };
-      function value_() {}
     },
   });
+  // an unverified student is stopped before anything else
+  await assert.rejects(
+    requestPayout({ user: { id: 'stu' }, supabase: db(500, null, { identity_verified: false, identity_18plus: false }) }, { credits: 100, method: 'PayPal', handle: 'a@b.com' }),
+    /verify your identity/,
+  );
+  // a verified minor cannot be paid
+  await assert.rejects(
+    requestPayout({ user: { id: 'stu' }, supabase: db(500, null, { identity_verified: true, identity_18plus: false }) }, { credits: 100, method: 'PayPal', handle: 'a@b.com' }),
+    /18 or older/,
+  );
   // over-drawing is rejected
   await assert.rejects(
     requestPayout({ user: { id: 'stu' }, supabase: db(50) }, { credits: 200, method: 'PayPal', handle: 'a@b.com' }),

@@ -23,6 +23,40 @@ function serviceClient(env, createSupabaseClient = createClient) {
   return createSupabaseClient(configuration.url, configuration.secret, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
 }
 
+// Adult if born on or before (today − 18 years). dob is Stripe's { day, month, year }.
+export function isAdult(dob) {
+  if (!dob || !dob.year) return false;
+  const cutoff = new Date();
+  cutoff.setUTCFullYear(cutoff.getUTCFullYear() - 18);
+  const born = new Date(Date.UTC(dob.year, (dob.month || 1) - 1, dob.day || 1));
+  return born <= cutoff;
+}
+
+// A verified identity session: mark the profile verified and record whether they are 18+.
+// We store only the result — never the document. Idempotent (re-running just re-sets the
+// same flags). If the event lacks verified_outputs (Stripe redacts them by default), we
+// retrieve the session with expand to read the date of birth for the 18+ check.
+export async function recordIdentityVerification(session, supabase, { stripe } = {}) {
+  const userId = session?.metadata?.userId;
+  if (!userId) return { ok: false, reason: 'unrecognised-session' };
+  let dob = session?.verified_outputs?.dob;
+  if (!dob && stripe) {
+    try {
+      const full = await stripe.identity.verificationSessions.retrieve(session.id, { expand: ['verified_outputs'] });
+      dob = full?.verified_outputs?.dob;
+    } catch { /* fall through: verified, but treat as unknown age (not 18+) until re-checked */ }
+  }
+  const adult = isAdult(dob);
+  const { error } = await supabase.from('member_profiles').update({
+    identity_verified: true,
+    identity_verified_at: new Date().toISOString(),
+    identity_18plus: adult,
+    identity_session_id: session.id,
+  }).eq('user_id', userId);
+  if (error) throw error;
+  return { ok: true, adult };
+}
+
 // Insert the purchase, idempotently. Testable in isolation from Stripe.
 export async function recordStripePurchase(session, supabase) {
   const userId = session?.metadata?.userId;
@@ -66,8 +100,12 @@ export default async function handler(req, res, dependencies = {}) {
     if (event.type === 'checkout.session.completed') {
       const supabase = dependencies.supabase || serviceClient(env);
       await recordStripePurchase(event.data.object, supabase);
+    } else if (event.type === 'identity.verification_session.verified') {
+      const supabase = dependencies.supabase || serviceClient(env);
+      const stripe = dependencies.stripe || new Stripe(env.STRIPE_SECRET_KEY.trim());
+      await recordIdentityVerification(event.data.object, supabase, { stripe });
     }
-    // Acknowledge every event type so Stripe stops retrying; we only act on the one.
+    // Acknowledge every event type so Stripe stops retrying; we only act on the ones we handle.
     return res.status(200).json({ received: true });
   } catch (error) {
     // A real failure to write — return 500 so Stripe retries later (idempotency makes that safe).
