@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 import { supabaseConfiguration } from './submissions.js';
+import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail } from './notify.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
@@ -275,6 +276,7 @@ export async function saveMemberProfile(member, input) {
   if (input.verticals !== undefined) row.verticals = cleanTaxonomy(input.verticals, VERTICALS);
   if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
   if (input.avatarUrl !== undefined) row.avatar_url = cleanText(input.avatarUrl, 500) || null;
+  if (input.emailOptOut !== undefined) row.email_opt_out = input.emailOptOut === true;
   return checked(supabase.from('member_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
 }
 
@@ -378,10 +380,17 @@ export async function requestPayout(member, input) {
     null,
   );
   if (open) throw new Error('You already have a payout request awaiting review.');
-  return checked(
+  const created = await checked(
     member.supabase.from('payout_requests').insert({ user_id: member.user.id, credits, method, handle }).select('*').single(),
     null,
   );
+  // Best-effort: alert the operator inbox so payouts don't sit unseen. Use the member's email
+  // as the identifier (no extra query — the operator can look up the profile from there).
+  await notifyOperatorEvent({
+    idempotencyKey: `covenda-payout-${created?.id || member.user.id}`,
+    build: ({ to, from, adminUrl }) => payoutRequestedEmail({ to, from, memberName: member.user.email, credits, method, adminUrl }),
+  });
+  return created;
 }
 
 export async function cancelPayoutRequest(member, input) {
@@ -729,9 +738,9 @@ export async function loadBatchRoster(member, input) {
 export async function applyToProject(member, input, env = process.env) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project.');
-  const profile = await checked(member.supabase.from('member_profiles').select('role,verticals,work_types,skills').eq('user_id', member.user.id).maybeSingle(), null);
+  const profile = await checked(member.supabase.from('member_profiles').select('role,display_name,verticals,work_types,skills').eq('user_id', member.user.id).maybeSingle(), null);
   if (profile?.role !== 'student') throw new Error('Only student accounts can apply to projects.');
-  const project = await checked(member.supabase.from('member_projects').select('id,status,visibility,verticals,work_types,desired_skills,credits_listed,target_date').eq('id', projectId).maybeSingle(), null);
+  const project = await checked(member.supabase.from('member_projects').select('id,title,owner_user_id,status,visibility,verticals,work_types,desired_skills,credits_listed,target_date').eq('id', projectId).maybeSingle(), null);
   if (!project || project.status !== 'open' || !['members', 'open'].includes(project.visibility)) throw new Error('This project is not accepting applications.');
   const existing = await checked(
     member.supabase.from('project_applications').select('*').eq('project_id', projectId).eq('student_user_id', member.user.id).maybeSingle(),
@@ -756,6 +765,13 @@ export async function applyToProject(member, input, env = process.env) {
   if (error) ({ data: application, error } = await member.supabase.from('project_applications').insert(baseRow).select('*').single());
   if (error) throw error;
   await logMatchEvent(member, { projectId, studentUserId: member.user.id, eventType: 'applied', fit, features: { project: pick(project, ['verticals', 'work_types', 'desired_skills', 'credits_listed']), student: pick(profile, ['verticals', 'work_types', 'skills']) } });
+  // Best-effort: tell the project owner a new applicant arrived. Never blocks the application.
+  await notifyMember(member.supabase, {
+    toUserId: project.owner_user_id,
+    idempotencyKey: `covenda-applied-${application.id}`,
+    build: ({ to, from, portalUrl }) => applicationReceivedEmail({ to, from, projectTitle: project.title, studentName: profile.display_name, portalUrl }),
+    env,
+  });
   return application;
 }
 
@@ -825,7 +841,7 @@ export async function acceptApplication(member, input) {
   );
   if (!application) throw new Error('This application is no longer available.');
   const project = await checked(
-    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', application.project_id).maybeSingle(),
+    member.supabase.from('member_projects').select('id,title,owner_user_id,status').eq('id', application.project_id).maybeSingle(),
     null,
   );
   if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can accept an applicant.');
@@ -846,6 +862,13 @@ export async function acceptApplication(member, input) {
     [],
   );
   await logMatchEvent(member, { projectId: project.id, studentUserId: application.student_user_id, eventType: 'accepted', fit: { score: accepted.fit_score, reasons: accepted.fit_reasons } });
+  // Best-effort: tell the accepted student. (The cascade-declined applicants are intentionally
+  // not emailed here to avoid a burst; an explicit decline still notifies — see declineApplication.)
+  await notifyMember(member.supabase, {
+    toUserId: application.student_user_id,
+    idempotencyKey: `covenda-accepted-${application.id}`,
+    build: ({ to, from, portalUrl }) => applicationDecisionEmail({ to, from, projectTitle: project.title, accepted: true, portalUrl }),
+  });
   return accepted;
 }
 
@@ -857,7 +880,7 @@ export async function declineApplication(member, input) {
     null,
   );
   if (!application) throw new Error('This application is no longer available.');
-  const project = await checked(member.supabase.from('member_projects').select('id,owner_user_id').eq('id', application.project_id).maybeSingle(), null);
+  const project = await checked(member.supabase.from('member_projects').select('id,title,owner_user_id').eq('id', application.project_id).maybeSingle(), null);
   if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can decline an applicant.');
   if (!['submitted', 'reviewing', 'shortlisted'].includes(application.status)) throw new Error('This application has already been resolved.');
   const declined = await checked(
@@ -865,6 +888,12 @@ export async function declineApplication(member, input) {
     null,
   );
   await logMatchEvent(member, { projectId: project.id, studentUserId: application.student_user_id, eventType: 'declined', fit: { score: application.fit_score, reasons: application.fit_reasons } });
+  // Best-effort: a gentle "not this one" to the student on an explicit decline.
+  await notifyMember(member.supabase, {
+    toUserId: application.student_user_id,
+    idempotencyKey: `covenda-declined-${application.id}`,
+    build: ({ to, from, portalUrl }) => applicationDecisionEmail({ to, from, projectTitle: project.title, accepted: false, portalUrl }),
+  });
   return declined;
 }
 
