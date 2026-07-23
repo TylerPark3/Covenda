@@ -3,6 +3,9 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const ACCESS_KEY = 'covendaMemberAccessToken';
 const REFRESH_KEY = 'covendaMemberRefreshToken';
 const EXPIRY_KEY = 'covendaMemberExpiry';
+// Non-sensitive display cache (name/avatar/role) so the marketing nav can paint a
+// "Signed in" state instantly on same-origin loads. Never holds tokens.
+const SUMMARY_KEY = 'covendaMemberSummary';
 
 const state = { dashboard: null, view: 'overview', applyProject: null, messageProjectId: null };
 const roleLabels = { student: 'Student', company: 'Company', university: 'University partner' };
@@ -21,9 +24,13 @@ function text(value) { return value === null || value === undefined ? '' : Strin
 function titleCase(value) { return text(value).replaceAll('_',' ').replace(/\b\w/g, letter => letter.toUpperCase()); }
 function dateLabel(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'Not set' : date.toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' }); }
 function initial(name) { return text(name).trim().charAt(0).toUpperCase() || 'C'; }
-function session() { return { accessToken:sessionStorage.getItem(ACCESS_KEY)||'', refreshToken:sessionStorage.getItem(REFRESH_KEY)||'', expiresAt:Number(sessionStorage.getItem(EXPIRY_KEY)||0) }; }
-function saveSession(data) { if (data.accessToken) sessionStorage.setItem(ACCESS_KEY,data.accessToken); if (data.refreshToken) sessionStorage.setItem(REFRESH_KEY,data.refreshToken); if (data.expiresAt) sessionStorage.setItem(EXPIRY_KEY,String(data.expiresAt)); }
-function clearSession() { sessionStorage.removeItem(ACCESS_KEY); sessionStorage.removeItem(REFRESH_KEY); sessionStorage.removeItem(EXPIRY_KEY); }
+// "Remember me": the session lives in localStorage so it survives a browser restart
+// (was sessionStorage, which was wiped on close). Persisting the refresh token in
+// localStorage is the standard remember-me tradeoff; httpOnly-cookie is a someday item.
+function session() { return { accessToken:localStorage.getItem(ACCESS_KEY)||'', refreshToken:localStorage.getItem(REFRESH_KEY)||'', expiresAt:Number(localStorage.getItem(EXPIRY_KEY)||0) }; }
+function saveSession(data) { if (data.accessToken) localStorage.setItem(ACCESS_KEY,data.accessToken); if (data.refreshToken) localStorage.setItem(REFRESH_KEY,data.refreshToken); if (data.expiresAt) localStorage.setItem(EXPIRY_KEY,String(data.expiresAt)); }
+function clearSession() { localStorage.removeItem(ACCESS_KEY); localStorage.removeItem(REFRESH_KEY); localStorage.removeItem(EXPIRY_KEY); localStorage.removeItem(SUMMARY_KEY); }
+function cacheMemberSummary(profile,fallbackName) { try{ localStorage.setItem(SUMMARY_KEY,JSON.stringify({ displayName:profile?.display_name||fallbackName||'', avatarUrl:profile?.avatar_url||'', role:profile?.role||'' })); }catch{} }
 function setLoginMessage(message, error=false) { const root=$('#memberLoginMessage'); root.textContent=message; root.classList.toggle('is-error',error); }
 function setDialogMessage(id,message,error=false) { const root=$(id); root.textContent=message; root.classList.toggle('is-error',error); }
 
@@ -124,6 +131,7 @@ function renderIdentity(profile) {
   $('#memberNavName').textContent=name; $('#memberNavRole').textContent=roleLabels[profile?.role]||'Setup needed';
   paintAvatarSlot($('#memberInitial'),profile?.avatar_url,letter); paintAvatarSlot($('#headerInitial'),profile?.avatar_url,letter); $('#headerName').textContent=name;
   $('#memberHeaderStatus').textContent=profile?`${roleLabels[profile.role]} account · Private`:'Complete setup to continue';
+  cacheMemberSummary(profile,name);
 }
 
 function renderDashboard() {

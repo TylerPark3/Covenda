@@ -116,6 +116,83 @@ function removeStorage(key) {
   }
 }
 
+// Marketing top-right nav reflects sign-in state. The portal (same origin) stores its
+// session + a non-sensitive summary in localStorage, so we paint "Signed in" + avatar
+// instantly from cache, then verify/refresh in the background and revert if the session
+// is dead. Token keys mirror portal.js. expiresAt is a Unix timestamp in SECONDS.
+const MEMBER_ACCESS_KEY = 'covendaMemberAccessToken';
+const MEMBER_REFRESH_KEY = 'covendaMemberRefreshToken';
+const MEMBER_EXPIRY_KEY = 'covendaMemberExpiry';
+const MEMBER_SUMMARY_KEY = 'covendaMemberSummary';
+
+function memberNavAvatar(summary) {
+  const node = document.createElement('span');
+  node.className = 'member-nav-avatar';
+  const url = summary && summary.avatarUrl;
+  if (url && /^https:\/\//i.test(url)) {
+    node.style.backgroundImage = `url("${encodeURI(url)}")`;
+    node.classList.add('has-avatar');
+  } else {
+    node.textContent = ((summary && summary.displayName) || 'C').trim().charAt(0).toUpperCase() || 'C';
+  }
+  return node;
+}
+
+function paintMemberSignedIn(link, summary) {
+  link.classList.add('is-signed-in');
+  link.setAttribute('aria-label', 'Open your Covenda workspace');
+  const label = document.createElement('span');
+  label.textContent = 'Signed in';
+  link.replaceChildren(memberNavAvatar(summary), label);
+}
+
+function paintMemberSignedOut(link) {
+  link.classList.remove('is-signed-in');
+  link.setAttribute('aria-label', 'Member sign in');
+  link.innerHTML = '<svg><use href="#icon-lock"/></svg><span>Member sign in</span>';
+}
+
+// Returns true if we hold (or can refresh to) a live session. Silent — never blocks paint.
+async function verifyMemberSession() {
+  const expiry = Number(localStorage.getItem(MEMBER_EXPIRY_KEY) || 0);
+  if (expiry * 1000 > Date.now() + 30000) return true; // still valid, no network needed
+  const refreshToken = localStorage.getItem(MEMBER_REFRESH_KEY) || '';
+  if (!refreshToken) return false;
+  try {
+    const response = await fetch('/api/portal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'refresh-session', refreshToken }) });
+    const result = await response.json().catch(() => ({}));
+    if (response.ok && result.ok && result.accessToken) {
+      localStorage.setItem(MEMBER_ACCESS_KEY, result.accessToken);
+      if (result.refreshToken) localStorage.setItem(MEMBER_REFRESH_KEY, result.refreshToken);
+      if (result.expiresAt) localStorage.setItem(MEMBER_EXPIRY_KEY, String(result.expiresAt));
+      return true;
+    }
+  } catch {
+    // Network hiccup — keep the cached signed-in paint rather than falsely signing out.
+    return true;
+  }
+  return false;
+}
+
+function initMemberNav() {
+  const link = document.querySelector('.member-login-link');
+  if (!link) return;
+  let token = '';
+  let summary = null;
+  try {
+    token = localStorage.getItem(MEMBER_ACCESS_KEY) || '';
+    summary = JSON.parse(localStorage.getItem(MEMBER_SUMMARY_KEY) || 'null');
+  } catch { /* fall back to signed-out */ }
+  if (!token) return; // leave the default "Member sign in"
+  paintMemberSignedIn(link, summary);
+  verifyMemberSession().then(alive => {
+    if (alive) return;
+    // Session is truly dead — clear the stale keys and revert the nav.
+    [MEMBER_ACCESS_KEY, MEMBER_REFRESH_KEY, MEMBER_EXPIRY_KEY, MEMBER_SUMMARY_KEY].forEach(removeStorage);
+    paintMemberSignedOut(link);
+  });
+}
+
 let introRun = 0;
 let introTimers = [];
 
@@ -4103,4 +4180,5 @@ initCovendaMotion();
 initFlowDemo();
 initIcosahedron();
 initScrollReveal();
+initMemberNav();
 window.requestAnimationFrame(() => openIntro());
