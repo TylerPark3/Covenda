@@ -400,30 +400,16 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   letter-spacing: -.015em;
   cursor: pointer;
 }
+/* Flat, de-"AI-slop" primary CTA: solid gold, hairline border, no gradient / inset shadows /
+   shimmer sweep / hover lift. */
 .gold-button {
   position: relative;
-  overflow: hidden;
-  border: 1px solid #9f650b;
-  background: linear-gradient(180deg, #d7ad52 0%, #b57b20 56%, #9b620b 100%);
+  border: 1px solid var(--gold-deep);
+  background: var(--gold);
   color: #fff;
-  text-shadow: 0 1px 1px rgba(75,40,0,.24);
-  box-shadow: inset 0 1px 1px rgba(255,255,255,.8), inset 0 -2px 2px rgba(78,42,0,.22), 0 8px 20px rgba(119,77,13,.18);
 }
-.gold-button::before {
-  content: "";
-  position: absolute;
-  top: -60%;
-  left: -42%;
-  width: 32%;
-  height: 220%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.44), transparent);
-  transform: rotate(18deg) translateX(-180%);
-  transition: transform .62s cubic-bezier(.2,.75,.25,1);
-  pointer-events: none;
-}
-.gold-button:hover::before { transform: rotate(18deg) translateX(560%); }
-.gold-button:hover { filter: brightness(1.04); transform: translateY(-1px); }
-.gold-button:active { transform: translateY(0); }
+.gold-button:hover { background: var(--gold-deep); }
+.gold-button:active { transform: none; }
 .gold-button svg, .outline-button svg { width: 17px; height: 17px; }
 .selector-submit { z-index: 2; min-width: 250px; min-height: 58px; margin: 34px auto 0; border-radius: 999px; }
 .student-journey {
