@@ -300,6 +300,102 @@ export async function updateAdminRequest(supabase, input, operatorEmail = '') {
   return data;
 }
 
+// §13 slice 2: operator batch management. All degrade to [] if the batches tables aren't
+// migrated yet, so the inbox never breaks before the migration is applied.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
+const BATCH_TIERS = new Set(['open', 'elite']);
+const BATCH_STATUSES = new Set(['draft', 'open', 'reviewing', 'closed', 'archived']);
+const BATCH_APP_STATUSES = new Set(['submitted', 'reviewing', 'accepted', 'waitlisted', 'declined']);
+
+export async function listAdminBatches(supabase) {
+  const { data, error } = await supabase.from('batches').select('*').order('created_at', { ascending: false }).limit(100);
+  if (error) return [];
+  const batches = Array.isArray(data) ? data : [];
+  if (!batches.length) return batches;
+  const batchIds = batches.map(b => b.id);
+  const { data: apps } = await supabase
+    .from('batch_applications')
+    .select('*')
+    .in('batch_id', batchIds)
+    .order('created_at', { ascending: false });
+  const applications = Array.isArray(apps) ? apps : [];
+  const studentIds = [...new Set(applications.map(a => a.student_user_id).filter(Boolean))];
+  let byStudent = new Map();
+  if (studentIds.length) {
+    const { data: profiles } = await supabase
+      .from('member_profiles')
+      .select('user_id,display_name,headline,school_name,verticals,work_types,skills')
+      .in('user_id', studentIds);
+    byStudent = new Map((profiles || []).map(p => [p.user_id, p]));
+  }
+  const appsByBatch = new Map();
+  for (const app of applications) {
+    const withStudent = { ...app, student: byStudent.get(app.student_user_id) || null };
+    if (!appsByBatch.has(app.batch_id)) appsByBatch.set(app.batch_id, []);
+    appsByBatch.get(app.batch_id).push(withStudent);
+  }
+  return batches.map(b => ({ ...b, applications: appsByBatch.get(b.id) || [] }));
+}
+
+export async function createBatch(supabase, input, operatorEmail = '') {
+  const name = text(input.name, 160);
+  if (!name || name.length < 1) throw new Error('Enter a batch name.');
+  const tier = text(input.tier, 20) || 'open';
+  if (!BATCH_TIERS.has(tier)) throw new Error('Choose a valid tier.');
+  const status = text(input.status, 20) || 'open';
+  if (!BATCH_STATUSES.has(status)) throw new Error('Choose a valid status.');
+  const record = { name, tier, status };
+  const discipline = text(input.discipline, 160);
+  if (discipline) record.discipline = discipline;
+  const partnerOrg = text(input.partner_org ?? input.partnerOrg, 160);
+  if (partnerOrg) record.partner_org = partnerOrg;
+  const season = text(input.season, 60);
+  if (season) record.season = season;
+  const description = text(input.description, 2_000);
+  if (description) record.description = description;
+  if (input.capacity !== undefined && input.capacity !== null && input.capacity !== '') {
+    const capacity = Number(input.capacity);
+    if (!Number.isInteger(capacity) || capacity < 0) throw new Error('Enter a whole number for capacity, or leave it blank.');
+    record.capacity = capacity;
+  }
+  const { data, error } = await supabase.from('batches').insert(record).select('*').single();
+  if (error) throw error;
+  return { ...data, applications: [] };
+}
+
+export async function updateBatch(supabase, input, operatorEmail = '') {
+  const id = text(input.id, 50);
+  if (!UUID_PATTERN.test(id)) throw new Error('Choose a valid batch.');
+  const status = text(input.status, 20);
+  if (!BATCH_STATUSES.has(status)) throw new Error('Choose a valid status.');
+  const { data, error } = await supabase
+    .from('batches')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function reviewBatchApplication(supabase, input, operatorEmail = '') {
+  const id = text(input.id, 50);
+  if (!UUID_PATTERN.test(id)) throw new Error('Choose a valid application.');
+  const status = text(input.status, 20);
+  if (!BATCH_APP_STATUSES.has(status)) throw new Error('Choose a valid application status.');
+  // reviewed_by is a uuid FK to auth.users; operators are allowlist-based (no auth row), so we
+  // record only reviewed_at and leave reviewed_by null rather than force a type mismatch.
+  const changes = { status, reviewed_at: new Date().toISOString() };
+  const { data, error } = await supabase
+    .from('batch_applications')
+    .update(changes)
+    .eq('id', id)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 function adminFailure(error) {
   if (error instanceof AdminOperationalError) {
     return { status: 503, code: error.code, message: error.publicMessage };
@@ -338,15 +434,23 @@ export default async function handler(req, res, dependencies = {}) {
   try {
     if (req.method === 'POST') {
       const input = body(req);
-      if (input.action !== 'request-link') return res.status(400).json({ ok: false, error: 'Unknown action.' });
-      const result = await requestAdminLink(input.email, req, dependencies);
-      const requestId = adminRequestId(req);
-      logAdminLinkRequest(req, result, requestId, startedAt);
-      return res.status(200).json({
-        ok: true,
-        requestId,
-        message: 'If this address is authorized, a sign-in link is on its way.',
-      });
+      if (input.action === 'request-link') {
+        const result = await requestAdminLink(input.email, req, dependencies);
+        const requestId = adminRequestId(req);
+        logAdminLinkRequest(req, result, requestId, startedAt);
+        return res.status(200).json({
+          ok: true,
+          requestId,
+          message: 'If this address is authorized, a sign-in link is on its way.',
+        });
+      }
+      // Every other POST action mutates operator data and requires an authenticated operator.
+      const operator = await authorizeAdmin(req, dependencies);
+      if (!operator) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
+      if (input.action === 'create-batch') {
+        return res.status(201).json({ ok: true, batch: await createBatch(operator.supabase, input, operator.email) });
+      }
+      return res.status(400).json({ ok: false, error: 'Unknown action.' });
     }
 
     if (!['GET', 'PATCH'].includes(req.method)) {
@@ -358,13 +462,21 @@ export default async function handler(req, res, dependencies = {}) {
     if (!admin) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
 
     if (req.method === 'GET') {
-      const [submissions, requests] = await Promise.all([listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase)]);
-      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests });
+      const [submissions, requests, batches] = await Promise.all([
+        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase),
+      ]);
+      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches });
     }
 
     const patchInput = body(req);
     if (patchInput.action === 'update-request') {
       return res.status(200).json({ ok: true, request: await updateAdminRequest(admin.supabase, patchInput, admin.email) });
+    }
+    if (patchInput.action === 'update-batch') {
+      return res.status(200).json({ ok: true, batch: await updateBatch(admin.supabase, patchInput, admin.email) });
+    }
+    if (patchInput.action === 'review-batch-application') {
+      return res.status(200).json({ ok: true, application: await reviewBatchApplication(admin.supabase, patchInput, admin.email) });
     }
     const submission = await updateAdminSubmission(admin.supabase, patchInput, admin.email);
     return res.status(200).json({ ok: true, submission });

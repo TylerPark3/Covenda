@@ -170,4 +170,43 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .admin-request-controls select, .admin-request-controls textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--line-strong); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; outline: 0; }
 .admin-request-controls select:focus, .admin-request-controls textarea:focus { border-color: var(--gold); outline: 3px solid rgba(180,123,32,.11); }
 .admin-request-save { justify-self: start; min-height: 34px; padding: 7px 16px; border: 1px solid var(--gold-deep); border-radius: 9px; background: var(--gold); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+/* §13 slice 2: operator batch management */
+.admin-batches-section { max-width: 1240px; margin: 0 auto; padding: 8px 26px 64px; }
+.admin-batches-section h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 20px; letter-spacing: -.03em; }
+.admin-batches-section h2 b { display: inline-grid; min-width: 22px; height: 22px; margin-left: 6px; place-items: center; padding: 0 6px; border-radius: 999px; background: var(--pale); color: var(--gold-deep); font-size: 12px; vertical-align: middle; }
+.admin-batches-section .admin-queue-heading p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.admin-batch-form { margin-top: 18px; padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.admin-batch-form-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.admin-batch-form label, .admin-batch-desc { display: flex; flex-direction: column; gap: 5px; font-size: 11px; font-weight: 650; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; }
+.admin-batch-desc { margin-top: 12px; }
+.admin-batch-form label small { text-transform: none; letter-spacing: 0; color: var(--soft); font-weight: 500; }
+.admin-batch-form input, .admin-batch-form select, .admin-batch-form textarea { padding: 9px 11px; border: 1px solid var(--line-strong); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; font-weight: 500; text-transform: none; letter-spacing: 0; outline: 0; }
+.admin-batch-form input:focus, .admin-batch-form select:focus, .admin-batch-form textarea:focus { border-color: var(--gold); outline: 3px solid rgba(180,123,32,.11); }
+.admin-batch-form-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 14px; }
+.admin-batch-form-actions span { color: var(--muted); font-size: 12px; }
+.admin-batch-form-actions span.is-error { color: #b4231f; }
+.admin-batch-form-actions button { min-height: 36px; padding: 8px 18px; border: 1px solid var(--gold-deep); border-radius: 9px; background: var(--gold); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+.admin-batches { display: grid; gap: 14px; margin-top: 18px; }
+.admin-batch-card { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.admin-batch-card.is-elite { border-color: rgba(180,123,32,.4); background: linear-gradient(180deg, var(--pale), #fff 55%); }
+.admin-batch-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.admin-batch-head strong { display: block; font-size: 15px; letter-spacing: -.02em; }
+.admin-batch-head small { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+.admin-batch-status { display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 650; color: var(--soft); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+.admin-batch-status select { padding: 6px 9px; border: 1px solid var(--line-strong); border-radius: 8px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; text-transform: none; letter-spacing: 0; }
+.admin-batch-description { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.admin-batch-tally { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--gold-deep); font-size: 11px; font-weight: 650; }
+.admin-batch-apps { display: grid; gap: 10px; margin-top: 12px; }
+.admin-batch-app { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 11px; background: #fdfcfa; }
+.admin-batch-app-who { min-width: 0; }
+.admin-batch-app-who strong { font-size: 13px; }
+.admin-batch-app-who small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+.admin-batch-app-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.admin-batch-app-tags span { padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--soft); font-size: 9px; font-weight: 600; }
+.admin-batch-app-note { margin: 8px 0 0; color: var(--ink); font-size: 11px; line-height: 1.55; }
+.admin-batch-app-links { display: flex; gap: 10px; margin-top: 7px; }
+.admin-batch-app-links a { color: var(--gold-deep); font-size: 11px; font-weight: 650; }
+.admin-batch-app-controls select { padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 9px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; }
+.admin-batch-app-controls select[data-status="accepted"] { border-color: rgba(36,117,58,.4); color: #24753a; }
+.admin-batch-app-controls select[data-status="declined"] { color: var(--soft); }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; } }

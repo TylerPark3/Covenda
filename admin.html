@@ -92,6 +92,29 @@
       <div class="admin-queue-heading"><div><h2>Brokered work requests <b id="adminRequestsCount">0</b></h2><p>Companies asking Covenda to package work. Set a status and reply — the company sees it in their portal.</p></div></div>
       <div class="admin-requests" id="adminRequests"></div>
     </section>
+    <section class="admin-batches-section">
+      <div class="admin-queue-heading"><div><h2>Elite batches <b id="adminBatchesCount">0</b></h2><p>Curated cohorts. Create a batch, then review every application — accept, waitlist, or decline. Admitted students are surfaced to partner companies.</p></div></div>
+      <form class="admin-batch-form" id="adminBatchForm">
+        <div class="admin-batch-form-grid">
+          <label>Batch name<input name="name" maxlength="160" required placeholder="Quant Research Cohort · Fall"></label>
+          <label>Discipline<input name="discipline" maxlength="160" placeholder="Asset management" list="adminBatchDisciplines"></label>
+          <label>Partner org <small>Optional</small><input name="partner_org" maxlength="160" placeholder="Princeton Quant Club"></label>
+          <label>Season <small>Optional</small><input name="season" maxlength="60" placeholder="Fall 2026"></label>
+          <label>Tier<select name="tier"><option value="open">Open</option><option value="elite">Elite</option></select></label>
+          <label>Capacity <small>Optional</small><input name="capacity" type="number" min="0" step="1" placeholder="12"></label>
+          <label>Status<select name="status"><option value="open">Open</option><option value="draft">Draft</option><option value="reviewing">Reviewing</option><option value="closed">Closed</option></select></label>
+        </div>
+        <label class="admin-batch-desc">Description <small>Optional</small><textarea name="description" rows="2" maxlength="2000" placeholder="What this cohort is for and who it surfaces to."></textarea></label>
+        <div class="admin-batch-form-actions"><span id="adminBatchFormMessage" aria-live="polite"></span><button type="submit">Create batch</button></div>
+      </form>
+      <datalist id="adminBatchDisciplines">
+        <option>Accounting &amp; finance</option><option>Investment banking</option><option>Asset management</option><option>Equity research</option><option>Private equity / VC</option>
+        <option>Software &amp; AI</option><option>Machine learning / LLMs</option><option>Physical AI / robotics</option><option>Autonomy / self-driving</option>
+        <option>Healthcare operations</option><option>Neuroscience / biotech</option><option>Clinical operations</option>
+        <option>Consumer &amp; retail</option><option>Professional services</option>
+      </datalist>
+      <div class="admin-batches" id="adminBatches"></div>
+    </section>
   </div>
 </body>
 </html>

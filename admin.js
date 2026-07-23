@@ -5,6 +5,10 @@ const statusLabels = { received:'Received', reviewing:'In human review', needs_i
 const typeLabels = { student_interest:'Student', employer_intake:'Company', university_partner:'University', call_request:'Call request' };
 let submissions = [];
 let requests = [];
+let batches = [];
+const batchTierLabels = { open:'Open', elite:'Elite' };
+const batchStatusLabels = { draft:'Draft', open:'Open', reviewing:'Reviewing', closed:'Closed', archived:'Archived' };
+const batchAppStatusLabels = { submitted:'Applied', reviewing:'In review', accepted:'Accepted', waitlisted:'Waitlisted', declined:'Declined' };
 const requestTypeLabels = { new_project:'New project', more_students:'More students', scope_change:'Scope change', revision:'Revision', consult:'Consult', question:'Question', specific_student:'Specific student' };
 const requestStatusLabels = { submitted:'Submitted', in_packaging:'Being packaged', packaged:'Packaged', declined:'Declined', closed:'Closed' };
 let selectedReference = '';
@@ -188,15 +192,95 @@ function renderRequests() {
   }
 }
 
+// §13 slice 2: operator batch management — create cohorts and review each application.
+function renderBatches() {
+  const root = $('#adminBatches'); if (!root) return; root.replaceChildren();
+  const count = $('#adminBatchesCount'); if (count) count.textContent = batches.length;
+  if (!batches.length) { const p = document.createElement('p'); p.className = 'admin-requests-empty'; p.textContent = 'No batches yet. Create one above to open a cohort.'; root.append(p); return; }
+  for (const batch of batches) root.append(batchCard(batch));
+}
+
+function batchCard(batch) {
+  const card = document.createElement('article'); card.className = 'admin-batch-card' + (batch.tier === 'elite' ? ' is-elite' : '');
+  const head = document.createElement('div'); head.className = 'admin-batch-head';
+  const title = document.createElement('div');
+  const name = document.createElement('strong'); name.textContent = batch.name;
+  const meta = document.createElement('small'); meta.textContent = [batchTierLabels[batch.tier] || batch.tier, batch.discipline, batch.partner_org, batch.season].filter(Boolean).join(' · ');
+  title.append(name, meta);
+  const statusLabel = document.createElement('label'); statusLabel.className = 'admin-batch-status';
+  statusLabel.append(document.createTextNode('Status'));
+  const statusSelect = document.createElement('select');
+  Object.entries(batchStatusLabels).forEach(([val, label]) => { const o = document.createElement('option'); o.value = val; o.textContent = label; if (val === batch.status) o.selected = true; statusSelect.append(o); });
+  statusSelect.addEventListener('change', async () => {
+    statusSelect.disabled = true;
+    try {
+      const result = await adminRequest({ method: 'PATCH', body: JSON.stringify({ action: 'update-batch', id: batch.id, status: statusSelect.value }) });
+      const i = batches.findIndex(b => b.id === batch.id); if (i >= 0) batches[i] = { ...batches[i], ...result.batch };
+    } catch (error) { alert(error.message); statusSelect.value = batch.status; } finally { statusSelect.disabled = false; }
+  });
+  statusLabel.append(statusSelect);
+  head.append(title, statusLabel); card.append(head);
+  if (batch.description) { const desc = document.createElement('p'); desc.className = 'admin-batch-description'; desc.textContent = batch.description; card.append(desc); }
+
+  const apps = batch.applications || [];
+  const tally = document.createElement('div'); tally.className = 'admin-batch-tally';
+  const accepted = apps.filter(a => a.status === 'accepted').length;
+  tally.textContent = apps.length
+    ? `${apps.length} ${apps.length === 1 ? 'application' : 'applications'} · ${accepted} accepted${batch.capacity ? ` of ${batch.capacity} seats` : ''}`
+    : 'No applications yet.';
+  card.append(tally);
+
+  if (apps.length) {
+    const list = document.createElement('div'); list.className = 'admin-batch-apps';
+    for (const app of apps) list.append(batchApplicationRow(batch, app));
+    card.append(list);
+  }
+  return card;
+}
+
+function batchApplicationRow(batch, app) {
+  const row = document.createElement('div'); row.className = 'admin-batch-app';
+  const who = document.createElement('div'); who.className = 'admin-batch-app-who';
+  const student = app.student || {};
+  const nm = document.createElement('strong'); nm.textContent = student.display_name || 'Student'; who.append(nm);
+  const sub = document.createElement('small'); sub.textContent = [student.headline, student.school_name].filter(Boolean).join(' · '); if (sub.textContent) who.append(sub);
+  const signals = [ ...(student.verticals || []), ...(student.work_types || []) ];
+  if (signals.length) { const tags = document.createElement('div'); tags.className = 'admin-batch-app-tags'; signals.slice(0, 6).forEach(s => { const t = document.createElement('span'); t.textContent = s; tags.append(t); }); who.append(tags); }
+  const materials = app.materials || {};
+  const packet = [];
+  if (materials.note) packet.push(materials.note);
+  const links = [materials.videoUrl, materials.demonstration].filter(v => typeof v === 'string' && /^https?:\/\//i.test(v));
+  if (materials.note) { const note = document.createElement('p'); note.className = 'admin-batch-app-note'; note.textContent = materials.note; who.append(note); }
+  if (links.length) { const lw = document.createElement('div'); lw.className = 'admin-batch-app-links'; links.forEach(url => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = url.includes('video') || url === materials.videoUrl ? 'Video' : 'Work sample'; lw.append(a); }); who.append(lw); }
+  row.append(who);
+
+  const controls = document.createElement('div'); controls.className = 'admin-batch-app-controls';
+  const select = document.createElement('select');
+  Object.entries(batchAppStatusLabels).forEach(([val, label]) => { const o = document.createElement('option'); o.value = val; o.textContent = label; if (val === app.status) o.selected = true; select.append(o); });
+  select.dataset.status = app.status;
+  select.addEventListener('change', async () => {
+    select.disabled = true;
+    try {
+      const result = await adminRequest({ method: 'PATCH', body: JSON.stringify({ action: 'review-batch-application', id: app.id, status: select.value }) });
+      const bi = batches.findIndex(b => b.id === batch.id);
+      if (bi >= 0) { const ai = (batches[bi].applications || []).findIndex(a => a.id === app.id); if (ai >= 0) batches[bi].applications[ai] = { ...batches[bi].applications[ai], ...result.application }; }
+      renderBatches();
+    } catch (error) { alert(error.message); select.value = app.status; select.disabled = false; }
+  });
+  controls.append(select);
+  row.append(controls);
+  return row;
+}
+
 async function loadInbox({ announce = false } = {}) {
   showInbox();
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {
-    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; $('#operatorEmail').textContent=result.operator.email;
+    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; $('#operatorEmail').textContent=result.operator.email;
     if (!selectedReference && submissions[0]) selectedReference=submissions[0].reference;
     if (selectedReference && !submissions.some(item=>item.reference===selectedReference)) selectedReference=submissions[0]?.reference || '';
-    updateQueueSummary(); renderRows(); renderRequests();
+    updateQueueSummary(); renderRows(); renderRequests(); renderBatches();
     $('#adminSyncStatus').textContent=`Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }
@@ -209,7 +293,18 @@ $('#adminSort').addEventListener('change',renderRows);
 $('#adminRefresh').addEventListener('click',()=>loadInbox({ announce:true }).catch(error=>{ $('#adminSyncStatus').textContent='Refresh failed'; alert(error.message); }));
 $('#adminClearFilters').addEventListener('click',()=>{ activeType='all'; $('#adminTypeFilter').value='all'; $('#adminStatusFilter').value='all'; $('#adminSort').value='newest'; $('#adminSearch').value=''; $$('[data-admin-type]').forEach(button=>button.classList.toggle('is-active',button.dataset.adminType==='all')); renderRows(); });
 $$('[data-summary-status]').forEach(button=>button.addEventListener('click',()=>{ $('#adminStatusFilter').value=button.dataset.summaryStatus; renderRows(); $('#adminRows').closest('.admin-table-wrap').scrollIntoView({ behavior:'smooth', block:'start' }); }));
-$('#adminSignout').addEventListener('click',()=>{ sessionStorage.removeItem(TOKEN_KEY); selectedReference=''; submissions=[]; showLogin('Signed out of this browser.'); });
+$('#adminSignout').addEventListener('click',()=>{ sessionStorage.removeItem(TOKEN_KEY); selectedReference=''; submissions=[]; batches=[]; showLogin('Signed out of this browser.'); });
+$('#adminBatchForm')?.addEventListener('submit',async event=>{
+  event.preventDefault(); const form=event.currentTarget; const button=$('button[type="submit"]',form); const message=$('#adminBatchFormMessage');
+  button.disabled=true; const original=button.textContent; button.textContent='Creating…'; if (message) { message.textContent=''; message.classList.remove('is-error'); }
+  try {
+    const payload={ action:'create-batch', name:form.elements.name.value, discipline:form.elements.discipline.value, partner_org:form.elements.partner_org.value, season:form.elements.season.value, tier:form.elements.tier.value, capacity:form.elements.capacity.value, status:form.elements.status.value, description:form.elements.description.value };
+    const result=await adminRequest({ method:'POST', body:JSON.stringify(payload) });
+    batches=[result.batch, ...batches]; renderBatches(); form.reset();
+    if (message) message.textContent='Batch created.';
+  } catch(error) { if (message) { message.textContent=error.message; message.classList.add('is-error'); } }
+  finally { button.disabled=false; button.textContent=original; }
+});
 
 const authError=captureMagicLink();
 if (authError) showLogin(authError,true); else if (token()) loadInbox().catch(error=>showLogin(error.message,true)); else showLogin();
