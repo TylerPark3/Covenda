@@ -89,6 +89,7 @@ async function loadDashboard() {
   try {
     const dashboard=await portalRequest(); state.dashboard=dashboard; showMember(); renderDashboard();
     if (shouldOnboard(dashboard.profile)) startOnboarding();
+    else handleCheckoutReturn();
   } catch(error) { if(session().accessToken) showAuth(error.message,true); }
 }
 
@@ -356,10 +357,35 @@ function renderWalletLedger(){
   root.append(table);
 }
 async function runBuyCredits(credits,button){
-  button.disabled=true;setDialogMessage('#walletMessage','Adding credits…');
-  try{await portalRequest({method:'POST',body:JSON.stringify({action:'buy-credits',credits})});await loadDashboard();setView('wallet');setDialogMessage('#walletMessage','');}
-  catch(error){setDialogMessage('#walletMessage',error.message,true);}
-  finally{button.disabled=false;}
+  button.disabled=true;setDialogMessage('#walletMessage','Starting secure checkout…');
+  try{
+    // Money in: try Stripe Checkout first. Stripe hosts the card form — we never see card
+    // data and only get back a URL to send the buyer to. Credits are granted later, by the
+    // webhook, once Stripe confirms payment (see api/stripe-webhook.js).
+    const res=await fetch('/api/stripe-checkout',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({credits})});
+    const data=await res.json().catch(()=>({}));
+    if(res.ok&&data.url){location.assign(data.url);return;}
+    // Stripe not wired up yet (dev/test): fall back to the internal operator grant, which is
+    // itself gated server-side (allowlist / feature flag) so a normal buyer can't self-grant.
+    if(data.code==='STRIPE_NOT_CONFIGURED'){
+      await portalRequest({method:'POST',body:JSON.stringify({action:'buy-credits',credits})});
+      await loadDashboard();setView('wallet');setDialogMessage('#walletMessage','');return;
+    }
+    throw new Error(data.error||'Could not start checkout.');
+  }
+  catch(error){setDialogMessage('#walletMessage',error.message,true);button.disabled=false;}
+}
+
+// After returning from Stripe Checkout the URL carries ?wallet=paid|cancelled. Surface a
+// status, then strip the param so a refresh doesn't replay it. The credit grant lands
+// asynchronously via the webhook, so on success we tell the buyer it may take a moment.
+function handleCheckoutReturn(){
+  const params=new URLSearchParams(location.search);
+  const wallet=params.get('wallet');
+  if(!wallet)return;
+  history.replaceState(null,'',location.pathname);
+  if(wallet==='paid'){setView('wallet');setDialogMessage('#walletMessage','Payment received — your credits will appear here within a few seconds.');}
+  else if(wallet==='cancelled'){setView('wallet');setDialogMessage('#walletMessage','Checkout cancelled — no charge was made.',true);}
 }
 
 function selectMessageProject(projectId){state.messageProjectId=projectId;renderMessages();}
