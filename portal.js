@@ -284,6 +284,13 @@ function renderPayout(){
   // Payout eligibility gate: a student with earnings must pass identity verification (and be
   // 18+) before they can request a payout. Show the verify CTA in place of the form.
   const profile=d.profile||{};
+  // Identity collection is off until COVENDA_IDENTITY_ENABLED is set (legal/privacy gate) —
+  // when off, don't surface a verify button that leads nowhere; show a neutral note instead.
+  if(profile.role==='student'&&!profile.identity_verified&&!d.identityEnabled){
+    const note=document.createElement('p');note.className='payout-empty';
+    note.textContent='Withdrawals are opening soon — we’ll let you know the moment you can cash out your earnings.';
+    root.append(note);return;
+  }
   if(profile.role==='student'&&!profile.identity_verified){
     const gate=document.createElement('div');gate.className='payout-gate';
     const g=document.createElement('strong');g.textContent='Verify your identity to receive payouts';
@@ -413,7 +420,7 @@ async function runVerifyIdentity(button){
     const res=await fetch('/api/stripe-identity',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({})});
     const data=await res.json().catch(()=>({}));
     if(res.ok&&data.url){location.assign(data.url);return;}
-    if(data.code==='STRIPE_NOT_CONFIGURED'){setDialogMessage('#payoutMessage','Identity verification isn’t switched on yet.',true);button.disabled=false;return;}
+    if(data.code==='STRIPE_NOT_CONFIGURED'||data.code==='IDENTITY_DISABLED'){setDialogMessage('#payoutMessage','Identity verification isn’t switched on yet.',true);button.disabled=false;return;}
     throw new Error(data.error||'Could not start identity verification.');
   }catch(error){setDialogMessage('#payoutMessage',error.message,true);button.disabled=false;}
 }

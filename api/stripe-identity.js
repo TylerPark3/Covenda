@@ -48,9 +48,15 @@ export default async function handler(req, res, dependencies = {}) {
   if (!sameOrigin(req)) return res.status(403).json({ ok: false, error: 'Origin not allowed.' });
   const member = await authorizeMember(req, dependencies);
   if (!member) return res.status(401).json({ ok: false, error: 'Member authentication is required.' });
+  const env = dependencies.env || process.env;
+  // Safety flag: collecting a real government ID triggers privacy/biometric-law obligations
+  // (e.g. BIPA) the instant a real student verifies — independent of any money movement, and
+  // independent of whether Checkout is live. Keep ID collection OFF until COVENDA_IDENTITY_ENABLED
+  // is explicitly set, so flipping to live Stripe keys can't silently start collecting IDs.
+  if (env.COVENDA_IDENTITY_ENABLED !== 'true') return res.status(503).json({ ok: false, code: 'IDENTITY_DISABLED', error: 'Identity verification is not enabled yet.' });
   try { parseBody(req); } catch { return res.status(400).json({ ok: false, error: 'Invalid request.' }); }
   try {
-    const result = await createVerificationSession({ member, origin: baseUrl(req), env: dependencies.env || process.env, stripe: dependencies.stripe });
+    const result = await createVerificationSession({ member, origin: baseUrl(req), env, stripe: dependencies.stripe });
     return res.status(200).json({ ok: true, ...result });
   } catch (error) {
     if (error instanceof StripeNotConfiguredError) return res.status(503).json({ ok: false, code: 'STRIPE_NOT_CONFIGURED', error: error.message });

@@ -179,13 +179,17 @@ export async function loadMemberIntakes(member) {
   );
 }
 
-export async function loadMemberDashboard(member) {
+export async function loadMemberDashboard(member, env = process.env) {
   const { user, supabase } = member;
+  // Whether the ID-verification feature is switched on for this deployment. Off by default so
+  // the frontend hides the verify CTA (and real ID collection stays disabled) until it's
+  // deliberately enabled — see the safety note in api/stripe-identity.js.
+  const identityEnabled = env.COVENDA_IDENTITY_ENABLED === 'true';
   const [profile, intakes] = await Promise.all([
     checked(supabase.from('member_profiles').select('*').eq('user_id', user.id).maybeSingle(), null),
     loadMemberIntakes(member),
   ]);
-  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [], verifiedCount: 0 };
+  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [], verifiedCount: 0, identityEnabled };
 
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
@@ -205,7 +209,7 @@ export async function loadMemberDashboard(member) {
     const [walletBalance, creditLedger, payoutRequests] = await Promise.all([
       creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member),
     ]);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests };
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, identityEnabled };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -221,7 +225,7 @@ export async function loadMemberDashboard(member) {
     : [];
   const verifiedCount = projects.filter(project => project.status === 'complete').length;
   const [walletBalance, creditLedger] = await Promise.all([creditBalance(member), loadCreditLedger(member)]);
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger };
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, identityEnabled };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -683,7 +687,7 @@ export default async function handler(req, res, dependencies = {}) {
     }
     const member = await authorizeMember(req, dependencies);
     if (!member) return res.status(401).json({ ok: false, error: 'Member authentication is required.' });
-    if (req.method === 'GET') return res.status(200).json({ ok: true, ...(await loadMemberDashboard(member)) });
+    if (req.method === 'GET') return res.status(200).json({ ok: true, ...(await loadMemberDashboard(member, dependencies.env || process.env)) });
 
     const input = parseBody(req);
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
