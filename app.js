@@ -980,7 +980,7 @@ function applyDeliveryHealth(primary, { checkedAt = '' } = {}) {
   if (details) details.dataset.status = status;
   if (detailsTitle) {
     detailsTitle.textContent = status === 'ready'
-      ? 'Supabase inbox connected'
+      ? 'Submission saved securely'
       : status === 'checking'
         ? 'Checking the primary inbox…'
         : 'Primary inbox needs attention';
