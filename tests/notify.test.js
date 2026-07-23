@@ -2,9 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail,
+  applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail, batchDecisionEmail,
   notifyMember, notifyOperatorEvent,
 } from '../api/notify.js';
+
+test('batchDecisionEmail says the right thing for each outcome', () => {
+  const accepted = batchDecisionEmail({ to: 's@x.com', from: 'h@c.app', batchName: 'Quant Research Cohort', decision: 'accepted' });
+  const waitlisted = batchDecisionEmail({ to: 's@x.com', from: 'h@c.app', batchName: 'Quant Research Cohort', decision: 'waitlisted' });
+  const declined = batchDecisionEmail({ to: 's@x.com', from: 'h@c.app', batchName: 'Quant Research Cohort', decision: 'declined' });
+  assert.match(accepted.subject, /You're in/);
+  assert.match(waitlisted.subject, /Waitlisted/);
+  assert.match(declined.subject, /Update on your/);
+  assert.match(accepted.html, /Quant Research Cohort/);
+  assert.notEqual(accepted.html, declined.html);
+  assert.notEqual(waitlisted.html, declined.html);
+});
 
 test('applicationReceivedEmail addresses the owner with the project + applicant', () => {
   const email = applicationReceivedEmail({ to: 'co@x.com', from: 'hello@covenda.app', projectTitle: 'Pricing scan', studentName: 'Ada', portalUrl: 'https://covenda.app/portal.html' });

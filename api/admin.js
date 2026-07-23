@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 import { supabaseConfiguration } from './submissions.js';
 import { sendPartnerDigests } from './digest.js';
+import { notifyMember, batchDecisionEmail } from './notify.js';
 
 const ADMIN_STATUSES = new Set(['received', 'reviewing', 'needs_information', 'packet_proposed', 'approval_pending', 'approved', 'declined', 'archived']);
 const linkBuckets = new Map();
@@ -399,6 +400,16 @@ export async function reviewBatchApplication(supabase, input, operatorEmail = ''
     .select('*')
     .single();
   if (error) throw error;
+  // Best-effort: on a terminal decision, tell the student. Never blocks the review.
+  if (data && ['accepted', 'waitlisted', 'declined'].includes(status) && data.student_user_id) {
+    let batchName = '';
+    try { const { data: batch } = await supabase.from('batches').select('name').eq('id', data.batch_id).maybeSingle(); batchName = batch?.name || ''; } catch { batchName = ''; }
+    await notifyMember(supabase, {
+      toUserId: data.student_user_id,
+      idempotencyKey: `covenda-batch-${data.id}-${status}`,
+      build: ({ to, from, portalUrl }) => batchDecisionEmail({ to, from, batchName, decision: status, portalUrl }),
+    });
+  }
   return data;
 }
 

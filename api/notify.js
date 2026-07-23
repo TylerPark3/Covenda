@@ -55,6 +55,34 @@ export function applicationDecisionEmail({ to, from, projectTitle, accepted, por
     tags: TAGS,
   };
 }
+export function batchDecisionEmail({ to, from, batchName, decision, portalUrl = '' }) {
+  const name = batchName || 'the cohort';
+  if (decision === 'accepted') {
+    return {
+      from, to: [to],
+      subject: `You're in — ${name}`,
+      text: `Congratulations — you've been admitted to ${name} on Covenda. Open your portal to see next steps${portalUrl ? `: ${portalUrl}` : '.'}\n`,
+      html: shell(`<h1 style="font-size:20px;margin:0 0 10px">You're in 🎉</h1><p>You've been admitted to <strong>${escapeHtml(name)}</strong>. Admitted students are surfaced to partner companies — keep your profile sharp.</p>${button(portalUrl, 'Open your batches')}`),
+      tags: TAGS,
+    };
+  }
+  if (decision === 'waitlisted') {
+    return {
+      from, to: [to],
+      subject: `Waitlisted — ${name}`,
+      text: `You've been waitlisted for ${name} on Covenda. If a spot opens, you'll be the first to know. Your profile and proof stay with you${portalUrl ? `: ${portalUrl}` : '.'}\n`,
+      html: shell(`<h1 style="font-size:20px;margin:0 0 10px">Waitlisted for ${escapeHtml(name)}</h1><p>You made a strong case — you're on the waitlist. If a seat opens, we'll reach out. In the meantime, keep building proof through real projects.</p>${button(portalUrl, 'Find a project')}`),
+      tags: TAGS,
+    };
+  }
+  return {
+    from, to: [to],
+    subject: `Update on your ${name} application`,
+    text: `Thanks for applying to ${name}. It wasn't a match this round — cohorts are small and fit is specific. Your profile and proof stay with you, and new cohorts open regularly${portalUrl ? `: ${portalUrl}` : '.'}\n`,
+    html: shell(`<h1 style="font-size:20px;margin:0 0 10px">Not this cohort — keep going</h1><p>You weren't selected for <strong>${escapeHtml(name)}</strong> this round. Cohorts are small and fit is project-specific; it's not a mark against you. New cohorts open regularly.</p>${button(portalUrl, 'Explore Covenda')}`),
+    tags: TAGS,
+  };
+}
 export function payoutRequestedEmail({ to, from, memberName, credits, method, adminUrl = '' }) {
   const who = memberName || 'A member';
   return {
