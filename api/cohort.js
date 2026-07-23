@@ -22,7 +22,7 @@ function sameOrigin(req) {
 
 // Pure, testable aggregation. Takes the raw rows already narrowed to this code and produces the
 // public shape. Kept free of I/O so the funnel logic can be unit-tested deterministically.
-export function summarizeCohort({ code, endorsementSubs = [], codedApplications = [], completedStudentIds = new Set() }) {
+export function summarizeCohort({ code, endorsementSubs = [], codedApplications = [], completedStudentIds = new Set(), employerSubs = [] }) {
   let orgName = '';
   const rosterEmails = new Set();
   const industries = {};
@@ -41,6 +41,15 @@ export function summarizeCohort({ code, endorsementSubs = [], codedApplications 
   const endorsedCount = rosterEmails.size;
   const appliedCount = applicantStudents.size;
   const verifiedCount = verifiedStudents.length;
+  // Employer-side attribution (GTM Move 3): firms that arrived via this partner's referral code.
+  // Distinct by contact/submitter email so a firm that submits twice counts once. PII-free output.
+  const firmEmails = new Set();
+  for (const sub of employerSubs) {
+    const details = sub?.details || {};
+    const email = String(details.contact?.email || sub?.submitter_email || '').trim().toLowerCase();
+    if (email) firmEmails.add(email);
+  }
+  const referredFirms = firmEmails.size;
   const industryList = Object.entries(industries)
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
@@ -50,6 +59,7 @@ export function summarizeCohort({ code, endorsementSubs = [], codedApplications 
     endorsedCount,
     appliedCount,
     verifiedCount,
+    referredFirms,
     industries: industryList,
     // A partner-friendly funnel. Every rung is a real count; higher rungs are earned, never assigned.
     funnel: [
@@ -57,7 +67,7 @@ export function summarizeCohort({ code, endorsementSubs = [], codedApplications 
       { key: 'applied', label: 'Applied through Covenda', count: appliedCount, note: 'Came in via this referral and applied to real work' },
       { key: 'verified', label: 'Employer-Verified', count: verifiedCount, note: 'Completed a reviewed project' },
     ],
-    isEmpty: endorsedCount === 0 && appliedCount === 0,
+    isEmpty: endorsedCount === 0 && appliedCount === 0 && referredFirms === 0,
   };
 }
 
@@ -70,6 +80,14 @@ async function loadCohort(supabase, code) {
     .eq('submission_type', 'referrer_endorsement')
     .limit(500);
   const endorsementSubs = (subs || []).filter(s => String(s?.details?.attributionCode || '').toUpperCase() === code);
+
+  // Employer intakes that arrived via this partner's referral link (GTM Move 3).
+  const { data: empSubs } = await supabase
+    .from('submissions')
+    .select('details, submitter_email')
+    .eq('submission_type', 'employer_intake')
+    .limit(1000);
+  const employerSubs = (empSubs || []).filter(s => String(s?.details?.referral?.code || '').toUpperCase() === code);
 
   // Applications that cited this referral code.
   const { data: apps } = await supabase
@@ -89,7 +107,7 @@ async function loadCohort(supabase, code) {
       .eq('status', 'complete');
     completedStudentIds = new Set((projects || []).map(p => p.assigned_student_user_id).filter(Boolean));
   }
-  return summarizeCohort({ code, endorsementSubs, codedApplications, completedStudentIds });
+  return summarizeCohort({ code, endorsementSubs, codedApplications, completedStudentIds, employerSubs });
 }
 
 export default async function handler(req, res, dependencies = {}) {

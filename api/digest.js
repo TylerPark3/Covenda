@@ -67,6 +67,7 @@ export function partnerDigestEmail(digest, { to, from, cohortUrl = '' } = {}) {
     `  Endorsed: ${c.endorsedCount}`,
     `  Applied through Covenda: ${c.appliedCount}`,
     `  Employer-Verified: ${c.verifiedCount}`,
+    c.referredFirms ? `  Firms you introduced: ${c.referredFirms}` : undefined,
     cohortUrl ? `\nYour live cohort page: ${cohortUrl}` : '',
     '',
     'Every number is earned — students move up only by completing real, reviewed work.',
@@ -84,6 +85,7 @@ export function partnerDigestEmail(digest, { to, from, cohortUrl = '' } = {}) {
     `<h1 style="font-size:22px;margin:0 0 12px">${escapeHtml(org)}</h1>`,
     `<p style="color:#444;font-size:14px;line-height:1.5">This month: <strong>${escapeHtml(movedText)}</strong></p>`,
     `<table role="presentation" cellspacing="8" style="margin:16px 0"><tr>${stat('Endorsed', c.endorsedCount)}${stat('Applied', c.appliedCount)}${stat('Verified', c.verifiedCount)}</tr></table>`,
+    c.referredFirms ? `<p style="color:#b47b20;font-size:14px;font-weight:600;margin:0 0 12px">🏢 ${c.referredFirms} firm${c.referredFirms === 1 ? '' : 's'} you introduced to Covenda.</p>` : '',
     cohortLink,
     `<p style="color:#777;font-size:12px;line-height:1.5;border-top:1px solid #eee;padding-top:14px;margin-top:18px">Every number is earned — students move up only by completing real, reviewed work. Reply to update your roster or to stop receiving these.</p>`,
     `</div>`,
@@ -127,6 +129,20 @@ export async function buildPartnerDigests(supabase, { sinceDays = 30, now = new 
     appsByCode.get(code).push(app);
   }
 
+  // Employer intakes attributed to a tracked partner code (GTM Move 3).
+  const { data: empSubs } = await supabase
+    .from('submissions')
+    .select('details, submitter_email')
+    .eq('submission_type', 'employer_intake')
+    .limit(2000);
+  const empByCode = new Map();
+  for (const sub of empSubs || []) {
+    const code = String(sub?.details?.referral?.code || '').toUpperCase();
+    if (!byCode.has(code)) continue;
+    if (!empByCode.has(code)) empByCode.set(code, []);
+    empByCode.get(code).push(sub);
+  }
+
   // Completed projects (with completion time) for any student who cited a tracked code.
   const trackedStudentIds = [...new Set([...appsByCode.values()].flat().map(a => a.student_user_id).filter(Boolean))];
   let completedById = new Map();
@@ -148,7 +164,7 @@ export async function buildPartnerDigests(supabase, { sinceDays = 30, now = new 
   const digests = [];
   for (const [code, entry] of byCode) {
     const codedApplications = appsByCode.get(code) || [];
-    const cohort = summarizeCohort({ code, endorsementSubs: entry.endorsementSubs, codedApplications, completedStudentIds });
+    const cohort = summarizeCohort({ code, endorsementSubs: entry.endorsementSubs, codedApplications, completedStudentIds, employerSubs: empByCode.get(code) || [] });
     const newApplied = codedApplications.filter(a => a.created_at && a.created_at >= sinceIso).length;
     // Distinct students in this cohort whose completion landed in the period.
     const newVerified = new Set(

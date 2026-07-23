@@ -1563,6 +1563,9 @@ function companyPayload(form) {
     type: 'employer_intake',
     ...(form.dataset.revisionOf ? { revisionOf: form.dataset.revisionOf } : {}),
     startedAt: Number(form.dataset.startedAt),
+    // Employer-side referral attribution (GTM Move 3): if the firm arrived through a partner's
+    // ?ref= link, the code rides along so the partner's track record credits the intro.
+    referral: activeReferralPayload(),
     website: formValue(form, 'website'),
     consent: $('[name="companyConsent"]', form).checked,
     contact: {

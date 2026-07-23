@@ -82,6 +82,15 @@
     funnel.replaceChildren();
     (cohort.funnel || []).forEach((rung) => funnel.append(statCard(rung)));
 
+    const firmsEl = $('#cohortFirms');
+    if (firmsEl) {
+      const n = Number(cohort.referredFirms) || 0;
+      if (n > 0) {
+        firmsEl.textContent = '🏢 ' + n + (n === 1 ? ' firm' : ' firms') + ' introduced to Covenda through ' + (org || 'this partner') + '.';
+        firmsEl.hidden = false;
+      } else { firmsEl.hidden = true; }
+    }
+
     if ((cohort.industries || []).length) {
       renderBars($('#cohortBars'), cohort.industries);
       $('#cohortBreakdown').hidden = false;

@@ -52,3 +52,17 @@ test('summarizeCohort counts a real endorsed → applied → verified funnel wit
   assert.equal(cohort.funnel[0].count, 3);
   assert.equal(cohort.funnel[2].count, 1);
 });
+
+test('summarizeCohort counts distinct referred firms (GTM Move 3) without leaking PII', () => {
+  const employerSubs = [
+    { details: { referral: { code: 'REF-ABC123' }, contact: { email: 'cfo@acme.com', company: 'Acme LLC' } } },
+    // Same firm submits twice → one firm.
+    { details: { referral: { code: 'REF-ABC123' }, contact: { email: 'CFO@acme.com' } } },
+    { details: { referral: { code: 'REF-ABC123' } }, submitter_email: 'owner@beta.co' },
+  ];
+  const cohort = summarizeCohort({ code: 'REF-ABC123', employerSubs });
+  assert.equal(cohort.referredFirms, 2, 'distinct firm emails, case-insensitive');
+  assert.equal(cohort.isEmpty, false, 'a referred firm alone makes the cohort non-empty');
+  const serialized = JSON.stringify(cohort);
+  assert.ok(!serialized.includes('acme.com') && !serialized.includes('Acme LLC'), 'no firm PII in the public payload');
+});
