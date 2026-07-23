@@ -209,6 +209,18 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .admin-batch-app-controls select { padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 9px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; }
 .admin-batch-app-controls select[data-status="accepted"] { border-color: rgba(36,117,58,.4); color: #24753a; }
 .admin-batch-app-controls select[data-status="declined"] { color: var(--soft); }
+/* §B operator analytics band — sits at the top of the queue column. */
+.admin-metrics-section { margin: 0 0 28px; }
+.admin-metrics-band { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); }
+.admin-metric { display: flex; flex-direction: column; gap: 3px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.admin-metric strong { font-size: 24px; font-weight: 700; letter-spacing: -.03em; color: var(--ink); line-height: 1; }
+.admin-metric span { color: var(--muted); font-size: 11px; font-weight: 600; }
+.admin-metric small { color: var(--soft); font-size: 10px; }
+.admin-metric.is-good strong { color: var(--success); }
+.admin-metric.is-money { background: var(--pale); border-color: rgba(180,123,32,.2); }
+.admin-metric.is-money strong { color: var(--gold-deep); }
+.admin-metric.is-warn small { color: #b4231f; font-weight: 650; }
+
 /* §9 partner digest operator tools */
 .admin-digest-section { max-width: 1240px; margin: 0 auto; padding: 8px 26px 64px; }
 .admin-digest-section h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 20px; letter-spacing: -.03em; }

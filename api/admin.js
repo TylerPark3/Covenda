@@ -402,6 +402,65 @@ export async function reviewBatchApplication(supabase, input, operatorEmail = ''
   return data;
 }
 
+// §B operator analytics. Pure aggregation of the credit ledger into money-in / platform-revenue /
+// paid-to-students, so the dashboard math is testable in isolation.
+export function summarizeLedger(rows = []) {
+  let purchased = 0, platformRevenue = 0, toStudents = 0;
+  for (const row of rows) {
+    const credits = Number(row?.credits) || 0;
+    if (row?.entry_type === 'purchase') purchased += credits;
+    // user_id null = Covenda platform revenue (reach fees, platform fees, batch access).
+    if (row?.user_id == null && credits > 0) platformRevenue += credits;
+    // Credits released from escrow to a student (their earnings).
+    if (row?.entry_type === 'escrow_release' && row?.user_id != null && credits > 0) toStudents += credits;
+  }
+  return { purchased, platformRevenue, toStudents };
+}
+
+async function countRows(supabase, table, apply) {
+  try {
+    let query = supabase.from(table).select('*', { count: 'exact', head: true });
+    if (apply) query = apply(query);
+    const { count, error } = await query;
+    return error ? 0 : (count || 0);
+  } catch { return 0; }
+}
+
+// Real operator metrics. Every number is a live count/sum; anything unmigrated degrades to 0 so
+// the dashboard renders honest zeros rather than breaking.
+export async function loadAdminMetrics(supabase) {
+  const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const [
+    submissions, profiles, applications, accepted, projects, completed,
+    activeBatches, pendingPayouts,
+    wkSubmissions, wkApplications, wkCompleted,
+  ] = await Promise.all([
+    countRows(supabase, 'submissions'),
+    countRows(supabase, 'member_profiles'),
+    countRows(supabase, 'project_applications'),
+    countRows(supabase, 'project_applications', q => q.eq('status', 'accepted')),
+    countRows(supabase, 'member_projects'),
+    countRows(supabase, 'member_projects', q => q.eq('status', 'complete')),
+    countRows(supabase, 'batches', q => q.in('status', ['open', 'reviewing'])),
+    countRows(supabase, 'payout_requests', q => q.eq('status', 'requested')),
+    countRows(supabase, 'submissions', q => q.gte('created_at', weekAgo)),
+    countRows(supabase, 'project_applications', q => q.gte('created_at', weekAgo)),
+    countRows(supabase, 'member_projects', q => q.eq('status', 'complete').gte('updated_at', weekAgo)),
+  ]);
+  let ledgerRows = [];
+  try {
+    const { data } = await supabase.from('credit_ledger').select('credits,entry_type,user_id').limit(10_000);
+    ledgerRows = Array.isArray(data) ? data : [];
+  } catch { ledgerRows = []; }
+  return {
+    funnel: { submissions, profiles, applications, accepted, projects, completed },
+    thisWeek: { submissions: wkSubmissions, applications: wkApplications, completed: wkCompleted },
+    credits: summarizeLedger(ledgerRows),
+    batches: { active: activeBatches },
+    payouts: { pending: pendingPayouts },
+  };
+}
+
 function adminFailure(error) {
   if (error instanceof AdminOperationalError) {
     return { status: 503, code: error.code, message: error.publicMessage };
@@ -474,10 +533,10 @@ export default async function handler(req, res, dependencies = {}) {
     if (!admin) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
 
     if (req.method === 'GET') {
-      const [submissions, requests, batches] = await Promise.all([
-        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase),
+      const [submissions, requests, batches, metrics] = await Promise.all([
+        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase),
       ]);
-      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches });
+      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches, metrics });
     }
 
     const patchInput = body(req);

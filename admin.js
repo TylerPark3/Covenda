@@ -282,7 +282,7 @@ async function loadInbox({ announce = false } = {}) {
     const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; $('#operatorEmail').textContent=result.operator.email;
     if (!selectedReference && submissions[0]) selectedReference=submissions[0].reference;
     if (selectedReference && !submissions.some(item=>item.reference===selectedReference)) selectedReference=submissions[0]?.reference || '';
-    updateQueueSummary(); renderRows(); renderRequests(); renderBatches();
+    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics);
     $('#adminSyncStatus').textContent=`Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }
@@ -296,6 +296,38 @@ $('#adminRefresh').addEventListener('click',()=>loadInbox({ announce:true }).cat
 $('#adminClearFilters').addEventListener('click',()=>{ activeType='all'; $('#adminTypeFilter').value='all'; $('#adminStatusFilter').value='all'; $('#adminSort').value='newest'; $('#adminSearch').value=''; $$('[data-admin-type]').forEach(button=>button.classList.toggle('is-active',button.dataset.adminType==='all')); renderRows(); });
 $$('[data-summary-status]').forEach(button=>button.addEventListener('click',()=>{ $('#adminStatusFilter').value=button.dataset.summaryStatus; renderRows(); $('#adminRows').closest('.admin-table-wrap').scrollIntoView({ behavior:'smooth', block:'start' }); }));
 $('#adminSignout').addEventListener('click',()=>{ sessionStorage.removeItem(TOKEN_KEY); selectedReference=''; submissions=[]; batches=[]; showLogin('Signed out of this browser.'); });
+// §B operator analytics: a live metrics band across the top of the console.
+function metricTile(label, value, sub, group){
+  const tile=document.createElement('div');tile.className='admin-metric'+(group?` is-${group}`:'');
+  const v=document.createElement('strong');v.textContent=value;
+  const l=document.createElement('span');l.textContent=label;
+  tile.append(v,l);
+  if(sub){const s=document.createElement('small');s.textContent=sub;tile.append(s);}
+  return tile;
+}
+function renderMetrics(m){
+  const section=$('#adminMetricsSection');const band=$('#adminMetricsBand');
+  if(!band)return;
+  if(!m){if(section)section.hidden=true;return;}
+  const f=m.funnel||{},w=m.thisWeek||{},c=m.credits||{},b=m.batches||{},p=m.payouts||{};
+  const n=x=>String(x==null?0:x);
+  band.replaceChildren();
+  const tiles=[
+    ['Submissions',n(f.submissions),w.submissions?`+${w.submissions} this week`:'',''],
+    ['Member profiles',n(f.profiles),'',''],
+    ['Applications',n(f.applications),w.applications?`+${w.applications} this week`:'',''],
+    ['Accepted',n(f.accepted),'',''],
+    ['Completed',n(f.completed),w.completed?`+${w.completed} this week`:'','good'],
+    ['Active batches',n(b.active),'',''],
+    ['Credits purchased',n(c.purchased),'money in','money'],
+    ['Platform revenue',n(c.platformRevenue),'earned','money'],
+    ['Paid to students',n(c.toStudents),'money out','money'],
+    ['Payouts pending',n(p.pending),p.pending?'needs review':'','warn'],
+  ];
+  tiles.forEach(([l,v,s,g])=>band.append(metricTile(l,v,s,g)));
+  if(section)section.hidden=false;
+}
+
 // §9 partner digests: operator-triggered preview + send.
 function renderDigests(result){
   const root=$('#adminDigests');if(!root)return;root.replaceChildren();

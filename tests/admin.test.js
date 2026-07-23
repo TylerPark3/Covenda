@@ -1,7 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminRequests, listAdminSubmissions, requestAdminLink, updateAdminRequest, updateAdminSubmission } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission } from '../api/admin.js';
+
+test('summarizeLedger splits money-in, platform revenue, and student payouts', () => {
+  const rows = [
+    { entry_type: 'purchase', credits: 500, user_id: 'co' },
+    { entry_type: 'purchase', credits: 100, user_id: 'co' },
+    { entry_type: 'reach_fee', credits: 25, user_id: null },        // platform revenue
+    { entry_type: 'reach_fee', credits: -25, user_id: 'co' },       // company side, ignored
+    { entry_type: 'batch_access', credits: 50, user_id: null },     // platform revenue
+    { entry_type: 'escrow_release', credits: 200, user_id: 'stu' }, // paid to a student
+    { entry_type: 'escrow_hold', credits: -200, user_id: 'co' },    // ignored
+  ];
+  const out = summarizeLedger(rows);
+  assert.equal(out.purchased, 600);
+  assert.equal(out.platformRevenue, 75);
+  assert.equal(out.toStudents, 200);
+});
+
+test('summarizeLedger is zero-safe on empty input', () => {
+  assert.deepEqual(summarizeLedger(), { purchased: 0, platformRevenue: 0, toStudents: 0 });
+});
 
 function authClient({ user, authError = null } = {}) {
   return {
