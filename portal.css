@@ -2,6 +2,8 @@
 * { box-sizing: border-box; }
 html, body { min-height: 100%; }
 body { margin: 0; background: #fff; color: var(--ink); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
+/* §14: all page/section/dialog headings use the shared display serif (card titles are h3 → stay sans). */
+h1, h2 { font-family: var(--font-display); font-weight: 500; }
 button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { color: inherit; }
@@ -88,12 +90,12 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 @keyframes view-in { from { opacity:0; transform:translateY(7px); } }
 .overview-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(310px,360px); gap:clamp(35px,5vw,80px); max-width:1440px; margin:auto; }
 .welcome-row,.page-heading,.section-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:22px; }
-.welcome-row h1,.page-heading h1 { margin:0; font-size:clamp(38px,4.3vw,62px); line-height:1; letter-spacing:-.065em; }
+.welcome-row h1,.page-heading h1 { margin:0; font-family:var(--font-display); font-weight:500; font-size:clamp(36px,4.1vw,58px); line-height:1.02; letter-spacing:-.03em; }
 .welcome-row > div > p:last-child,.page-heading > div > p:last-child { max-width:650px; margin:14px 0 0; color:var(--muted); font-size:12px; line-height:1.7; }
 .welcome-row .portal-primary { flex:0 0 auto; margin-top:4px; }
 .focus-section,.plain-section { margin-top:54px; }
 .section-heading { align-items:flex-end; padding-bottom:15px; border-bottom:1px solid var(--line); }
-.section-heading h2 { margin:0; font-size:20px; letter-spacing:-.045em; }
+.section-heading h2 { margin:0; font-family:var(--font-display); font-weight:500; font-size:21px; letter-spacing:-.02em; }
 .section-heading button { padding:5px 0; border:0; background:transparent; color:var(--gold-deep); font-size:9px; font-weight:700; cursor:pointer; }
 .project-focus { display:grid; grid-template-columns:1fr auto; gap:22px; padding:25px 0; border-bottom:1px solid var(--line); }
 .project-focus h3 { margin:0 0 7px; font-size:17px; letter-spacing:-.03em; }
@@ -289,7 +291,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .member-dialog::backdrop { background:rgba(24,22,17,.28); backdrop-filter:blur(7px); }
 .member-dialog form { display:grid; max-height:inherit; }
 .member-dialog header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding:25px 28px 20px; border-bottom:1px solid var(--line); }
-.member-dialog header h2 { margin:0; font-size:28px; letter-spacing:-.05em; }
+.member-dialog header h2 { margin:0; font-family:var(--font-display); font-weight:500; font-size:27px; letter-spacing:-.02em; }
 .member-dialog header p:last-child { margin:7px 0 0; color:var(--muted); font-size:10px; }
 .member-dialog header button { display:grid; width:36px; height:36px; place-items:center; border:1px solid var(--line); border-radius:50%; background:#fff; cursor:pointer; }
 .dialog-body { display:grid; gap:18px; padding:24px 28px; overflow:auto; }
