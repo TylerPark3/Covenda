@@ -24,7 +24,9 @@ export async function createCheckoutSession({ member, credits, origin, env = pro
   if (!CREDIT_BUNDLES.has(amount)) throw new Error('Choose one of the available credit bundles.');
   if (!env.STRIPE_SECRET_KEY) throw new StripeNotConfiguredError();
   const priceUsd = CREDIT_BUNDLES.get(amount);
-  const client = stripe || new Stripe(env.STRIPE_SECRET_KEY);
+  // Trim the key: a stray space or newline pasted into the env var makes an invalid HTTP
+  // auth header, which Stripe's SDK surfaces as a confusing "connection" error, not "bad key".
+  const client = stripe || new Stripe(env.STRIPE_SECRET_KEY.trim());
   const session = await client.checkout.sessions.create({
     mode: 'payment',
     // client_reference_id + metadata are what the webhook trusts to credit the right
@@ -72,6 +74,9 @@ export default async function handler(req, res, dependencies = {}) {
     if (error instanceof StripeNotConfiguredError) return res.status(503).json({ ok: false, code: 'STRIPE_NOT_CONFIGURED', error: error.message });
     const message = (error && error.message) || 'Could not start checkout.';
     const expected = /^Choose/.test(message);
+    // Log the underlying Stripe error (type/code/detail) — never the key — so a real network
+    // or auth failure is diagnosable from Vercel logs instead of only the generic message.
+    if (!expected) console.error(JSON.stringify({ level: 'error', message: 'Stripe checkout failed', type: error?.type, code: error?.code, detail: String(error?.detail?.message || error?.detail || error?.message || '').slice(0, 300) }));
     return res.status(expected ? 400 : 502).json({ ok: false, error: message });
   }
 }

@@ -52,9 +52,11 @@ export default async function handler(req, res, dependencies = {}) {
 
   let event;
   try {
-    const stripe = dependencies.stripe || new Stripe(env.STRIPE_SECRET_KEY);
+    // Trim both secrets: a pasted trailing space/newline would otherwise silently break the
+    // HMAC signature check (every real event would 400) or the auth header.
+    const stripe = dependencies.stripe || new Stripe(env.STRIPE_SECRET_KEY.trim());
     const body = await rawBody(req);
-    event = stripe.webhooks.constructEvent(body, req.headers['stripe-signature'], env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(body, req.headers['stripe-signature'], env.STRIPE_WEBHOOK_SECRET.trim());
   } catch (error) {
     // A bad or missing signature is the forgery case — refuse it.
     return res.status(400).json({ ok: false, error: `Signature verification failed: ${(error && error.message) || 'unknown'}` });
