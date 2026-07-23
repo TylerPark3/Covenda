@@ -3896,28 +3896,44 @@ if (incomingReferral) {
 // pick, so a student lands on "Month-end close · reconciliation cleanup" instead of
 // declaring "I can do research". Every leaf maps to one of the five work types, which
 // is what the rest of the app already understands, so nothing downstream changes.
+// §8/§12-B: industry → real SUB-INDUSTRY (a student's domain expertise) → a concrete work
+// item. Level 2 is genuine specialization (Asset management, Equity research, Neuroscience…),
+// not a project chore; the leaf still carries a work_type so matching data stays derivable.
 const NARROW_TREE = {
   'Accounting & finance': {
-    'Month-end close': [['Reconciliation cleanup', 'Data & spreadsheets'], ['Exception write-ups', 'Writing & documentation'], ['Close checklist mapping', 'Operations']],
-    'Revenue & billing': [['Invoice accuracy audit', 'Data & spreadsheets'], ['Pricing benchmark', 'Research'], ['Billing workflow map', 'Operations']],
-    'Financial research': [['Competitor cost scan', 'Research'], ['Market sizing', 'Research'], ['Findings memo', 'Writing & documentation']],
+    'Investment banking': [['M&A analysis', 'Research'], ['Comps & valuation', 'Data & spreadsheets'], ['Pitch materials', 'Writing & documentation']],
+    'Asset management': [['Portfolio analysis', 'Data & spreadsheets'], ['Fund & manager research', 'Research'], ['Performance reporting', 'Data & spreadsheets']],
+    'Equity research': [['Company deep-dives', 'Research'], ['Financial modeling', 'Data & spreadsheets'], ['Research notes', 'Writing & documentation']],
+    'Private equity / VC': [['Market mapping', 'Research'], ['Diligence support', 'Research'], ['Portfolio operations', 'Operations']],
+    'Corporate finance / FP&A': [['Budget modeling', 'Data & spreadsheets'], ['Variance analysis', 'Data & spreadsheets'], ['Month-end close support', 'Operations']],
+    'Accounting & audit': [['Reconciliation', 'Data & spreadsheets'], ['AP/AR cleanup', 'Operations'], ['Audit prep', 'Writing & documentation']],
   },
   'Software & AI': {
-    'Quality & testing': [['Structured test passes', 'QA & testing'], ['Bug reproduction', 'QA & testing'], ['Test case authoring', 'QA & testing']],
-    'Product research': [['Competitor teardown', 'Research'], ['User feedback synthesis', 'Research'], ['Positioning brief', 'Writing & documentation']],
-    'Docs & enablement': [['API documentation', 'Writing & documentation'], ['Onboarding guides', 'Writing & documentation'], ['Release notes upkeep', 'Operations']],
+    'Machine learning / LLMs': [['Data labeling & eval', 'QA & testing'], ['Eval / prompt sets', 'Research'], ['Model & API docs', 'Writing & documentation']],
+    'Physical AI / robotics': [['Sensor data review', 'Data & spreadsheets'], ['Test-case authoring', 'QA & testing'], ['Field research', 'Research']],
+    'Autonomy / self-driving': [['Scenario labeling', 'QA & testing'], ['Edge-case research', 'Research'], ['Data QA', 'QA & testing']],
+    'Web & full-stack': [['Manual QA passes', 'QA & testing'], ['Bug reproduction', 'QA & testing'], ['Docs & guides', 'Writing & documentation']],
+    'Data & analytics': [['Data cleanup', 'Data & spreadsheets'], ['Dashboards & reporting', 'Data & spreadsheets'], ['Analysis memos', 'Research']],
+    'Security': [['Test-case authoring', 'QA & testing'], ['Threat / policy research', 'Research'], ['Runbook docs', 'Writing & documentation']],
   },
   'Healthcare operations': {
-    'Process & workflow': [['Intake workflow map', 'Operations'], ['Scheduling analysis', 'Data & spreadsheets'], ['SOP authoring', 'Writing & documentation']],
-    'Public-source research': [['Vendor comparison', 'Research'], ['Policy scan', 'Research'], ['Briefing memo', 'Writing & documentation']],
+    'Neuroscience / biotech': [['Literature synthesis', 'Research'], ['Data cleanup', 'Data & spreadsheets'], ['Findings memo', 'Writing & documentation']],
+    'Clinical operations': [['Workflow mapping', 'Operations'], ['Scheduling analysis', 'Data & spreadsheets'], ['SOP authoring', 'Writing & documentation']],
+    'Digital health': [['Product research', 'Research'], ['QA passes', 'QA & testing'], ['Onboarding docs', 'Writing & documentation']],
+    'Medical devices': [['Test documentation', 'QA & testing'], ['Vendor comparison', 'Research'], ['Process mapping', 'Operations']],
+    'Pharma / life sciences': [['Public-source research', 'Research'], ['Data extraction', 'Data & spreadsheets'], ['Briefing memo', 'Writing & documentation']],
   },
   'Consumer & retail': {
-    'Customer insight': [['Review mining', 'Research'], ['Survey synthesis', 'Research'], ['Segment brief', 'Writing & documentation']],
-    'Merchandising & ops': [['Catalog cleanup', 'Data & spreadsheets'], ['Returns analysis', 'Data & spreadsheets'], ['Store process map', 'Operations']],
+    'E-commerce': [['Catalog cleanup', 'Data & spreadsheets'], ['Conversion research', 'Research'], ['Ops process map', 'Operations']],
+    'Brand & marketing': [['Competitor teardown', 'Research'], ['Content QA', 'QA & testing'], ['Campaign briefs', 'Writing & documentation']],
+    'Consumer packaged goods': [['Category research', 'Research'], ['Sales data cleanup', 'Data & spreadsheets'], ['Retail process map', 'Operations']],
+    'Supply chain & ops': [['Inventory analysis', 'Data & spreadsheets'], ['Returns analysis', 'Data & spreadsheets'], ['Workflow map', 'Operations']],
   },
   'Professional services': {
-    'Client delivery': [['Deliverable QA', 'QA & testing'], ['Template build', 'Writing & documentation'], ['Process documentation', 'Operations']],
-    'Business development': [['Prospect research', 'Research'], ['Proposal support', 'Writing & documentation'], ['CRM hygiene', 'Operations']],
+    'Management consulting': [['Market research', 'Research'], ['Model / slide build', 'Data & spreadsheets'], ['Findings deck', 'Writing & documentation']],
+    'Legal': [['Legal research', 'Research'], ['Document review', 'QA & testing'], ['Summaries & memos', 'Writing & documentation']],
+    'Marketing & advertising': [['Audience research', 'Research'], ['Creative QA', 'QA & testing'], ['Brief writing', 'Writing & documentation']],
+    'Real estate': [['Market comps', 'Research'], ['Financial modeling', 'Data & spreadsheets'], ['Listing documentation', 'Writing & documentation']],
   },
 };
 const NARROW_ANY = 'Not sure yet — show me everything';
