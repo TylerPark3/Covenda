@@ -260,7 +260,7 @@ function renderActivity(){
 const REACH_FEE_TARGETED=25;
 const PLATFORM_FEE_RATE=0.10;
 const CREDIT_BUNDLES=[[100,100],[500,475],[1000,900]];
-const ledgerLabels={purchase:'Purchase',reach_fee:'Reach fee',escrow_hold:'Escrow held',escrow_release:'Paid to student',platform_fee:'Platform fee',refund:'Refund',adjustment:'Adjustment'};
+const ledgerLabels={purchase:'Purchase',reach_fee:'Reach fee',escrow_hold:'Escrow held',escrow_release:'Paid to student',platform_fee:'Platform fee',refund:'Refund',adjustment:'Adjustment',payout:'Payout',ai_brief:'AI brief'};
 function projectCreditCost(creditsListed,targeting){
   const listed=Math.max(0,Math.round(Number(creditsListed)||0));
   const reachFee=targeting==='targeted'?REACH_FEE_TARGETED:0;
@@ -676,7 +676,10 @@ async function finishOnboarding(){
 // ===== Company/university AI-assisted project intake (multi-step) =====
 let intakeState={step:1,attachments:[],brief:null,verticals:[],workTypes:[],consultBooked:false,editedSummary:'',targeting:'public'};
 function portalCalendlyUrl(){const raw=document.querySelector('meta[name="covenda-calendly-url"]')?.content?.trim()||'';try{const u=new URL(raw);if(u.protocol==='https:'&&/(^|\.)calendly\.com$/.test(u.hostname))return u.toString();}catch{}return '';}
-function openIntake(){intakeState={step:1,attachments:[],brief:null,verticals:[],workTypes:[],consultBooked:false,editedSummary:'',targeting:'public'};const form=$('#intakeForm');form.reset();$('#intakeChips').replaceChildren();const brief=$('#intakeBrief');brief.replaceChildren();brief.hidden=true;$('#intakeConsultCard').classList.remove('is-booked');setDialogMessage('#intakeMessage','');setDialogMessage('#intakeStepMessage','');renderIntakeStep();$('#intakeDialog').showModal();}
+function openIntake(){intakeState={step:1,attachments:[],brief:null,verticals:[],workTypes:[],consultBooked:false,editedSummary:'',targeting:'public'};const form=$('#intakeForm');form.reset();$('#intakeChips').replaceChildren();const brief=$('#intakeBrief');brief.replaceChildren();brief.hidden=true;$('#intakeConsultCard').classList.remove('is-booked');setDialogMessage('#intakeMessage','');setDialogMessage('#intakeStepMessage','');
+  // Show the AI-brief credit cost up front when metering is enabled for this deployment.
+  const costHint=$('#intakeBriefCost');const d=state.dashboard;if(costHint){if(d?.briefMeteringEnabled&&d?.briefFee>0){costHint.textContent=`Generating a brief costs ${d.briefFee} credits.`;costHint.hidden=false;}else{costHint.hidden=true;}}
+  renderIntakeStep();$('#intakeDialog').showModal();}
 function renderIntakeStep(){const s=intakeState.step;$$('.intake-step').forEach(el=>el.classList.toggle('is-active',Number(el.dataset.intakeStep)===s));$$('#intakeProgress span').forEach((el,i)=>el.classList.toggle('is-active',i===s-1));$('#intakeBack').hidden=s===1;$('#intakeNext').hidden=s===4;$('#intakePost').hidden=s!==4;if(s===3){renderIntakeTargets();renderIntakeCost();}if(s===4)renderIntakeReview();}
 function renderIntakeCost(){
   const form=$('#intakeForm');const root=$('#intakeCost');if(!root||!form)return;

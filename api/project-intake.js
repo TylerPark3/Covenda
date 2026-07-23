@@ -1,6 +1,16 @@
 import { get } from '@vercel/blob';
 
-import { authorizeMember, VERTICALS, WORK_TYPES } from './portal.js';
+import { authorizeMember, creditBalance, VERTICALS, WORK_TYPES } from './portal.js';
+
+// AI-brief metering. Off by default so it can't block the pilot funnel before companies hold
+// credits; when COVENDA_BRIEF_METERING_ENABLED=true, each successful generation costs `fee`
+// credits and the caller must have the balance. Fee is one configurable constant (default 5).
+export function briefFeeConfig(env = process.env) {
+  return {
+    enabled: env.COVENDA_BRIEF_METERING_ENABLED === 'true',
+    fee: Math.max(0, Math.round(Number(env.COVENDA_BRIEF_FEE) || 5)),
+  };
+}
 
 // AI-assisted project intake. One Anthropic Messages API call reads the company's
 // problem description plus any attached PDFs/images (Claude reads PDFs natively) and
@@ -196,14 +206,29 @@ export default async function handler(req, res, dependencies = {}) {
   if (!member) return res.status(401).json({ ok: false, error: 'Member authentication is required.' });
   let body;
   try { body = parseBody(req); } catch { return res.status(400).json({ ok: false, error: 'Invalid request body.' }); }
+  const env = dependencies.env || process.env;
+  const { enabled: metering, fee } = briefFeeConfig(env);
   try {
+    // Gate on balance BEFORE spending the API call, so a company can't run a brief it can't pay for.
+    if (metering && fee > 0) {
+      const balance = await creditBalance(member);
+      if (balance < fee) return res.status(402).json({ ok: false, code: 'INSUFFICIENT_CREDITS', error: `Generating an AI brief costs ${fee} credits — your balance is ${balance}. Top up in Wallet first.` });
+    }
     const brief = await generateProjectBrief({
       problemText: body.problemText,
       attachments: Array.isArray(body.attachments) ? body.attachments : [],
-      env: dependencies.env || process.env,
+      env,
       fetchImpl: dependencies.fetchImpl || fetch,
     });
-    return res.status(200).json({ ok: true, brief });
+    // Charge only after a successful generation. Best-effort: if the ledger write fails we
+    // still return the brief the company is waiting on rather than erroring after the fact.
+    let charged = 0;
+    if (metering && fee > 0) {
+      const { error } = await member.supabase.from('credit_ledger').insert({ user_id: member.user.id, entry_type: 'ai_brief', credits: -fee, note: `AI project brief · ${fee} credits` });
+      if (error) console.error(JSON.stringify({ level: 'error', message: 'AI brief charge failed', error: String(error?.message || error).slice(0, 200) }));
+      else charged = fee;
+    }
+    return res.status(200).json({ ok: true, brief, charged });
   } catch (error) {
     if (error instanceof IntakeConfigError) return res.status(503).json({ ok: false, code: 'INTAKE_NOT_CONFIGURED', error: error.message });
     const message = (error && error.message) || 'AI intake failed.';

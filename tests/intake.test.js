@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { generateProjectBrief, IntakeConfigError, normalizeBrief } from '../api/project-intake.js';
+import { briefFeeConfig, generateProjectBrief, IntakeConfigError, normalizeBrief } from '../api/project-intake.js';
 import { uploadPolicy, validateUpload } from '../api/project-upload.js';
 
 function anthropicResponse(object) {
@@ -126,6 +126,12 @@ test('a 4xx rejection of Structured Outputs falls back to a plain call', async (
   assert.equal(bodies[0].output_config.format.type, 'json_schema');
   assert.equal(bodies[1].output_config, undefined);
   assert.equal(brief.safeToPost, true);
+});
+
+test('brief metering is off by default and configurable', () => {
+  assert.deepEqual(briefFeeConfig({}), { enabled: false, fee: 5 });
+  assert.deepEqual(briefFeeConfig({ COVENDA_BRIEF_METERING_ENABLED: 'true' }), { enabled: true, fee: 5 });
+  assert.deepEqual(briefFeeConfig({ COVENDA_BRIEF_METERING_ENABLED: 'true', COVENDA_BRIEF_FEE: '10' }), { enabled: true, fee: 10 });
 });
 
 test('upload validation rejects unsupported types and oversized files', () => {

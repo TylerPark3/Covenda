@@ -185,11 +185,14 @@ export async function loadMemberDashboard(member, env = process.env) {
   // the frontend hides the verify CTA (and real ID collection stays disabled) until it's
   // deliberately enabled — see the safety note in api/stripe-identity.js.
   const identityEnabled = env.COVENDA_IDENTITY_ENABLED === 'true';
+  // AI-brief metering surface: whether it's on and what a generation costs (default 5 credits).
+  const briefMeteringEnabled = env.COVENDA_BRIEF_METERING_ENABLED === 'true';
+  const briefFee = Math.max(0, Math.round(Number(env.COVENDA_BRIEF_FEE) || 5));
   const [profile, intakes] = await Promise.all([
     checked(supabase.from('member_profiles').select('*').eq('user_id', user.id).maybeSingle(), null),
     loadMemberIntakes(member),
   ]);
-  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [], verifiedCount: 0, identityEnabled };
+  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [], verifiedCount: 0, identityEnabled , briefMeteringEnabled, briefFee };
 
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
@@ -209,7 +212,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     const [walletBalance, creditLedger, payoutRequests] = await Promise.all([
       creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member),
     ]);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, identityEnabled };
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, identityEnabled , briefMeteringEnabled, briefFee };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -225,7 +228,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     : [];
   const verifiedCount = projects.filter(project => project.status === 'complete').length;
   const [walletBalance, creditLedger] = await Promise.all([creditBalance(member), loadCreditLedger(member)]);
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, identityEnabled };
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, identityEnabled , briefMeteringEnabled, briefFee };
 }
 
 export async function saveMemberProfile(member, input) {
