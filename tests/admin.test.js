@@ -1,7 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, caseStudyMetrics, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission } from '../api/admin.js';
+
+test('caseStudyMetrics computes acceptance, repeat, and avg value from real rows', () => {
+  const completed = [
+    { owner_user_id: 'co-a', credits_listed: 400 },
+    { owner_user_id: 'co-a', credits_listed: 600 }, // co-a is a repeat buyer
+    { owner_user_id: 'co-b', credits_listed: 500 },
+  ];
+  const m = caseStudyMetrics(completed, { applications: 10, accepted: 4 });
+  assert.equal(m.delivered, 3);
+  assert.equal(m.acceptanceRate, 40);
+  assert.equal(m.repeatRate, 50, '1 of 2 companies delivered 2+');
+  assert.equal(m.avgDeliveredCredits, 500);
+});
+
+test('caseStudyMetrics is zero-safe with no data', () => {
+  assert.deepEqual(caseStudyMetrics(), { delivered: 0, acceptanceRate: 0, repeatRate: 0, avgDeliveredCredits: 0 });
+});
 
 test('summarizeLedger splits money-in, platform revenue, and student payouts', () => {
   const rows = [

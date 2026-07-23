@@ -428,6 +428,26 @@ export function summarizeLedger(rows = []) {
   return { purchased, platformRevenue, toStudents };
 }
 
+// §B+ / GTM Move 5: willingness-to-pay metrics that become the sales case study. Pure so the
+// funnel math is testable. Repeat rate is the metric that answers willingness-to-pay definitively.
+export function caseStudyMetrics(completedProjects = [], { applications = 0, accepted = 0 } = {}) {
+  const byCompany = new Map();
+  let creditsSum = 0, creditsN = 0;
+  for (const p of completedProjects) {
+    if (p?.owner_user_id) byCompany.set(p.owner_user_id, (byCompany.get(p.owner_user_id) || 0) + 1);
+    const c = Number(p?.credits_listed);
+    if (Number.isFinite(c) && c > 0) { creditsSum += c; creditsN += 1; }
+  }
+  const companiesWithDelivery = byCompany.size;
+  const repeatCompanies = [...byCompany.values()].filter(n => n >= 2).length;
+  return {
+    delivered: completedProjects.length,
+    acceptanceRate: applications ? Math.round((accepted / applications) * 100) : 0,
+    repeatRate: companiesWithDelivery ? Math.round((repeatCompanies / companiesWithDelivery) * 100) : 0,
+    avgDeliveredCredits: creditsN ? Math.round(creditsSum / creditsN) : 0,
+  };
+}
+
 async function countRows(supabase, table, apply) {
   try {
     let query = supabase.from(table).select('*', { count: 'exact', head: true });
@@ -463,12 +483,18 @@ export async function loadAdminMetrics(supabase) {
     const { data } = await supabase.from('credit_ledger').select('credits,entry_type,user_id').limit(10_000);
     ledgerRows = Array.isArray(data) ? data : [];
   } catch { ledgerRows = []; }
+  let completedProjectRows = [];
+  try {
+    const { data } = await supabase.from('member_projects').select('owner_user_id, credits_listed').eq('status', 'complete').limit(5000);
+    completedProjectRows = Array.isArray(data) ? data : [];
+  } catch { completedProjectRows = []; }
   return {
     funnel: { submissions, profiles, applications, accepted, projects, completed },
     thisWeek: { submissions: wkSubmissions, applications: wkApplications, completed: wkCompleted },
     credits: summarizeLedger(ledgerRows),
     batches: { active: activeBatches },
     payouts: { pending: pendingPayouts },
+    caseStudy: caseStudyMetrics(completedProjectRows, { applications, accepted }),
   };
 }
 

@@ -319,7 +319,7 @@ function renderMetrics(m){
   const section=$('#adminMetricsSection');const band=$('#adminMetricsBand');
   if(!band)return;
   if(!m){if(section)section.hidden=true;return;}
-  const f=m.funnel||{},w=m.thisWeek||{},c=m.credits||{},b=m.batches||{},p=m.payouts||{};
+  const f=m.funnel||{},w=m.thisWeek||{},c=m.credits||{},b=m.batches||{},p=m.payouts||{},cs=m.caseStudy||{};
   const n=x=>String(x==null?0:x);
   band.replaceChildren();
   const tiles=[
@@ -333,6 +333,10 @@ function renderMetrics(m){
     ['Platform revenue',n(c.platformRevenue),'earned','money'],
     ['Paid to students',n(c.toStudents),'money out','money'],
     ['Payouts pending',n(p.pending),p.pending?'needs review':'','warn'],
+    // GTM Move 5 — the willingness-to-pay / case-study metrics.
+    ['Acceptance rate',`${n(cs.acceptanceRate)}%`,'of applications','good'],
+    ['Repeat rate',`${n(cs.repeatRate)}%`,'companies with 2+ delivered','good'],
+    ['Avg project value',n(cs.avgDeliveredCredits),'credits / delivered','money'],
   ];
   tiles.forEach(([l,v,s,g])=>band.append(metricTile(l,v,s,g)));
   if(section)section.hidden=false;
