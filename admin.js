@@ -249,11 +249,21 @@ function batchApplicationRow(batch, app) {
   const signals = [ ...(student.verticals || []), ...(student.work_types || []) ];
   if (signals.length) { const tags = document.createElement('div'); tags.className = 'admin-batch-app-tags'; signals.slice(0, 6).forEach(s => { const t = document.createElement('span'); t.textContent = s; tags.append(t); }); who.append(tags); }
   const materials = app.materials || {};
-  const packet = [];
-  if (materials.note) packet.push(materials.note);
-  const links = [materials.videoUrl, materials.demonstration].filter(v => typeof v === 'string' && /^https?:\/\//i.test(v));
-  if (materials.note) { const note = document.createElement('p'); note.className = 'admin-batch-app-note'; note.textContent = materials.note; who.append(note); }
-  if (links.length) { const lw = document.createElement('div'); lw.className = 'admin-batch-app-links'; links.forEach(url => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = url.includes('video') || url === materials.videoUrl ? 'Video' : 'Work sample'; lw.append(a); }); who.append(lw); }
+  const field = (label, value) => { const wrap = document.createElement('div'); wrap.className = 'admin-batch-app-field'; const l = document.createElement('span'); l.className = 'admin-batch-app-flabel'; l.textContent = label; const p = document.createElement('p'); p.className = 'admin-batch-app-ftext'; p.textContent = value; wrap.append(l, p); who.append(wrap); };
+  if (materials.note) field('Why this cohort', materials.note);
+  if (materials.experience) field('Relevant experience', materials.experience);
+  if ((materials.skills || []).length) { const wrap = document.createElement('div'); wrap.className = 'admin-batch-app-tags'; materials.skills.slice(0, 12).forEach(s => { const t = document.createElement('span'); t.className = 'is-skill'; t.textContent = s; wrap.append(t); }); who.append(wrap); }
+  const av = materials.availability || {};
+  const avText = [av.hoursPerWeek ? `${av.hoursPerWeek} hrs/week` : '', av.startDate ? `starts ${av.startDate}` : ''].filter(Boolean).join(' · ');
+  if (avText) field('Availability', avText);
+  if (materials.referral && materials.referral.name) field('Referred by', `${materials.referral.name}${materials.referral.code ? ` · ${materials.referral.code}` : ''}${materials.referral.verified ? ' ✓ verified' : ''}`);
+  // Links: work samples + video + résumé.
+  const linkDefs = [];
+  (materials.workSamples || []).forEach((u, i) => linkDefs.push([`Work sample ${i + 1}`, u]));
+  if (materials.videoUrl) linkDefs.push(['Video', materials.videoUrl]);
+  if (materials.resumeUrl) linkDefs.push(['Résumé', materials.resumeUrl]);
+  const links = linkDefs.filter(([, u]) => typeof u === 'string' && /^https?:\/\//i.test(u));
+  if (links.length) { const lw = document.createElement('div'); lw.className = 'admin-batch-app-links'; links.forEach(([label, url]) => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = label; lw.append(a); }); who.append(lw); }
   row.append(who);
 
   const controls = document.createElement('div'); controls.className = 'admin-batch-app-controls';

@@ -243,7 +243,37 @@
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="batchApplyDialog">
-    <form method="dialog" id="batchApplyForm"><header><div><p class="eyebrow">Batch application</p><h2 id="batchApplyTitle">Apply to this batch.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="batchId" type="hidden"><p id="batchApplySummary"></p><label>Why are you a fit? <small>Optional</small><textarea name="note" rows="4" maxlength="2000" placeholder="Connect your background and interests to this discipline."></textarea></label><label>Show your work <small>Optional link — portfolio, repo, sample</small><input name="demonstration" type="url" placeholder="https://…"></label><label>Intro video <small>Optional link — Loom, YouTube, Drive</small><input name="videoUrl" type="url" placeholder="https://…"></label><p class="dialog-message" id="batchApplyMessage" aria-live="polite"></p><p class="intake-hint">Your profile — skills, verticals, and work types — is attached automatically.</p></div><footer><button class="portal-primary" type="submit">Submit application<svg><use href="#p-arrow"/></svg></button></footer></form>
+    <form method="dialog" id="batchApplyForm">
+      <header><div><p class="eyebrow">Batch application</p><h2 id="batchApplyTitle">Apply to this batch.</h2><p id="batchApplySummary" class="dialog-sub"></p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="dialog-body">
+        <input name="batchId" type="hidden">
+        <p class="batch-apply-intro">Elite batches are reviewed by hand. The more you share, the stronger your case — take a few minutes.</p>
+        <label>Why this cohort? <b class="req">Required</b><textarea name="note" rows="4" minlength="40" maxlength="2000" required placeholder="What draws you to this discipline, and what do you want to get out of the cohort?"></textarea></label>
+        <label>Relevant experience <small>What you've built, studied, or worked on</small><textarea name="experience" rows="4" maxlength="2000" placeholder="Coursework, internships, projects, competitions — anything that shows you can do this work."></textarea></label>
+        <label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Python, financial modeling, research"></label>
+        <div class="form-grid">
+          <label>Hours per week <small>Optional</small><input name="hoursPerWeek" type="number" min="1" max="60" inputmode="numeric" placeholder="10"></label>
+          <label>Earliest start <small>Optional</small><input name="startDate" type="date"></label>
+        </div>
+        <div class="form-grid">
+          <label>Work sample 1 <small>Portfolio, repo, doc</small><input name="workSample1" type="url" placeholder="https://…"></label>
+          <label>Work sample 2 <small>Optional</small><input name="workSample2" type="url" placeholder="https://…"></label>
+        </div>
+        <label>Intro video <small>Optional link — Loom, YouTube, Drive</small><input name="videoUrl" type="url" placeholder="https://…"></label>
+        <div class="batch-resume-row">
+          <button type="button" class="portal-ghost compact" id="batchResumeBtn"><svg><use href="#p-plus"/></svg>Attach résumé / CV</button>
+          <input type="file" id="batchResumeInput" accept=".pdf,.doc,.docx" hidden>
+          <span id="batchResumeChip" class="batch-resume-chip" hidden></span>
+        </div>
+        <div class="form-grid">
+          <label>Referred by <small>Optional — professor, club</small><input name="referralName" placeholder="Prof. Lee"></label>
+          <label>Referral code <small>Optional</small><input name="referralCode" placeholder="REF-XXXX"></label>
+        </div>
+        <p class="dialog-message" id="batchApplyMessage" aria-live="polite"></p>
+        <p class="intake-hint">Your profile — verticals and work types — is attached automatically.</p>
+      </div>
+      <footer><button class="portal-primary" type="submit">Submit application<svg><use href="#p-arrow"/></svg></button></footer>
+    </form>
   </dialog>
 
   <dialog class="member-dialog" id="discoverDetail">

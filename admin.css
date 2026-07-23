@@ -204,6 +204,10 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .admin-batch-app-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
 .admin-batch-app-tags span { padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: 999px; color: var(--soft); font-size: 9px; font-weight: 600; }
 .admin-batch-app-note { margin: 8px 0 0; color: var(--ink); font-size: 11px; line-height: 1.55; }
+.admin-batch-app-field { margin-top: 9px; }
+.admin-batch-app-flabel { display: block; color: var(--gold-deep); font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.admin-batch-app-ftext { margin: 3px 0 0; color: var(--ink); font-size: 11px; line-height: 1.55; white-space: pre-wrap; }
+.admin-batch-app-tags span.is-skill { border-color: rgba(180,123,32,.3); color: var(--gold-deep); }
 .admin-batch-app-links { display: flex; gap: 10px; margin-top: 7px; }
 .admin-batch-app-links a { color: var(--gold-deep); font-size: 11px; font-weight: 650; }
 .admin-batch-app-controls select { padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 9px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; font-weight: 600; }

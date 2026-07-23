@@ -648,12 +648,26 @@ export async function applyToBatch(member, input) {
   if (!batch || !['open', 'reviewing'].includes(batch.status)) throw new Error('This batch is not accepting applications.');
   const existing = await checked(member.supabase.from('batch_applications').select('*').eq('batch_id', batchId).eq('student_user_id', member.user.id).maybeSingle(), null);
   if (existing) return existing;
-  // Snapshot the student's packet + profile signals at apply time so review is self-contained.
+  // Elite batches are hand-reviewed, so the application is thorough. A short motivation is
+  // required; the rest is optional but strengthens the case. Snapshot everything + the profile
+  // signals at apply time so review is self-contained.
+  const note = cleanText(input.note, 2_000);
+  if (note.length < 40) throw new Error('Tell us why this cohort fits you — a few sentences at least.');
+  const hoursPerWeek = Number(input.hoursPerWeek);
+  const workSamples = [input.workSample1, input.workSample2, input.demonstration]
+    .map(value => cleanUrl(value)).filter(Boolean).slice(0, 3);
   const materials = {
-    note: cleanText(input.note, 2_000) || null,
-    videoUrl: cleanUrl(input.videoUrl),
-    demonstration: cleanUrl(input.demonstration) || cleanText(input.demonstration, 500) || null,
+    note,
+    experience: cleanText(input.experience, 2_000) || null,
     skills: cleanList(input.skills, 20),
+    availability: {
+      hoursPerWeek: Number.isFinite(hoursPerWeek) && hoursPerWeek > 0 ? Math.min(Math.round(hoursPerWeek), 60) : null,
+      startDate: cleanText(input.startDate, 20) || null,
+    },
+    workSamples,
+    videoUrl: cleanUrl(input.videoUrl),
+    resumeUrl: cleanUrl(input.resumeUrl),
+    referral: cleanReferral(input.referral, verifiedPartnersFromEnv(process.env)),
     verticals: profile.verticals || [],
     workTypes: profile.work_types || [],
   };

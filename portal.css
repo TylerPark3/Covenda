@@ -214,6 +214,14 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-roster { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
 .batch-roster-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
 .batch-roster-empty { margin:0; color:var(--muted); font-size:12px; line-height:1.6; }
+.dialog-sub { margin:6px 0 0; color:var(--muted); font-size:11px; }
+.batch-apply-intro { margin:0 0 4px; padding:10px 12px; border:1px solid rgba(180,123,32,.25); border-radius:10px; background:var(--gold-pale); color:var(--gold-deep); font-size:11px; line-height:1.5; }
+.req { display:inline-block; margin-left:4px; padding:1px 6px; border-radius:99px; background:var(--gold-pale); color:var(--gold-deep); font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+.batch-resume-row { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.batch-resume-row .portal-ghost { display:inline-flex; align-items:center; gap:6px; }
+.batch-resume-row .portal-ghost svg { width:13px; height:13px; }
+.batch-resume-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 6px 4px 10px; border:1px solid var(--line-strong); border-radius:99px; background:var(--gold-pale); font-size:10px; }
+.batch-resume-chip button { display:grid; width:16px; height:16px; place-items:center; border:0; border-radius:50%; background:rgba(0,0,0,.06); color:var(--ink); font-size:12px; line-height:1; cursor:pointer; }
 .save-toggle { min-height:34px; padding:7px 12px; margin-left:auto; border:1px solid var(--line-strong); border-radius:9px; background:#fff; color:var(--muted); font-size:11px; font-weight:650; cursor:pointer; }
 .save-toggle.is-saved { border-color:var(--gold); background:var(--gold-pale); color:var(--gold-deep); }
 .detail-head { display:flex; align-items:center; gap:12px; margin-bottom:6px; }
