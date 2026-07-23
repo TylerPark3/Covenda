@@ -238,8 +238,8 @@ export async function loadMemberDashboard(member, env = process.env) {
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
     : [];
   const verifiedCount = projects.filter(project => project.status === 'complete').length;
-  const [walletBalance, creditLedger] = await Promise.all([creditBalance(member), loadCreditLedger(member)]);
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+  const [walletBalance, creditLedger, projectRequests] = await Promise.all([creditBalance(member), loadCreditLedger(member), loadProjectRequests(member)]);
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -576,6 +576,32 @@ export async function logMatchEvent(member, { projectId, studentUserId, eventTyp
   }
 }
 
+// §6 brokered requests. A company asks Covenda to package work; an operator triages it later.
+export const REQUEST_TYPES = new Set(['new_project', 'more_students', 'scope_change', 'revision', 'consult', 'question', 'specific_student']);
+export async function createProjectRequest(member, input) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (!profile || !['company', 'university'].includes(profile.role)) throw new Error('Only company and university accounts can request work.');
+  const requestType = cleanText(input.requestType, 40);
+  if (!REQUEST_TYPES.has(requestType)) throw new Error('Choose what you are requesting.');
+  const details = cleanText(input.details, 5000);
+  if (details.length < 10) throw new Error('Describe your request in at least 10 characters.');
+  const subject = cleanText(input.subject, 200) || null;
+  // Optionally tie the request to one of the caller's own projects (more students / scope / revision).
+  let projectId = null;
+  const rawProjectId = cleanText(input.projectId, 50);
+  if (rawProjectId && PROJECT_ID_PATTERN.test(rawProjectId)) {
+    const project = await checked(member.supabase.from('member_projects').select('id,owner_user_id').eq('id', rawProjectId).maybeSingle(), null);
+    if (project && project.owner_user_id === member.user.id) projectId = project.id;
+  }
+  const row = { company_user_id: member.user.id, project_id: projectId, request_type: requestType, subject, details };
+  return checked(member.supabase.from('project_requests').insert(row).select('*').single(), null);
+}
+export async function loadProjectRequests(member) {
+  // Degrade gracefully if the table hasn't been migrated yet.
+  const { data, error } = await member.supabase.from('project_requests').select('*').eq('company_user_id', member.user.id).order('created_at', { ascending: false }).limit(50);
+  return error ? [] : (data || []);
+}
+
 export async function applyToProject(member, input) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project.');
@@ -827,6 +853,7 @@ export default async function handler(req, res, dependencies = {}) {
     const input = parseBody(req);
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
+    if (req.method === 'POST' && input.action === 'create-request') return res.status(201).json({ ok: true, request: await createProjectRequest(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
     if (req.method === 'POST' && input.action === 'get-messages') return res.status(200).json({ ok: true, ...(await loadNewMessages(member, input)) });

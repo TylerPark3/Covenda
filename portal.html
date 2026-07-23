@@ -108,7 +108,8 @@
       </section>
 
       <section class="portal-view" data-portal-view="projects">
-        <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every active and completed project in one place.</p></div><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Post a project</button></div>
+        <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every active and completed project in one place.</p></div><div class="page-heading-actions"><button class="portal-secondary" id="requestWork" type="button" data-org-only hidden><svg><use href="#p-message"/></svg>Request work</button><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Post a project</button></div></div>
+        <div class="request-list" id="requestList"></div>
         <div class="project-list" id="projectList"></div>
       </section>
 
@@ -221,6 +222,10 @@
 
   <dialog class="member-dialog compact-dialog" id="applyDialog">
     <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="4" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Research, spreadsheets, writing"></label><label>Show your work <small>Optional link — portfolio, repo, sample</small><input name="demonstration" type="url" placeholder="https://…"></label><label>Intro video <small>Optional link — Loom, YouTube, Drive</small><input name="videoUrl" type="url" placeholder="https://…"></label><div class="form-grid"><label>Referred by <small>Optional</small><input name="referralName" placeholder="Prof. Lee"></label><label>Referral code <small>Optional</small><input name="referralCode" placeholder="REF-XXXX"></label></div><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
+  </dialog>
+
+  <dialog class="member-dialog compact-dialog" id="requestDialog">
+    <form method="dialog" id="requestForm"><header><div><p class="eyebrow">Request work</p><h2>Ask Covenda to package it.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>What do you need?<select name="requestType" required><option value="new_project">A new project</option><option value="more_students">More students on a project</option><option value="scope_change">A scope change</option><option value="revision">A revision</option><option value="consult">A consult</option><option value="specific_student">A specific student</option><option value="question">A question</option></select></label><label>Subject <small>Optional</small><input name="subject" maxlength="200" placeholder="Short summary"></label><label>Details<textarea name="details" rows="5" minlength="10" maxlength="5000" required placeholder="Describe what you need. Covenda will scope and package it with you — public or approved inputs only."></textarea></label><p class="dialog-message" id="requestMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send request<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
   <dialog class="member-dialog" id="discoverDetail">

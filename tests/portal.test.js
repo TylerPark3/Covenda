@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, creditBalance, declineApplication, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
@@ -317,6 +317,20 @@ test('applying stores skills, links, a referral and a snapshotted fit score, and
   assert.ok(captured.application.fit_score >= 65);
   assert.equal(captured.events[0].event_type, 'applied');
   assert.equal(captured.events[0].student_user_id, 'stu');
+});
+
+test('a company can create a brokered request; a bogus type or a student is refused', async () => {
+  const companySupabase = { from(table) {
+    if (table === 'member_profiles') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { role: 'company' }, error: null }; } };
+    if (table === 'project_requests') return { insert(row) { this._row = row; return this; }, select() { return this; }, async single() { return { data: { id: 'r1', ...this._row }, error: null }; } };
+    throw new Error('unexpected table ' + table);
+  } };
+  const r = await createProjectRequest({ user: { id: 'co' }, supabase: companySupabase }, { requestType: 'new_project', details: 'We need a pricing scan built from public pages.' });
+  assert.equal(r.request_type, 'new_project');
+  assert.equal(r.company_user_id, 'co');
+  await assert.rejects(createProjectRequest({ user: { id: 'co' }, supabase: companySupabase }, { requestType: 'bogus', details: 'a long enough description here' }), /Choose what you are requesting/);
+  const studentSupabase = { from() { return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { role: 'student' }, error: null }; } }; } };
+  await assert.rejects(createProjectRequest({ user: { id: 'stu' }, supabase: studentSupabase }, { requestType: 'new_project', details: 'a long enough description here' }), /Only company and university/);
 });
 
 test('get-messages returns messages across the caller\'s owned and assigned projects since a timestamp', async () => {

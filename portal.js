@@ -153,7 +153,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderActivity(); renderDiscover(); renderPortfolio(); renderMessages(); renderWallet();
+  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderPortfolio(); renderMessages(); renderWallet();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -268,6 +268,25 @@ function renderMetrics(){
     root.append(item);
   }
 }
+// §6 brokered requests: the company's transparent list of what they've asked Covenda to package.
+const requestTypeLabels={new_project:'New project',more_students:'More students',scope_change:'Scope change',revision:'Revision',consult:'Consult',question:'Question',specific_student:'Specific student'};
+const requestStatusLabels={submitted:'Submitted',in_packaging:'Being packaged',packaged:'Packaged',declined:'Declined',closed:'Closed'};
+function renderRequests(){
+  const root=$('#requestList');if(!root)return;root.replaceChildren();
+  const d=state.dashboard;const requests=d.projectRequests||[];
+  if(d.profile?.role==='student'||!requests.length)return;
+  const head=document.createElement('p');head.className='request-list-head';head.textContent=`Your requests to Covenda · ${requests.length}`;root.append(head);
+  for(const r of requests){
+    const row=document.createElement('article');row.className='request-row';const main=document.createElement('div');
+    const top=document.createElement('div');top.className='request-top';top.append(pill(requestTypeLabels[r.request_type]||titleCase(r.request_type),'status-pill'),pill(requestStatusLabels[r.status]||titleCase(r.status),'status-pill',r.status));main.append(top);
+    if(r.subject){const h=document.createElement('h3');h.textContent=r.subject;main.append(h);}
+    const p=document.createElement('p');p.className='request-details';p.textContent=r.details;main.append(p);
+    if(r.resolution_note){const rn=document.createElement('p');rn.className='request-resolution';rn.textContent=`Covenda: ${r.resolution_note}`;main.append(rn);}
+    const time=document.createElement('small');time.className='request-time';time.textContent=`Requested ${dateLabel(r.created_at)}`;main.append(time);
+    row.append(main);root.append(row);
+  }
+}
+function openRequest(){const form=$('#requestForm');if(form)form.reset();setDialogMessage('#requestMessage','');$('#requestDialog').showModal();}
 
 function renderProgress(){const profile=state.dashboard.profile;const score=profileCompletion(profile);$('#profileRing').style.setProperty('--progress',`${score*3.6}deg`);$('strong',$('#profileRing')).textContent=`${score}%`;$('#profileProgressTitle').textContent=score===100?'Your profile is ready':score>=60?'Add the finishing details':'Make a strong first impression';$('#profileProgressCopy').textContent=profile?.role==='student'?'Companies see only portfolios you choose to share.':'A complete organization profile adds context to every project.';}
 
@@ -888,6 +907,8 @@ $$('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>{c
 $$('[name="role"]',$('#profileForm')).forEach(input=>input.addEventListener('change',updateProfileFields));
 $('#primaryAction').addEventListener('click',event=>{const target=event.currentTarget.dataset.target;if(target==='profile')openProfile({required:!state.dashboard.profile});else if(target==='new-project')openIntake();else setView(target);});
 $('#newProject').addEventListener('click',openIntake);$('#editProfile').addEventListener('click',()=>openProfile());
+$('#requestWork')?.addEventListener('click',openRequest);
+$('#requestForm')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#requestMessage','Sending your request…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'create-request',requestType:form.elements.requestType.value,subject:form.elements.subject.value,details:form.elements.details.value})});$('#requestDialog').close();await loadDashboard();setView('projects');pulse('#requestList');}catch(error){setDialogMessage('#requestMessage',error.message,true);}finally{button.disabled=false;}});
 $('#discoverSearch')?.addEventListener('input',renderDiscover);
 ['#filterVertical','#filterWorkType','#filterMinCredits','#filterWithin','#filterMatched'].forEach(sel=>$(sel)?.addEventListener('input',renderDiscover));
 $('#filterReset')?.addEventListener('click',()=>{const ids=['#discoverSearch','#filterVertical','#filterWorkType','#filterMinCredits','#filterWithin'];ids.forEach(id=>{const el=$(id);if(el)el.value='';});const m=$('#filterMatched');if(m)m.checked=false;renderDiscover();});
