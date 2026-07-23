@@ -267,12 +267,33 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .message-bubble time { display:block; margin-top:7px; color:var(--soft); font-size:7px; }
 .message-compose { display:grid; gap:8px; padding:12px 20px 14px; border-top:1px solid var(--line); background:#fff; }
 .message-compose label { color:#2b2924; font-size:9px; font-weight:650; }
-.message-compose textarea { width:100%; min-height:60px; padding:10px 13px; resize:vertical; border:1px solid var(--line-strong); border-radius:11px; outline:0; line-height:1.5; }
+.message-compose textarea { width:100%; min-height:52px; max-height:220px; padding:10px 13px; resize:none; border:1px solid var(--line-strong); border-radius:11px; outline:0; line-height:1.5; overflow-y:auto; }
 .message-compose textarea:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(180,123,32,.1); }
-.message-compose > div { display:flex; min-height:42px; align-items:center; justify-content:space-between; gap:16px; }
-.message-compose p { margin:0; color:var(--success); font-size:8px; }
-.message-compose p.is-error { color:var(--danger); }
-.message-compose .portal-primary { min-height:42px; }
+.message-compose-bar { display:flex; min-height:42px; align-items:center; gap:12px; }
+.message-compose-bar #messageFormStatus { margin:0; margin-left:auto; color:var(--success); font-size:8px; }
+.message-compose-bar #messageFormStatus.is-error { color:var(--danger); }
+.message-compose-bar .portal-primary { min-height:42px; }
+.message-attach-btn { display:inline-flex; align-items:center; gap:5px; min-height:34px; padding:6px 12px; border:1px solid var(--line-strong); border-radius:9px; background:#fff; color:var(--muted); font-size:11px; font-weight:650; cursor:pointer; }
+.message-attach-btn:hover { border-color:var(--gold); color:var(--gold-deep); }
+.message-attach-btn svg { width:13px; height:13px; }
+.message-attach-pending { display:flex; flex-wrap:wrap; gap:6px; }
+.message-attach-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 6px 4px 10px; border:1px solid var(--line-strong); border-radius:99px; background:var(--gold-pale); font-size:10px; }
+.message-attach-chip button { display:grid; width:16px; height:16px; place-items:center; border:0; border-radius:50%; background:rgba(0,0,0,.06); color:var(--ink); font-size:12px; line-height:1; cursor:pointer; }
+.message-bubble-foot { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:7px; }
+.message-bubble-foot time { margin:0; }
+.message-pin { border:0; background:none; padding:2px 4px; color:var(--soft); font-size:8px; font-weight:650; cursor:pointer; opacity:0; transition:opacity .12s ease; }
+.message-bubble:hover .message-pin,.message-pin.is-pinned { opacity:1; }
+.message-pin.is-pinned { color:var(--gold-deep); }
+.message-files { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.message-file { display:inline-flex; align-items:center; gap:6px; max-width:100%; padding:6px 10px; border:1px solid var(--line-strong); border-radius:9px; background:#fff; color:var(--ink); font-size:9px; text-decoration:none; }
+.message-file:hover { border-color:var(--gold); }
+.message-file svg { width:12px; height:12px; flex:none; color:var(--gold-deep); }
+.message-file span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.message-file small { color:var(--soft); }
+.message-pinned { display:flex; flex-direction:column; gap:8px; padding:12px; border:1px dashed rgba(180,123,32,.4); border-radius:12px; background:rgba(180,123,32,.04); }
+.message-pinned-head { display:flex; align-items:center; gap:6px; margin:0; color:var(--gold-deep); font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+.message-pinned-head svg { width:12px; height:12px; }
+.message-bubble.is-pinned { border-color:rgba(180,123,32,.4); }
 .portfolio-profile { display:grid; grid-template-columns:220px 1fr; gap:50px; padding:36px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
 .portfolio-avatar { display:grid; width:128px; height:128px; place-items:center; border-radius:50%; background:var(--gold); background-size:cover; background-position:center; color:#fff; font-size:42px; font-weight:700; }
 .portfolio-avatar.is-editable { position:relative; overflow:hidden; padding:0; border:1px solid rgba(180,123,32,.4); cursor:pointer; font-family:inherit; }

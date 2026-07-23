@@ -496,7 +496,10 @@ async function runVerifyIdentity(button){
   }catch(error){setDialogMessage('#payoutMessage',error.message,true);button.disabled=false;}
 }
 
-function selectMessageProject(projectId){state.messageProjectId=projectId;renderMessages();}
+let messageDraftAttachments=[];
+// Switching threads must not carry a half-typed draft or staged files into another project.
+function clearMessageDraft(){messageDraftAttachments=[];const ta=$('#messageBody');if(ta){ta.value='';ta.style.height='auto';}renderMessageAttachments();const status=$('#messageFormStatus');if(status){status.textContent='';status.classList.remove('is-error');}}
+function selectMessageProject(projectId){if(projectId!==state.messageProjectId)clearMessageDraft();state.messageProjectId=projectId;renderMessages();}
 // §4c live messages: poll for new messages across the caller's projects and merge them in.
 function latestMessageTimestamp(){let latest='';for(const m of (state.dashboard?.messages||[])){if(!latest||new Date(m.created_at)>new Date(latest))latest=m.created_at;}return latest;}
 let messagePollTimer=null;
@@ -528,8 +531,67 @@ function renderMessages(){
   thread.replaceChildren();
   const projectMessages=messages.filter(message=>message.project_id===project.id);
   if(!projectMessages.length){emptyList(thread,'p-message','Start the project thread.','Share a scope question, milestone, or review note. It will remain attached to this project.');return;}
-  for(const message of projectMessages){const own=message.author_user_id===d.user.id;const article=document.createElement('article');article.className=`message-bubble${own?' is-own':''}`;const author=document.createElement('strong');author.textContent=own?'You':'Project participant';const body=document.createElement('p');body.textContent=message.body;const time=document.createElement('time');time.dateTime=message.created_at;time.textContent=new Date(message.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});article.append(author,body,time);thread.append(article);}
+  const pinned=projectMessages.filter(m=>m.pinned);
+  if(pinned.length){
+    const strip=document.createElement('div');strip.className='message-pinned';
+    const head=document.createElement('p');head.className='message-pinned-head';head.append(icon('p-spark'));const ht=document.createElement('span');ht.textContent=`Pinned · ${pinned.length}`;head.append(ht);strip.append(head);
+    for(const message of pinned)strip.append(messageBubble(message,d.user.id,true));
+    thread.append(strip);
+  }
+  for(const message of projectMessages)thread.append(messageBubble(message,d.user.id,false));
   if(wasAtBottom||switched)thread.scrollTop=thread.scrollHeight;
+}
+function messageBubble(message,ownId,inPinnedStrip){
+  const own=message.author_user_id===ownId;
+  const article=document.createElement('article');article.className=`message-bubble${own?' is-own':''}${message.pinned?' is-pinned':''}`;
+  const author=document.createElement('strong');author.textContent=own?'You':'Project participant';article.append(author);
+  if(message.body){const body=document.createElement('p');body.textContent=message.body;article.append(body);}
+  const files=Array.isArray(message.attachments)?message.attachments:[];
+  if(files.length){const wrap=document.createElement('div');wrap.className='message-files';files.forEach(f=>wrap.append(messageFileLink(f)));article.append(wrap);}
+  const foot=document.createElement('div');foot.className='message-bubble-foot';
+  const time=document.createElement('time');time.dateTime=message.created_at;time.textContent=new Date(message.created_at).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});foot.append(time);
+  // Pin toggle only in the main thread (not duplicated inside the pinned strip).
+  if(!inPinnedStrip){const pin=document.createElement('button');pin.type='button';pin.className='message-pin'+(message.pinned?' is-pinned':'');pin.textContent=message.pinned?'★ Unpin':'☆ Pin';pin.addEventListener('click',()=>togglePinMessage(message,pin));foot.append(pin);}
+  article.append(foot);
+  return article;
+}
+function messageFileLink(file){
+  const a=document.createElement('a');a.className='message-file';a.href=file.blobUrl||'#';a.target='_blank';a.rel='noopener noreferrer';
+  a.append(icon('p-inbox'));const name=document.createElement('span');name.textContent=file.name||'Attachment';a.append(name);
+  if(Number(file.sizeBytes)>0){const size=document.createElement('small');size.textContent=formatBytes(Number(file.sizeBytes));a.append(size);}
+  return a;
+}
+function formatBytes(n){if(n<1024)return `${n} B`;if(n<1048576)return `${(n/1024).toFixed(0)} KB`;return `${(n/1048576).toFixed(1)} MB`;}
+async function togglePinMessage(message,button){
+  button.disabled=true;const original=button.textContent;button.textContent='…';
+  try{
+    const result=await portalRequest({method:'POST',body:JSON.stringify({action:'pin-message',messageId:message.id,pinned:!message.pinned})});
+    const i=(state.dashboard.messages||[]).findIndex(m=>m.id===message.id);
+    if(i>=0)state.dashboard.messages[i]={...state.dashboard.messages[i],...result.message};
+    renderMessages();
+  }catch(error){button.textContent=error.message;button.disabled=false;setTimeout(()=>{button.textContent=original;},2600);}
+}
+function renderMessageAttachments(){
+  const root=$('#messageAttachments');if(!root)return;root.replaceChildren();
+  root.hidden=!messageDraftAttachments.length;
+  messageDraftAttachments.forEach((f,idx)=>{
+    const chip=document.createElement('span');chip.className='message-attach-chip';
+    const name=document.createElement('span');name.textContent=f.name||'Attachment';chip.append(name);
+    const remove=document.createElement('button');remove.type='button';remove.setAttribute('aria-label',`Remove ${f.name||'attachment'}`);remove.textContent='×';remove.addEventListener('click',()=>{messageDraftAttachments.splice(idx,1);renderMessageAttachments();});chip.append(remove);
+    root.append(chip);
+  });
+}
+async function uploadMessageFile(file){
+  const status=$('#messageFormStatus');
+  const prepared=/^image\//.test(file.type||'')?await downscaleImage(file,1600,'image/webp',0.85):file;
+  if(prepared.size>DIRECT_UPLOAD_LIMIT){if(status){status.textContent=`${file.name} is too large (over ~4 MB). Compress it or share a link.`;status.classList.add('is-error');}return;}
+  if(messageDraftAttachments.length>=6){if(status){status.textContent='Up to 6 files per message.';status.classList.add('is-error');}return;}
+  if(status){status.textContent=`Uploading ${file.name}…`;status.classList.remove('is-error');}
+  try{
+    const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':prepared.type||'application/octet-stream','x-file-name':encodeURIComponent(prepared.name)},body:prepared});
+    const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Upload failed.');
+    messageDraftAttachments.push(data);renderMessageAttachments();if(status)status.textContent='';
+  }catch(error){if(status){status.textContent=error.message;status.classList.add('is-error');}}
 }
 
 // §3 discovery: tabs (best match / all open / saved), a filter rail, fit-scored cards, and a
@@ -1031,7 +1093,31 @@ $('#batchApplyForm')?.addEventListener('submit',async event=>{event.preventDefau
 
 $('#submitWorkForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#submitWorkMessage','Submitting your work…');const notes=form.elements.workNotes.value.trim();const summary=[form.elements.workSummary.value.trim(),notes&&`\n\nNotes for the reviewer: ${notes}`].filter(Boolean).join('');const links=form.elements.workLinks.value.split(/\n/).map(link=>link.trim()).filter(Boolean);try{await portalRequest({method:'POST',body:JSON.stringify({action:'submit-deliverable',projectId:form.elements.projectId.value,deliverable:summary,deliverableLinks:links})});$('#submitWorkDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#submitWorkMessage',error.message,true);}finally{button.disabled=false;}});
 $$('#reviewForm [data-decision]').forEach(button=>button.addEventListener('click',async()=>{const form=$('#reviewForm');const decision=button.dataset.decision;const note=form.elements.note.value.trim();if(decision==='revise'&&!note){setDialogMessage('#reviewMessage','Add a note so the student knows what to revise.',true);return;}const buttons=$$('#reviewForm [data-decision]');buttons.forEach(b=>b.disabled=true);setDialogMessage('#reviewMessage',decision==='accept'?'Accepting the deliverable…':'Sending the change request…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'review-deliverable',projectId:form.elements.projectId.value,decision,note})});$('#reviewDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#reviewMessage',error.message,true);}finally{buttons.forEach(b=>b.disabled=false);}}));
-$('#messageForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const status=$('#messageFormStatus');button.disabled=true;status.textContent='Sending…';status.classList.remove('is-error');try{const result=await portalRequest({method:'POST',body:JSON.stringify({action:'send-message',projectId:state.messageProjectId,message:form.elements.message.value})});state.dashboard.messages.push(result.message);form.reset();status.textContent='Sent securely.';renderMessages();$('#messageThread').scrollTop=$('#messageThread').scrollHeight;}catch(error){status.textContent=error.message;status.classList.add('is-error');}finally{button.disabled=false;}});
+$('#messageForm').addEventListener('submit',async event=>{
+  event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const status=$('#messageFormStatus');
+  const bodyText=form.elements.message.value.trim();
+  if(!bodyText&&!messageDraftAttachments.length){status.textContent='Write a message or attach a file first.';status.classList.add('is-error');return;}
+  button.disabled=true;status.textContent='Sending…';status.classList.remove('is-error');
+  try{
+    const result=await portalRequest({method:'POST',body:JSON.stringify({action:'send-message',projectId:state.messageProjectId,message:form.elements.message.value,attachments:messageDraftAttachments})});
+    state.dashboard.messages.push(result.message);
+    form.reset();messageDraftAttachments=[];renderMessageAttachments();$('#messageBody').style.height='auto';
+    status.textContent='Sent securely.';renderMessages();$('#messageThread').scrollTop=$('#messageThread').scrollHeight;
+  }catch(error){status.textContent=error.message;status.classList.add('is-error');}finally{button.disabled=false;}
+});
+// Compose upgrades: auto-grow, Enter-to-send (Shift+Enter = newline), and the attach control.
+(()=>{
+  const ta=$('#messageBody');const form=$('#messageForm');
+  if(ta){
+    ta.addEventListener('input',()=>autoGrow(ta));
+    ta.addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();form.requestSubmit();}});
+  }
+  const attachBtn=$('#messageAttachBtn');const fileInput=$('#messageFileInput');
+  if(attachBtn&&fileInput){
+    attachBtn.addEventListener('click',()=>fileInput.click());
+    fileInput.addEventListener('change',async()=>{const chosen=fileInput.files[0];fileInput.value='';if(chosen)await uploadMessageFile(chosen);});
+  }
+})();
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')pollMessages();});
 window.addEventListener('focus',pollMessages);
 

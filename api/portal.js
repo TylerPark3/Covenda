@@ -763,15 +763,36 @@ export async function sendProjectMessage(member, input) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project conversation.');
   const body = cleanText(input.message, 4_000);
-  if (!body) throw new Error('Enter a message before sending.');
+  const attachments = cleanAttachments(input.attachments);
+  if (!body && !attachments.length) throw new Error('Write a message or attach a file before sending.');
   const project = await checked(
     member.supabase.from('member_projects').select('id,owner_user_id,assigned_student_user_id').eq('id', projectId).maybeSingle(),
     null,
   );
   const hasAccess = project && (project.owner_user_id === member.user.id || project.assigned_student_user_id === member.user.id);
   if (!hasAccess) throw new Error('This project conversation is not available to your account.');
-  const row = { project_id: projectId, author_user_id: member.user.id, body };
+  const row = { project_id: projectId, author_user_id: member.user.id, body, attachments };
   return checked(member.supabase.from('project_messages').insert(row).select('*').single(), null);
+}
+
+// Pin/unpin a message so a scope note or milestone stays at the top of the thread. Any
+// participant (owner or assigned student) can toggle; access is re-checked via the parent project.
+export async function pinProjectMessage(member, input) {
+  const messageId = cleanText(input.messageId, 50);
+  if (!PROJECT_ID_PATTERN.test(messageId)) throw new Error('Choose a valid message.');
+  const message = await checked(member.supabase.from('project_messages').select('id,project_id,pinned').eq('id', messageId).maybeSingle(), null);
+  if (!message) throw new Error('This message is no longer available.');
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,owner_user_id,assigned_student_user_id').eq('id', message.project_id).maybeSingle(),
+    null,
+  );
+  const hasAccess = project && (project.owner_user_id === member.user.id || project.assigned_student_user_id === member.user.id);
+  if (!hasAccess) throw new Error('This project conversation is not available to your account.');
+  const pinned = input.pinned !== undefined ? input.pinned === true : !message.pinned;
+  return checked(
+    member.supabase.from('project_messages').update({ pinned, pinned_at: pinned ? new Date().toISOString() : null }).eq('id', messageId).select('*').single(),
+    null,
+  );
 }
 
 // §4c live messages: return messages across the caller's projects (owner or assigned) newer
@@ -983,6 +1004,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'unlock-batch') return res.status(200).json({ ok: true, result: await unlockBatch(member, input) });
     if (req.method === 'POST' && input.action === 'batch-roster') return res.status(200).json({ ok: true, roster: await loadBatchRoster(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
+    if (req.method === 'POST' && input.action === 'pin-message') return res.status(200).json({ ok: true, message: await pinProjectMessage(member, input) });
     if (req.method === 'POST' && input.action === 'get-messages') return res.status(200).json({ ok: true, ...(await loadNewMessages(member, input)) });
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
     if (req.method === 'POST' && input.action === 'decline-application') return res.status(200).json({ ok: true, application: await declineApplication(member, input) });

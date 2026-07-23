@@ -166,8 +166,14 @@
             <div class="message-thread" id="messageThread" aria-live="polite"></div>
             <form class="message-compose" id="messageForm">
               <label for="messageBody">Message</label>
-              <textarea id="messageBody" name="message" rows="3" maxlength="4000" placeholder="Write a project update…" required></textarea>
-              <div><p id="messageFormStatus" aria-live="polite"></p><button class="portal-primary" type="submit">Send message<svg><use href="#p-arrow"/></svg></button></div>
+              <textarea id="messageBody" name="message" rows="2" maxlength="4000" placeholder="Write a project update…  (Enter to send, Shift+Enter for a new line)"></textarea>
+              <div class="message-attach-pending" id="messageAttachments" hidden></div>
+              <div class="message-compose-bar">
+                <button type="button" class="message-attach-btn" id="messageAttachBtn" aria-label="Attach a file"><svg><use href="#p-plus"/></svg>Attach</button>
+                <input type="file" id="messageFileInput" hidden>
+                <p id="messageFormStatus" aria-live="polite"></p>
+                <button class="portal-primary" type="submit">Send message<svg><use href="#p-arrow"/></svg></button>
+              </div>
             </form>
           </section>
         </div>
