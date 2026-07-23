@@ -448,15 +448,72 @@ function renderMessages(){
   thread.scrollTop=thread.scrollHeight;
 }
 
+// §3 discovery: tabs (best match / all open / saved), a filter rail, fit-scored cards, and a
+// side-panel detail that renders the stored §2 brief. Saved projects persist in localStorage.
+const SAVED_KEY='covendaSavedProjects';
+function loadSavedProjects(){try{return new Set(JSON.parse(localStorage.getItem(SAVED_KEY)||'[]'));}catch{return new Set();}}
+const discoverState={tab:'best',saved:loadSavedProjects()};
+function persistSavedProjects(){try{localStorage.setItem(SAVED_KEY,JSON.stringify([...discoverState.saved]));}catch{}}
+function discoverFilters(){return{query:($('#discoverSearch')?.value||'').trim().toLowerCase(),vertical:$('#filterVertical')?.value||'',workType:$('#filterWorkType')?.value||'',minCredits:Number($('#filterMinCredits')?.value)||0,within:Number($('#filterWithin')?.value)||0,matchedOnly:$('#filterMatched')?.checked||false};}
+function fitPill(score){const s=Math.round(Number(score)||0);const el=document.createElement('span');el.className='fit-pill '+(s>=70?'is-high':s>=40?'is-mid':'is-low');el.textContent=`${s}% fit`;return el;}
+function discoverChip(label,value){const c=document.createElement('div');c.className='discover-chip';const s=document.createElement('small');s.textContent=label;const b=document.createElement('span');b.textContent=value;c.append(s,b);return c;}
+function skillsText(project){const s=project.desired_skills;return Array.isArray(s)?s.join(', '):(s||'');}
 function renderDiscover(){
-  const d=state.dashboard;const root=$('#opportunityList');const query=$('#discoverSearch').value.trim().toLowerCase();
-  const items=d.opportunities.filter(project=>[project.title,project.summary,...(project.desired_skills||[])].join(' ').toLowerCase().includes(query));
-  $('#discoverCount').textContent=`${items.length} open ${items.length===1?'project':'projects'}`;
+  const d=state.dashboard;const root=$('#opportunityList');if(!root)return;
+  const f=discoverFilters();const saved=discoverState.saved;
+  let items=(d.opportunities||[]).slice();
+  if(discoverState.tab==='saved')items=items.filter(p=>saved.has(p.id));
+  items=items.filter(p=>{
+    const hay=[p.title,p.summary,skillsText(p)].join(' ').toLowerCase();
+    if(f.query&&!hay.includes(f.query))return false;
+    if(f.vertical&&!(p.verticals||[]).includes(f.vertical))return false;
+    if(f.workType&&!(p.work_types||[]).includes(f.workType))return false;
+    if(f.minCredits&&(Number(p.credits_listed)||0)<f.minCredits)return false;
+    if(f.within){const due=p.target_date?new Date(p.target_date):null;if(!due||Number.isNaN(due.getTime()))return false;const days=(due.getTime()-Date.now())/86400000;if(days<0||days>f.within)return false;}
+    if(f.matchedOnly&&!p.matched)return false;
+    return true;
+  });
+  if(discoverState.tab==='all')items.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+  else items.sort((a,b)=>(b.fitScore||0)-(a.fitScore||0));
+  const openCount=(d.opportunities||[]).length;const matchedCount=d.matchedCount||0;
+  $('#discoverCount').textContent=`${openCount} open · ${matchedCount} matched to you`;
+  const savedCountEl=$('#savedCount');if(savedCountEl)savedCountEl.textContent=saved.size;
+  $('#discoverSummary').textContent=`${items.length} ${items.length===1?'project':'projects'} shown`;
   root.replaceChildren();
-  const matchedCount=d.matchedCount||0;const verticals=(d.profile?.verticals||[]).filter(v=>v&&v!=='Not sure yet — show me everything');
-  if(!query&&matchedCount>0){const hi=document.createElement('div');hi.className='discover-highlight';hi.append(icon('p-compass'));const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent=`${matchedCount} open ${matchedCount===1?'project':'projects'} in your ${verticals.length?'vertical':'areas'}${verticals.length?` (${verticals.join(', ')})`:''}`;const small=document.createElement('small');small.textContent='Matched to the work you chose during onboarding — shown first below.';box.append(strong,small);hi.append(box);root.append(hi);}
-  if(!items.length){emptyList(root,'p-compass',query?'No projects match that search.':'No open projects right now.','Covenda will place reviewed opportunities here as companies and universities make them available.');return;}
-  for(const project of items){const row=document.createElement('article');row.className='list-row'+(project.matched?' is-matched':'');const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;main.append(h);if(project.matched)main.append(pill('Matched to your vertical','match-pill'));const p=document.createElement('p');p.textContent=project.summary;main.append(p);const skills=cell('Skills',(project.desired_skills||[]).join(', ')||'Open fit');const due=cell('Target',project.target_date?dateLabel(project.target_date):'Flexible');const applied=d.applications.some(app=>app.project_id===project.id);const button=document.createElement('button');button.type='button';button.textContent=applied?'Interest sent':'View & apply';button.disabled=applied;button.addEventListener('click',()=>openApply(project));row.append(main,skills,due,button);root.append(row);}
+  if(!items.length){emptyList(root,'p-compass',discoverState.tab==='saved'?'No saved projects yet.':'No projects match your filters.',discoverState.tab==='saved'?'Tap Save on any project to keep it here.':'Try clearing a filter, or check back as new projects are posted.');return;}
+  const applied=new Set((d.applications||[]).map(a=>a.project_id));
+  for(const project of items)root.append(discoverCard(project,applied.has(project.id)));
+}
+function discoverCard(project,isApplied){
+  const row=document.createElement('article');row.className='discover-card'+(project.matched?' is-matched':'');
+  const top=document.createElement('div');top.className='discover-card-top';const h=document.createElement('h3');h.textContent=project.title;top.append(h,fitPill(project.fitScore));row.append(top);
+  const meta=document.createElement('div');meta.className='discover-meta';const pay=Number(project.credits_listed)||0;meta.append(discoverChip('Payout',pay?`${pay.toLocaleString()} credits`:'—'),discoverChip('Target',project.target_date?dateLabel(project.target_date):'Flexible'));if((project.verticals||[]).length)meta.append(discoverChip('Vertical',project.verticals[0]));row.append(meta);
+  const p=document.createElement('p');p.className='discover-card-summary';p.textContent=project.summary;row.append(p);
+  if((project.fitReasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';project.fitReasons.slice(0,3).forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});row.append(rs);}
+  const actions=document.createElement('div');actions.className='discover-actions';
+  const view=document.createElement('button');view.type='button';view.className='portal-secondary compact';view.textContent='View details';view.addEventListener('click',()=>openDiscoverDetail(project,isApplied));
+  const apply=document.createElement('button');apply.type='button';apply.className='portal-primary compact';apply.textContent=isApplied?'Interest sent':'Apply';apply.disabled=isApplied;apply.addEventListener('click',()=>openApply(project));
+  const save=document.createElement('button');const isSaved=discoverState.saved.has(project.id);save.type='button';save.className='save-toggle'+(isSaved?' is-saved':'');save.setAttribute('aria-pressed',isSaved?'true':'false');save.setAttribute('aria-label',isSaved?'Unsave project':'Save project');save.textContent=isSaved?'★ Saved':'☆ Save';save.addEventListener('click',()=>{if(discoverState.saved.has(project.id))discoverState.saved.delete(project.id);else discoverState.saved.add(project.id);persistSavedProjects();renderDiscover();});
+  actions.append(view,apply,save);row.append(actions);return row;
+}
+function renderBriefDocument(root,brief,fallbackSummary){
+  root.replaceChildren();
+  const add=(title,text)=>{if(!text)return;const s=briefSection(title);const p=document.createElement('p');p.className='brief-text';p.textContent=text;s.append(p);root.append(s);};
+  add('Summary',(brief&&brief.summary)||fallbackSummary);
+  if(!brief)return;
+  add('Context',brief.context);add('Objective',brief.objective);
+  if((brief.scopeInclusions||[]).length||(brief.scopeExclusions||[]).length){const s=briefSection('Scope');if(brief.scopeInclusions?.length){const t=document.createElement('p');t.className='brief-subtitle';t.textContent='In scope';s.append(t,briefBullets(brief.scopeInclusions));}if(brief.scopeExclusions?.length){const t=document.createElement('p');t.className='brief-subtitle';t.textContent='Out of scope';s.append(t,briefBullets(brief.scopeExclusions));}root.append(s);}
+  if((brief.candidateDeliverables||[]).length){const s=briefSection('Deliverables');brief.candidateDeliverables.forEach(dd=>{const card=document.createElement('div');card.className='deliverable-card';const st=document.createElement('strong');st.textContent=(dd&&dd.title)||dd||'Deliverable';card.append(st);if(dd&&dd.description){const p=document.createElement('p');p.textContent=dd.description;card.append(p);}if(dd&&dd.acceptanceCriteria){const ac=document.createElement('p');ac.className='deliverable-ac';const b=document.createElement('span');b.textContent='Done when: ';ac.append(b,document.createTextNode(dd.acceptanceCriteria));card.append(ac);}s.append(card);});root.append(s);}
+  if((brief.approvedInputs||[]).length){const s=briefSection('Approved inputs');s.append(briefBullets(brief.approvedInputs));root.append(s);}
+  add('Estimated effort',brief.estimatedEffort);
+}
+function openDiscoverDetail(project,isApplied){
+  $('#discoverDetailTitle').textContent=project.title;const body=$('#discoverDetailBody');
+  renderBriefDocument(body,project.ai_brief,project.summary);
+  const head=document.createElement('div');head.className='detail-head';head.append(fitPill(project.fitScore));const pay=Number(project.credits_listed)||0;const payS=document.createElement('span');payS.className='detail-pay';payS.textContent=pay?`${pay.toLocaleString()} credits payout`:'Payout TBD';head.append(payS);body.prepend(head);
+  if((project.fitReasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';project.fitReasons.forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});body.insertBefore(rs,head.nextSibling);}
+  const footer=$('#discoverDetailFooter');footer.replaceChildren();const apply=document.createElement('button');apply.type='button';apply.className='portal-primary';apply.textContent=isApplied?'Interest already sent':'Apply to this project';apply.disabled=isApplied;apply.addEventListener('click',()=>{$('#discoverDetail').close();openApply(project);});footer.append(apply);
+  $('#discoverDetail').showModal();
 }
 
 // "Identity verified ✓" credibility badge — shown wherever a verified member's name appears.
@@ -767,7 +824,10 @@ $$('[data-close-dialog]').forEach(button=>button.addEventListener('click',()=>{c
 $$('[name="role"]',$('#profileForm')).forEach(input=>input.addEventListener('change',updateProfileFields));
 $('#primaryAction').addEventListener('click',event=>{const target=event.currentTarget.dataset.target;if(target==='profile')openProfile({required:!state.dashboard.profile});else if(target==='new-project')openIntake();else setView(target);});
 $('#newProject').addEventListener('click',openIntake);$('#editProfile').addEventListener('click',()=>openProfile());
-$('#discoverSearch').addEventListener('input',renderDiscover);
+$('#discoverSearch')?.addEventListener('input',renderDiscover);
+['#filterVertical','#filterWorkType','#filterMinCredits','#filterWithin','#filterMatched'].forEach(sel=>$(sel)?.addEventListener('input',renderDiscover));
+$('#filterReset')?.addEventListener('click',()=>{const ids=['#discoverSearch','#filterVertical','#filterWorkType','#filterMinCredits','#filterWithin'];ids.forEach(id=>{const el=$(id);if(el)el.value='';});const m=$('#filterMatched');if(m)m.checked=false;renderDiscover();});
+$$('#discoverTabs .discover-tab').forEach(tab=>tab.addEventListener('click',()=>{discoverState.tab=tab.dataset.tab;$$('#discoverTabs .discover-tab').forEach(t=>t.classList.toggle('is-active',t===tab));renderDiscover();}));
 $('#memberSignout').addEventListener('click',()=>{clearSession();state.dashboard=null;showAuth('Signed out of this browser.');});
 $('#mobileMenu').addEventListener('click',()=>$('.member-nav').classList.toggle('is-open'));
 

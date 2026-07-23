@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, authorizeMember, buyCredits, cancelProject, createMemberProject, creditBalance, fulfilPayout, loadMemberIntakes, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+import { acceptApplication, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, creditBalance, fulfilPayout, loadMemberIntakes, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
@@ -287,6 +287,16 @@ test('opportunities matching the student vertical or work type are flagged and s
   assert.equal(ranked[0].matched, true);
   assert.equal(ranked[ranked.length - 1].id, '1');
   assert.equal(ranked.find(project => project.id === '1').matched, false);
+});
+
+test('fit score reflects vertical, work-type, skill and pay overlap, with explainable reasons', () => {
+  const profile = { verticals: ['Software & AI'], work_types: ['Research'], skills: ['Python', 'SQL'] };
+  const strong = computeFitScore({ verticals: ['Software & AI'], work_types: ['Research'], desired_skills: 'Python, R', credits_listed: 200, target_date: '2035-01-01' }, profile);
+  const weak = computeFitScore({ verticals: ['Healthcare operations'], work_types: ['Operations'], desired_skills: 'Excel' }, profile);
+  assert.ok(strong.score > weak.score);
+  assert.ok(strong.score >= 65); // at least vertical (35) + work type (30)
+  assert.ok(strong.reasons.some(r => /skill/i.test(r)));
+  assert.equal(weak.score, 0); // no overlap on any legitimate signal
 });
 
 test('a show-me-everything student matches every open vertical', () => {

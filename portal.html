@@ -121,9 +121,27 @@
       </section>
 
       <section class="portal-view" data-portal-view="discover">
-        <div class="page-heading"><div><p class="eyebrow">Reviewed opportunities</p><h1>Discover projects</h1><p>Projects appear here only after a company or university makes them available to members.</p></div></div>
-        <div class="filter-line"><span id="discoverCount">0 open projects</span><label>Search<input id="discoverSearch" type="search" placeholder="Skill, deliverable, or company"></label></div>
-        <div class="opportunity-list" id="opportunityList"></div>
+        <div class="page-heading"><div><p class="eyebrow">Reviewed opportunities</p><h1>Discover projects</h1><p id="discoverCount">Projects appear here only after a company or university makes them available to members.</p></div></div>
+        <div class="discover-tabs" id="discoverTabs" role="tablist">
+          <button type="button" class="discover-tab is-active" data-tab="best" role="tab">Best match</button>
+          <button type="button" class="discover-tab" data-tab="all" role="tab">All open</button>
+          <button type="button" class="discover-tab" data-tab="saved" role="tab">Saved <b id="savedCount">0</b></button>
+        </div>
+        <div class="discover-body">
+          <aside class="discover-filters" aria-label="Filter projects">
+            <label>Search<input id="discoverSearch" type="search" placeholder="Skill, deliverable, company"></label>
+            <label>Vertical<select id="filterVertical"><option value="">Any vertical</option><option>Accounting &amp; finance</option><option>Software &amp; AI</option><option>Healthcare operations</option><option>Consumer &amp; retail</option><option>Professional services</option></select></label>
+            <label>Work type<select id="filterWorkType"><option value="">Any work type</option><option>Research</option><option>Data &amp; spreadsheets</option><option>Operations</option><option>QA &amp; testing</option><option>Writing &amp; documentation</option></select></label>
+            <label>Minimum payout (credits)<input id="filterMinCredits" type="number" min="0" step="25" placeholder="Any"></label>
+            <label>Deadline within<select id="filterWithin"><option value="">Any time</option><option value="7">1 week</option><option value="30">1 month</option><option value="90">3 months</option></select></label>
+            <label class="filter-check"><input id="filterMatched" type="checkbox"><span>Matched to me only</span></label>
+            <button type="button" class="portal-ghost" id="filterReset">Reset filters</button>
+          </aside>
+          <div class="discover-main">
+            <p class="discover-summary" id="discoverSummary"></p>
+            <div class="opportunity-list" id="opportunityList"></div>
+          </div>
+        </div>
       </section>
 
       <section class="portal-view" data-portal-view="portfolio">
@@ -203,6 +221,10 @@
 
   <dialog class="member-dialog compact-dialog" id="applyDialog">
     <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="5" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
+  </dialog>
+
+  <dialog class="member-dialog" id="discoverDetail">
+    <div class="dialog-scroll"><header><div><p class="eyebrow">Project detail</p><h2 id="discoverDetailTitle">Project</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body" id="discoverDetailBody"></div><footer id="discoverDetailFooter"></footer></div>
   </dialog>
 
   <dialog class="member-dialog" id="intakeDialog">

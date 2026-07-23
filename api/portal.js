@@ -416,9 +416,39 @@ function sanitizeBrief(brief) {
   };
 }
 
-// Rank open opportunities so ones matching the student's verticals/work types come
-// first, each tagged `matched` for the "Matched to your vertical" badge. A student who
-// picked "Not sure yet — show me everything" matches every vertical.
+// §5 fit score: a per-project↔student compatibility signal (NEVER a universal student
+// rating). Transparent, tunable weights over legitimate signals only — no protected
+// attributes or proxies (e.g. school prestige is deliberately excluded). Returns 0–100 plus
+// human-readable reasons so the score is always explainable.
+export const FIT_WEIGHTS = { vertical: 35, workType: 30, skills: 20, compensation: 8, deadline: 7 };
+
+export function computeFitScore(project, profile) {
+  const reasons = [];
+  const pV = new Set(profile?.verticals || []);
+  const pW = new Set(profile?.work_types || []);
+  const pS = new Set((profile?.skills || []).map(s => String(s).toLowerCase().trim()).filter(Boolean));
+  const everything = pV.has('Not sure yet — show me everything');
+  const projV = project.verticals || [];
+  const projW = project.work_types || [];
+  const projS = (project.desired_skills ? String(project.desired_skills).split(/[,\n]/) : []).map(s => s.toLowerCase().trim()).filter(Boolean);
+  let score = 0;
+  if (projV.length && (everything || projV.some(v => pV.has(v)))) {
+    score += FIT_WEIGHTS.vertical;
+    reasons.push(everything ? 'Open to every vertical' : `Matches your vertical (${projV.find(v => pV.has(v)) || projV[0]})`);
+  }
+  const wMatches = projW.filter(w => pW.has(w));
+  if (projW.length && wMatches.length) { score += FIT_WEIGHTS.workType; reasons.push(`Your work type: ${wMatches.slice(0, 2).join(', ')}`); }
+  const sMatches = projS.filter(s => pS.has(s));
+  if (projS.length && sMatches.length) { score += Math.round(FIT_WEIGHTS.skills * Math.min(1, sMatches.length / projS.length)); reasons.push(`${sMatches.length} skill${sMatches.length > 1 ? 's' : ''} in common`); }
+  const credits = Number(project.credits_listed) || 0;
+  if (credits > 0) { score += FIT_WEIGHTS.compensation; reasons.push(`Pays ${credits.toLocaleString()} credits`); }
+  if (project.target_date) { const due = new Date(project.target_date); if (!Number.isNaN(due.getTime()) && due.getTime() > Date.now()) score += FIT_WEIGHTS.deadline; }
+  return { score: Math.max(0, Math.min(100, Math.round(score))), reasons };
+}
+
+// Rank open opportunities by fit score. `matched` (vertical or work-type overlap) is kept for
+// the existing badge + matchedCount. A student who picked "show me everything" matches every
+// vertical.
 export function rankOpportunities(opportunities, profile) {
   const profileVerticals = new Set(profile?.verticals || []);
   const profileWorkTypes = new Set(profile?.work_types || []);
@@ -431,8 +461,8 @@ export function rankOpportunities(opportunities, profile) {
     return Boolean((verticals.length && verticalMatch) || (workTypes.length && workTypeMatch));
   };
   return (opportunities || [])
-    .map(project => ({ ...project, matched: isMatch(project) }))
-    .sort((a, b) => Number(b.matched) - Number(a.matched));
+    .map(project => { const fit = computeFitScore(project, profile); return { ...project, matched: isMatch(project), fitScore: fit.score, fitReasons: fit.reasons }; })
+    .sort((a, b) => b.fitScore - a.fitScore || Number(b.matched) - Number(a.matched));
 }
 
 export async function createMemberProject(member, input) {
