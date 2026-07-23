@@ -21,7 +21,7 @@ test('student-first hero offers five work paths and a scroll continuation', () =
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(hero, /What is your <span class="word-gold">domain expertise<\/span>\?/); // §8 rename
   assert.equal((hero.match(/class="work-option/g) || []).length, 5);
-  assert.match(hero, /Join the pilot list/);
+  assert.match(hero, /Make a student account/); // §8: one student-account flow (quick-join retired)
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
 });
