@@ -43,7 +43,8 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .auth-panel label,.member-dialog label { display:grid; gap:8px; color:#2b2924; font-size:10px; font-weight:650; }
 .auth-panel input,.member-dialog input,.member-dialog textarea,.member-dialog select,.filter-line input { width:100%; min-height:48px; padding:11px 13px; border:1px solid var(--line-strong); border-radius:11px; background:#fff; color:var(--ink); outline:0; }
 .auth-panel input:focus,.member-dialog input:focus,.member-dialog textarea:focus,.member-dialog select:focus,.filter-line input:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(180,123,32,.1); }
-.portal-primary { border:1px solid var(--gold-deep); background:linear-gradient(#d8a541,#ab6d09); box-shadow:0 10px 22px rgba(180,123,32,.2),inset 0 1px rgba(255,255,255,.35); color:#fff; }
+.portal-primary { border:1px solid var(--gold-deep); background:var(--gold); color:#fff; }
+.portal-primary:hover { background:var(--gold-deep); }
 .portal-primary:hover { transform:translateY(-1px); box-shadow:0 14px 28px rgba(180,123,32,.25); }
 .portal-primary:disabled,.google-button:disabled { cursor:wait; opacity:.55; }
 .portal-secondary { border:1px solid var(--line-strong); background:#fff; color:var(--ink); }

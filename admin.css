@@ -18,7 +18,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .admin-login input, .admin-controls select, .admin-search { min-height: 48px; border: 1px solid var(--line-strong); border-radius: 12px; background: #fff; }
 .admin-login input { width: 100%; padding: 11px 13px; }
 .admin-login input:focus, .admin-controls select:focus, .admin-search:focus-within { border-color: var(--gold); outline: 3px solid rgba(180,123,32,.11); }
-.admin-login button { min-height: 50px; border: 1px solid var(--gold-deep); border-radius: 12px; background: linear-gradient(#d6a33f,#ab6c08); box-shadow: 0 10px 22px rgba(180,123,32,.18); color: #fff; font-weight: 700; cursor: pointer; }
+.admin-login button { min-height: 50px; border: 1px solid var(--gold-deep); border-radius: 12px; background: var(--gold); color: #fff; font-weight: 700; cursor: pointer; }
 .admin-login button:disabled { opacity: .55; cursor: wait; }
 #adminLoginMessage { min-height: 20px; margin: 0; color: var(--success); font-size: 11px; }
 #adminLoginMessage.is-error { color: #a43124; }
@@ -110,7 +110,7 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .workflow-actions { display: flex; min-height: 39px; align-items: center; justify-content: space-between; gap: 12px; }
 .workflow-actions > span { color: var(--success); font-size: 9px; line-height: 1.35; }
 .workflow-actions > span.is-error { color: #a43124; }
-.workflow-actions button { min-height: 39px; padding: 8px 13px; border: 1px solid var(--gold-deep); border-radius: 10px; background: linear-gradient(#d6a33f,#ab6c08); box-shadow: 0 8px 18px rgba(180,123,32,.15); color: #fff; font-size: 10px; font-weight: 700; cursor: pointer; }
+.workflow-actions button { min-height: 39px; padding: 8px 13px; border: 1px solid var(--gold-deep); border-radius: 10px; background: var(--gold); color: #fff; font-size: 10px; font-weight: 700; cursor: pointer; }
 .workflow-actions button:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(180,123,32,.2); }
 .workflow-actions button:disabled { cursor: wait; opacity: .62; transform: none; }
 .workflow-audit { margin: 13px 0 0; color: var(--soft); font-size: 8px; line-height: 1.5; }
@@ -167,5 +167,5 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .admin-request-controls { display: grid; gap: 8px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); }
 .admin-request-controls select, .admin-request-controls textarea { width: 100%; padding: 9px 11px; border: 1px solid var(--line-strong); border-radius: 10px; background: #fff; color: var(--ink); font: inherit; font-size: 12px; outline: 0; }
 .admin-request-controls select:focus, .admin-request-controls textarea:focus { border-color: var(--gold); outline: 3px solid rgba(180,123,32,.11); }
-.admin-request-save { justify-self: start; min-height: 34px; padding: 7px 16px; border: 1px solid var(--gold-deep); border-radius: 9px; background: linear-gradient(#d6a33f,#ab6c08); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+.admin-request-save { justify-self: start; min-height: 34px; padding: 7px 16px; border: 1px solid var(--gold-deep); border-radius: 9px; background: var(--gold); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; } }
