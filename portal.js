@@ -560,10 +560,31 @@ const ONBOARD_ICONS={
   Research:'p-search','Data & spreadsheets':'p-grid',Operations:'p-flow','QA & testing':'p-shield','Writing & documentation':'p-write',
 };
 function avatarImage(url){const img=document.createElement('img');img.className='onboard-avatar-img';img.src=url;img.alt='';return img;}
+// Downscale an image in-browser before upload. This is the fix for "upload failed" on big
+// photos: it keeps the request body well under Vercel's ~4.5 MB serverless cap and
+// normalizes odd formats (e.g. HEIC on Safari) to WebP. Animated GIFs are left untouched so
+// they don't flatten to a single frame; anything the browser can't decode passes through
+// unchanged (the server then validates it).
+async function downscaleImage(file,maxDim=512,type='image/webp',quality=0.85){
+  if(!/^image\//.test(file.type||'')||file.type==='image/gif')return file;
+  try{
+    const bitmap=await createImageBitmap(file);
+    const scale=Math.min(1,maxDim/Math.max(bitmap.width,bitmap.height));
+    const w=Math.max(1,Math.round(bitmap.width*scale)),h=Math.max(1,Math.round(bitmap.height*scale));
+    const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+    canvas.getContext('2d').drawImage(bitmap,0,0,w,h);bitmap.close&&bitmap.close();
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,type,quality));
+    if(!blob)return file;
+    const base=(file.name||'image').replace(/\.[^.]+$/,'');
+    return new File([blob],`${base}.webp`,{type});
+  }catch{return file;}
+}
+const DIRECT_UPLOAD_LIMIT=4.3*1024*1024; // just under Vercel's serverless request-body cap
 async function uploadAvatar(file){
-  if(!/^image\//.test(file.type||''))throw new Error('Choose an image file.');
-  if(file.size>5*1024*1024)throw new Error('Image is over 5 MB.');
-  const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':file.type,'x-file-name':file.name,'x-upload-kind':'avatar'},body:file});
+  if(!/^image\//.test(file.type||''))throw new Error('Choose an image file (PNG, JPEG, WebP, or GIF).');
+  const prepared=await downscaleImage(file,512,'image/webp',0.9);
+  if(prepared.size>DIRECT_UPLOAD_LIMIT)throw new Error('That image is too large to process here. Try a JPEG or PNG under 4 MB.');
+  const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':prepared.type,'x-file-name':prepared.name,'x-upload-kind':'avatar'},body:prepared});
   const data=await res.json().catch(()=>({}));
   if(!res.ok)throw new Error(data.error||'Upload failed.');
   return data.blobUrl;
@@ -583,7 +604,7 @@ function renderOnboardProfileScreen({values,controls,body,msg}){
   paint();
   const upload=document.createElement('label');upload.className='onboard-avatar-upload';upload.append(icon('p-plus'));
   const uploadLabel=document.createElement('span');uploadLabel.textContent='Add a profile image';
-  const file=document.createElement('input');file.type='file';file.accept='image/*';file.hidden=true;
+  const file=document.createElement('input');file.type='file';file.accept='image/png,image/jpeg,image/webp,image/gif';file.hidden=true;
   upload.append(uploadLabel,file);
   const caption=document.createElement('p');caption.className='onboard-avatar-note';
   const restCaption=()=>{caption.textContent=onboardState.values.avatarUrl?'Profile image set — optional, and you can change it later.':'Optional — we generate one from your name until you add a photo.';};
@@ -677,8 +698,16 @@ function renderIntakeCost(){
 function intakeToggle(list,option,button){const i=list.indexOf(option);if(i>=0)list.splice(i,1);else list.push(option);const now=i<0;button.classList.toggle('is-selected',now);button.setAttribute('aria-pressed',now?'true':'false');}
 function renderIntakeTargets(){const vRoot=$('#intakeVerticals');vRoot.replaceChildren();ONBOARD_VERTICALS.forEach(opt=>{const on=intakeState.verticals.includes(opt);const b=document.createElement('button');b.type='button';b.className='intake-toggle'+(on?' is-selected':'');b.setAttribute('aria-pressed',on?'true':'false');b.textContent=opt;b.addEventListener('click',()=>intakeToggle(intakeState.verticals,opt,b));vRoot.append(b);});const wRoot=$('#intakeWorkTypes');wRoot.replaceChildren();ONBOARD_WORK_TYPES.forEach(opt=>{const on=intakeState.workTypes.includes(opt);const b=document.createElement('button');b.type='button';b.className='intake-toggle'+(on?' is-selected':'');b.setAttribute('aria-pressed',on?'true':'false');b.textContent=opt;b.addEventListener('click',()=>intakeToggle(intakeState.workTypes,opt,b));wRoot.append(b);});}
 function renderIntakeReview(){const root=$('#intakeReview');root.replaceChildren();const form=$('#intakeForm');const title=$('[name="title"]',form).value.trim()||'Untitled project';const rows=[['Title',title],['Verticals',intakeState.verticals.join(', ')||'—'],['Work types',intakeState.workTypes.join(', ')||'—'],['Files',intakeState.attachments.length?`${intakeState.attachments.length} attached`:'None'],['20-min consult',intakeState.consultBooked?'Booked':'Not yet — you can book later']];const dl=document.createElement('dl');dl.className='intake-review-list';rows.forEach(([k,v])=>{const wrap=document.createElement('div');const dt=document.createElement('dt');dt.textContent=k;const dd=document.createElement('dd');dd.textContent=v;wrap.append(dt,dd);dl.append(wrap);});root.append(dl);}
-function addIntakeChip(name,status){const chip=document.createElement('div');chip.className='intake-chip';const b=document.createElement('strong');b.textContent=name;const s=document.createElement('small');s.textContent=status;chip.append(b,s);$('#intakeChips').append(chip);return chip;}
-async function uploadIntakeFile(file){if(file.size>15*1024*1024){setDialogMessage('#intakeStepMessage',`${file.name} is over 15 MB.`,true);return;}const chip=addIntakeChip(file.name,'Uploading…');try{const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':file.type||'application/octet-stream','x-file-name':file.name},body:file});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Upload failed.');intakeState.attachments.push(data);$('small',chip).textContent='Attached';}catch(error){$('small',chip).textContent=error.message;chip.classList.add('is-error');}}
+function addIntakeChip(name,status){const chip=document.createElement('div');chip.className='intake-chip';const b=document.createElement('strong');b.textContent=name;const s=document.createElement('small');s.textContent=status;s.setAttribute('aria-live','polite');chip.append(b,s);$('#intakeChips').append(chip);return chip;}
+async function uploadIntakeFile(file){
+  // Images are downscaled (bigger max than avatars so they stay legible for the AI brief);
+  // other files (PDF/doc) can't be shrunk here, so we surface a clear over-limit message
+  // rather than letting Vercel's ~4.5 MB request cap fail the upload cryptically.
+  const prepared=/^image\//.test(file.type||'')?await downscaleImage(file,1600,'image/webp',0.85):file;
+  if(prepared.size>DIRECT_UPLOAD_LIMIT){setDialogMessage('#intakeStepMessage',`${file.name} is too large to upload directly (over ~4 MB). Compress it or share a link instead.`,true);return;}
+  const chip=addIntakeChip(prepared.name,'Uploading…');
+  try{const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':prepared.type||'application/octet-stream','x-file-name':prepared.name},body:prepared});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Upload failed.');intakeState.attachments.push(data);$('small',chip).textContent='Attached';}catch(error){$('small',chip).textContent=error.message;chip.classList.add('is-error');}
+}
 function renderIntakeBrief(){const brief=intakeState.brief;const root=$('#intakeBrief');root.replaceChildren();root.hidden=false;
   if(brief.safeToPost===false){const warn=document.createElement('div');warn.className='intake-warn';warn.append(icon('p-close'));const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent='Outside Covenda’s safe boundary';const ul=document.createElement('ul');(brief.safetyFlags||[]).forEach(f=>{const li=document.createElement('li');li.textContent=f;ul.append(li);});const p=document.createElement('p');p.textContent='Covenda can’t post this as-is. Book the 20-minute consult and we’ll find a safe, useful version.';box.append(strong,ul,p);warn.append(box);root.append(warn);return;}
   const label=document.createElement('p');label.className='intake-brief-label';label.textContent='AI draft understanding — edit before you post';root.append(label);
