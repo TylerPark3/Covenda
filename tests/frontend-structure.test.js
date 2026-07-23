@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const script = await readFile(new URL('../app.js', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../styles.css', import.meta.url), 'utf8');
+const typeCss = await readFile(new URL('../type.css', import.meta.url), 'utf8');
 
 test('frontend JavaScript parses', () => {
   assert.doesNotThrow(() => new Function(script));
@@ -35,7 +36,7 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
   assert.match(script, /covendaIntroSeen/);
   assert.match(script, /function openIntro\(/);
   assert.match(script, /function dismissIntro\(/);
-  assert.match(styles, /--font-display:/);
+  assert.match(typeCss, /--font-display:/); // §14: fonts now live in the shared type.css
   assert.match(styles, /\.intro-statement/);
 });
 
@@ -204,8 +205,11 @@ test('design system stays true white and supports responsive and reduced-motion 
   assert.match(styles, /backdrop-filter: blur/);
   assert.match(styles, /@media \(max-width: 560px\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(styles, /--font-ui: "Manrope"/);
-  assert.match(styles, /--font-display: "Newsreader"/);
+  // §14: the three families now live in one shared type.css, linked by all surfaces.
+  assert.match(typeCss, /--font-body: "Manrope"/);
+  assert.match(typeCss, /--font-display: "Newsreader"/);
+  assert.match(typeCss, /--font-mono:/);
+  assert.match(html, /href="type\.css"/);
   assert.match(html, /fonts\.googleapis\.com/);
 });
 

@@ -1,0 +1,35 @@
+/* Covenda unified type system (§14) — the SINGLE source of truth for the THREE font families
+   and one named type scale, linked by marketing, portal, and admin (same pattern as the
+   one-SVG logo). No fourth family, no second serif: display serif for headlines + gold stat
+   numbers, body sans for everything else, mono for reference codes only. Values match the
+   marketing site's existing stacks so linking this changes nothing there; portal/admin now
+   inherit the same families (headlines become the display serif instead of a stray Georgia). */
+:root {
+  --font-display: "Newsreader", "Iowan Old Style", "Baskerville", Georgia, serif;
+  --font-body: "Manrope", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-ui: var(--font-body); /* legacy alias used by the marketing stylesheet */
+
+  /* One scale. Sizes clamp; weight + line-height live on the utility classes below so every
+     text role maps to a named step instead of an ad-hoc size/weight per component. */
+  --step-display-xl: clamp(40px, 6.4vw, 76px);
+  --step-display-lg: clamp(32px, 4.4vw, 56px);
+  --step-h1: clamp(28px, 3.6vw, 40px);
+  --step-h2: clamp(22px, 2.8vw, 30px);
+  --step-h3: clamp(16px, 1.8vw, 20px);
+  --step-body-lg: 17px;
+  --step-body: 15px;
+  --step-small: 12px;
+  --step-eyebrow: 11px;
+}
+
+.t-display-xl { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-xl); line-height: 1.02; letter-spacing: -.03em; }
+.t-display-lg { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-lg); line-height: 1.05; letter-spacing: -.03em; }
+.t-h1 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-h1); line-height: 1.1; letter-spacing: -.02em; }
+.t-h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-h2); line-height: 1.15; letter-spacing: -.02em; }
+.t-h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-h3); line-height: 1.25; }
+.t-body-lg { font-family: var(--font-body); font-weight: 400; font-size: var(--step-body-lg); line-height: 1.6; }
+.t-body { font-family: var(--font-body); font-weight: 400; font-size: var(--step-body); line-height: 1.55; }
+.t-small { font-family: var(--font-body); font-weight: 500; font-size: var(--step-small); line-height: 1.5; }
+.t-eyebrow { font-family: var(--font-body); font-weight: 700; font-size: var(--step-eyebrow); letter-spacing: .12em; text-transform: uppercase; }
+.t-mono { font-family: var(--font-mono); }
