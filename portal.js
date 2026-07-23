@@ -297,8 +297,38 @@ function renderActions(){const root=$('#nextActions');root.replaceChildren();con
 
 function emptyList(root,iconId,title,copy,action){root.replaceChildren();const box=document.createElement('div');box.className='list-empty';const mark=document.createElement('span');mark.append(icon(iconId));const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=copy;box.append(mark,h,p);if(action&&action.label&&typeof action.run==='function'){const b=document.createElement('button');b.type='button';b.className='empty-cta';b.textContent=action.label;b.addEventListener('click',action.run);box.append(b);}root.append(box);}
 
-function renderProjects(){const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();if(!items.length){const isStudent=state.dashboard.profile?.role==='student';emptyList(root,'p-project','No projects in this workspace yet.',isStudent?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.',isStudent?{label:'Discover projects →',run:()=>setView('discover')}:{label:'Post a project →',run:openIntake});return;}for(const project of items){if(project.status==='complete'){root.append(verifiedCard(project,{full:true}));continue;}const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');const visibility=cell('Visibility',titleCase(project.visibility));row.append(main,status,due,visibility);root.append(row);}}
+function renderProjects(){const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();if(!items.length){const isStudent=state.dashboard.profile?.role==='student';emptyList(root,'p-project','No projects in this workspace yet.',isStudent?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.',isStudent?{label:'Discover projects →',run:()=>setView('discover')}:{label:'Post a project →',run:openIntake});return;}for(const project of items){if(project.status==='complete'){root.append(verifiedCard(project,{full:true}));continue;}if(project.status==='proposed'){root.append(packetCard(project));continue;}const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');const visibility=cell('Visibility',titleCase(project.visibility));row.append(main,status,due,visibility);root.append(row);}}
 function cell(label,value){const div=document.createElement('div');div.className='list-cell';const small=document.createElement('small');small.textContent=label;const strong=document.createElement('strong');strong.textContent=value;div.append(small,strong);return div;}
+// Packet-first intake (GTM Move 1): a Covenda-scoped packet the company accepts (funds it) or declines.
+function packetCard(project){
+  const card=document.createElement('article');card.className='packet-card';
+  const top=document.createElement('div');top.className='packet-card-top';
+  const eyebrow=document.createElement('p');eyebrow.className='packet-eyebrow';eyebrow.textContent='Scoped by Covenda for you';
+  const h=document.createElement('h3');h.textContent=project.title;
+  top.append(eyebrow,h);card.append(top);
+  const rows=[['Deliverable',project.deliverable],['Acceptance criteria',project.acceptance_criteria],['Target',project.target_date?dateLabel(project.target_date):'Flexible']];
+  const dl=document.createElement('dl');dl.className='packet-dl';
+  rows.filter(([,v])=>v).forEach(([k,v])=>{const dt=document.createElement('dt');dt.textContent=k;const dd=document.createElement('dd');dd.textContent=v;dl.append(dt,dd);});
+  card.append(dl);
+  const price=Number(project.credits_listed)||0;
+  const priceRow=document.createElement('div');priceRow.className='packet-price';
+  const strong=document.createElement('strong');strong.textContent=price?`${price.toLocaleString()} credits`:'Free';const small=document.createElement('span');small.textContent='pay-on-acceptance · a 10% platform fee applies on top';priceRow.append(strong,small);card.append(priceRow);
+  const msg=document.createElement('p');msg.className='packet-msg';msg.setAttribute('aria-live','polite');card.append(msg);
+  const actions=document.createElement('div');actions.className='packet-actions';
+  const accept=document.createElement('button');accept.type='button';accept.className='portal-primary compact';accept.textContent='Accept & fund';
+  const decline=document.createElement('button');decline.type='button';decline.className='portal-ghost compact';decline.textContent='Decline';
+  accept.addEventListener('click',()=>respondPacket(project.id,'accept',accept,msg));
+  decline.addEventListener('click',()=>{if(confirm('Decline this packet?'))respondPacket(project.id,'decline',decline,msg);});
+  actions.append(accept,decline);card.append(actions);
+  return card;
+}
+async function respondPacket(projectId,decision,button,msg){
+  button.disabled=true;const original=button.textContent;button.textContent=decision==='accept'?'Funding…':'Declining…';if(msg){msg.textContent='';msg.classList.remove('is-error');}
+  try{
+    await portalRequest({method:'POST',body:JSON.stringify({action:'respond-packet',projectId,decision})});
+    await loadDashboard();setView('projects');
+  }catch(error){if(msg){msg.textContent=error.message;msg.classList.add('is-error');}button.disabled=false;button.textContent=original;}
+}
 
 function renderActivity(){
   const d=state.dashboard;const intakes=d.intakes||[];const applications=d.applications||[];const intakeRoot=$('#intakeList');const applicationRoot=$('#applicationList');

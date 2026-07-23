@@ -225,6 +225,12 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .admin-metric.is-money strong { color: var(--gold-deep); }
 .admin-metric.is-warn small { color: #b4231f; font-weight: 650; }
 
+/* Packet-first intake (operator) */
+.admin-packet-section { max-width: 1240px; margin: 0 auto; padding: 8px 26px 24px; }
+.admin-packet-section h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 20px; letter-spacing: -.03em; }
+.admin-packet-section .admin-queue-heading p { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.admin-packet-section .admin-batch-form { margin-top: 18px; }
+
 /* §9 partner digest operator tools */
 .admin-digest-section { max-width: 1240px; margin: 0 auto; padding: 8px 26px 64px; }
 .admin-digest-section h2 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 20px; letter-spacing: -.03em; }

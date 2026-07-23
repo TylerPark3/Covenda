@@ -1,7 +1,51 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
+import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, respondToPacket, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
+
+test('accepting a packet funds it — escrow held, status opens', async () => {
+  const cap = {};
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, owner_user_id: 'co-1', status: 'proposed', credits_listed: 400 } },
+    { result: [{ credits: 1000 }] }, // balance covers 440
+    { result: { id: PROJECT_UUID, status: 'open' }, capture: v => { cap.update = v; } },
+    { result: [{ id: 'l1' }], capture: v => { cap.ledger = v; } },
+  ]);
+  await respondToPacket({ user: { id: 'co-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' });
+  assert.equal(cap.update.status, 'open');
+  assert.equal(cap.update.credits_held, 400);
+  assert.equal(cap.ledger[0].entry_type, 'escrow_hold');
+  assert.equal(cap.ledger[0].credits, -440); // 400 listed + 40 (10%) platform fee
+});
+
+test('declining a packet closes it without charging', async () => {
+  const cap = {};
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, owner_user_id: 'co-1', status: 'proposed', credits_listed: 400 } },
+    { result: { id: PROJECT_UUID, status: 'proposal_declined' }, capture: v => { cap.update = v; } },
+  ]);
+  await respondToPacket({ user: { id: 'co-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'decline' });
+  assert.equal(cap.update.status, 'proposal_declined');
+});
+
+test('accepting a packet is blocked when the balance is short', async () => {
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, owner_user_id: 'co-1', status: 'proposed', credits_listed: 400 } },
+    { result: [{ credits: 100 }] }, // 100 < 440
+  ]);
+  await assert.rejects(
+    respondToPacket({ user: { id: 'co-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' }),
+    /needs 440 credits/,
+  );
+});
+
+test('a packet can only be answered by its owner', async () => {
+  const supabase = queuedSupabase([{ result: { id: PROJECT_UUID, owner_user_id: 'co-1', status: 'proposed', credits_listed: 400 } }]);
+  await assert.rejects(
+    respondToPacket({ user: { id: 'someone-else' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' }),
+    /not available to your account/,
+  );
+});
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/

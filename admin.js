@@ -6,6 +6,7 @@ const typeLabels = { student_interest:'Student', employer_intake:'Company', univ
 let submissions = [];
 let requests = [];
 let batches = [];
+let companies = [];
 const batchTierLabels = { open:'Open', elite:'Elite' };
 const batchStatusLabels = { draft:'Draft', open:'Open', reviewing:'Reviewing', closed:'Closed', archived:'Archived' };
 const batchAppStatusLabels = { submitted:'Applied', reviewing:'In review', accepted:'Accepted', waitlisted:'Waitlisted', declined:'Declined' };
@@ -289,10 +290,10 @@ async function loadInbox({ announce = false } = {}) {
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {
-    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; $('#operatorEmail').textContent=result.operator.email;
+    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; companies=result.companies||[]; $('#operatorEmail').textContent=result.operator.email;
     if (!selectedReference && submissions[0]) selectedReference=submissions[0].reference;
     if (selectedReference && !submissions.some(item=>item.reference===selectedReference)) selectedReference=submissions[0]?.reference || '';
-    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics);
+    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies();
     $('#adminSyncStatus').textContent=`Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }
@@ -379,6 +380,25 @@ async function runDigests(send){
 }
 $('#digestPreviewBtn')?.addEventListener('click',()=>runDigests(false));
 $('#digestSendBtn')?.addEventListener('click',()=>{if(confirm('Send the monthly digest to every partner with an email on file?'))runDigests(true);});
+// Packet-first intake (GTM Move 1): operator scopes a packet for a company.
+function renderPacketCompanies(){
+  const sel=$('#packetCompany');if(!sel)return;
+  const current=sel.value;
+  sel.replaceChildren();
+  const first=document.createElement('option');first.value='';first.textContent=companies.length?'Select a company…':'No company accounts yet';sel.append(first);
+  for(const c of companies){const o=document.createElement('option');o.value=c.user_id;o.textContent=(c.organization_name||c.display_name||'Company')+(c.display_name&&c.organization_name?` · ${c.display_name}`:'');sel.append(o);}
+  if(current)sel.value=current;
+}
+$('#adminPacketForm')?.addEventListener('submit',async event=>{
+  event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const message=$('#adminPacketMessage');
+  button.disabled=true;const original=button.textContent;button.textContent='Sending…';if(message){message.textContent='';message.classList.remove('is-error');}
+  try{
+    const payload={action:'create-packet',companyUserId:form.elements.companyUserId.value,title:form.elements.title.value,deliverable:form.elements.deliverable.value,acceptance:form.elements.acceptance.value,credits:form.elements.credits.value,targetDate:form.elements.targetDate.value};
+    await adminRequest({method:'POST',body:JSON.stringify(payload)});
+    form.reset();if(message)message.textContent='Packet sent — it now shows in their portal to accept or decline.';
+  }catch(error){if(message){message.textContent=error.message;message.classList.add('is-error');}}
+  finally{button.disabled=false;button.textContent=original;}
+});
 $('#adminBatchForm')?.addEventListener('submit',async event=>{
   event.preventDefault(); const form=event.currentTarget; const button=$('button[type="submit"]',form); const message=$('#adminBatchFormMessage');
   button.disabled=true; const original=button.textContent; button.textContent='Creating…'; if (message) { message.textContent=''; message.classList.remove('is-error'); }

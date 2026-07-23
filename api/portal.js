@@ -569,6 +569,38 @@ export async function createMemberProject(member, input) {
   return project;
 }
 
+// Packet-first intake (GTM Move 1): a company responds to a Covenda-scoped packet. Accept funds
+// it into a live project (escrow held, exactly like posting a priced project); decline closes it.
+export async function respondToPacket(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid packet.');
+  const decision = input.decision === 'accept' ? 'accept' : input.decision === 'decline' ? 'decline' : null;
+  if (!decision) throw new Error('Choose accept or decline.');
+  const project = await checked(member.supabase.from('member_projects').select('id,owner_user_id,status,credits_listed').eq('id', projectId).maybeSingle(), null);
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('This packet is not available to your account.');
+  if (project.status !== 'proposed') throw new Error('This packet has already been resolved.');
+  const now = new Date().toISOString();
+  if (decision === 'decline') {
+    return checked(member.supabase.from('member_projects').update({ status: 'proposal_declined', updated_at: now }).eq('id', projectId).select('*').single(), null);
+  }
+  // Accept = fund it. Hold escrow (listed + platform fee) just like a normal priced post.
+  const cost = projectCreditCost(project.credits_listed, 'public');
+  if (cost.total > 0) {
+    const balance = await creditBalance(member);
+    if (balance < cost.total) throw new Error(`Accepting this packet needs ${cost.total} credits (${cost.listed} listed + ${cost.platformFee} platform fee) but your balance is ${balance}. Buy credits first.`);
+  }
+  const accepted = await checked(
+    member.supabase.from('member_projects').update({ status: 'open', visibility: 'members', targeting: 'public', credits_held: cost.listed, platform_fee_credits: cost.platformFee, updated_at: now }).eq('id', projectId).select('*').single(),
+    null,
+  );
+  if (cost.listed + cost.platformFee > 0) {
+    await checked(member.supabase.from('credit_ledger').insert([
+      { user_id: member.user.id, entry_type: 'escrow_hold', credits: -(cost.listed + cost.platformFee), project_id: projectId, note: `Escrow (packet): ${cost.listed} listed + ${cost.platformFee} platform fee` },
+    ]).select('id'), []);
+  }
+  return accepted;
+}
+
 // Accept only an http(s) URL (for video/demonstration links); reject anything else so a
 // stored "link" can never be a javascript:/data: surprise.
 function cleanUrl(value) {
@@ -1058,6 +1090,7 @@ export default async function handler(req, res, dependencies = {}) {
     const input = parseBody(req);
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
+    if (req.method === 'POST' && input.action === 'respond-packet') return res.status(200).json({ ok: true, project: await respondToPacket(member, input) });
     if (req.method === 'POST' && input.action === 'create-request') return res.status(201).json({ ok: true, request: await createProjectRequest(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input, dependencies.env || process.env) });
     if (req.method === 'POST' && input.action === 'apply-batch') return res.status(201).json({ ok: true, application: await applyToBatch(member, input) });

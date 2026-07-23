@@ -498,6 +498,46 @@ export async function loadAdminMetrics(supabase) {
   };
 }
 
+// Packet-first intake (GTM Move 1): companies the operator can send a scoped packet to.
+export async function listAdminCompanies(supabase) {
+  const { data, error } = await supabase
+    .from('member_profiles')
+    .select('user_id, display_name, organization_name')
+    .in('role', ['company', 'university'])
+    .order('updated_at', { ascending: false })
+    .limit(200);
+  return error ? [] : (data || []);
+}
+
+export async function createPacket(supabase, input, operatorEmail = '') {
+  const companyUserId = text(input.companyUserId, 50);
+  if (!UUID_PATTERN.test(companyUserId)) throw new Error('Choose a company.');
+  const { data: profile } = await supabase.from('member_profiles').select('role').eq('user_id', companyUserId).maybeSingle();
+  if (!profile || !['company', 'university'].includes(profile.role)) throw new Error('Packets can only be sent to company accounts.');
+  const title = text(input.title, 160);
+  if (!title) throw new Error('Enter a packet title.');
+  const deliverable = text(input.deliverable, 2_000);
+  if (!deliverable) throw new Error('Describe the deliverable.');
+  const price = Math.round(Number(input.credits) || 0);
+  if (!Number.isInteger(price) || price < 0 || price > 100_000) throw new Error('Enter a valid price in credits (0–100,000).');
+  const record = {
+    owner_user_id: companyUserId,
+    title,
+    summary: text(input.summary, 5_000) || deliverable,
+    deliverable,
+    acceptance_criteria: text(input.acceptance, 2_000) || null,
+    credits_listed: price,
+    credits_held: 0,
+    status: 'proposed',
+    visibility: 'private',
+    proposed_by: email(operatorEmail) || null,
+    target_date: /^\d{4}-\d{2}-\d{2}$/.test(input.targetDate || '') ? input.targetDate : null,
+  };
+  const { data, error } = await supabase.from('member_projects').insert(record).select('*').single();
+  if (error) throw error;
+  return data;
+}
+
 function adminFailure(error) {
   if (error instanceof AdminOperationalError) {
     return { status: 503, code: error.code, message: error.publicMessage };
@@ -552,6 +592,9 @@ export default async function handler(req, res, dependencies = {}) {
       if (input.action === 'create-batch') {
         return res.status(201).json({ ok: true, batch: await createBatch(operator.supabase, input, operator.email) });
       }
+      if (input.action === 'create-packet') {
+        return res.status(201).json({ ok: true, packet: await createPacket(operator.supabase, input, operator.email) });
+      }
       if (input.action === 'partner-digests') {
         // Operator-triggered. send:false is a dry-run preview; send:true only mails when Resend
         // + COVENDA_DIGEST_ENABLED are configured (enforced inside sendPartnerDigests).
@@ -570,10 +613,10 @@ export default async function handler(req, res, dependencies = {}) {
     if (!admin) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
 
     if (req.method === 'GET') {
-      const [submissions, requests, batches, metrics] = await Promise.all([
-        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase),
+      const [submissions, requests, batches, metrics, companies] = await Promise.all([
+        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase), listAdminCompanies(admin.supabase),
       ]);
-      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches, metrics });
+      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches, metrics, companies });
     }
 
     const patchInput = body(req);

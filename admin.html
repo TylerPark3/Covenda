@@ -119,6 +119,20 @@
       </datalist>
       <div class="admin-batches" id="adminBatches"></div>
     </section>
+    <section class="admin-packet-section">
+      <div class="admin-queue-heading"><div><h2>Propose a packet</h2><p>Scope a project for a company and send it as a packet. They see it in their portal and Accept (which funds it into a live project) or Decline. Members only.</p></div></div>
+      <form class="admin-batch-form" id="adminPacketForm">
+        <div class="admin-batch-form-grid">
+          <label>Company<select name="companyUserId" id="packetCompany" required><option value="">Select a company…</option></select></label>
+          <label>Packet title<input name="title" maxlength="160" required placeholder="Competitor fee benchmarking"></label>
+          <label>Price <small>Credits (1 = $1)</small><input name="credits" type="number" min="0" max="100000" step="25" placeholder="400"></label>
+          <label>Target date <small>Optional</small><input name="targetDate" type="date"></label>
+        </div>
+        <label class="admin-batch-desc">Deliverable<textarea name="deliverable" rows="2" maxlength="2000" required placeholder="A cited spreadsheet: 8 competitors' published fee tiers + a summary tab flagging the 3 biggest gaps."></textarea></label>
+        <label class="admin-batch-desc">Acceptance criteria <small>What 'done and correct' means</small><textarea name="acceptance" rows="2" maxlength="2000" placeholder="8 firms covered · every number linked to its source · summary tab flags the 3 biggest gaps."></textarea></label>
+        <div class="admin-batch-form-actions"><span id="adminPacketMessage" aria-live="polite"></span><button type="submit">Send packet</button></div>
+      </form>
+    </section>
     <section class="admin-digest-section">
       <div class="admin-queue-heading"><div><h2>Partner monthly digests</h2><p>A once-a-month email to each referral partner summarizing their own cohort (endorsed → applied → verified). Preview first — sending only works once Resend + <code>COVENDA_DIGEST_ENABLED</code> are set.</p></div></div>
       <div class="admin-digest-actions">
