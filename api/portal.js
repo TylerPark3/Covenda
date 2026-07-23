@@ -209,10 +209,10 @@ export async function loadMemberDashboard(member, env = process.env) {
     const matchedCount = rankedOpportunities.filter(project => project.matched).length;
     // Students hold credits too once escrow is released, so they get a balance (the
     // Wallet view itself stays company/university only).
-    const [walletBalance, creditLedger, payoutRequests] = await Promise.all([
-      creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member),
+    const [walletBalance, creditLedger, payoutRequests, batches, batchApplications] = await Promise.all([
+      creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member), loadBatches(member), loadBatchApplications(member),
     ]);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches, batchApplications, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -618,6 +618,37 @@ export async function loadProjectRequests(member) {
   return error ? [] : (data || []);
 }
 
+// §13 Elite Batches. Anyone can browse open/reviewing batches; a student applies with a rich
+// packet. Degrade to [] if the batches migration hasn't been applied yet.
+export async function loadBatches(member) {
+  const { data, error } = await member.supabase.from('batches').select('*').in('status', ['open', 'reviewing']).order('created_at', { ascending: false }).limit(50);
+  return error ? [] : (data || []);
+}
+export async function loadBatchApplications(member) {
+  const { data, error } = await member.supabase.from('batch_applications').select('*').eq('student_user_id', member.user.id).order('created_at', { ascending: false }).limit(50);
+  return error ? [] : (data || []);
+}
+export async function applyToBatch(member, input) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role,verticals,work_types,skills').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'student') throw new Error('Only student accounts can apply to a batch.');
+  const batchId = cleanText(input.batchId, 50);
+  if (!PROJECT_ID_PATTERN.test(batchId)) throw new Error('Choose a valid batch.');
+  const batch = await checked(member.supabase.from('batches').select('id,status').eq('id', batchId).maybeSingle(), null);
+  if (!batch || !['open', 'reviewing'].includes(batch.status)) throw new Error('This batch is not accepting applications.');
+  const existing = await checked(member.supabase.from('batch_applications').select('*').eq('batch_id', batchId).eq('student_user_id', member.user.id).maybeSingle(), null);
+  if (existing) return existing;
+  // Snapshot the student's packet + profile signals at apply time so review is self-contained.
+  const materials = {
+    note: cleanText(input.note, 2_000) || null,
+    videoUrl: cleanUrl(input.videoUrl),
+    demonstration: cleanUrl(input.demonstration) || cleanText(input.demonstration, 500) || null,
+    skills: cleanList(input.skills, 20),
+    verticals: profile.verticals || [],
+    workTypes: profile.work_types || [],
+  };
+  return checked(member.supabase.from('batch_applications').insert({ batch_id: batchId, student_user_id: member.user.id, materials }).select('*').single(), null);
+}
+
 export async function applyToProject(member, input, env = process.env) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project.');
@@ -871,6 +902,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
     if (req.method === 'POST' && input.action === 'create-request') return res.status(201).json({ ok: true, request: await createProjectRequest(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input, dependencies.env || process.env) });
+    if (req.method === 'POST' && input.action === 'apply-batch') return res.status(201).json({ ok: true, application: await applyToBatch(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
     if (req.method === 'POST' && input.action === 'get-messages') return res.status(200).json({ ok: true, ...(await loadNewMessages(member, input)) });
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });

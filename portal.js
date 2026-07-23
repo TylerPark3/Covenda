@@ -109,7 +109,7 @@ function profileCompletion(profile) {
 }
 
 function setView(view) {
-  const allowed=['overview','projects','activity','discover','portfolio','messages','wallet'];
+  const allowed=['overview','projects','activity','discover','batches','portfolio','messages','wallet'];
   state.view=allowed.includes(view)?view:'overview';
   $$('[data-portal-view]').forEach(section=>section.classList.toggle('is-active',section.dataset.portalView===state.view));
   $$('[data-view]').forEach(button=>button.classList.toggle('is-active',button.closest('.member-nav')&&button.dataset.view===state.view));
@@ -147,13 +147,15 @@ function renderDashboard() {
   $('#intakeCount').textContent=intakes.length;
   $('#messageCount').textContent=messages.length;
   $('#opportunityCount').textContent=opportunities.length;
+  const openBatches=(state.dashboard.batches||[]).filter(b=>b.status==='open').length;
+  const bc=$('#batchCount'); if(bc)bc.textContent=openBatches;
   $('#newProject').hidden=!['company','university'].includes(role);
   const now=new Date(); $('#welcomeDate').textContent=now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
   const first=profile?.display_name?.split(/\s+/)[0]; $('#welcomeTitle').textContent=first?`Good ${dayPart()}, ${first}.`:`Good ${dayPart()}.`;
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderPortfolio(); renderMessages(); renderWallet();
+  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -577,6 +579,33 @@ function discoverCard(project,isApplied){
   const save=document.createElement('button');const isSaved=discoverState.saved.has(project.id);save.type='button';save.className='save-toggle'+(isSaved?' is-saved':'');save.setAttribute('aria-pressed',isSaved?'true':'false');save.setAttribute('aria-label',isSaved?'Unsave project':'Save project');save.textContent=isSaved?'★ Saved':'☆ Save';save.addEventListener('click',()=>{if(discoverState.saved.has(project.id))discoverState.saved.delete(project.id);else discoverState.saved.add(project.id);persistSavedProjects();renderDiscover();});
   actions.append(view,apply,save);row.append(actions);return row;
 }
+const BATCH_STATUS_LABELS={submitted:'Applied',reviewing:'In review',accepted:'Accepted',waitlisted:'Waitlisted',declined:'Not selected'};
+function renderBatches(){
+  const root=$('#batchList');if(!root)return;
+  const batches=(state.dashboard.batches||[]).filter(b=>b.status==='open'||b.status==='reviewing');
+  const appByBatch=new Map((state.dashboard.batchApplications||[]).map(a=>[a.batch_id,a]));
+  root.replaceChildren();
+  if(!batches.length){emptyList(root,'p-spark','No batches are open right now.','Curated cohorts open a few times a season. Check back — admitted students are surfaced directly to partner companies.');return;}
+  for(const batch of batches)root.append(batchCard(batch,appByBatch.get(batch.id)));
+}
+function batchCard(batch,application){
+  const card=document.createElement('article');card.className='batch-card'+(batch.tier==='elite'?' is-elite':'');
+  const top=document.createElement('div');top.className='batch-card-top';
+  const h=document.createElement('h3');h.textContent=batch.name;top.append(h);
+  top.append(pill(batch.tier==='elite'?'Elite':'Open',batch.tier==='elite'?'batch-tier is-elite':'batch-tier'));
+  card.append(top);
+  const meta=document.createElement('div');meta.className='discover-meta';
+  if(batch.discipline)meta.append(discoverChip('Discipline',batch.discipline));
+  if(batch.partner_org)meta.append(discoverChip('Partner',batch.partner_org));
+  if(batch.season)meta.append(discoverChip('Season',batch.season));
+  if(meta.childElementCount)card.append(meta);
+  if(batch.description){const p=document.createElement('p');p.className='discover-card-summary';p.textContent=batch.description;card.append(p);}
+  const actions=document.createElement('div');actions.className='discover-actions';
+  if(application){actions.append(pill(BATCH_STATUS_LABELS[application.status]||titleCase(application.status),'status-pill',application.status));}
+  else{const apply=document.createElement('button');apply.type='button';apply.className='portal-primary compact';apply.textContent='Apply';apply.disabled=batch.status!=='open';if(batch.status!=='open')apply.title='Applications are closed for this batch.';apply.addEventListener('click',()=>openBatchApply(batch));actions.append(apply);}
+  card.append(actions);return card;
+}
+function openBatchApply(batch){const form=$('#batchApplyForm');if(!form)return;form.reset();form.elements.batchId.value=batch.id;$('#batchApplyTitle').textContent=`Apply to ${batch.name}.`;$('#batchApplySummary').textContent=batch.description||`${batch.discipline||'Curated cohort'}${batch.partner_org?` · ${batch.partner_org}`:''}`;setDialogMessage('#batchApplyMessage','');$('#batchApplyDialog').showModal();}
 function renderBriefDocument(root,brief,fallbackSummary){
   root.replaceChildren();
   const add=(title,text)=>{if(!text)return;const s=briefSection(title);const p=document.createElement('p');p.className='brief-text';p.textContent=text;s.append(p);root.append(s);};
@@ -932,6 +961,7 @@ $('#profileForm').addEventListener('submit',async event=>{event.preventDefault()
 $('#projectForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#projectMessage','Creating project…');const payload={action:'create-project',title:form.elements.title.value,summary:form.elements.summary.value,deliverable:form.elements.deliverable.value,desiredSkills:form.elements.desiredSkills.value,targetDate:form.elements.targetDate.value,visibility:form.elements.visibility.value};try{await portalRequest({method:'POST',body:JSON.stringify(payload)});$('#projectDialog').close();await loadDashboard();setView('projects');}catch(error){setDialogMessage('#projectMessage',error.message,true);}finally{button.disabled=false;}});
 
 $('#applyForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#applyMessage','Sending your interest…');const skills=form.elements.skills.value.split(',').map(s=>s.trim()).filter(Boolean);const referral={name:form.elements.referralName.value.trim(),code:form.elements.referralCode.value.trim()};try{await portalRequest({method:'POST',body:JSON.stringify({action:'apply',projectId:form.elements.projectId.value,note:form.elements.note.value,skills,demonstration:form.elements.demonstration.value.trim(),videoUrl:form.elements.videoUrl.value.trim(),referral})});$('#applyDialog').close();await loadDashboard();setView('activity');}catch(error){setDialogMessage('#applyMessage',error.message,true);}finally{button.disabled=false;}});
+$('#batchApplyForm')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#batchApplyMessage','Submitting your application…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:form.elements.batchId.value,note:form.elements.note.value.trim(),demonstration:form.elements.demonstration.value.trim(),videoUrl:form.elements.videoUrl.value.trim()})});$('#batchApplyDialog').close();await loadDashboard();setView('batches');}catch(error){setDialogMessage('#batchApplyMessage',error.message,true);}finally{button.disabled=false;}});
 
 $('#submitWorkForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#submitWorkMessage','Submitting your work…');const notes=form.elements.workNotes.value.trim();const summary=[form.elements.workSummary.value.trim(),notes&&`\n\nNotes for the reviewer: ${notes}`].filter(Boolean).join('');const links=form.elements.workLinks.value.split(/\n/).map(link=>link.trim()).filter(Boolean);try{await portalRequest({method:'POST',body:JSON.stringify({action:'submit-deliverable',projectId:form.elements.projectId.value,deliverable:summary,deliverableLinks:links})});$('#submitWorkDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#submitWorkMessage',error.message,true);}finally{button.disabled=false;}});
 $$('#reviewForm [data-decision]').forEach(button=>button.addEventListener('click',async()=>{const form=$('#reviewForm');const decision=button.dataset.decision;const note=form.elements.note.value.trim();if(decision==='revise'&&!note){setDialogMessage('#reviewMessage','Add a note so the student knows what to revise.',true);return;}const buttons=$$('#reviewForm [data-decision]');buttons.forEach(b=>b.disabled=true);setDialogMessage('#reviewMessage',decision==='accept'?'Accepting the deliverable…':'Sending the change request…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'review-deliverable',projectId:form.elements.projectId.value,decision,note})});$('#reviewDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#reviewMessage',error.message,true);}finally{buttons.forEach(b=>b.disabled=false);}}));

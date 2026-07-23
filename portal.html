@@ -79,6 +79,7 @@
         <button type="button" data-view="projects"><svg><use href="#p-project"/></svg><span>My projects</span><b id="projectCount">0</b></button>
         <button type="button" data-view="activity"><svg><use href="#p-inbox"/></svg><span>Submissions</span><b id="intakeCount">0</b></button>
         <button type="button" data-view="discover" data-student-only><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
+        <button type="button" data-view="batches" data-student-only><svg><use href="#p-spark"/></svg><span>Batches</span><b id="batchCount">0</b></button>
         <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
         <button type="button" data-view="messages"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
         <button type="button" data-view="wallet"><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
@@ -144,6 +145,11 @@
             <div class="opportunity-list" id="opportunityList"></div>
           </div>
         </div>
+      </section>
+
+      <section class="portal-view" data-portal-view="batches">
+        <div class="page-heading"><div><p class="eyebrow">Curated cohorts</p><h1>Elite batches</h1><p>Vetted, reviewed cohorts in a discipline. Apply once — an operator reviews every application, and admitted students are surfaced to partner companies.</p></div></div>
+        <div class="batch-list" id="batchList"></div>
       </section>
 
       <section class="portal-view" data-portal-view="portfolio">
@@ -227,6 +233,10 @@
 
   <dialog class="member-dialog compact-dialog" id="requestDialog">
     <form method="dialog" id="requestForm"><header><div><p class="eyebrow">Request work</p><h2>Ask Covenda to package it.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>What do you need?<select name="requestType" required><option value="new_project">A new project</option><option value="more_students">More students on a project</option><option value="scope_change">A scope change</option><option value="revision">A revision</option><option value="consult">A consult</option><option value="specific_student">A specific student</option><option value="question">A question</option></select></label><label>Subject <small>Optional</small><input name="subject" maxlength="200" placeholder="Short summary"></label><label>Details<textarea name="details" rows="5" minlength="10" maxlength="5000" required placeholder="Describe what you need. Covenda will scope and package it with you — public or approved inputs only."></textarea></label><p class="dialog-message" id="requestMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send request<svg><use href="#p-arrow"/></svg></button></footer></form>
+  </dialog>
+
+  <dialog class="member-dialog compact-dialog" id="batchApplyDialog">
+    <form method="dialog" id="batchApplyForm"><header><div><p class="eyebrow">Batch application</p><h2 id="batchApplyTitle">Apply to this batch.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="batchId" type="hidden"><p id="batchApplySummary"></p><label>Why are you a fit? <small>Optional</small><textarea name="note" rows="4" maxlength="2000" placeholder="Connect your background and interests to this discipline."></textarea></label><label>Show your work <small>Optional link — portfolio, repo, sample</small><input name="demonstration" type="url" placeholder="https://…"></label><label>Intro video <small>Optional link — Loom, YouTube, Drive</small><input name="videoUrl" type="url" placeholder="https://…"></label><p class="dialog-message" id="batchApplyMessage" aria-live="polite"></p><p class="intake-hint">Your profile — skills, verticals, and work types — is attached automatically.</p></div><footer><button class="portal-primary" type="submit">Submit application<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
   <dialog class="member-dialog" id="discoverDetail">
