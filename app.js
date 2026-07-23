@@ -2792,6 +2792,12 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   }
   if (action === 'student-form') {
     selectWorkType(state.workType);
+    // §8: seed the account's industries from the hero narrowing picks — but only when the form
+    // is fresh (no industry chosen yet), so it never overrides a draft the student built.
+    if (!studentForm.querySelector('input[name="studentIndustry"]:checked')) {
+      narrowPicks().industries.forEach(ind => { const cb = studentForm.querySelector('input[name="studentIndustry"][value="' + ind.replace(/"/g, '') + '"]'); if (cb) cb.checked = true; });
+      renderStudentSpecializations(studentForm);
+    }
     openDialog(studentDialog, studentForm);
   }
   if (action === 'company-form') {
@@ -3915,85 +3921,75 @@ const NARROW_TREE = {
   },
 };
 const NARROW_ANY = 'Not sure yet — show me everything';
-const narrowStorageKey = 'covendaNarrowPath';
-
-function narrowRound(label, options, selected, onPick) {
-  const round = document.createElement('div');
-  round.className = 'narrow-round';
-  const heading = document.createElement('p');
-  heading.className = 'narrow-label';
-  heading.textContent = label;
-  const grid = document.createElement('div');
-  grid.className = 'narrow-options';
-  options.forEach(option => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'narrow-option' + (option === selected ? ' is-selected' : '');
-    button.setAttribute('aria-pressed', option === selected ? 'true' : 'false');
-    button.textContent = option;
-    button.addEventListener('click', () => onPick(option));
-    grid.append(button);
-  });
-  round.append(heading, grid);
-  return round;
+// §8 Pinterest-style progressive narrowing: a MULTI-SELECT additive tile grid. Picking an
+// industry reveals its focus tiles inline (flex-wrap → same row until full, then wrap);
+// picking a focus reveals its specific tiles. Selections persist and pre-fill the account.
+const narrowStorageKey = 'covendaNarrowPicks';
+const narrowSel = new Set((readStorage(narrowStorageKey, []) || []).filter(k => typeof k === 'string'));
+function persistNarrow() { writeStorage(narrowStorageKey, [...narrowSel]); }
+function toggleNarrow(key) {
+  if (narrowSel.has(key)) {
+    narrowSel.delete(key);
+    for (const k of [...narrowSel]) if (k.startsWith(key + '>')) narrowSel.delete(k); // drop hidden descendants
+  } else {
+    narrowSel.add(key);
+  }
 }
-
-function narrowResult(path) {
-  const box = document.createElement('div');
-  box.className = 'narrow-result';
-  const trail = document.createElement('p');
-  trail.className = 'narrow-trail';
-  trail.textContent = [path.vertical, path.focus, path.specific].filter(Boolean).join('  ·  ');
-  const note = document.createElement('p');
-  note.className = 'narrow-note';
-  note.textContent = 'Covenda will show you paid projects that look like this. You can change it any time.';
-  const reset = document.createElement('button');
-  reset.type = 'button';
-  reset.className = 'narrow-reset';
-  reset.textContent = 'Start over';
-  reset.addEventListener('click', () => { state.narrowPath = {}; writeStorage(narrowStorageKey, {}); renderNarrowFlow(); });
-  box.append(trail, note, reset);
-  return box;
+// Map the selection back to the taxonomy for the account payload. Keys are '>'-joined paths
+// (industry / industry>focus / industry>focus>specific); no label contains '>'.
+function narrowPicks() {
+  const industries = []; const subIndustries = []; const workTypes = new Set();
+  for (const key of narrowSel) {
+    const parts = key.split('>');
+    if (parts.length === 1) { if (!industries.includes(parts[0])) industries.push(parts[0]); continue; }
+    const label = parts[parts.length - 1];
+    if (!subIndustries.includes(label)) subIndustries.push(label);
+    if (parts.length === 3) {
+      const leaf = (NARROW_TREE[parts[0]]?.[parts[1]] || []).find(l => l[0] === parts[2]);
+      if (leaf) workTypes.add(leaf[1]);
+    }
+  }
+  return { industries, subIndustries, workTypes: [...workTypes] };
 }
-
+function narrowTile(label, key, level) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'narrow-tile narrow-l' + level + (narrowSel.has(key) ? ' is-selected' : '');
+  button.setAttribute('aria-pressed', narrowSel.has(key) ? 'true' : 'false');
+  button.textContent = label;
+  button.addEventListener('click', () => { toggleNarrow(key); persistNarrow(); renderNarrowFlow(); });
+  return button;
+}
 function renderNarrowFlow() {
   const root = document.querySelector('[data-narrow-flow]');
   if (!root) return;
-  const path = state.narrowPath || {};
   root.textContent = '';
-  const verticals = Object.keys(NARROW_TREE).concat([NARROW_ANY]);
-  root.append(narrowRound('Start with your industry', verticals, path.vertical, value => {
-    state.narrowPath = { vertical: value };
-    writeStorage(narrowStorageKey, state.narrowPath);
-    renderNarrowFlow();
-    if (value === NARROW_ANY) document.getElementById('narrowFallback')?.setAttribute('open', '');
-  }));
-  if (!path.vertical || !NARROW_TREE[path.vertical]) return;
-
-  const focuses = Object.keys(NARROW_TREE[path.vertical]);
-  root.append(narrowRound('Where in ' + path.vertical.toLowerCase() + '?', focuses, path.focus, value => {
-    state.narrowPath = { vertical: path.vertical, focus: value };
-    writeStorage(narrowStorageKey, state.narrowPath);
-    renderNarrowFlow();
-  }));
-  if (!path.focus) return;
-
-  const leaves = NARROW_TREE[path.vertical][path.focus] || [];
-  root.append(narrowRound('What would you want to own?', leaves.map(leaf => leaf[0]), path.specific, value => {
-    const leaf = leaves.find(item => item[0] === value);
-    state.narrowPath = { vertical: path.vertical, focus: path.focus, specific: value, workType: leaf ? leaf[1] : '' };
-    writeStorage(narrowStorageKey, state.narrowPath);
-    renderNarrowFlow();
-    if (leaf) selectWorkType(leaf[1]);
-  }));
-  if (path.specific) root.append(narrowResult(path));
+  const grid = document.createElement('div');
+  grid.className = 'narrow-grid';
+  for (const industry of Object.keys(NARROW_TREE)) {
+    grid.append(narrowTile(industry, industry, 1));
+    if (!narrowSel.has(industry)) continue;
+    for (const focus of Object.keys(NARROW_TREE[industry])) {
+      const fKey = industry + '>' + focus;
+      grid.append(narrowTile(focus, fKey, 2));
+      if (!narrowSel.has(fKey)) continue;
+      for (const [leaf] of NARROW_TREE[industry][focus]) grid.append(narrowTile(leaf, fKey + '>' + leaf, 3));
+    }
+  }
+  root.append(grid);
+  const picks = narrowPicks();
+  if (picks.industries.length || picks.subIndustries.length) {
+    const note = document.createElement('p');
+    note.className = 'narrow-note';
+    note.textContent = 'Covenda will show you paid projects that look like this. Make a student account to save it.';
+    root.append(note);
+  }
 }
 
 restoreRosterDraft();
 renderLocalSubmissionState();
-state.narrowPath = readStorage(narrowStorageKey, {}) || {};
 renderNarrowFlow();
-selectWorkType(state.narrowPath.workType || state.workType);
+selectWorkType(state.workType);
 setAudience(state.audience);
 renderReferralBanner();
 renderReferralLink();

@@ -2424,6 +2424,19 @@ body[data-audience="university"] .roles-section { display: none; }
 .narrow-option:hover { border-color: var(--gold); }
 .narrow-option.is-selected { border-color: var(--gold); background: var(--gold-pale); color: var(--gold-deep); font-weight: 650; box-shadow: 0 0 0 3px rgba(180,123,32,.12); }
 .narrow-option:focus-visible { outline: 3px solid rgba(180,123,32,.28); outline-offset: 2px; }
+/* §8 Pinterest-style additive narrowing grid: one flex-wrap flow; level distinguished by scale. */
+.narrow-grid { display: flex; flex-wrap: wrap; gap: 9px; width: min(100%, 760px); margin: 0 auto; }
+/* §8: the Pinterest narrowing IS the picker now — hide the redundant student-facing work-type
+   fallback (kept in the DOM so its wiring/data stays intact; work_types derive from the tiles). */
+#narrowFallback { display: none; }
+.narrow-tile { padding: 10px 15px; border: 1px solid var(--line-strong); border-radius: 999px; background: #fff; color: var(--ink); font-size: 13px; font-weight: 550; cursor: pointer; transition: border-color .12s ease, background .12s ease; }
+.narrow-tile:hover { border-color: var(--gold); }
+.narrow-tile.is-selected { border-color: var(--gold); background: var(--gold-pale); color: var(--gold-deep); font-weight: 650; }
+.narrow-tile:focus-visible { outline: 3px solid rgba(180,123,32,.28); outline-offset: 2px; }
+.narrow-tile.narrow-l2 { padding: 8px 13px; font-size: 12px; color: var(--muted); }
+.narrow-tile.narrow-l2.is-selected { color: var(--gold-deep); }
+.narrow-tile.narrow-l3 { padding: 7px 12px; font-size: 11px; border-style: dashed; color: var(--soft); }
+.narrow-tile.narrow-l3.is-selected { color: var(--gold-deep); border-style: solid; }
 .narrow-result { padding: 18px 20px; border: 1px solid var(--gold-light); border-radius: 16px; background: linear-gradient(160deg, var(--gold-pale), #fff); }
 .narrow-trail { margin: 0; font-family: var(--font-display); font-size: clamp(18px, 2.2vw, 24px); line-height: 1.3; letter-spacing: -.02em; color: var(--ink); }
 .narrow-note { margin: 8px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
