@@ -14,9 +14,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .portal-icon-library { position: absolute; width: 0; height: 0; overflow: hidden; }
 .eyebrow { margin: 0 0 9px; color: var(--gold-deep); font-size: 10px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
 .portal-brand { display: inline-flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; letter-spacing: -.045em; }
-.portal-brand > span { position: relative; width: 29px; height: 29px; }
-.portal-brand i { position: absolute; inset: 1px; border: 6px solid var(--gold); border-right-color: transparent; border-radius: 50%; }
-.portal-brand i:last-child { inset: 8px 0 8px 18px; border-width: 3px; }
+.portal-brand img { display: block; width: 29px; height: 29px; }
 
 .portal-auth { display: grid; min-height: 100vh; grid-template-columns: minmax(360px, .9fr) minmax(500px, 1.1fr); }
 .auth-story { position: relative; display: flex; min-height: 100vh; padding: clamp(36px, 5vw, 72px); overflow: hidden; background: #12110e; color: #fff; flex-direction: column; justify-content: space-between; }

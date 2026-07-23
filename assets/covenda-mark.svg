@@ -1,0 +1,8 @@
+<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Covenda">
+  <!-- Covenda mark: two joined rings = partnership / a deal joined. Flat, gold, no gradient
+       or shadow, per the de-"AI-slop" design directive. This is the SINGLE source for the
+       mark across marketing, portal and admin — replace this one file (e.g. with a bespoke
+       handshake) and it propagates everywhere, including the OAuth logo and Resend emails. -->
+  <circle cx="19" cy="24" r="10" stroke="#b47b20" stroke-width="4" />
+  <circle cx="29" cy="24" r="10" stroke="#b47b20" stroke-width="4" />
+</svg>
