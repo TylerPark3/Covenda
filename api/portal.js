@@ -548,14 +548,30 @@ function cleanUrl(value) {
   if (!s) return null;
   try { const u = new URL(s); return (u.protocol === 'http:' || u.protocol === 'https:') ? u.toString() : null; } catch { return null; }
 }
-// A professor/partner referral. Stored pending; real verification against partner orgs +
-// REF- codes is a later step (§9), so this never fabricates an endorsed/certified status.
-function cleanReferral(value) {
+// §9 verified partners: a founder-confirmed allowlist of endorsement codes → partner name,
+// set as COVENDA_VERIFIED_PARTNERS="REF-1042:Prof. Lee @ Columbia,CORE-01:CORE Club". A student
+// who cites a matching code gets a REAL "Covenda-certified" endorsement; anything else stays
+// pending — the credential can never be self-asserted.
+export function verifiedPartnersFromEnv(env = process.env) {
+  const map = new Map();
+  for (const pair of String(env.COVENDA_VERIFIED_PARTNERS || '').split(',')) {
+    const idx = pair.indexOf(':');
+    if (idx < 0) continue;
+    const code = cleanText(pair.slice(0, idx), 60).toUpperCase();
+    const name = cleanText(pair.slice(idx + 1), 160);
+    if (code && name) map.set(code, name);
+  }
+  return map;
+}
+// A professor/partner referral. Verified ONLY when the code matches a founder-confirmed
+// partner; never fabricates an endorsed/certified status.
+function cleanReferral(value, verifiedPartners) {
   const r = value && typeof value === 'object' ? value : {};
   const name = cleanText(r.name, 160);
   const code = cleanText(r.code, 60);
   if (!name && !code) return {};
-  return { name: name || null, code: code || null, verified: false };
+  const partner = verifiedPartners && verifiedPartners.get(code.toUpperCase());
+  return { name: name || partner || null, code: code || null, verified: Boolean(partner), partner: partner || null };
 }
 const pick = (obj, keys) => Object.fromEntries(keys.map(k => [k, obj?.[k]]));
 
@@ -602,7 +618,7 @@ export async function loadProjectRequests(member) {
   return error ? [] : (data || []);
 }
 
-export async function applyToProject(member, input) {
+export async function applyToProject(member, input, env = process.env) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project.');
   const profile = await checked(member.supabase.from('member_profiles').select('role,verticals,work_types,skills').eq('user_id', member.user.id).maybeSingle(), null);
@@ -622,7 +638,7 @@ export async function applyToProject(member, input) {
     video_url: cleanUrl(input.videoUrl),
     skills: cleanList(input.skills, 20),
     demonstration: cleanUrl(input.demonstration) || cleanText(input.demonstration, 500) || null,
-    referral: cleanReferral(input.referral),
+    referral: cleanReferral(input.referral, verifiedPartnersFromEnv(env)),
     fit_score: fit.score,
     fit_reasons: fit.reasons,
   };
@@ -854,7 +870,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
     if (req.method === 'POST' && input.action === 'create-request') return res.status(201).json({ ok: true, request: await createProjectRequest(member, input) });
-    if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input) });
+    if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input, dependencies.env || process.env) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
     if (req.method === 'POST' && input.action === 'get-messages') return res.status(200).json({ ok: true, ...(await loadNewMessages(member, input)) });
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });

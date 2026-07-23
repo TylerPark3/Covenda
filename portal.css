@@ -215,6 +215,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .skill-pill.is-matched { border-color:rgba(36,117,58,.3); background:#f4faf5; color:var(--success); }
 .applicant-note { margin:12px 0 0; color:#31312e; font-size:11px; line-height:1.6; }
 .applicant-referral { margin:10px 0 0; color:var(--gold-deep); font-size:10px; font-weight:650; }
+.applicant-referral.is-verified { color:var(--success); }
 .applicant-links { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; }
 .applicant-links a { color:var(--gold-deep); font-size:11px; font-weight:700; text-decoration:underline; }
 .applicant-actions { display:flex; gap:8px; margin-top:16px; }

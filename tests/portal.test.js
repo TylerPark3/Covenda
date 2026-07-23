@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable } from '../api/portal.js';
+import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
 
 // A queued Supabase double: each from() call consumes the next step in order. A step
 // resolves maybeSingle()/single()/await to its `result` and can `capture` an update/
@@ -344,6 +344,27 @@ test('get-messages returns messages across the caller\'s owned and assigned proj
   assert.equal(sinceUsed, '2026-07-22T09:00:00Z');
   assert.equal(result.messages.length, 1);
   assert.equal(result.messages[0].id, 'm1');
+});
+
+test('verifiedPartnersFromEnv parses the founder allowlist and upper-cases codes', () => {
+  const map = verifiedPartnersFromEnv({ COVENDA_VERIFIED_PARTNERS: 'REF-1042:Prof. Lee,core-01:CORE Club' });
+  assert.equal(map.get('REF-1042'), 'Prof. Lee');
+  assert.equal(map.get('CORE-01'), 'CORE Club');
+  assert.equal(verifiedPartnersFromEnv({}).size, 0);
+});
+
+test('a referral code matching a founder-confirmed partner becomes Covenda-certified', async () => {
+  const captured = { application: null };
+  const supabase = { from(table) {
+    if (table === 'member_profiles') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { role: 'student', verticals: [], work_types: [], skills: [] }, error: null }; } };
+    if (table === 'member_projects') return { select() { return this; }, eq() { return this; }, async maybeSingle() { return { data: { id: PROJECT_UUID, status: 'open', visibility: 'members', verticals: [], work_types: [], desired_skills: '', credits_listed: 0 }, error: null }; } };
+    if (table === 'project_applications') return { select() { return this; }, eq() { return this; }, insert(row) { captured.application = row; return this; }, async maybeSingle() { return { data: null, error: null }; }, async single() { return { data: { id: 'app', ...captured.application }, error: null }; } };
+    if (table === 'match_events') return { insert() { return Promise.resolve({ error: null }); } };
+    throw new Error('unexpected table ' + table);
+  } };
+  await applyToProject({ user: { id: 'stu' }, supabase }, { projectId: PROJECT_UUID, referral: { code: 'ref-1042' } }, { COVENDA_VERIFIED_PARTNERS: 'REF-1042:Prof. Lee @ Columbia' });
+  assert.equal(captured.application.referral.verified, true);
+  assert.equal(captured.application.referral.partner, 'Prof. Lee @ Columbia');
 });
 
 test('only the project owner can decline an applicant', async () => {
