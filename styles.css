@@ -1978,6 +1978,11 @@ body[data-audience="university"] #flowDemo { display: none; }
   color: var(--gold-deep); /* fallback if background-clip:text is unsupported */
   padding-right: 0.26em;
   margin-right: -0.2em;
+  /* Clone the box per line fragment so the padding (and gold fill) covers the italic overhang
+     at EVERY line end — otherwise a word that ends a wrapped line (e.g. "domain") has its last
+     glyph's slant clipped by background-clip:text. */
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
   background-image:
     linear-gradient(102deg, transparent 40%, rgba(255,251,240,.9) 50%, transparent 60%),
     linear-gradient(96deg, #8A6A2F 0%, #A9822F 42%, #C9A24B 66%, #A9822F 88%);
