@@ -238,8 +238,10 @@ export async function loadMemberDashboard(member, env = process.env) {
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
     : [];
   const verifiedCount = projects.filter(project => project.status === 'complete').length;
-  const [walletBalance, creditLedger, projectRequests] = await Promise.all([creditBalance(member), loadCreditLedger(member), loadProjectRequests(member)]);
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+  const [walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted] = await Promise.all([
+    creditBalance(member), loadCreditLedger(member), loadProjectRequests(member), loadBatches(member), loadBatchAccess(member), loadBatchAdmittedCounts(member),
+  ]);
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -649,6 +651,81 @@ export async function applyToBatch(member, input) {
   return checked(member.supabase.from('batch_applications').insert({ batch_id: batchId, student_user_id: member.user.id, materials }).select('*').single(), null);
 }
 
+// ---- §13 slice 3: company credit-gated access to a batch's admitted students. ----
+// Which batches this company has unlocked (id + what it paid), so the UI can gate rosters.
+export async function loadBatchAccess(member) {
+  const { data, error } = await member.supabase
+    .from('batch_access')
+    .select('batch_id,credits_spent,granted_at')
+    .eq('company_user_id', member.user.id);
+  return error ? [] : (data || []);
+}
+
+// How many admitted (accepted) students each open/reviewing batch has, so a company can judge
+// a roster's size before paying. Counted client-side (one flat read, no group-by rpc needed).
+export async function loadBatchAdmittedCounts(member) {
+  const { data, error } = await member.supabase
+    .from('batch_applications')
+    .select('batch_id')
+    .eq('status', 'accepted');
+  if (error) return {};
+  const counts = {};
+  for (const row of data || []) counts[row.batch_id] = (counts[row.batch_id] || 0) + 1;
+  return counts;
+}
+
+// Charge the company the batch's access price and record access. The whole fee is platform
+// revenue (no student payout, so no fee-on-top split). Idempotent: an already-unlocked batch
+// is never charged twice, and the unique(batch_id, company_user_id) constraint blocks races
+// BEFORE any ledger row is written.
+export async function unlockBatch(member, input) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'company') throw new Error('Only company accounts can unlock a batch.');
+  const batchId = cleanText(input.batchId, 50);
+  if (!PROJECT_ID_PATTERN.test(batchId)) throw new Error('Choose a valid batch.');
+  const batch = await checked(member.supabase.from('batches').select('id,name,status,access_credits').eq('id', batchId).maybeSingle(), null);
+  if (!batch || !['open', 'reviewing'].includes(batch.status)) throw new Error('This batch is not available.');
+  const existing = await checked(member.supabase.from('batch_access').select('id').eq('batch_id', batchId).eq('company_user_id', member.user.id).maybeSingle(), null);
+  if (existing) return { alreadyUnlocked: true, balance: await creditBalance(member) };
+  const price = Math.max(0, Math.round(Number(batch.access_credits) || 0));
+  const balance = await creditBalance(member);
+  if (price > 0 && balance < price) throw new Error(`You need ${price} credits to unlock this batch. Top up in your wallet.`);
+  // Record access first — the unique constraint is the race guard, and it fires before any charge.
+  const { data: access, error: accessError } = await member.supabase
+    .from('batch_access')
+    .insert({ batch_id: batchId, company_user_id: member.user.id, credits_spent: price })
+    .select('*')
+    .single();
+  if (accessError) {
+    if (/duplicate|unique/i.test(accessError.message || '')) return { alreadyUnlocked: true, balance: await creditBalance(member) };
+    throw accessError;
+  }
+  if (price > 0) {
+    const note = `Batch access: ${batch.name}`.slice(0, 500);
+    await checked(member.supabase.from('credit_ledger').insert([
+      { user_id: member.user.id, entry_type: 'batch_access', credits: -price, note },
+      { user_id: null, entry_type: 'batch_access', credits: price, note },
+    ]).select('id'), []);
+  }
+  return { access, balance: await creditBalance(member) };
+}
+
+// The admitted roster for a batch the company has unlocked. Gated on batch_access existing.
+export async function loadBatchRoster(member, input) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'company') throw new Error('Only company accounts can view a batch roster.');
+  const batchId = cleanText(input.batchId, 50);
+  if (!PROJECT_ID_PATTERN.test(batchId)) throw new Error('Choose a valid batch.');
+  const access = await checked(member.supabase.from('batch_access').select('id').eq('batch_id', batchId).eq('company_user_id', member.user.id).maybeSingle(), null);
+  if (!access) throw new Error('Unlock this batch to view its admitted students.');
+  const apps = await checked(member.supabase.from('batch_applications').select('student_user_id,materials').eq('batch_id', batchId).eq('status', 'accepted'), []);
+  const studentIds = [...new Set(apps.map(a => a.student_user_id).filter(Boolean))];
+  if (!studentIds.length) return [];
+  const profiles = await checked(member.supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,verticals,work_types,avatar_url,identity_verified').in('user_id', studentIds), []);
+  const materialsById = new Map(apps.map(a => [a.student_user_id, a.materials || {}]));
+  return profiles.map(p => ({ ...p, batchMaterials: materialsById.get(p.user_id) || {} }));
+}
+
 export async function applyToProject(member, input, env = process.env) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project.');
@@ -903,6 +980,8 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'create-request') return res.status(201).json({ ok: true, request: await createProjectRequest(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input, dependencies.env || process.env) });
     if (req.method === 'POST' && input.action === 'apply-batch') return res.status(201).json({ ok: true, application: await applyToBatch(member, input) });
+    if (req.method === 'POST' && input.action === 'unlock-batch') return res.status(200).json({ ok: true, result: await unlockBatch(member, input) });
+    if (req.method === 'POST' && input.action === 'batch-roster') return res.status(200).json({ ok: true, roster: await loadBatchRoster(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });
     if (req.method === 'POST' && input.action === 'get-messages') return res.status(200).json({ ok: true, ...(await loadNewMessages(member, input)) });
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });

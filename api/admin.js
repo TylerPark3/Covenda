@@ -358,6 +358,11 @@ export async function createBatch(supabase, input, operatorEmail = '') {
     if (!Number.isInteger(capacity) || capacity < 0) throw new Error('Enter a whole number for capacity, or leave it blank.');
     record.capacity = capacity;
   }
+  if (input.access_credits !== undefined && input.access_credits !== null && input.access_credits !== '') {
+    const accessCredits = Number(input.access_credits);
+    if (!Number.isInteger(accessCredits) || accessCredits < 0) throw new Error('Enter a whole number of credits for access price, or leave it blank.');
+    record.access_credits = accessCredits;
+  }
   const { data, error } = await supabase.from('batches').insert(record).select('*').single();
   if (error) throw error;
   return { ...data, applications: [] };

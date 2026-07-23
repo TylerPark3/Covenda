@@ -149,6 +149,7 @@ function renderDashboard() {
   $('#opportunityCount').textContent=opportunities.length;
   const openBatches=(state.dashboard.batches||[]).filter(b=>b.status==='open').length;
   const bc=$('#batchCount'); if(bc)bc.textContent=openBatches;
+  const batchesNav=$('#batchesNav'); if(batchesNav)batchesNav.hidden=!['student','company'].includes(role);
   $('#newProject').hidden=!['company','university'].includes(role);
   const now=new Date(); $('#welcomeDate').textContent=now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
   const first=profile?.display_name?.split(/\s+/)[0]; $('#welcomeTitle').textContent=first?`Good ${dayPart()}, ${first}.`:`Good ${dayPart()}.`;
@@ -580,13 +581,78 @@ function discoverCard(project,isApplied){
   actions.append(view,apply,save);row.append(actions);return row;
 }
 const BATCH_STATUS_LABELS={submitted:'Applied',reviewing:'In review',accepted:'Accepted',waitlisted:'Waitlisted',declined:'Not selected'};
+const batchRosters=new Map(); // batchId -> loaded accepted-student array (company view cache)
 function renderBatches(){
   const root=$('#batchList');if(!root)return;
+  const role=state.dashboard?.profile?.role;
+  if(role==='company'){renderCompanyBatches(root);return;}
   const batches=(state.dashboard.batches||[]).filter(b=>b.status==='open'||b.status==='reviewing');
   const appByBatch=new Map((state.dashboard.batchApplications||[]).map(a=>[a.batch_id,a]));
   root.replaceChildren();
   if(!batches.length){emptyList(root,'p-spark','No batches are open right now.','Curated cohorts open a few times a season. Check back — admitted students are surfaced directly to partner companies.');return;}
   for(const batch of batches)root.append(batchCard(batch,appByBatch.get(batch.id)));
+}
+function renderCompanyBatches(root){
+  const intro=$('#batchIntro');if(intro)intro.textContent='Curated, operator-reviewed cohorts of vetted students. Unlock a batch to see its admitted roster and reach out.';
+  const batches=(state.dashboard.batches||[]).filter(b=>b.status==='open'||b.status==='reviewing');
+  const unlocked=new Map((state.dashboard.batchAccess||[]).map(a=>[a.batch_id,a]));
+  const admitted=state.dashboard.batchAdmitted||{};
+  root.replaceChildren();
+  if(!batches.length){emptyList(root,'p-spark','No batches are open yet.','Curated cohorts open a few times a season. When one does, you can unlock its admitted roster here.');return;}
+  for(const batch of batches)root.append(companyBatchCard(batch,unlocked.get(batch.id),admitted[batch.id]||0));
+}
+function companyBatchCard(batch,access,admittedCount){
+  const card=document.createElement('article');card.className='batch-card'+(batch.tier==='elite'?' is-elite':'');
+  const top=document.createElement('div');top.className='batch-card-top';
+  const h=document.createElement('h3');h.textContent=batch.name;top.append(h);
+  top.append(pill(batch.tier==='elite'?'Elite':'Open',batch.tier==='elite'?'batch-tier is-elite':'batch-tier'));
+  card.append(top);
+  const meta=document.createElement('div');meta.className='discover-meta';
+  if(batch.discipline)meta.append(discoverChip('Discipline',batch.discipline));
+  if(batch.partner_org)meta.append(discoverChip('Partner',batch.partner_org));
+  meta.append(discoverChip('Admitted',`${admittedCount} ${admittedCount===1?'student':'students'}`));
+  if(meta.childElementCount)card.append(meta);
+  if(batch.description){const p=document.createElement('p');p.className='discover-card-summary';p.textContent=batch.description;card.append(p);}
+  const price=Math.max(0,Math.round(Number(batch.access_credits)||0));
+  const actions=document.createElement('div');actions.className='discover-actions';
+  if(access){
+    const badge=pill('Unlocked','status-pill','accepted');actions.append(badge);
+    const view=document.createElement('button');view.type='button';view.className='portal-primary compact';view.textContent='View roster';
+    view.addEventListener('click',()=>toggleBatchRoster(batch,card,view));
+    actions.append(view);
+  }else{
+    const price_label=document.createElement('span');price_label.className='batch-price';price_label.textContent=price?`${price.toLocaleString()} credits`:'Free';actions.append(price_label);
+    const unlock=document.createElement('button');unlock.type='button';unlock.className='portal-primary compact';unlock.textContent=admittedCount?`Unlock roster`:'No roster yet';unlock.disabled=!admittedCount;
+    unlock.addEventListener('click',()=>unlockBatchAccess(batch,unlock));
+    actions.append(unlock);
+  }
+  card.append(actions);
+  const rosterHost=document.createElement('div');rosterHost.className='batch-roster';rosterHost.hidden=true;card.append(rosterHost);
+  return card;
+}
+async function unlockBatchAccess(batch,button){
+  const price=Math.max(0,Math.round(Number(batch.access_credits)||0));
+  const balance=state.dashboard?.walletBalance||0;
+  if(price>balance){setView('wallet');return;}
+  const original=button.textContent;button.disabled=true;button.textContent='Unlocking…';
+  try{
+    await portalRequest({method:'POST',body:JSON.stringify({action:'unlock-batch',batchId:batch.id})});
+    await loadDashboard();setView('batches');
+  }catch(error){button.textContent=error.message;setTimeout(()=>{button.textContent=original;button.disabled=false;},3200);}
+}
+async function toggleBatchRoster(batch,card,button){
+  const host=$('.batch-roster',card);if(!host)return;
+  if(!host.hidden){host.hidden=true;button.textContent='View roster';return;}
+  button.disabled=true;const original=button.textContent;button.textContent='Loading…';
+  try{
+    let roster=batchRosters.get(batch.id);
+    if(!roster){const result=await portalRequest({method:'POST',body:JSON.stringify({action:'batch-roster',batchId:batch.id})});roster=result.roster||[];batchRosters.set(batch.id,roster);}
+    host.replaceChildren();
+    if(!roster.length){const p=document.createElement('p');p.className='batch-roster-empty';p.textContent='No students have been admitted to this batch yet. Check back after the operator finishes review.';host.append(p);}
+    else{const grid=document.createElement('div');grid.className='batch-roster-grid';roster.forEach(s=>grid.append(talentCard(s)));host.append(grid);}
+    host.hidden=false;button.textContent='Hide roster';
+  }catch(error){button.textContent=error.message;setTimeout(()=>{button.textContent=original;},3200);}
+  finally{button.disabled=false;}
 }
 function batchCard(batch,application){
   const card=document.createElement('article');card.className='batch-card'+(batch.tier==='elite'?' is-elite':'');

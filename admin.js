@@ -225,9 +225,11 @@ function batchCard(batch) {
   const apps = batch.applications || [];
   const tally = document.createElement('div'); tally.className = 'admin-batch-tally';
   const accepted = apps.filter(a => a.status === 'accepted').length;
-  tally.textContent = apps.length
+  const price = Number.isFinite(Number(batch.access_credits)) ? `${Number(batch.access_credits)} cr company access` : '';
+  const appsText = apps.length
     ? `${apps.length} ${apps.length === 1 ? 'application' : 'applications'} · ${accepted} accepted${batch.capacity ? ` of ${batch.capacity} seats` : ''}`
     : 'No applications yet.';
+  tally.textContent = [appsText, price].filter(Boolean).join('  ·  ');
   card.append(tally);
 
   if (apps.length) {
@@ -298,7 +300,7 @@ $('#adminBatchForm')?.addEventListener('submit',async event=>{
   event.preventDefault(); const form=event.currentTarget; const button=$('button[type="submit"]',form); const message=$('#adminBatchFormMessage');
   button.disabled=true; const original=button.textContent; button.textContent='Creating…'; if (message) { message.textContent=''; message.classList.remove('is-error'); }
   try {
-    const payload={ action:'create-batch', name:form.elements.name.value, discipline:form.elements.discipline.value, partner_org:form.elements.partner_org.value, season:form.elements.season.value, tier:form.elements.tier.value, capacity:form.elements.capacity.value, status:form.elements.status.value, description:form.elements.description.value };
+    const payload={ action:'create-batch', name:form.elements.name.value, discipline:form.elements.discipline.value, partner_org:form.elements.partner_org.value, season:form.elements.season.value, tier:form.elements.tier.value, capacity:form.elements.capacity.value, access_credits:form.elements.access_credits.value, status:form.elements.status.value, description:form.elements.description.value };
     const result=await adminRequest({ method:'POST', body:JSON.stringify(payload) });
     batches=[result.batch, ...batches]; renderBatches(); form.reset();
     if (message) message.textContent='Batch created.';

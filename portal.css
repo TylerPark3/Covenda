@@ -207,7 +207,11 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-card-top h3 { margin:0; font-size:16px; letter-spacing:-.03em; }
 .batch-tier { display:inline-flex; padding:5px 10px; border:1px solid var(--line); border-radius:99px; color:var(--muted); font-size:8px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; white-space:nowrap; }
 .batch-tier.is-elite { border-color:var(--gold); background:var(--gold); color:#1c1300; }
-.batch-card .discover-actions { margin-top:auto; padding-top:16px; }
+.batch-card .discover-actions { margin-top:auto; padding-top:16px; align-items:center; }
+.batch-price { margin-right:auto; font-size:12px; font-weight:700; color:var(--gold-deep); }
+.batch-roster { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+.batch-roster-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+.batch-roster-empty { margin:0; color:var(--muted); font-size:12px; line-height:1.6; }
 .save-toggle { min-height:34px; padding:7px 12px; margin-left:auto; border:1px solid var(--line-strong); border-radius:9px; background:#fff; color:var(--muted); font-size:11px; font-weight:650; cursor:pointer; }
 .save-toggle.is-saved { border-color:var(--gold); background:var(--gold-pale); color:var(--gold-deep); }
 .detail-head { display:flex; align-items:center; gap:12px; margin-bottom:6px; }

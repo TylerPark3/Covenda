@@ -79,7 +79,7 @@
         <button type="button" data-view="projects"><svg><use href="#p-project"/></svg><span>My projects</span><b id="projectCount">0</b></button>
         <button type="button" data-view="activity"><svg><use href="#p-inbox"/></svg><span>Submissions</span><b id="intakeCount">0</b></button>
         <button type="button" data-view="discover" data-student-only><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
-        <button type="button" data-view="batches" data-student-only><svg><use href="#p-spark"/></svg><span>Batches</span><b id="batchCount">0</b></button>
+        <button type="button" data-view="batches" id="batchesNav"><svg><use href="#p-spark"/></svg><span>Batches</span><b id="batchCount">0</b></button>
         <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
         <button type="button" data-view="messages"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
         <button type="button" data-view="wallet"><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
@@ -148,7 +148,7 @@
       </section>
 
       <section class="portal-view" data-portal-view="batches">
-        <div class="page-heading"><div><p class="eyebrow">Curated cohorts</p><h1>Elite batches</h1><p>Vetted, reviewed cohorts in a discipline. Apply once — an operator reviews every application, and admitted students are surfaced to partner companies.</p></div></div>
+        <div class="page-heading"><div><p class="eyebrow">Curated cohorts</p><h1>Elite batches</h1><p id="batchIntro">Vetted, reviewed cohorts in a discipline. Apply once — an operator reviews every application, and admitted students are surfaced to partner companies.</p></div></div>
         <div class="batch-list" id="batchList"></div>
       </section>
 
