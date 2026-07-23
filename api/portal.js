@@ -192,7 +192,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     checked(supabase.from('member_profiles').select('*').eq('user_id', user.id).maybeSingle(), null),
     loadMemberIntakes(member),
   ]);
-  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [], verifiedCount: 0, identityEnabled , briefMeteringEnabled, briefFee };
+  if (!profile) return { user, profile: null, projects: [], opportunities: [], applications: [], studentDirectory: [], intakes, messages: [], verifiedCount: 0, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
 
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
@@ -212,7 +212,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     const [walletBalance, creditLedger, payoutRequests] = await Promise.all([
       creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member),
     ]);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, identityEnabled , briefMeteringEnabled, briefFee };
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -239,7 +239,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     : [];
   const verifiedCount = projects.filter(project => project.status === 'complete').length;
   const [walletBalance, creditLedger] = await Promise.all([creditBalance(member), loadCreditLedger(member)]);
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, identityEnabled , briefMeteringEnabled, briefFee };
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -280,7 +280,11 @@ export async function saveMemberProfile(member, input) {
 // work-type + referred students) post costs a reach fee. The platform fee is 10% of the
 // listed amount charged ON TOP, so the student always receives the full listed amount.
 export const REACH_FEE_TARGETED = 25;
-export const PLATFORM_FEE_RATE = 0.10;
+// One configurable constant, charged ON TOP of the listed amount so the student always
+// receives the full listed credits. 10% -> 15% is a single env var (COVENDA_PLATFORM_FEE_RATE),
+// with the code default as the fallback. Exposed to the client via the dashboard payload so
+// the cost the buyer sees can never drift from what the server charges.
+export const PLATFORM_FEE_RATE = (() => { const r = Number(process.env.COVENDA_PLATFORM_FEE_RATE); return Number.isFinite(r) && r >= 0 && r <= 1 ? r : 0.10; })();
 // Payments are stubbed in v1: bundles record what the company *would* pay, and the
 // discount lives in the price, not in extra credits (1 credit stays $1 of value).
 export const CREDIT_BUNDLES = new Map([[100, 100], [500, 475], [1000, 900]]);

@@ -65,6 +65,15 @@ test('a paid session grants the bundle credits, re-deriving amount from the tabl
   assert.match(row.note, /\$900/); // 1000 credits is the $900 bundle
 });
 
+test('a first purchase also grants a one-time welcome promo, keyed per user', async () => {
+  const supabase = fakeSupabase();
+  await recordStripePurchase({ id: 'cs_test_promo', metadata: { userId: 'user-9', credits: '500' } }, supabase);
+  const promo = supabase.inserts.find(r => r.entry_type === 'promo');
+  assert.ok(promo, 'expected a promo ledger entry');
+  assert.equal(promo.credits, 50);
+  assert.equal(promo.external_ref, 'first-purchase-promo:user-9'); // idempotency key = one promo per account
+});
+
 test('a duplicate session is treated as success, not an error', async () => {
   const supabase = fakeSupabase({ failWith: { message: 'duplicate key value violates unique constraint' } });
   const result = await recordStripePurchase({ id: 'cs_test_abc', metadata: { userId: 'user-9', credits: '1000' } }, supabase);

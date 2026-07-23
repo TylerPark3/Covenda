@@ -12,6 +12,9 @@ import { supabaseConfiguration } from './submissions.js';
 
 export const config = { api: { bodyParser: false } };
 
+// One-time first-purchase bonus (credits). Kept simple/capped: exactly one per account.
+export const PROMO_CREDITS = 50;
+
 async function rawBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
@@ -75,6 +78,23 @@ export async function recordStripePurchase(session, supabase) {
   if (error) {
     if (/duplicate key|unique|already exists|23505/i.test(String(error.message || error))) return { ok: true, duplicate: true };
     throw error;
+  }
+  // §7 first-purchase bonus: +PROMO_CREDITS, once per account. Keyed to a per-user external_ref
+  // so it lands exactly once (the first purchase); later purchases dup-no-op. Best-effort — a
+  // failure here (dup, or migration not yet applied) must never undo the completed purchase.
+  try {
+    const { error: promoError } = await supabase.from('credit_ledger').insert({
+      user_id: userId,
+      entry_type: 'promo',
+      credits: PROMO_CREDITS,
+      note: `Welcome bonus · +${PROMO_CREDITS} credits`,
+      external_ref: `first-purchase-promo:${userId}`,
+    });
+    if (promoError && !/duplicate key|unique|already exists|23505/i.test(String(promoError.message || promoError))) {
+      console.error(JSON.stringify({ level: 'error', message: 'first-purchase promo failed', error: String(promoError.message || promoError).slice(0, 200) }));
+    }
+  } catch (promoException) {
+    console.error(JSON.stringify({ level: 'error', message: 'first-purchase promo threw', error: String(promoException?.message || promoException).slice(0, 200) }));
   }
   return { ok: true };
 }

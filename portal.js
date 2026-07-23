@@ -285,11 +285,14 @@ function renderActivity(){
 const REACH_FEE_TARGETED=25;
 const PLATFORM_FEE_RATE=0.10;
 const CREDIT_BUNDLES=[[100,100],[500,475],[1000,900]];
-const ledgerLabels={purchase:'Purchase',reach_fee:'Reach fee',escrow_hold:'Escrow held',escrow_release:'Paid to student',platform_fee:'Platform fee',refund:'Refund',adjustment:'Adjustment',payout:'Payout',ai_brief:'AI brief'};
+const ledgerLabels={purchase:'Purchase',reach_fee:'Reach fee',escrow_hold:'Escrow held',escrow_release:'Paid to student',platform_fee:'Platform fee',refund:'Refund',adjustment:'Adjustment',payout:'Payout',ai_brief:'AI brief',promo:'Welcome bonus'};
 function projectCreditCost(creditsListed,targeting){
   const listed=Math.max(0,Math.round(Number(creditsListed)||0));
   const reachFee=targeting==='targeted'?REACH_FEE_TARGETED:0;
-  const platformFee=Math.round(listed*PLATFORM_FEE_RATE);
+  // Use the deployment's fee rate from the dashboard so the displayed cost always matches what
+  // the server charges; fall back to the code default before the dashboard has loaded.
+  const rate=state.dashboard?.platformFeeRate??PLATFORM_FEE_RATE;
+  const platformFee=Math.round(listed*rate);
   return {listed,reachFee,platformFee,total:listed+reachFee+platformFee};
 }
 function projectTitleFor(projectId){return (state.dashboard.projects||[]).find(p=>p.id===projectId)?.title||'';}
