@@ -2834,12 +2834,15 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   }
   if (action === 'student-form') {
     selectWorkType(state.workType);
-    // §8: seed the account's industries from the hero narrowing picks — but only when the form
-    // is fresh (no industry chosen yet), so it never overrides a draft the student built.
-    if (!studentForm.querySelector('input[name="studentIndustry"]:checked')) {
-      narrowPicks().industries.forEach(ind => { const cb = studentForm.querySelector('input[name="studentIndustry"][value="' + ind.replace(/"/g, '') + '"]'); if (cb) cb.checked = true; });
-      renderStudentSpecializations(studentForm);
-    }
+    // §8: mirror the hero narrowing picks into the account form EVERY time it opens —
+    // additively (checks are only ever added, never removed), so the first page always shows
+    // all the buttons the student tapped without clobbering anything they checked by hand.
+    let seeded = false;
+    narrowPicks().industries.forEach(ind => {
+      const cb = studentForm.querySelector('input[name="studentIndustry"][value="' + ind.replace(/"/g, '') + '"]');
+      if (cb && !cb.checked) { cb.checked = true; seeded = true; }
+    });
+    if (seeded) renderStudentSpecializations(studentForm);
     openDialog(studentDialog, studentForm);
   }
   if (action === 'company-form') {
@@ -4029,7 +4032,10 @@ function narrowPicks() {
   const industries = []; const subIndustries = []; const workTypes = new Set();
   for (const key of narrowSel) {
     const parts = key.split('>');
-    if (parts.length === 1) { if (!industries.includes(parts[0])) industries.push(parts[0]); continue; }
+    // Any pick — top-level chip OR a deeper focus/specific — counts its parent industry, so
+    // the account form mirrors every button the student tapped in the hero.
+    if (!industries.includes(parts[0])) industries.push(parts[0]);
+    if (parts.length === 1) continue;
     const label = parts[parts.length - 1];
     if (!subIndustries.includes(label)) subIndustries.push(label);
     if (parts.length === 3) {
