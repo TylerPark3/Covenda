@@ -224,3 +224,30 @@ test('project targeting migration adds intake and file columns idempotently with
   assert.match(projectTargeting, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(projectTargeting, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
 });
+
+test('compatibility Stage-0 migration: evidence-tiered skill_claim, opportunity fields, match log with mandatory rationale, outcome slots — idempotent + locked down', () => {
+  const stage0 = readFileSync(
+    new URL('../supabase/migrations/20260726330000_compatibility_stage0.sql', import.meta.url),
+    'utf8',
+  ).toLowerCase();
+  // skill_claim: tiers + evidence requirement above 'claimed'
+  assert.match(stage0, /create table if not exists public\.skill_claim/);
+  assert.match(stage0, /verification_tier in \('claimed', 'artifact', 'referral', 'trial'\)/);
+  assert.match(stage0, /verification_tier = 'claimed' or evidence_pointer is not null/);
+  // opportunity fields (member_projects IS the opportunity — no rename)
+  assert.match(stage0, /add column if not exists opportunity_type text not null default 'project'/);
+  assert.match(stage0, /'project','part_time','internship','research','apprenticeship','talent_pipeline','full_time'/);
+  assert.match(stage0, /complexity_rating between 1 and 5/);
+  assert.match(stage0, /referral_requirement in \('required','preferred','none'\)/);
+  // matches: human decisions REQUIRE a rationale (training labels)
+  assert.match(stage0, /create table if not exists public\.matches/);
+  assert.match(stage0, /human_decision is null or \(human_rationale is not null/);
+  // outcome slots
+  assert.match(stage0, /add column if not exists milestones jsonb/);
+  assert.match(stage0, /founder_time_actual_min_week/);
+  // locked down + idempotent + PostgREST reload
+  assert.match(stage0, /revoke all on table public\.skill_claim from public, anon, authenticated/);
+  assert.match(stage0, /revoke all on table public\.matches from public, anon, authenticated/);
+  assert.match(stage0, /notify pgrst, 'reload schema';/);
+  assert.doesNotMatch(stage0, /drop table/);
+});
