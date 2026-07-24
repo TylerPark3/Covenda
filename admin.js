@@ -328,23 +328,35 @@ function renderMetrics(m){
   const f=m.funnel||{},w=m.thisWeek||{},c=m.credits||{},b=m.batches||{},p=m.payouts||{},cs=m.caseStudy||{};
   const n=x=>String(x==null?0:x);
   band.replaceChildren();
-  const tiles=[
-    ['Submissions',n(f.submissions),w.submissions?`+${w.submissions} this week`:'',''],
-    ['Member profiles',n(f.profiles),'',''],
-    ['Applications',n(f.applications),w.applications?`+${w.applications} this week`:'',''],
-    ['Accepted',n(f.accepted),'',''],
-    ['Completed',n(f.completed),w.completed?`+${w.completed} this week`:'','good'],
-    ['Active batches',n(b.active),'',''],
-    ['Credits purchased',n(c.purchased),'money in','money'],
-    ['Platform revenue',n(c.platformRevenue),'earned','money'],
-    ['Paid to students',n(c.toStudents),'money out','money'],
-    ['Payouts pending',n(p.pending),p.pending?'needs review':'','warn'],
-    // GTM Move 5 — the willingness-to-pay / case-study metrics.
-    ['Acceptance rate',`${n(cs.acceptanceRate)}%`,'of applications','good'],
-    ['Repeat rate',`${n(cs.repeatRate)}%`,'companies with 2+ delivered','good'],
-    ['Avg project value',n(cs.avgDeliveredCredits),'credits / delivered','money'],
+  // Grouped into three labelled clusters so the band reads as sections, not a wall of numbers.
+  const groups=[
+    ['Pipeline',[
+      ['Submissions',n(f.submissions),w.submissions?`+${w.submissions} wk`:'',''],
+      ['Member profiles',n(f.profiles),'',''],
+      ['Applications',n(f.applications),w.applications?`+${w.applications} wk`:'',''],
+      ['Accepted',n(f.accepted),'',''],
+      ['Completed',n(f.completed),w.completed?`+${w.completed} wk`:'','good'],
+    ]],
+    ['Money',[
+      ['Credits purchased',n(c.purchased),'in','money'],
+      ['Platform revenue',n(c.platformRevenue),'earned','money'],
+      ['Paid to students',n(c.toStudents),'out','money'],
+      ['Payouts pending',n(p.pending),p.pending?'review':'','warn'],
+    ]],
+    ['Quality & demand',[
+      ['Acceptance rate',`${n(cs.acceptanceRate)}%`,'of applications','good'],
+      ['Repeat rate',`${n(cs.repeatRate)}%`,'2+ delivered','good'],
+      ['Avg project value',n(cs.avgDeliveredCredits),'credits','money'],
+      ['Active batches',n(b.active),'',''],
+    ]],
   ];
-  tiles.forEach(([l,v,s,g])=>band.append(metricTile(l,v,s,g)));
+  for(const [label,tiles] of groups){
+    const group=document.createElement('section');group.className='admin-metric-group';
+    const gl=document.createElement('p');gl.className='admin-metric-group-label';gl.textContent=label;
+    const grid=document.createElement('div');grid.className='admin-metric-group-tiles';
+    tiles.forEach(([l,v,s,g])=>grid.append(metricTile(l,v,s,g)));
+    group.append(gl,grid);band.append(group);
+  }
   if(section)section.hidden=false;
 }
 
