@@ -412,8 +412,8 @@ function showToast(message) {
 const audienceTitles = {
   home: 'Covenda · Real work becomes credible proof',
   student: 'Covenda · Real work becomes credible evidence',
-  company: 'Covenda for companies · Turn delayed work into a project',
-  university: 'Covenda for educators · Share your students with the pilot',
+  company: 'Covenda for startups · Run a work-trial with vouched talent',
+  university: 'Covenda · Vouch for the students you believe in',
 };
 
 function setAudience(audience) {

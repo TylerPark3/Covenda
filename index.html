@@ -294,6 +294,7 @@
             </div>
             <div class="roster-section">
               <label class="roster-endorse-note">Add an endorsement <span>Optional · turns a shared roster into a vouch</span><textarea id="endorsementNote" rows="2" placeholder="Why you vouch for these students — applies to all (e.g. “Top of my Robotics lab; reliable, ships real work.”)"></textarea></label>
+              <p class="roster-stake-note"><svg aria-hidden="true"><use href="#icon-shield"/></svg><span>A vouch is a wager. Your standing rises as the students you back deliver reviewed work — tracked from real outcomes on your cohort page, never a black-box score.</span></p>
             </div>
             <label class="consent-row roster-consent"><input type="checkbox" id="uniConsent"><span>I can share these names and school emails with Covenda for a founder-led pilot. This is not an account system, and it does not guarantee placement.</span></label>
             <div class="form-message" id="rosterMessage" role="status" aria-live="polite"></div>
@@ -310,7 +311,7 @@
                 <input id="referralLinkInput" class="referral-link-input" type="text" readonly aria-label="Your referral link">
                 <button class="gold-button compact" type="button" data-action="referral-copy">Copy link<svg><use href="#icon-copy"/></svg></button>
               </div>
-              <p class="referral-link-help referral-cohort-help">Your students also get a shareable <b>cohort page</b> — a live, public snapshot of how far they’ve come, from endorsement to employer-verified work. No student names, just the numbers.</p>
+              <p class="referral-link-help referral-cohort-help">Your students also get a shareable <b>cohort page</b> — your <b>staked track record</b>: a live, public snapshot of how far the students you vouched for have come, from endorsement to employer-verified work. No student names, just the numbers.</p>
               <div class="referral-link-row">
                 <input id="cohortLinkInput" class="referral-link-input" type="text" readonly aria-label="Your public cohort page link">
                 <a class="ghost-button compact" id="cohortLinkOpen" href="#" target="_blank" rel="noopener">View cohort page<svg><use href="#icon-arrow-right"/></svg></a>
@@ -639,7 +640,7 @@
           <div class="cred-doors">
             <div class="cred-door glass-panel">
               <span class="cred-tag cred-tag-endorsed"><svg><use href="#icon-shield"/></svg>Endorsed</span>
-              <p>A professor, club, or career center vouches for you by name — a credible head-start.</p>
+              <p>A professor, club, or industry pro vouches for you by name — a credible head-start.</p>
               <div class="cred-marker">
                 <svg><use href="#icon-check"/></svg>
                 <span>Endorsed by <b>Prof. R. Chen</b> · Columbia Robotics</span>

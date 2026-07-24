@@ -2217,6 +2217,9 @@ body[data-audience="student"] .feature-band { display: none; }
 /* ---- Feeder builder: roster + endorsement actions ---- */
 .roster-endorse-note { display: grid; gap: 7px; color: #31312e; font-size: 12px; font-weight: 650; }
 .roster-endorse-note span { color: var(--soft); font-weight: 500; }
+/* Staked-vouch note: names the referral as a wager tied to real outcomes. */
+.roster-stake-note { display: flex; align-items: flex-start; gap: 9px; margin: 12px 0 0; padding: 12px 14px; border: 1px solid rgba(180,123,32,.25); border-radius: 12px; background: var(--gold-pale); color: var(--gold-deep); font-size: 11.5px; line-height: 1.55; font-weight: 500; }
+.roster-stake-note svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 1px; }
 .roster-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .roster-actions .roster-submit,
 .roster-actions .roster-endorse { min-height: 52px; margin-top: 0; }
