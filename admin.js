@@ -8,6 +8,7 @@ let requests = [];
 let batches = [];
 let companies = [];
 let members = [];
+let projects = [];
 const batchTierLabels = { open:'Open', elite:'Elite' };
 const batchStatusLabels = { draft:'Draft', open:'Open', reviewing:'Reviewing', closed:'Closed', archived:'Archived' };
 const batchAppStatusLabels = { submitted:'Applied', reviewing:'In review', accepted:'Accepted', waitlisted:'Waitlisted', declined:'Declined' };
@@ -293,10 +294,10 @@ async function loadInbox({ announce = false } = {}) {
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {
-    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; companies=result.companies||[]; members=result.users||[]; $('#operatorEmail').textContent=result.operator.email;
+    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; companies=result.companies||[]; members=result.users||[]; projects=result.projects||[]; $('#operatorEmail').textContent=result.operator.email;
     if (!selectedReference && submissions[0]) selectedReference=submissions[0].reference;
     if (selectedReference && !submissions.some(item=>item.reference===selectedReference)) selectedReference=submissions[0]?.reference || '';
-    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies(); renderMembers();
+    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies(); renderMembers(); renderProjects();
     $('#adminSyncStatus').textContent=`Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }
@@ -440,6 +441,49 @@ async function deleteMember(m,button){
 }
 $('#adminUsersSearch')?.addEventListener('input',renderMembers);
 $('#adminUsersRole')?.addEventListener('change',renderMembers);
+
+const projectStatusLabels={draft:'Draft',scoping:'In scoping',open:'Open',matched:'Matched',in_progress:'In progress',review:'In review',complete:'Complete',archived:'Archived',proposed:'Proposed',proposal_declined:'Proposal declined'};
+function filteredProjects(){
+  const q=($('#adminProjectsSearch')?.value||'').trim().toLowerCase();
+  const status=$('#adminProjectsStatus')?.value||'';
+  return projects.filter(p=>{
+    if(status==='active'){if(['complete','archived'].includes(p.status))return false;}
+    else if(status&&p.status!==status)return false;
+    if(q&&!String(p.title||'').toLowerCase().includes(q))return false;
+    return true;
+  });
+}
+function renderProjects(){
+  const root=$('#adminProjects');if(!root)return;root.replaceChildren();
+  const count=$('#adminProjectsCount');if(count)count.textContent=projects.length;
+  const rows=filteredProjects();
+  const shown=$('#adminProjectsShown');if(shown)shown.textContent=`${rows.length} of ${projects.length}`;
+  if(!projects.length){const p=document.createElement('p');p.className='admin-requests-empty';p.textContent='No projects yet.';root.append(p);return;}
+  if(!rows.length){const p=document.createElement('p');p.className='admin-requests-empty';p.textContent='No projects match this filter.';root.append(p);return;}
+  for(const pr of rows){
+    const row=document.createElement('div');row.className='admin-user-row';
+    const info=document.createElement('div');info.className='admin-user-info';
+    const nm=document.createElement('strong');nm.textContent=pr.title||'(untitled project)';const em=document.createElement('span');em.className='admin-user-email';em.textContent=`${(Number(pr.credits_listed)||0).toLocaleString()} credits listed${Number(pr.credits_held)?` · ${Number(pr.credits_held).toLocaleString()} held in escrow`:''}`;info.append(nm,em);
+    const meta=document.createElement('div');meta.className='admin-user-meta';
+    const statusPill=document.createElement('span');statusPill.className='admin-user-role';statusPill.textContent=projectStatusLabels[pr.status]||pr.status||'—';meta.append(statusPill);
+    if(pr.created_at){const d=document.createElement('small');d.textContent=`Created ${dateLabel(pr.created_at)}`;meta.append(d);}
+    const del=document.createElement('button');del.type='button';del.className='admin-user-delete';del.textContent='Delete';
+    del.addEventListener('click',()=>deleteProject(pr,del));
+    row.append(info,meta,del);root.append(row);
+  }
+}
+async function deleteProject(pr,button){
+  const label=pr.title||'this project';
+  const heldWarn=Number(pr.credits_held)?` It still holds ${Number(pr.credits_held).toLocaleString()} credits in escrow.`:'';
+  if(!confirm(`Delete "${label}"? This permanently removes the project and all its applications and messages.${heldWarn} This cannot be undone.`))return;
+  button.disabled=true;const original=button.textContent;button.textContent='Deleting…';
+  try{
+    await adminRequest({method:'PATCH',body:JSON.stringify({action:'delete-project',projectId:pr.id})});
+    projects=projects.filter(x=>x.id!==pr.id);renderProjects();
+  }catch(error){alert(error.message);button.disabled=false;button.textContent=original;}
+}
+$('#adminProjectsSearch')?.addEventListener('input',renderProjects);
+$('#adminProjectsStatus')?.addEventListener('change',renderProjects);
 // Packet-first intake (GTM Move 1): operator scopes a packet for a company.
 function renderPacketCompanies(){
   const sel=$('#packetCompany');if(!sel)return;

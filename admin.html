@@ -111,6 +111,15 @@
       </div>
       <div class="admin-users" id="adminUsers"></div>
     </section>
+    <section class="admin-users-section admin-projects-section">
+      <div class="admin-queue-heading"><div><h2>Projects <b id="adminProjectsCount">0</b></h2><p>Every project in the workspace. Remove test or unwanted projects — deleting one also removes its applications and messages. This can’t be undone.</p></div></div>
+      <div class="admin-users-controls">
+        <label class="admin-search"><svg><use href="#a-search"/></svg><input id="adminProjectsSearch" type="search" placeholder="Search project title" aria-label="Search projects"></label>
+        <select id="adminProjectsStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="active">Active (not complete)</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="review">In review</option><option value="complete">Complete</option><option value="proposed">Proposed</option></select>
+        <span id="adminProjectsShown" class="admin-users-shown"></span>
+      </div>
+      <div class="admin-users" id="adminProjects"></div>
+    </section>
     <section class="admin-batches-section">
       <div class="admin-queue-heading"><div><h2>Elite batches <b id="adminBatchesCount">0</b></h2><p>Curated cohorts. Create a batch, then review every application — accept, waitlist, or decline. Admitted students are surfaced to partner companies.</p></div></div>
       <form class="admin-batch-form" id="adminBatchForm">

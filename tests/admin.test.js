@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import adminHandler, { AdminOperationalError, authorizeAdmin, caseStudyMetrics, deleteAdminUser, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission, verifyAdminCode } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, caseStudyMetrics, deleteAdminProject, deleteAdminUser, listAdminProjects, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission, verifyAdminCode } from '../api/admin.js';
 
 test('deleteAdminUser removes a member but never the operator themselves', async () => {
   const uid = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
@@ -28,6 +28,26 @@ test('deleteAdminUser removes a member but never the operator themselves', async
 
 test('deleteAdminUser rejects a malformed user id', async () => {
   await assert.rejects(deleteAdminUser({}, { userId: 'nope' }, 'ops@covenda.com'), /valid user/);
+});
+
+test('deleteAdminProject deletes by id (cascade handles children) and validates the id', async () => {
+  const pid = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  let deletedFrom = '', deletedId = '';
+  const supabase = { from: (table) => ({ delete: () => ({ eq: async (_col, val) => { deletedFrom = table; deletedId = val; return { error: null }; } }) }) };
+  const out = await deleteAdminProject(supabase, { projectId: pid });
+  assert.equal(out.deleted, pid);
+  assert.equal(deletedFrom, 'member_projects');
+  assert.equal(deletedId, pid);
+  await assert.rejects(deleteAdminProject({}, { projectId: 'nope' }), /valid project/);
+  const failing = { from: () => ({ delete: () => ({ eq: async () => ({ error: { message: 'boom' } }) }) }) };
+  await assert.rejects(deleteAdminProject(failing, { projectId: pid }), /deleting this project failed/);
+});
+
+test('listAdminProjects returns rows and degrades to [] on error', async () => {
+  const ok = { from: () => ({ select: () => ({ order: () => ({ limit: async () => ({ data: [{ id: 'a', title: 'T', status: 'open' }], error: null }) }) }) }) };
+  assert.deepEqual(await listAdminProjects(ok), [{ id: 'a', title: 'T', status: 'open' }]);
+  const bad = { from: () => ({ select: () => ({ order: () => ({ limit: async () => ({ data: null, error: { message: 'x' } }) }) }) }) };
+  assert.deepEqual(await listAdminProjects(bad), []);
 });
 
 const codeEnv = { COVENDA_ADMIN_EMAILS: 'ops@covenda.com', SUPABASE_URL: 'https://x.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'pub' };

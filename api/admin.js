@@ -610,6 +610,26 @@ export async function deleteAdminUser(supabase, input, operatorEmail = '') {
   throw new Error(`Please try again — deleting this member failed: ${detail}`);
 }
 
+// Operator project management: list every member project, and permanently delete one.
+export async function listAdminProjects(supabase) {
+  const { data, error } = await supabase
+    .from('member_projects')
+    .select('id,title,status,owner_user_id,credits_listed,credits_held,created_at,updated_at')
+    .order('created_at', { ascending: false })
+    .limit(500);
+  return error ? [] : (data || []);
+}
+
+// Delete a project. project_applications + project_messages cascade via FK ON DELETE CASCADE,
+// so this one delete removes the whole conversation/application trail with it. Irreversible.
+export async function deleteAdminProject(supabase, input) {
+  const projectId = text(input.projectId, 50);
+  if (!UUID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const { error } = await supabase.from('member_projects').delete().eq('id', projectId);
+  if (error) throw new Error(`Please try again — deleting this project failed: ${String(error?.message || error).slice(0, 200)}`);
+  return { deleted: projectId };
+}
+
 function adminFailure(error) {
   if (error instanceof AdminOperationalError) {
     return { status: 503, code: error.code, message: error.publicMessage };
@@ -689,10 +709,10 @@ export default async function handler(req, res, dependencies = {}) {
     if (!admin) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
 
     if (req.method === 'GET') {
-      const [submissions, requests, batches, metrics, companies, users] = await Promise.all([
-        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase), listAdminCompanies(admin.supabase), listAdminUsers(admin.supabase),
+      const [submissions, requests, batches, metrics, companies, users, projects] = await Promise.all([
+        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase), listAdminCompanies(admin.supabase), listAdminUsers(admin.supabase), listAdminProjects(admin.supabase),
       ]);
-      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches, metrics, companies, users });
+      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches, metrics, companies, users, projects });
     }
 
     const patchInput = body(req);
@@ -707,6 +727,9 @@ export default async function handler(req, res, dependencies = {}) {
     }
     if (patchInput.action === 'delete-user') {
       return res.status(200).json({ ok: true, result: await deleteAdminUser(admin.supabase, patchInput, admin.email) });
+    }
+    if (patchInput.action === 'delete-project') {
+      return res.status(200).json({ ok: true, result: await deleteAdminProject(admin.supabase, patchInput) });
     }
     const submission = await updateAdminSubmission(admin.supabase, patchInput, admin.email);
     return res.status(200).json({ ok: true, submission });
