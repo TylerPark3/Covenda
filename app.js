@@ -4323,9 +4323,119 @@ function initScrollReveal() {
   window.setTimeout(() => targets.forEach(el => { if (!revealed.has(el)) reveal(el); }), 4000);
 }
 
+// ---- Home-hero background: a subtle gold "signal from noise" field. -----------------------
+// Many faint gold motes drift in from the left (the mass, the noise). At a soft filter line
+// most dim and fade out; a few brighten to solid gold and converge toward a focal cluster on
+// the right (the curated few), lightly linked like a bench. Deliberately low-contrast and
+// non-intrusive — it lives BEHIND the hero copy and never competes with it. It quietly
+// dramatizes Covenda's whole thesis: curation pulls signal out of the pile.
+function initHeroField() {
+  const canvas = document.getElementById('heroFieldCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const GOLD = '180,123,32';
+  let W = 0, H = 0, motes = [], running = false, raf = 0;
+
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    canvas.width = Math.max(1, Math.round(W * dpr));
+    canvas.height = Math.max(1, Math.round(H * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    build();
+  }
+  const focal = () => ({ x: W * 0.76, y: H * 0.46 });
+  function spawn(seed = false) {
+    return {
+      x: seed ? Math.random() * W : -12 - Math.random() * 40,
+      y: Math.random() * H,
+      vx: 0.18 + Math.random() * 0.34,
+      r: 0.8 + Math.random() * 1.6,
+      phase: Math.random() * Math.PI * 2,
+      state: 'drift', alpha: 0.05 + Math.random() * 0.06, judged: false,
+      // each selected mote settles near, but not exactly on, the focal point
+      tx: 0, ty: 0,
+    };
+  }
+  function build() {
+    const count = Math.round(Math.min(90, Math.max(26, W / 20)));
+    motes = Array.from({ length: count }, () => spawn(true));
+  }
+  function step(mote) {
+    const gate = W * 0.44;
+    if (mote.state === 'drift') {
+      mote.x += mote.vx;
+      mote.y += Math.sin(mote.phase + mote.x * 0.01) * 0.15;
+      mote.alpha = Math.min(0.14, mote.alpha + 0.002);
+      if (!mote.judged && mote.x > gate) {
+        mote.judged = true;
+        if (Math.random() < 0.16) {
+          const f = focal();
+          mote.state = 'selected';
+          mote.tx = f.x + (Math.random() - 0.5) * W * 0.16;
+          mote.ty = f.y + (Math.random() - 0.5) * H * 0.42;
+        } else { mote.state = 'fade'; }
+      }
+    } else if (mote.state === 'fade') {
+      mote.x += mote.vx * 0.6;
+      mote.alpha -= 0.004;
+      if (mote.alpha <= 0 || mote.x > W + 10) Object.assign(mote, spawn(false));
+    } else if (mote.state === 'selected') {
+      mote.x += (mote.tx - mote.x) * 0.03;
+      mote.y += (mote.ty - mote.y) * 0.03;
+      mote.phase += 0.01;
+      mote.tx += Math.cos(mote.phase) * 0.15; // gentle drift so the cluster breathes
+      mote.ty += Math.sin(mote.phase * 0.8) * 0.15;
+      mote.alpha = Math.min(0.42, mote.alpha + 0.006);
+      mote.r = Math.min(2.9, mote.r + 0.012);
+    }
+  }
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const selected = [];
+    for (const m of motes) {
+      if (m.state === 'selected') selected.push(m);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${GOLD},${m.alpha})`;
+      ctx.fill();
+    }
+    // faint links between the curated few — a light "bench" constellation
+    ctx.lineWidth = 1;
+    for (let i = 0; i < selected.length; i++) {
+      for (let j = i + 1; j < selected.length; j++) {
+        const a = selected[i], b = selected[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d = Math.hypot(dx, dy);
+        if (d < 118) {
+          ctx.strokeStyle = `rgba(${GOLD},${0.07 * (1 - d / 118)})`;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+      }
+    }
+  }
+  function frame() { for (const m of motes) step(m); draw(); raf = requestAnimationFrame(frame); }
+  function start() { if (running || reduce) return; running = true; raf = requestAnimationFrame(frame); }
+  function stop() { running = false; cancelAnimationFrame(raf); }
+
+  resize();
+  draw(); // one static frame immediately (and the only frame under reduced-motion)
+  window.addEventListener('resize', () => { resize(); if (!running) draw(); });
+  if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); if (!running) draw(); }).observe(canvas);
+  if (reduce) return;
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(es => es.forEach(e => (e.isIntersecting ? start() : stop())), { threshold: 0.02 }).observe(canvas);
+  } else { start(); }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
+}
+
 initCovendaMotion();
 initFlowDemo();
 initIcosahedron();
+initHeroField();
 initScrollReveal();
 initMemberNav();
 window.requestAnimationFrame(() => openIntro());

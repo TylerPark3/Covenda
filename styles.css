@@ -264,7 +264,9 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(56px, 6.4vw, 98px);
-  line-height: .96;
+  /* 1.0 (not .96) so the tall italic ascender/descender of the gold word — e.g. the "f" in
+     "proof" — has room and isn't cramped/clipped against the line above. */
+  line-height: 1.0;
   letter-spacing: -.064em;
   font-weight: 400;
 }
@@ -2165,6 +2167,10 @@ html.js-reveal .reveal.is-revealed { opacity: 1; transform: none; }
 /* ===== HOME audience: brand story only (core story + "What Covenda is") ===== */
 .hero-home { display: none; }
 body[data-audience="home"] .hero-home { display: block; }
+/* Subtle gold "signal from noise" field behind the home hero. Sits above the soft
+   background glows (z-index:-1) but below the content, which we lift to z-index:1. */
+.hero-field { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.hero-home > *:not(.hero-field) { position: relative; z-index: 1; }
 body[data-audience="home"] .hero-student,
 body[data-audience="home"] .hero-company,
 body[data-audience="home"] .hero-university { display: none; }
