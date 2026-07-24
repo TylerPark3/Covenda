@@ -594,7 +594,8 @@ async function runBuyCredits(credits,button){
 // identity result land asynchronously via the webhook, so we tell the member it may take a moment.
 function handleCheckoutReturn(){
   const params=new URLSearchParams(location.search);
-  const wallet=params.get('wallet');const identity=params.get('identity');
+  const wallet=params.get('wallet');const identity=params.get('identity');const connected=params.get('connected');
+  if(connected==='github'){history.replaceState(null,'',location.pathname);setView('profile');setDialogMessage('#profileMessage','GitHub account verified — repos you own now read as a verified account.');return;}
   if(!wallet&&!identity)return;
   history.replaceState(null,'',location.pathname);
   if(wallet==='paid'){setView('wallet');setDialogMessage('#walletMessage','Payment received — your credits will appear here within a few seconds.');}
@@ -1098,11 +1099,42 @@ function renderCredibility(root,d){
 
 // Skill-inference (GitHub): link a public repo -> per-skill scores with evidence. Scores from
 // code alone are anchored by trials + referrals, never proof on their own (anti-gaming).
+// Call the GitHub connector endpoint with the member's auth (separate route from /api/portal).
+async function connectGithubRequest(action, options={}){
+  const response=await fetch(`/api/connect-github?action=${action}`,{...options,headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json',...(options.headers||{})}});
+  const result=await response.json().catch(()=>({ok:false,error:'Unreadable response.'}));
+  if(!response.ok||!result.ok)throw new Error(result.error||'GitHub connection failed.');
+  return result;
+}
+// OWNERSHIP banner: connect your own GitHub account so owned repos read as "verified account"
+// rather than just a "linked repo". Read-only, revocable.
+function githubConnectBanner(){
+  const banner=document.createElement('div');banner.className='gh-connect';
+  const paint=(connected,login)=>{
+    banner.replaceChildren();banner.dataset.connected=connected?'1':'0';
+    const left=document.createElement('div');left.className='gh-connect-copy';
+    const badge=document.createElement('span');badge.className='gh-badge '+(connected?'is-verified':'is-linked');badge.textContent=connected?'✓ Verified account':'Linked repos only';
+    const txt=document.createElement('p');txt.textContent=connected?`Connected as @${login}. Repos you own read as verified — proof you can't fake by pasting someone else's link.`:'Connect your own GitHub account so repos you own are ownership-verified, not just linked. Read-only, revocable anytime.';
+    left.append(badge,txt);
+    const btn=document.createElement('button');btn.type='button';btn.className=connected?'portal-secondary compact':'portal-primary compact';btn.textContent=connected?'Disconnect':'Verify with GitHub';
+    btn.addEventListener('click',async()=>{
+      btn.disabled=true;
+      try{
+        if(connected){await connectGithubRequest('disconnect',{method:'GET'});paint(false,null);}
+        else{const {url}=await connectGithubRequest('start',{method:'GET'});window.location.href=url;}
+      }catch(e){txt.textContent=(e&&e.message)||'GitHub connection is not configured yet.';btn.disabled=false;}
+    });
+    banner.append(left,btn);
+  };
+  paint(false,null);
+  connectGithubRequest('status',{method:'GET'}).then(r=>paint(r.connected,r.login)).catch(()=>{});
+  return banner;
+}
 function renderProofOfWork(root,profile){
   const sec=document.createElement('section');sec.className='proof-of-work';
   const h=document.createElement('h3');h.textContent='Proof of work · GitHub';
   const sub=document.createElement('p');sub.className='pow-sub';sub.textContent='Link a public repo. Covenda reads the code and commit history and scores the skills it actually demonstrates — per skill, with the evidence behind each. Code alone is anchored by your trials and referrals, never proof on its own.';
-  sec.append(h,sub);
+  sec.append(h,sub,githubConnectBanner());
   const row=document.createElement('div');row.className='pow-row';
   const input=document.createElement('input');input.type='url';input.className='pow-input';input.placeholder='github.com/you/project';input.setAttribute('aria-label','GitHub repository URL');
   const btn=document.createElement('button');btn.type='button';btn.className='portal-primary compact';btn.textContent='Analyze repo';
@@ -1117,7 +1149,7 @@ function renderProofOfWork(root,profile){
     try{
       const {analysis}=await portalRequest({method:'POST',body:JSON.stringify({action:'analyze-github',repoUrl:url})});
       status.textContent=analysis.persisted?'Added to your profile.':'Analyzed. Run the skill_signals migration to keep it on your profile.';
-      const card=githubAnalysisCard({repo:analysis.repo.name,url:analysis.repo.url,skills:analysis.skills,flags:analysis.flags,needsReview:analysis.needsReview});
+      const card=githubAnalysisCard({repo:analysis.repo.name,url:analysis.repo.url,skills:analysis.skills,flags:analysis.flags,needsReview:analysis.needsReview,ownershipVerified:analysis.ownershipVerified});
       const dup=[...results.children].find(c=>c.dataset.repo===analysis.repo.name);if(dup)dup.remove();
       results.prepend(card);input.value='';
     }catch(e){status.textContent=(e&&e.message)||'Could not analyze that repo.';status.classList.add('is-error');}
@@ -1129,7 +1161,11 @@ function githubAnalysisCard(a){
   const card=document.createElement('article');card.className='pow-card';card.dataset.repo=a.repo||'';
   const top=document.createElement('div');top.className='pow-card-top';
   const name=document.createElement('h4');if(a.url){const link=document.createElement('a');link.href=a.url;link.target='_blank';link.rel='noopener';link.textContent=a.repo;name.append(link);}else name.textContent=a.repo||'repository';
-  top.append(name);if(a.needsReview)top.append(pill('Needs review','status-pill','revise'));card.append(top);
+  top.append(name);
+  // Ownership honesty: a repo owned by the connected account is "verified account"; otherwise
+  // it's a "linked repo" — the anti-slop distinction made visible.
+  top.append(pill(a.ownershipVerified?'✓ Verified account':'Linked repo','gh-owner-pill',a.ownershipVerified?'verified':'linked'));
+  if(a.needsReview)top.append(pill('Needs review','status-pill','revise'));card.append(top);
   (a.flags||[]).forEach(f=>{const p=document.createElement('p');p.className='pow-flag';p.textContent=f;card.append(p);});
   const grid=document.createElement('div');grid.className='pow-skill-grid';
   (a.skills||[]).forEach(s=>{
