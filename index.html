@@ -210,6 +210,34 @@
             </div>
           </article>
         </div>
+        <!-- Sourcing + matching flow: the vouched-in / matched-out counterpart to the packet
+             flow above. ILLUSTRATIVE example (robotics, Students A/B/C) — a model of the flow,
+             not a real posting or real people. Flat, monospace-flavored, no animation. -->
+        <div class="match-flow">
+          <div class="section-heading">
+            <p class="feature-kicker">How it works</p>
+            <h2>Vouched in. Matched out.</h2>
+            <p>Talent reaches Covenda through people who put their name on it — then the engine ranks for the specific request in front of it.</p>
+          </div>
+          <figure class="mflow" role="group" aria-label="Covenda flow: a robotics startup files a talent request for three students; a robotics coach, a professor, and a research mentor each vouch for one student; the three enter the Covenda talent pool; the compatibility engine ranks them and surfaces the top candidates for that request.">
+            <div class="mf-node mf-solo"><span class="mf-label">Robotics startup</span></div>
+            <div class="mf-conn" aria-hidden="true"><span class="mf-stalk"></span><span class="mf-chev">▼</span></div>
+            <div class="mf-node mf-solo"><span class="mf-label">Talent request</span><span class="mf-sub">“Need 3 robotics students”</span></div>
+            <div class="mf-branch mf-branch-down" aria-hidden="true"><span class="mf-stem"></span><div class="mf-legs"><span class="mf-leg"></span><span class="mf-leg"></span><span class="mf-leg"></span></div></div>
+            <div class="mf-lanes">
+              <div class="mf-lane"><div class="mf-node mf-ref"><span class="mf-label">Robotics coach</span></div><div class="mf-conn mf-conn-sm" aria-hidden="true"><span class="mf-stalk"></span><span class="mf-chev">▼</span></div><div class="mf-node"><span class="mf-label">Student A</span></div></div>
+              <div class="mf-lane"><div class="mf-node mf-ref"><span class="mf-label">Professor</span></div><div class="mf-conn mf-conn-sm" aria-hidden="true"><span class="mf-stalk"></span><span class="mf-chev">▼</span></div><div class="mf-node"><span class="mf-label">Student B</span></div></div>
+              <div class="mf-lane"><div class="mf-node mf-ref"><span class="mf-label">Research mentor</span></div><div class="mf-conn mf-conn-sm" aria-hidden="true"><span class="mf-stalk"></span><span class="mf-chev">▼</span></div><div class="mf-node"><span class="mf-label">Student C</span></div></div>
+            </div>
+            <div class="mf-branch mf-branch-up" aria-hidden="true"><div class="mf-legs"><span class="mf-leg"></span><span class="mf-leg"></span><span class="mf-leg"></span></div><span class="mf-stem"></span></div>
+            <div class="mf-node mf-pool"><span class="mf-label">Covenda talent pool</span></div>
+            <div class="mf-conn" aria-hidden="true"><span class="mf-stalk"></span><span class="mf-chev">▼</span></div>
+            <div class="mf-node mf-engine"><span class="mf-label">Compatibility engine</span></div>
+            <div class="mf-conn" aria-hidden="true"><span class="mf-stalk"></span><span class="mf-chev">▼</span></div>
+            <div class="mf-node mf-top"><span class="mf-label">Top candidates</span></div>
+          </figure>
+          <p class="mf-foot">Illustrative. Talent arrives through <b>vouched referrers</b> — a coach, a professor, a research mentor — not an open signup. The engine ranks <b>for this request</b>, with the evidence attached; it is not a global leaderboard of students.</p>
+        </div>
         <div class="prompt-links" aria-label="Questions to consider">
           <button type="button" data-prompt="What would the finished result let your team do?">What would finished unlock?<svg><use href="#icon-chevron"/></svg></button>
           <button type="button" data-prompt="What information can be shared safely without restricted or proprietary records?">What can be shared safely?<svg><use href="#icon-chevron"/></svg></button>
