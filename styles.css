@@ -2517,6 +2517,9 @@ body[data-audience="university"] .roles-section { display: none; }
 
 /* ---- "Why now" statistics band + founder note ---- */
 .stat-band { padding: clamp(56px, 7vw, 104px) var(--page-gutter); background: #fff; border-top: 1px solid var(--line); }
+/* On the student view the tree is hidden, so the founder note is the last thing in the
+   band — trim the trailing padding so it doesn't leave a big gap before the next section. */
+body[data-audience="student"] .stat-band { padding-bottom: clamp(24px, 3vw, 44px); }
 body[data-audience="company"] .stat-band,
 body[data-audience="university"] .stat-band { display: none; }
 .stat-band-inner { width: min(100%, var(--content)); margin: 0 auto; }

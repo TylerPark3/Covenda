@@ -248,19 +248,40 @@
       <header><div><p class="eyebrow">Batch application</p><h2 id="batchApplyTitle">Apply to this batch.</h2><p id="batchApplySummary" class="dialog-sub"></p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
       <div class="dialog-body">
         <input name="batchId" type="hidden">
-        <p class="batch-apply-intro">Elite batches are reviewed by hand. The more you share, the stronger your case — take a few minutes.</p>
-        <label>Why this cohort? <b class="req">Required</b><textarea name="note" rows="4" minlength="40" maxlength="2000" required placeholder="What draws you to this discipline, and what do you want to get out of the cohort?"></textarea></label>
-        <label>Relevant experience <small>What you've built, studied, or worked on</small><textarea name="experience" rows="4" maxlength="2000" placeholder="Coursework, internships, projects, competitions — anything that shows you can do this work."></textarea></label>
-        <label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Python, financial modeling, research"></label>
-        <div class="form-grid">
-          <label>Hours per week <small>Optional</small><input name="hoursPerWeek" type="number" min="1" max="60" inputmode="numeric" placeholder="10"></label>
-          <label>Earliest start <small>Optional</small><input name="startDate" type="date"></label>
+        <div class="batch-apply-detail">
+          <div class="batch-detail-block"><h4>Who this cohort is for</h4><p id="batchApplyWho"></p></div>
+          <div class="batch-detail-block"><h4>Where admitted students go</h4><p id="batchApplySamples"></p></div>
         </div>
-        <div class="form-grid">
-          <label>Work sample 1 <small>Portfolio, repo, doc</small><input name="workSample1" type="url" placeholder="https://…"></label>
-          <label>Work sample 2 <small>Optional</small><input name="workSample2" type="url" placeholder="https://…"></label>
+
+        <div class="batch-apply-step">
+          <p class="batch-step-kicker">Step 1 · Your ~5-minute video <b class="req">Required</b></p>
+          <div class="batch-prompt-box">
+            <span class="batch-prompt-tag">Your assigned prompt</span>
+            <p id="batchVideoPrompt"></p>
+          </div>
+          <p class="batch-step-hint">Record a short, unscripted video (Loom, YouTube unlisted, or Drive) answering the prompt above — about five minutes. Paste the shareable link here.</p>
+          <label>Video link <b class="req">Required</b><input name="videoUrl" type="url" placeholder="https://…" required></label>
         </div>
-        <label>Intro video <small>Optional link — Loom, YouTube, Drive</small><input name="videoUrl" type="url" placeholder="https://…"></label>
+
+        <div class="batch-apply-step">
+          <p class="batch-step-kicker">Step 2 · Your interest in the field</p>
+          <div id="batchInterestQuestions" class="batch-interest-list"></div>
+        </div>
+
+        <div class="batch-apply-step">
+          <p class="batch-step-kicker">Step 3 · About you</p>
+          <label>Why this cohort? <b class="req">Required</b><textarea name="note" rows="4" minlength="40" maxlength="2000" required placeholder="What draws you to this discipline, and what do you want to get out of the cohort?"></textarea></label>
+          <label>Relevant experience <small>What you've built, studied, or worked on</small><textarea name="experience" rows="4" maxlength="2000" placeholder="Coursework, internships, projects, competitions — anything that shows you can do this work."></textarea></label>
+          <label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Python, financial modeling, research"></label>
+          <div class="form-grid">
+            <label>Hours per week <small>Optional</small><input name="hoursPerWeek" type="number" min="1" max="60" inputmode="numeric" placeholder="10"></label>
+            <label>Earliest start <small>Optional</small><input name="startDate" type="date"></label>
+          </div>
+          <div class="form-grid">
+            <label>Work sample 1 <small>Portfolio, repo, doc</small><input name="workSample1" type="url" placeholder="https://…"></label>
+            <label>Work sample 2 <small>Optional</small><input name="workSample2" type="url" placeholder="https://…"></label>
+          </div>
+        </div>
         <div class="batch-resume-row">
           <button type="button" class="portal-ghost compact" id="batchResumeBtn"><svg><use href="#p-plus"/></svg>Attach résumé / CV</button>
           <input type="file" id="batchResumeInput" accept=".pdf,.doc,.docx" hidden>

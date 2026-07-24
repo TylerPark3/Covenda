@@ -715,6 +715,17 @@ export async function applyToBatch(member, input) {
     },
     workSamples,
     videoUrl: cleanUrl(input.videoUrl),
+    // The prompt the student was assigned + their video answers it; store it so review is
+    // self-contained (the reviewer sees which prompt they were answering).
+    videoPrompt: cleanText(input.videoPrompt, 500) || null,
+    // Short answers gauging genuine interest in the batch's vertical.
+    interest: Array.isArray(input.interest)
+      ? input.interest.slice(0, 10).map(a => ({
+          id: cleanText(a?.id, 40),
+          question: cleanText(a?.question, 300),
+          answer: cleanText(a?.answer, 600),
+        })).filter(a => a.answer)
+      : [],
     resumeUrl: cleanUrl(input.resumeUrl),
     referral: cleanReferral(input.referral, verifiedPartnersFromEnv(process.env)),
     verticals: profile.verticals || [],

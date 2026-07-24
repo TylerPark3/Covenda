@@ -231,6 +231,27 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-tier.is-elite { border-color:var(--gold); background:var(--gold); color:#1c1300; }
 .batch-card .discover-actions { margin-top:auto; padding-top:16px; align-items:center; }
 .batch-price { margin-right:auto; font-size:12px; font-weight:700; color:var(--gold-deep); }
+/* Bigger, expandable batch cards (student view). */
+.batch-list { grid-template-columns:repeat(auto-fill,minmax(380px,1fr)); }
+.batch-card-lg { padding:24px; gap:2px; }
+.batch-card-lg .discover-card-summary { margin:12px 0 4px; color:var(--muted); font-size:12.5px; line-height:1.65; }
+.batch-actions { justify-content:flex-start; gap:10px; }
+.batch-expand { display:inline-flex; align-items:center; gap:6px; }
+.batch-detail { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); display:grid; gap:14px; }
+.batch-detail-block h4 { margin:0 0 5px; font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--gold-deep); }
+.batch-detail-block p { margin:0; color:var(--muted); font-size:12.5px; line-height:1.65; }
+/* Apply dialog: detail recap + stepped application (video prompt + interest questions). */
+.batch-apply-detail { display:grid; gap:12px; padding:14px 16px; border:1px solid var(--line); border-radius:12px; background:var(--gold-pale); }
+.batch-apply-detail .batch-detail-block p { color:#5c4a26; }
+.batch-apply-step { margin-top:20px; }
+.batch-step-kicker { margin:0 0 10px; font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--gold-deep); }
+.batch-prompt-box { padding:14px 16px; border:1px solid rgba(180,123,32,.35); border-left:3px solid var(--gold); border-radius:0 12px 12px 0; background:#fff; }
+.batch-prompt-tag { display:block; margin-bottom:6px; font-size:8px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--gold-deep); }
+.batch-prompt-box p { margin:0; font-family:var(--font-display); font-size:16px; line-height:1.45; color:var(--ink); }
+.batch-step-hint { margin:10px 0 12px; color:var(--muted); font-size:11px; line-height:1.55; }
+.batch-interest-list { display:grid; gap:14px; }
+.batch-interest-q { display:block; }
+.batch-interest-label { display:block; margin-bottom:6px; font-size:12px; font-weight:600; color:var(--ink); line-height:1.45; }
 .batch-roster { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
 .batch-roster-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
 .batch-roster-empty { margin:0; color:var(--muted); font-size:12px; line-height:1.6; }

@@ -253,6 +253,8 @@ function batchApplicationRow(batch, app) {
   const materials = app.materials || {};
   const field = (label, value) => { const wrap = document.createElement('div'); wrap.className = 'admin-batch-app-field'; const l = document.createElement('span'); l.className = 'admin-batch-app-flabel'; l.textContent = label; const p = document.createElement('p'); p.className = 'admin-batch-app-ftext'; p.textContent = value; wrap.append(l, p); who.append(wrap); };
   if (materials.note) field('Why this cohort', materials.note);
+  if (materials.videoPrompt) field('Video prompt (assigned)', materials.videoPrompt);
+  (materials.interest || []).forEach(a => { if (a && a.answer) field(a.question || 'Interest', a.answer); });
   if (materials.experience) field('Relevant experience', materials.experience);
   if ((materials.skills || []).length) { const wrap = document.createElement('div'); wrap.className = 'admin-batch-app-tags'; materials.skills.slice(0, 12).forEach(s => { const t = document.createElement('span'); t.className = 'is-skill'; t.textContent = s; wrap.append(t); }); who.append(wrap); }
   const av = materials.availability || {};

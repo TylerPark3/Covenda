@@ -791,8 +791,53 @@ async function toggleBatchRoster(batch,card,button){
   }catch(error){button.textContent=error.message;setTimeout(()=>{button.textContent=original;},3200);}
   finally{button.disabled=false;}
 }
+// ---- Batch content generators ----
+// Batches carry a name + optional discipline/description from the operator. The rest of the
+// student-facing detail (who it's for, the kind of teams it feeds, the video prompt, the
+// interest questions) is generated from those fields so a batch reads richly without the
+// operator hand-filling everything. Admin-entered overrides (batch.student_profile,
+// batch.sample_companies) win when present. We describe partner companies by TYPE only —
+// never inventing named partnerships — and frame them honestly for a pilot stage.
+function batchVertical(batch){return (batch.discipline||batch.name||'this field').trim();}
+function batchStudentProfile(batch){
+  return (batch.student_profile||'').trim()||`Students who can already ship in ${batchVertical(batch)} — not learning it from scratch on the job. We look for a track record you can point to (projects, research, competitions, or real deliverables), a professor or club who'll vouch for you, and the judgment to work with little hand-holding. Drive and follow-through count more than a specific GPA or title.`;
+}
+function batchSampleCompanies(batch){
+  return (batch.sample_companies||'').trim()||`The kind of teams this cohort is built for: seed and Series-A startups working in ${batchVertical(batch)}, and small operator-led companies that need senior-quality work without a full-time hire. Exact companies vary each season — admitted students are surfaced directly to the partners hiring that cohort.`;
+}
+// A small bank of prompts. One is assigned at random when a student opens the application, so
+// the video answer is spontaneous rather than over-rehearsed. {v} = the batch's vertical.
+const BATCH_VIDEO_PROMPTS=[
+  'Walk us through something you built or figured out in {v} that you are genuinely proud of — what was hard about it, and what would you do differently now?',
+  'Pick a real problem a small team in {v} is likely facing today. How would you approach it in your first two weeks, with limited context and little hand-holding?',
+  'Teach us one non-obvious thing about {v} — explain it so a smart person outside the field could follow.',
+  'Tell us about a time you shipped something with an unclear spec. How did you decide what "done" meant, and were you right?',
+  'What is a strong opinion you hold about {v} that a lot of people would disagree with — and what convinced you?',
+  'Describe the last thing in {v} you taught yourself without being told to. Why that, and how did you go about it?',
+];
+function pickBatchPrompt(batch){
+  const v=batchVertical(batch);
+  const raw=BATCH_VIDEO_PROMPTS[Math.floor(Math.random()*BATCH_VIDEO_PROMPTS.length)];
+  return raw.replace(/\{v\}/g,v);
+}
+// Short questions that gauge genuine interest in the batch's vertical (not generic fit).
+function batchInterestQuestions(batch){
+  const v=batchVertical(batch);
+  return [
+    {id:'why',label:`Why ${v}? What pulls you toward this vertical specifically?`,type:'text',placeholder:'A sentence or two — be honest, not polished.'},
+    {id:'depth',label:`How deep are you in ${v} today?`,type:'select',options:['Just starting to explore it','Actively building or studying it','Worked on real projects in it','Deep — it is my main focus']},
+    {id:'commit',label:`If admitted, how set are you on working in ${v}?`,type:'select',options:['Just curious','Interested','Strongly interested','It is the plan']},
+  ];
+}
+function batchDetailSection(title,body){
+  const wrap=document.createElement('div');wrap.className='batch-detail-block';
+  const h=document.createElement('h4');h.textContent=title;wrap.append(h);
+  const p=document.createElement('p');p.textContent=body;wrap.append(p);
+  return wrap;
+}
+
 function batchCard(batch,application){
-  const card=document.createElement('article');card.className='batch-card'+(batch.tier==='elite'?' is-elite':'');
+  const card=document.createElement('article');card.className='batch-card batch-card-lg'+(batch.tier==='elite'?' is-elite':'');
   const top=document.createElement('div');top.className='batch-card-top';
   const h=document.createElement('h3');h.textContent=batch.name;top.append(h);
   top.append(pill(batch.tier==='elite'?'Elite':'Open',batch.tier==='elite'?'batch-tier is-elite':'batch-tier'));
@@ -803,14 +848,60 @@ function batchCard(batch,application){
   if(batch.season)meta.append(discoverChip('Season',batch.season));
   if(meta.childElementCount)card.append(meta);
   if(batch.description){const p=document.createElement('p');p.className='discover-card-summary';p.textContent=batch.description;card.append(p);}
-  const actions=document.createElement('div');actions.className='discover-actions';
-  if(application){actions.append(pill(BATCH_STATUS_LABELS[application.status]||titleCase(application.status),'status-pill',application.status));}
-  else{const apply=document.createElement('button');apply.type='button';apply.className='portal-primary compact';apply.textContent='Apply';apply.disabled=batch.status!=='open';if(batch.status!=='open')apply.title='Applications are closed for this batch.';apply.addEventListener('click',()=>openBatchApply(batch));actions.append(apply);}
-  card.append(actions);return card;
+
+  // Expandable detail panel: who it's for, the kind of teams it feeds, and how the application works.
+  const detail=document.createElement('div');detail.className='batch-detail';detail.hidden=true;
+  detail.append(batchDetailSection('Who this cohort is for',batchStudentProfile(batch)));
+  detail.append(batchDetailSection('Where admitted students go',batchSampleCompanies(batch)));
+  detail.append(batchDetailSection('How the application works',`Two parts, about 15 minutes total: a short ~5-minute video answering a prompt we assign you when you start (so it stays spontaneous), and a few written questions about your interest in ${batchVertical(batch)}. An operator reviews every application by hand.`));
+
+  const actions=document.createElement('div');actions.className='discover-actions batch-actions';
+  const expand=document.createElement('button');expand.type='button';expand.className='portal-ghost compact batch-expand';expand.setAttribute('aria-expanded','false');
+  expand.append(document.createTextNode('Expand'));
+  expand.addEventListener('click',()=>{const open=detail.hidden;detail.hidden=!open;expand.setAttribute('aria-expanded',String(open));expand.firstChild.textContent=open?'Show less':'Expand';});
+  actions.append(expand);
+  if(application){
+    actions.append(pill(BATCH_STATUS_LABELS[application.status]||titleCase(application.status),'status-pill',application.status));
+  }else{
+    const learn=document.createElement('button');learn.type='button';learn.className='portal-primary compact';learn.textContent='Learn more & apply';learn.disabled=batch.status!=='open';if(batch.status!=='open')learn.title='Applications are closed for this batch.';learn.addEventListener('click',()=>openBatchApply(batch));actions.append(learn);
+  }
+  card.append(actions,detail);return card;
 }
 let batchResumeUrl='';
 function renderBatchResumeChip(name){const chip=$('#batchResumeChip');if(!chip)return;if(!name){chip.hidden=true;chip.textContent='';return;}chip.hidden=false;chip.replaceChildren();const s=document.createElement('span');s.textContent=name;const x=document.createElement('button');x.type='button';x.setAttribute('aria-label','Remove résumé');x.textContent='×';x.addEventListener('click',()=>{batchResumeUrl='';renderBatchResumeChip('');});chip.append(s,x);}
-function openBatchApply(batch){const form=$('#batchApplyForm');if(!form)return;form.reset();batchResumeUrl='';renderBatchResumeChip('');form.elements.batchId.value=batch.id;$('#batchApplyTitle').textContent=`Apply to ${batch.name}.`;$('#batchApplySummary').textContent=[batch.tier==='elite'?'Elite cohort':'Cohort',batch.discipline,batch.partner_org].filter(Boolean).join(' · ');setDialogMessage('#batchApplyMessage','');$('#batchApplyDialog').showModal();}
+let currentBatchPrompt='';
+let batchInterestSpec=[];
+function renderBatchInterest(batch){
+  const host=$('#batchInterestQuestions');if(!host)return;host.replaceChildren();
+  batchInterestSpec=batchInterestQuestions(batch);
+  batchInterestSpec.forEach(q=>{
+    const label=document.createElement('label');label.className='batch-interest-q';
+    const span=document.createElement('span');span.className='batch-interest-label';span.textContent=q.label;label.append(span);
+    let field;
+    if(q.type==='select'){field=document.createElement('select');const ph=document.createElement('option');ph.value='';ph.textContent='Choose one…';field.append(ph);(q.options||[]).forEach(o=>{const opt=document.createElement('option');opt.value=o;opt.textContent=o;field.append(opt);});}
+    else{field=document.createElement('textarea');field.rows=2;field.maxLength=600;field.placeholder=q.placeholder||'';}
+    field.name='interest_'+q.id;label.append(field);host.append(label);
+  });
+}
+function readBatchInterest(form){
+  return batchInterestSpec.map(q=>({id:q.id,question:q.label,answer:(form.elements['interest_'+q.id]?.value||'').trim()})).filter(a=>a.answer);
+}
+function openBatchApply(batch){
+  const form=$('#batchApplyForm');if(!form)return;
+  form.reset();batchResumeUrl='';renderBatchResumeChip('');
+  form.elements.batchId.value=batch.id;
+  $('#batchApplyTitle').textContent=`Apply to ${batch.name}.`;
+  $('#batchApplySummary').textContent=[batch.tier==='elite'?'Elite cohort':'Cohort',batch.discipline,batch.partner_org].filter(Boolean).join(' · ');
+  // Open the application "inside" the batch: recap who it's for and where students go, then the
+  // assigned video prompt and the interest questions, so it doesn't feel like a bare form.
+  const who=$('#batchApplyWho');if(who)who.textContent=batchStudentProfile(batch);
+  const samples=$('#batchApplySamples');if(samples)samples.textContent=batchSampleCompanies(batch);
+  currentBatchPrompt=pickBatchPrompt(batch); // a fresh random prompt each time the form opens
+  const promptEl=$('#batchVideoPrompt');if(promptEl)promptEl.textContent=currentBatchPrompt;
+  renderBatchInterest(batch);
+  setDialogMessage('#batchApplyMessage','');
+  $('#batchApplyDialog').showModal();
+}
 function renderBriefDocument(root,brief,fallbackSummary){
   root.replaceChildren();
   const add=(title,text)=>{if(!text)return;const s=briefSection(title);const p=document.createElement('p');p.className='brief-text';p.textContent=text;s.append(p);root.append(s);};
@@ -1169,10 +1260,11 @@ $('#applyForm').addEventListener('submit',async event=>{event.preventDefault();c
 $('#batchApplyForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const e=form.elements;
   if(e.note.value.trim().length<40){setDialogMessage('#batchApplyMessage','Tell us why this cohort fits you — a few sentences at least.',true);e.note.focus();return;}
+  if(!e.videoUrl.value.trim()){setDialogMessage('#batchApplyMessage','Add the link to your ~5-minute video answering the prompt above.',true);e.videoUrl.focus();return;}
   button.disabled=true;setDialogMessage('#batchApplyMessage','Submitting your application…');
   const skills=e.skills.value.split(',').map(s=>s.trim()).filter(Boolean);
   try{
-    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),resumeUrl:batchResumeUrl,referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
+    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(form),resumeUrl:batchResumeUrl,referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
     $('#batchApplyDialog').close();await loadDashboard();setView('batches');
   }catch(error){setDialogMessage('#batchApplyMessage',error.message,true);}finally{button.disabled=false;}
 });
