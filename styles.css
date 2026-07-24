@@ -2887,3 +2887,24 @@ body[data-audience="university"] #referrerDashboard { display: block; }
   #covendaModel.ct-pre .ct-trunk { transform: none; }
   #covendaModel.ct-pre .ct-glow, #covendaModel.ct-pre .ct-card { opacity: 1; }
 }
+
+/* ---- Student of the Week (flat, consent-first; hidden until real data). ---- */
+body:not([data-audience="home"]) .spotlight-section { display: none; }
+.spotlight-section { padding: clamp(48px, 7vw, 96px) var(--page-gutter); border-top: 1px solid var(--line); background: #fff; }
+.spotlight-inner { max-width: 760px; margin: 0 auto; }
+.spotlight-card { margin-top: clamp(22px, 3vw, 34px); padding: clamp(20px, 3vw, 30px); border: 1px solid var(--line-strong); }
+.spotlight-head { display: flex; gap: 16px; align-items: center; }
+.spotlight-avatar { flex: 0 0 auto; width: 64px; height: 64px; display: grid; place-items: center; border: 1px solid var(--line-strong); font-family: var(--font-display); font-size: 28px; color: var(--gold-deep); overflow: hidden; }
+.spotlight-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.spotlight-id h3 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+.spotlight-id p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.spotlight-verified { margin-left: 8px; padding: 2px 8px; border: 1px solid var(--gold-deep); font-size: 9px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-deep); vertical-align: middle; }
+.spotlight-tier { display: inline-block; margin-top: 8px; padding: 3px 9px; border: 1px solid var(--line-strong); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.spotlight-tier.is-gold { border-color: var(--gold-deep); color: var(--gold-deep); }
+.spotlight-tier.is-silver { color: #6b6b66; }
+.spotlight-skills { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
+.spotlight-skills span { padding: 5px 11px; border: 1px solid var(--line); font-size: 11.5px; color: #31312e; }
+.spotlight-stats { margin: 14px 0 0; color: var(--gold-deep); font-size: 12.5px; font-weight: 650; }
+.spotlight-project { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line); font-size: 12.5px; }
+.spotlight-project span { color: var(--muted); }
+.spotlight-card .gold-button { margin-top: 18px; }

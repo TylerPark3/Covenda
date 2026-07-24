@@ -4498,6 +4498,44 @@ function initHeroField() {
   io.observe(tree);
 })();
 
+// Student of the Week — real, consented data only. Empty response hides the section.
+(function initSpotlight() {
+  var section = document.getElementById('studentOfWeek');
+  var body = document.getElementById('spotlightBody');
+  if (!section || !body || typeof fetch !== 'function') return;
+  fetch('/api/featured-student').then(function (res) { return res.ok ? res.json() : null; }).then(function (data) {
+    var s = data && data.featured;
+    if (!s || !s.name) return; // stays hidden — never a placeholder person
+    var card = document.createElement('article'); card.className = 'spotlight-card';
+    var head = document.createElement('div'); head.className = 'spotlight-head';
+    var avatar = document.createElement('div'); avatar.className = 'spotlight-avatar';
+    if (s.avatarUrl && /^https:\/\//.test(s.avatarUrl)) { var img = document.createElement('img'); img.src = s.avatarUrl; img.alt = s.name; avatar.append(img); }
+    else avatar.textContent = (s.name || 'C').slice(0, 1);
+    var id = document.createElement('div'); id.className = 'spotlight-id';
+    var h3 = document.createElement('h3'); h3.textContent = s.name;
+    if (s.identityVerified) { var v = document.createElement('span'); v.className = 'spotlight-verified'; v.textContent = 'Identity verified'; h3.append(v); }
+    var sub = document.createElement('p'); sub.textContent = [s.headline, s.school, s.graduationYear ? 'Class of ' + s.graduationYear : ''].filter(Boolean).join(' · ');
+    id.append(h3, sub);
+    if (s.evidenceTier) { var tier = document.createElement('span'); tier.className = 'spotlight-tier is-' + s.evidenceTier; tier.textContent = s.evidenceTier + ' evidence'; id.append(tier); }
+    head.append(avatar, id); card.append(head);
+    if (s.skills && s.skills.length) { var sk = document.createElement('div'); sk.className = 'spotlight-skills'; s.skills.forEach(function (x) { var c = document.createElement('span'); c.textContent = x; sk.append(c); }); card.append(sk); }
+    var stats = document.createElement('p'); stats.className = 'spotlight-stats';
+    stats.textContent = (s.verifiedRecords || 0) + ' verified work record' + (s.verifiedRecords === 1 ? '' : 's') + ' on Covenda';
+    card.append(stats);
+    (s.projects || []).forEach(function (p) {
+      var pr = document.createElement('div'); pr.className = 'spotlight-project';
+      var t = document.createElement('strong'); t.textContent = p.title; pr.append(t);
+      var m = document.createElement('span'); m.textContent = [p.vertical, p.shipped ? 'shipped ✓' : '', p.outcome ? 'led to: ' + p.outcome.replace(/_/g, ' ') : ''].filter(Boolean).join(' · '); pr.append(m);
+      card.append(pr);
+    });
+    var cta = document.createElement('a'); cta.className = 'gold-button compact'; cta.href = 'portal.html?intent=request-intro';
+    cta.textContent = 'Request an intro through Covenda';
+    card.append(cta);
+    body.replaceChildren(card);
+    section.hidden = false;
+  }).catch(function () { /* stays hidden */ });
+})();
+
 initCovendaMotion();
 initFlowDemo();
 initIcosahedron();

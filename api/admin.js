@@ -603,7 +603,7 @@ export async function listAdminUsers(supabase) {
   const ids = users.map(u => u.id).filter(Boolean);
   let byId = new Map();
   try {
-    const { data: profiles } = await supabase.from('member_profiles').select('user_id, display_name, organization_name, role').in('user_id', ids);
+    const { data: profiles } = await supabase.from('member_profiles').select('user_id, display_name, organization_name, role, spotlight_consent, featured_at').in('user_id', ids);
     byId = new Map((profiles || []).map(p => [p.user_id, p]));
   } catch { byId = new Map(); }
   return users.map(u => {
@@ -614,6 +614,8 @@ export async function listAdminUsers(supabase) {
       role: p.role || null,
       name: p.display_name || p.organization_name || '',
       created_at: u.created_at || '',
+      spotlight_consent: p.spotlight_consent === true,
+      featured: Boolean(p.featured_at),
     };
   });
 }
@@ -685,6 +687,24 @@ export async function runOpportunityMatch(supabase, input) {
     } catch { /* matches table not migrated yet — shortlist still returns for display */ }
   }
   return result;
+}
+
+// Student of the Week: set/clear the ONE featured student. Only spotlight-consented
+// students are eligible — consent is the hard gate, checked here every time.
+export async function setFeaturedStudent(supabase, input) {
+  if (input.clear === true) {
+    await supabase.from('member_profiles').update({ featured_at: null }).not('featured_at', 'is', null);
+    return { featured: null };
+  }
+  const userId = text(input.userId, 50);
+  if (!UUID_PATTERN.test(userId)) throw new Error('Choose a valid student.');
+  const { data: profile } = await supabase.from('member_profiles').select('user_id, role, spotlight_consent').eq('user_id', userId).maybeSingle();
+  if (!profile || profile.role !== 'student') throw new Error('Choose a student account.');
+  if (profile.spotlight_consent !== true) throw new Error('Please pick a consented student — this one has not opted in to being featured.');
+  await supabase.from('member_profiles').update({ featured_at: null }).not('featured_at', 'is', null);
+  const { error } = await supabase.from('member_profiles').update({ featured_at: new Date().toISOString() }).eq('user_id', userId);
+  if (error) throw new Error(`Please try again — featuring failed: ${String(error?.message || error).slice(0, 200)}`);
+  return { featured: userId };
 }
 
 // Record the human decision on a drafted match. The rationale is REQUIRED — enforced here
@@ -829,6 +849,9 @@ export default async function handler(req, res, dependencies = {}) {
     }
     if (patchInput.action === 'decide-match') {
       return res.status(200).json({ ok: true, match: await decideMatch(admin.supabase, patchInput) });
+    }
+    if (patchInput.action === 'set-featured') {
+      return res.status(200).json({ ok: true, result: await setFeaturedStudent(admin.supabase, patchInput) });
     }
     const submission = await updateAdminSubmission(admin.supabase, patchInput, admin.email);
     return res.status(200).json({ ok: true, submission });

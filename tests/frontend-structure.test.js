@@ -28,8 +28,8 @@ test('student-first hero offers five work paths and a scroll continuation', () =
 
 test('Covenda restores the skippable editorial intro and keeps it replayable', () => {
   assert.match(html, /id="introScreen"/);
-  assert.match(html, /Students get paid\./);
-  assert.match(html, /Employers get work done\./);
+  assert.match(html, /Students get paid to prove it\./);
+  assert.match(html, /Startups get proven talent\./);
   assert.match(html, /id="introEnter"[^>]*>[\s\S]*Enter Covenda/);
   assert.match(html, /id="introSkip"[^>]*>Skip intro/);
   assert.match(html, /data-action="replay-intro"/);

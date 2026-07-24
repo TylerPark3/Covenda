@@ -429,6 +429,19 @@ function renderMembers(){
     if(m.created_at){const d=document.createElement('small');d.textContent=`Joined ${dateLabel(m.created_at)}`;meta.append(d);}
     const del=document.createElement('button');del.type='button';del.className='admin-user-delete';del.textContent='Delete';
     del.addEventListener('click',()=>deleteMember(m,del));
+    // Student of the Week: only consented students are featureable (consent is the gate).
+    if(m.role==='student'&&m.spotlight_consent){
+      const feat=document.createElement('button');feat.type='button';feat.className='admin-user-feature'+(m.featured?' is-featured':'');
+      feat.textContent=m.featured?'★ Featured — clear':'☆ Feature';
+      feat.addEventListener('click',async()=>{
+        feat.disabled=true;
+        try{
+          await adminRequest({method:'PATCH',body:JSON.stringify(m.featured?{action:'set-featured',clear:true}:{action:'set-featured',userId:m.id})});
+          await loadInbox();
+        }catch(error){alert(error.message);feat.disabled=false;}
+      });
+      row.append(info,meta,feat,del);root.append(row);continue;
+    }
     row.append(info,meta,del);root.append(row);
   }
 }

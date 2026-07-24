@@ -305,3 +305,5 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .match-note { margin:0; color:#7a5a17; font-size:11.5px; }
 .match-refusal { border-left:3px solid #a43124; }
 .match-refusal ul { margin:8px 0 0; padding-left:18px; color:#65635d; font-size:12px; }
+.admin-user-feature { min-height:34px; padding:7px 12px; border:1px solid var(--gold-deep,#8d5b0f); border-radius:9px; background:#fff; color:var(--gold-deep,#8d5b0f); font-size:11px; font-weight:700; cursor:pointer; }
+.admin-user-feature.is-featured { background:var(--gold,#b47b20); color:#fff; }

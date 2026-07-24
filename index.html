@@ -54,8 +54,8 @@
         <span>Covenda</span>
       </div>
       <h1 class="intro-statement" id="introStatement">
-        <span class="intro-line" data-intro-copy="Students get paid.">Students get paid.</span>
-        <span class="intro-line is-accent" data-intro-copy="Employers get work done.">Employers get work done.</span>
+        <span class="intro-line" data-intro-copy="Students get paid to prove it.">Students get paid to prove it.</span>
+        <span class="intro-line is-accent" data-intro-copy="Startups get proven talent.">Startups get proven talent.</span>
       </h1>
       <div class="intro-actions">
         <button class="intro-enter" id="introEnter" type="button"><svg><use href="#icon-arrow-right"/></svg>Enter Covenda</button>
@@ -477,6 +477,18 @@
               </ul>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Student of the Week: consent-first spotlight. Hidden until /api/featured-student
+           returns a consented, operator-featured student — never a placeholder person. -->
+      <section class="spotlight-section" id="studentOfWeek" hidden>
+        <div class="spotlight-inner">
+          <div class="section-heading">
+            <p class="feature-kicker">Student of the week</p>
+            <h2>Meet someone who <span class="word-gold">ships</span>.</h2>
+          </div>
+          <div id="spotlightBody"></div>
         </div>
       </section>
 

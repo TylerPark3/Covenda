@@ -290,6 +290,9 @@ export async function saveMemberProfile(member, input) {
   if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
   if (input.avatarUrl !== undefined) row.avatar_url = cleanText(input.avatarUrl, 500) || null;
   if (input.emailOptOut !== undefined) row.email_opt_out = input.emailOptOut === true;
+  // Spotlight is an EXPLICIT opt-in (higher bar than portfolio visibility). Only touch the
+  // column when provided so saves keep working before the spotlight migration.
+  if (input.spotlightConsent !== undefined) row.spotlight_consent = input.spotlightConsent === true;
   // Startup work-style prefs (optional). Only touch the column when provided, so onboarding
   // keeps working before the startup_fit migration is applied.
   if (input.workStyle !== undefined) row.work_style = cleanWorkStyle(input.workStyle);
