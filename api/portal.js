@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 import { supabaseConfiguration } from './submissions.js';
 import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail } from './notify.js';
+import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
@@ -1072,6 +1073,30 @@ function portalFailure(error) {
   return { status: 503, code: 'PORTAL_UNAVAILABLE', message: 'The member portal is temporarily unavailable. Check the newest /api/portal entry in Vercel Runtime Logs.' };
 }
 
+// Skill-inference: analyze a student's linked public GitHub repo into per-skill scores.
+// The analysis engine (api/github.js) is deterministic + evidence-grounded; here we gate to
+// students, run it, and best-effort persist into the living profile (member_profiles.skill_signals).
+// Persistence is graceful: if the column isn't migrated yet, the analysis still returns for display.
+export async function analyzeGithub(member, input, env = process.env) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'student') throw new Error('Only student accounts can analyze a GitHub repository.');
+  const ref = parseRepoRef(input.repoUrl);
+  if (!ref) throw new Error('Enter a valid GitHub repository URL (e.g. github.com/you/project).');
+  const raw = await fetchRepoData(ref, { token: env.GITHUB_TOKEN || env.GITHUB_ANALYSIS_TOKEN || '' });
+  const analysis = analyzeRepo(raw);
+  try {
+    const { data: existing } = await member.supabase.from('member_profiles').select('skill_signals').eq('user_id', member.user.id).maybeSingle();
+    const signals = existing && existing.skill_signals && typeof existing.skill_signals === 'object' ? existing.skill_signals : {};
+    const record = { repo: analysis.repo.name, url: analysis.repo.url, skills: analysis.skills, flags: analysis.flags, needsReview: analysis.needsReview, analyzedAt: new Date().toISOString() };
+    const github = (Array.isArray(signals.github) ? signals.github : []).filter(g => g && g.repo !== record.repo);
+    github.unshift(record);
+    signals.github = github.slice(0, 20);
+    const { error } = await member.supabase.from('member_profiles').update({ skill_signals: signals }).eq('user_id', member.user.id);
+    analysis.persisted = !error;
+  } catch { analysis.persisted = false; }
+  return analysis;
+}
+
 export default async function handler(req, res, dependencies = {}) {
   const startedAt = Date.now();
   res.setHeader('Cache-Control', 'no-store');
@@ -1105,6 +1130,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'create-request') return res.status(201).json({ ok: true, request: await createProjectRequest(member, input) });
     if (req.method === 'POST' && input.action === 'apply') return res.status(201).json({ ok: true, application: await applyToProject(member, input, dependencies.env || process.env) });
     if (req.method === 'POST' && input.action === 'apply-batch') return res.status(201).json({ ok: true, application: await applyToBatch(member, input) });
+    if (req.method === 'POST' && input.action === 'analyze-github') return res.status(200).json({ ok: true, analysis: await analyzeGithub(member, input, dependencies.env || process.env) });
     if (req.method === 'POST' && input.action === 'unlock-batch') return res.status(200).json({ ok: true, result: await unlockBatch(member, input) });
     if (req.method === 'POST' && input.action === 'batch-roster') return res.status(200).json({ ok: true, roster: await loadBatchRoster(member, input) });
     if (req.method === 'POST' && input.action === 'send-message') return res.status(201).json({ ok: true, message: await sendProjectMessage(member, input) });

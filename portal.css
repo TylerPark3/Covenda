@@ -161,6 +161,32 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .request-details { margin:0; color:var(--muted); font-size:11px; line-height:1.6; }
 .request-resolution { margin:8px 0 0; padding:8px 10px; border-radius:8px; background:var(--gold-pale); color:var(--gold-deep); font-size:11px; line-height:1.55; }
 .request-time { display:block; margin-top:8px; color:var(--soft); font-size:9px; }
+/* Proof of work · GitHub skill analysis (student profile). */
+.proof-of-work { margin:22px 0 0; padding:22px; border:1px solid var(--line); border-radius:16px; background:#fff; }
+.proof-of-work h3 { margin:0; font-size:15px; letter-spacing:-.02em; }
+.pow-sub { margin:6px 0 14px; color:var(--muted); font-size:12px; line-height:1.6; max-width:640px; }
+.pow-row { display:flex; gap:10px; flex-wrap:wrap; }
+.pow-input { flex:1 1 260px; min-height:44px; padding:11px 13px; border:1px solid var(--line-strong); border-radius:11px; background:#fff; color:var(--ink); }
+.pow-input:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(180,123,32,.1); outline:0; }
+.pow-row .portal-primary { flex:0 0 auto; }
+.pow-status { margin:10px 0 0; color:var(--muted); font-size:11.5px; }
+.pow-status.is-error { color:var(--danger); }
+.pow-results { display:grid; gap:14px; margin-top:16px; }
+.pow-card { padding:18px; border:1px solid var(--line); border-radius:14px; background:linear-gradient(180deg,#fffdf9,#fff 60%); }
+.pow-card-top { display:flex; align-items:center; gap:10px; }
+.pow-card-top h4 { margin:0; font-size:13.5px; }
+.pow-card-top a { color:var(--gold-deep); text-decoration:none; }
+.pow-card-top a:hover { text-decoration:underline; }
+.pow-flag { margin:8px 0 0; padding:9px 11px; border-left:3px solid var(--gold); border-radius:0 8px 8px 0; background:var(--gold-pale); color:#5c4a26; font-size:11px; line-height:1.5; }
+.pow-skill-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:12px; margin-top:14px; }
+.pow-skill { padding:12px 14px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+.pow-skill-line { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.pow-skill-line strong { font-size:12.5px; color:var(--ink); }
+.pow-score { font-family:var(--font-display,inherit); font-size:15px; font-weight:700; color:var(--gold-deep); }
+.pow-conf { display:block; margin:4px 0 6px; font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--soft); }
+.pow-conf[data-conf="high"] { color:var(--success); }
+.pow-conf[data-conf="medium"] { color:var(--gold-deep); }
+.pow-evidence { margin:0; color:var(--muted); font-size:11px; line-height:1.5; }
 /* Work-trial ladder: names the "proof precedes access" model on the projects view. */
 .work-trial-ladder { display:flex; align-items:stretch; gap:14px; max-width:1240px; margin:0 auto 24px; }
 .wtl-step { flex:1; display:flex; align-items:flex-start; gap:12px; padding:16px 18px; border:1px solid var(--line); border-radius:14px; background:#fff; }

@@ -988,7 +988,57 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   bar.append(search,vsel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student')renderProofOfWork(root,profile);}
+
+// Skill-inference (GitHub): link a public repo -> per-skill scores with evidence. Scores from
+// code alone are anchored by trials + referrals, never proof on their own (anti-gaming).
+function renderProofOfWork(root,profile){
+  const sec=document.createElement('section');sec.className='proof-of-work';
+  const h=document.createElement('h3');h.textContent='Proof of work · GitHub';
+  const sub=document.createElement('p');sub.className='pow-sub';sub.textContent='Link a public repo. Covenda reads the code and commit history and scores the skills it actually demonstrates — per skill, with the evidence behind each. Code alone is anchored by your trials and referrals, never proof on its own.';
+  sec.append(h,sub);
+  const row=document.createElement('div');row.className='pow-row';
+  const input=document.createElement('input');input.type='url';input.className='pow-input';input.placeholder='github.com/you/project';input.setAttribute('aria-label','GitHub repository URL');
+  const btn=document.createElement('button');btn.type='button';btn.className='portal-primary compact';btn.textContent='Analyze repo';
+  row.append(input,btn);sec.append(row);
+  const status=document.createElement('p');status.className='pow-status';status.setAttribute('aria-live','polite');sec.append(status);
+  const results=document.createElement('div');results.className='pow-results';sec.append(results);
+  const prior=(profile?.skill_signals&&Array.isArray(profile.skill_signals.github))?profile.skill_signals.github:[];
+  prior.forEach(a=>results.append(githubAnalysisCard(a)));
+  btn.addEventListener('click',async()=>{
+    const url=input.value.trim();if(!url){status.textContent='Paste a public GitHub repo URL.';status.classList.add('is-error');return;}
+    btn.disabled=true;status.textContent='Reading the repository…';status.classList.remove('is-error');
+    try{
+      const {analysis}=await portalRequest({method:'POST',body:JSON.stringify({action:'analyze-github',repoUrl:url})});
+      status.textContent=analysis.persisted?'Added to your profile.':'Analyzed. Run the skill_signals migration to keep it on your profile.';
+      const card=githubAnalysisCard({repo:analysis.repo.name,url:analysis.repo.url,skills:analysis.skills,flags:analysis.flags,needsReview:analysis.needsReview});
+      const dup=[...results.children].find(c=>c.dataset.repo===analysis.repo.name);if(dup)dup.remove();
+      results.prepend(card);input.value='';
+    }catch(e){status.textContent=(e&&e.message)||'Could not analyze that repo.';status.classList.add('is-error');}
+    finally{btn.disabled=false;}
+  });
+  root.append(sec);
+}
+function githubAnalysisCard(a){
+  const card=document.createElement('article');card.className='pow-card';card.dataset.repo=a.repo||'';
+  const top=document.createElement('div');top.className='pow-card-top';
+  const name=document.createElement('h4');if(a.url){const link=document.createElement('a');link.href=a.url;link.target='_blank';link.rel='noopener';link.textContent=a.repo;name.append(link);}else name.textContent=a.repo||'repository';
+  top.append(name);if(a.needsReview)top.append(pill('Needs review','status-pill','revise'));card.append(top);
+  (a.flags||[]).forEach(f=>{const p=document.createElement('p');p.className='pow-flag';p.textContent=f;card.append(p);});
+  const grid=document.createElement('div');grid.className='pow-skill-grid';
+  (a.skills||[]).forEach(s=>{
+    const sk=document.createElement('div');sk.className='pow-skill';
+    const line=document.createElement('div');line.className='pow-skill-line';
+    const nm=document.createElement('strong');nm.textContent=s.skill;
+    const sc=document.createElement('span');sc.className='pow-score';sc.textContent=`${Number(s.score).toFixed(1)}/10`;
+    line.append(nm,sc);sk.append(line);
+    const conf=document.createElement('span');conf.className='pow-conf';conf.dataset.conf=s.confidence||'low';conf.textContent=`${s.confidence||'low'} confidence · from ${s.source||'github'}`;sk.append(conf);
+    const ev=document.createElement('p');ev.className='pow-evidence';ev.textContent=s.evidence||'';sk.append(ev);
+    grid.append(sk);
+  });
+  if(!(a.skills||[]).length){const none=document.createElement('p');none.className='pow-evidence';none.textContent='No scored skills — the repo may be empty, tiny, or unreadable.';card.append(none);}
+  card.append(grid);return card;
+}
 
 function updateProfileFields(){const role=$('[name="role"]:checked',$('#profileForm'))?.value||state.dashboard?.profile?.role||'student';$$('[data-profile-field="organization"]').forEach(el=>el.hidden=role==='student');$$('[data-profile-field="school"],[data-profile-field="graduation"],[data-student-profile]').forEach(el=>el.hidden=role!=='student');}
 function openProfile({required=false}={}){const form=$('#profileForm');const p=state.dashboard?.profile;form.reset();if(p){form.elements.role.value=p.role;form.elements.displayName.value=p.display_name||'';form.elements.organizationName.value=p.organization_name||'';form.elements.schoolName.value=p.school_name||'';form.elements.graduationYear.value=p.graduation_year||'';form.elements.headline.value=p.headline||'';form.elements.bio.value=p.bio||'';form.elements.skills.value=(p.skills||[]).join(', ');form.elements.portfolioVisibility.checked=p.portfolio_visibility!=='private';if(form.elements.emailNotifications)form.elements.emailNotifications.checked=p.email_opt_out!==true;$$('[name="role"]',form).forEach(input=>input.disabled=true);}else{$$('[name="role"]',form).forEach(input=>input.disabled=false);const inferred=state.dashboard?.user?.metadata?.full_name||state.dashboard?.user?.metadata?.name||'';form.elements.displayName.value=inferred;}form.dataset.required=required?'true':'false';$$('[data-close-dialog]',form).forEach(button=>button.hidden=required);updateProfileFields();setDialogMessage('#profileMessage','');$('#profileDialog').showModal();}
