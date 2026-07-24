@@ -693,6 +693,9 @@ export async function createMemberProject(member, input) {
   // Work-trial ladder: only touch access_stage when explicitly Stage 2, so default (Stage 1)
   // project creation keeps working before the access_stage migration is applied.
   if (Number(input.accessStage) === 2) row.access_stage = 2;
+  // Engagement ladder rung (delta #2). 'micro' = bounded ~5-hour task, the de-risked first
+  // bet. Only written when explicitly provided, so creation works before the migration.
+  if (['micro', 'project_short', 'project_long', 'part_time', 'internship', 'full_time'].includes(input.engagementRung)) row.engagement_rung = input.engagementRung;
 
   // Credits: charge the reach fee and hold escrow (listed + platform fee) at post time.
   const priced = input.creditsListed !== undefined;

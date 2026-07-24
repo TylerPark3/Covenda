@@ -138,3 +138,16 @@ test('ranking metrics: precision@k and NDCG@k behave on known orderings', () => 
   assert.equal(Math.round(ndcgAtK(['a', 'b', 'c'], gains, 3) * 100) / 100, 1); // ideal order
   assert.ok(ndcgAtK(['c', 'b', 'a'], gains, 3) < 1); // worst order scores lower
 });
+
+test('four-fifths report flags a group selected below 0.8x the top rate', async () => {
+  const { fourFifthsReport } = await import('../../api/match.js');
+  const out = fourFifthsReport([
+    { name: 'group-a', selected: 10, total: 20 }, // 0.50 (top)
+    { name: 'group-b', selected: 9, total: 20 },  // 0.45 -> ratio 0.9, ok
+    { name: 'group-c', selected: 7, total: 20 },  // 0.35 -> ratio 0.7, flagged
+  ]);
+  assert.equal(out.anyFlagged, true);
+  assert.equal(out.groups.find(g => g.name === 'group-c').flagged, true);
+  assert.equal(out.groups.find(g => g.name === 'group-b').flagged, false);
+  assert.deepEqual(fourFifthsReport([]).groups, []);
+});

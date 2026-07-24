@@ -703,8 +703,15 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .intake-step { display:none; }
 .intake-step.is-active { display:block; }
 .intake-step > label { display:block; margin-bottom:16px; }
-.intake-consent { display:flex; align-items:flex-start; gap:10px; padding:12px 13px; border:1px solid var(--line); border-radius:11px; font-size:11px; color:var(--muted); line-height:1.5; }
-.intake-consent input { width:16px; min-height:16px; height:16px; flex:0 0 auto; margin-top:1px; }
+.intake-consent { display:flex; align-items:flex-start; gap:14px; padding:18px 20px; border:1px solid var(--line-strong); border-radius:14px; background:#fffdf8; font-size:13px; color:#31312e; line-height:1.6; cursor:pointer; transition:border-color .14s ease, background .14s ease, box-shadow .14s ease; }
+.intake-consent:hover { border-color:var(--gold); }
+.intake-consent:has(input:checked) { border-color:var(--gold-deep); background:var(--gold-pale); box-shadow:0 0 0 3px rgba(180,123,32,.1); }
+.intake-consent input { appearance:none; -webkit-appearance:none; width:24px; min-height:24px; height:24px; flex:0 0 auto; margin-top:1px; border:2px solid var(--line-strong); border-radius:7px; background:#fff; cursor:pointer; display:grid; place-items:center; transition:border-color .14s ease, background .14s ease; }
+.intake-consent input:hover { border-color:var(--gold); }
+.intake-consent input:checked { border-color:var(--gold-deep); background:var(--gold); }
+.intake-consent input:checked::after { content:"✓"; color:#fff; font-size:15px; font-weight:800; line-height:1; }
+/* Step-1 problem box: the intake's centerpiece — give it real size and reading comfort. */
+#intakeForm [name="problem"] { min-height:240px; font-size:15px; line-height:1.6; padding:16px 18px; }
 .intake-hint { margin:14px 0 0; color:var(--soft); font-size:10px; line-height:1.5; }
 .intake-files { margin-bottom:16px; }
 .intake-file-btn { display:inline-flex; align-items:center; gap:8px; padding:11px 15px; border:1px dashed var(--line-strong); border-radius:11px; background:#fff; color:var(--gold-deep); font-size:11px; font-weight:650; cursor:pointer; }

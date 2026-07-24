@@ -186,3 +186,19 @@ export function ndcgAtK(ranked, gains, k) {
   const idcg = dcg(ideal);
   return idcg ? dcg(ranked || []) / idcg : 0;
 }
+
+// ---- Four-fifths (0.8) disparate-impact report (audit-ready from Stage 2). --------------
+// groups: [{ name, selected, total }] — selection counts per (simulated or real) category.
+// Flags any group whose selection rate falls below 0.8x the highest group's rate.
+export function fourFifthsReport(groups) {
+  const rows = (groups || [])
+    .filter(g => g && g.name && Number(g.total) > 0)
+    .map(g => ({ name: String(g.name), selected: Number(g.selected) || 0, total: Number(g.total), rate: (Number(g.selected) || 0) / Number(g.total) }));
+  const best = rows.reduce((m, r) => Math.max(m, r.rate), 0);
+  const report = rows.map(r => ({
+    ...r,
+    ratio: best ? Math.round((r.rate / best) * 100) / 100 : 1,
+    flagged: best > 0 && r.rate / best < 0.8,
+  }));
+  return { groups: report, anyFlagged: report.some(r => r.flagged), rule: 'four-fifths (0.8)' };
+}
