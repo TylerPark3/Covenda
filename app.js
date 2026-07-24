@@ -2653,7 +2653,43 @@ function candidateCard(c) {
   const trace = document.createElement('button'); trace.type = 'button'; trace.className = 'outline-button compact cand-trace';
   trace.append(document.createTextNode('Trace referral'), createIcon('icon-route'));
   trace.addEventListener('click', () => openTrace(c));
-  card.append(head, endorser, club, skills, trace);
+
+  // Expandable detail — opens the card into an illustrative mini-profile built ONLY from the
+  // candidate's own sample fields (the section is already labeled illustrative). Explainable,
+  // decision-support framing: why the fit, the evidence shape, and one honest concern.
+  const detail = document.createElement('div'); detail.className = 'cand-detail'; detail.hidden = true;
+  const why = document.createElement('div'); why.className = 'cand-detail-block';
+  const whyH = document.createElement('h4'); whyH.textContent = 'Why this fit';
+  const whyList = document.createElement('ul');
+  [
+    c.function + ' matches the requested function',
+    'Vouched by ' + ref.name + ' (' + ref.role + ') — a staked referral',
+    c.clubRecord ? c.club + ' has a positive track record on Covenda' : 'No club track record yet — individual signal only',
+  ].forEach(t => { const li = document.createElement('li'); li.textContent = t; whyList.append(li); });
+  why.append(whyH, whyList);
+  const ev = document.createElement('div'); ev.className = 'cand-detail-block';
+  const evH = document.createElement('h4'); evH.textContent = 'Evidence shape';
+  const evList = document.createElement('ul');
+  c.skills.forEach(s => { const li = document.createElement('li'); li.textContent = s + ' — demonstrated in reviewed sample work'; evList.append(li); });
+  ev.append(evH, evList);
+  const concern = document.createElement('p'); concern.className = 'cand-detail-concern';
+  concern.textContent = 'One concern to check: confirm ' + (c.skills[0] || 'the core skill') + ' depth on a bounded Stage 1 work-trial before deeper access. A score is a signal, not a guarantee.';
+  detail.append(why, ev, concern);
+
+  const expand = document.createElement('button'); expand.type = 'button'; expand.className = 'outline-button compact cand-expand';
+  expand.setAttribute('aria-expanded', 'false');
+  expand.append(document.createTextNode('View profile'), createIcon('icon-chevron'));
+  expand.addEventListener('click', () => {
+    const open = detail.hidden;
+    detail.hidden = !open;
+    expand.setAttribute('aria-expanded', String(open));
+    expand.replaceChildren(document.createTextNode(open ? 'Close profile' : 'View profile'), createIcon('icon-chevron'));
+    card.classList.toggle('is-open', open);
+  });
+
+  const actions = document.createElement('div'); actions.className = 'cand-actions';
+  actions.append(expand, trace);
+  card.append(head, endorser, club, skills, actions, detail);
   return card;
 }
 function renderCandidates() {

@@ -2782,7 +2782,14 @@ body[data-audience="company"] #candidates { display: block; }
 .cand-skills { display: flex; flex-wrap: wrap; gap: 6px; }
 .cand-skill { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; font-size: 11px; color: #55554f; }
 .cand-skill.is-match { border-color: var(--gold-light); background: var(--gold-pale); color: var(--gold-deep); font-weight: 600; }
-.cand-trace { margin-top: 2px; align-self: flex-start; }
+.cand-trace { margin-top: 0; }
+/* Expandable candidate mini-profile. */
+.cand-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.candidate-card.is-open { border-color: rgba(180,123,32,.45); }
+.cand-detail { margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--line); display: grid; gap: 12px; }
+.cand-detail-block h4 { margin: 0 0 6px; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); }
+.cand-detail-block ul { margin: 0; padding-left: 16px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.cand-detail-concern { margin: 0; padding: 10px 12px; border-left: 3px solid var(--gold); border-radius: 0 8px 8px 0; background: var(--gold-pale); color: #5c4a26; font-size: 11.5px; line-height: 1.55; }
 .cand-empty { margin-top: 18px; padding: 26px; border: 1px dashed var(--line-strong); border-radius: 16px; text-align: center; color: var(--muted); font-size: 14px; }
 .cand-honest { display: flex; align-items: flex-start; gap: 9px; margin-top: 22px; padding: 14px 16px; border-radius: 13px; border: 1px solid var(--line); background: var(--gold-pale); font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 .cand-honest svg { flex: 0 0 auto; width: 17px; height: 17px; margin-top: 1px; color: var(--gold-deep); }
