@@ -2850,6 +2850,14 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
       saveDraft(companyForm);
     }
   }
+  // "Create Project" routes into the member portal, where a company account is created/signed
+  // in and the project is actually posted. The typed brief rides along so the portal can
+  // prefill it once you're a company.
+  if (action === 'portal-create-project') {
+    const seed = $('#companyProblemSeed')?.value.trim() || '';
+    try { if (seed) localStorage.setItem('covendaProjectSeed', seed); } catch (_) {}
+    window.location.href = 'portal.html?intent=create-project';
+  }
   if (action === 'schedule-demo') scheduleDemo();
   if (action === 'university-roster') openUniversityRoster();
   if (action === 'roster-paste') {

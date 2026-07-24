@@ -94,7 +94,7 @@ function showMember() { $('#portalAuth').hidden=true; $('#portalLoading').hidden
 async function loadDashboard() {
   showLoading();
   try {
-    const dashboard=await portalRequest(); state.dashboard=dashboard; showMember(); renderDashboard(); startMessagePolling();
+    const dashboard=await portalRequest(); state.dashboard=dashboard; showMember(); renderDashboard(); startMessagePolling(); consumeProjectSeed();
     if (shouldOnboard(dashboard.profile)) startOnboarding();
     else handleCheckoutReturn();
   } catch(error) { if(session().accessToken) showAuth(error.message,true); }
@@ -1084,6 +1084,25 @@ function githubAnalysisCard(a){
 function updateProfileFields(){const role=$('[name="role"]:checked',$('#profileForm'))?.value||state.dashboard?.profile?.role||'student';$$('[data-profile-field="organization"]').forEach(el=>el.hidden=role==='student');$$('[data-profile-field="school"],[data-profile-field="graduation"],[data-student-profile]').forEach(el=>el.hidden=role!=='student');}
 function openProfile({required=false}={}){const form=$('#profileForm');const p=state.dashboard?.profile;form.reset();if(p){form.elements.role.value=p.role;form.elements.displayName.value=p.display_name||'';form.elements.organizationName.value=p.organization_name||'';form.elements.schoolName.value=p.school_name||'';form.elements.graduationYear.value=p.graduation_year||'';form.elements.headline.value=p.headline||'';form.elements.bio.value=p.bio||'';form.elements.skills.value=(p.skills||[]).join(', ');form.elements.portfolioVisibility.checked=p.portfolio_visibility!=='private';if(form.elements.emailNotifications)form.elements.emailNotifications.checked=p.email_opt_out!==true;$$('[name="role"]',form).forEach(input=>input.disabled=true);}else{$$('[name="role"]',form).forEach(input=>input.disabled=false);const inferred=state.dashboard?.user?.metadata?.full_name||state.dashboard?.user?.metadata?.name||'';form.elements.displayName.value=inferred;}form.dataset.required=required?'true':'false';$$('[data-close-dialog]',form).forEach(button=>button.hidden=required);updateProfileFields();setDialogMessage('#profileMessage','');$('#profileDialog').showModal();}
 function openProject(){setDialogMessage('#projectMessage','');$('#projectForm').reset();$('#projectDialog').showModal();}
+// A "Create Project" click on the marketing site stashes the typed brief and routes here. Once
+// the visitor is signed in as a COMPANY, open the project intake pre-filled with that brief.
+// If they aren't a company yet (new signup picking a role, or a student account), we keep the
+// brief so it opens the moment they have a company account — the "make a company account" step.
+function consumeProjectSeed(){
+  let seed=''; try{ seed=localStorage.getItem('covendaProjectSeed')||''; }catch(_){ seed=''; }
+  if(!seed) return;
+  const role=state.dashboard?.profile?.role;
+  if(role==='company'){
+    try{ localStorage.removeItem('covendaProjectSeed'); }catch(_){}
+    setView('projects');
+    openIntake();
+    const ta=$('#intakeForm [name="problem"]'); if(ta){ ta.value=seed; ta.dispatchEvent(new Event('input',{bubbles:true})); }
+  } else if(role && role!=='company'){
+    // Signed in, but not a company — a project needs a company account. Drop the brief quietly.
+    try{ localStorage.removeItem('covendaProjectSeed'); }catch(_){}
+  }
+  // No profile yet (brand-new signup mid-onboarding): keep the brief until a company profile exists.
+}
 function openApply(project){state.applyProject=project;const form=$('#applyForm');form.reset();form.elements.projectId.value=project.id;$('#applyTitle').textContent=`Apply to ${project.title}.`;$('#applySummary').textContent=project.summary;const ds=project.desired_skills;if(form.elements.skills)form.elements.skills.value=Array.isArray(ds)?ds.join(', '):(ds||'');setDialogMessage('#applyMessage','');$('#applyDialog').showModal();}
 function openSubmitWork(project){const form=$('#submitWorkForm');form.reset();form.elements.projectId.value=project.id;$('#submitWorkTitle').textContent=`Submit your work · ${project.title}`;setDialogMessage('#submitWorkMessage','');$('#submitWorkDialog').showModal();}
 function openReview(project){const form=$('#reviewForm');form.reset();form.elements.projectId.value=project.id;$('#reviewTitle').textContent=`Review · ${project.title}`;$('#reviewDeliverable').textContent=project.deliverable||'No deliverable text was provided.';const held=Number(project.credits_held)||0;
