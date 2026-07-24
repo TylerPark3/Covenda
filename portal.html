@@ -228,6 +228,13 @@
         <label class="visibility-row" data-student-profile><input name="portfolioVisibility" type="checkbox" value="members" checked><span>Let signed-in company members discover my portfolio.</span></label>
         <label class="visibility-row"><input name="emailNotifications" type="checkbox" checked><span>Email me about applications, decisions, and payouts.</span></label>
         <label class="visibility-row" data-student-profile><input name="spotlightConsent" type="checkbox"><span>Covenda may feature me publicly (photo, skills, projects, reviews) on the homepage and in marketing — Student of the Week. Off by default; withdraw anytime.</span></label>
+        <details class="appeal-box" data-student-profile>
+          <summary>Contest a score</summary>
+          <p class="appeal-note">Every Covenda score is decision support, not a verdict — and it's contestable. Tell us which score you're challenging and share the new evidence; an operator reviews every appeal and writes a resolution.</p>
+          <input name="appealSubject" type="text" maxlength="160" placeholder="Which score? (e.g. fit score on “Churn dashboard”)">
+          <textarea name="appealEvidence" rows="3" placeholder="The new evidence — links, context, what changed"></textarea>
+          <div class="appeal-actions"><button type="button" id="appealSubmitBtn" class="ghost-button">Submit appeal</button><span id="appealStatus" role="status"></span></div>
+        </details>
         <p class="dialog-message" id="profileMessage" aria-live="polite"></p>
       </div>
       <footer><button class="portal-primary" type="submit">Save my workspace<svg><use href="#p-arrow"/></svg></button></footer>

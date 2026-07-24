@@ -42,6 +42,7 @@ export const MATCH_WEIGHTS = {
 };
 
 import { canonicalizeSkill } from './skills-taxonomy.js';
+import { presentScore, evidenceTierFromClaims } from './hardening.js';
 
 const norm = s => String(s || '').toLowerCase().trim();
 const canon = s => canonicalizeSkill(s).canonical.toLowerCase();
@@ -150,7 +151,17 @@ export function scoreCandidate(opportunity, candidate, weights = MATCH_WEIGHTS) 
 // Refusal floor: a shortlist is never padded with weak fits.
 export const MATCH_FLOOR = 35;
 export function matchOpportunity(opportunity, candidates, { weights = MATCH_WEIGHTS, k = 3 } = {}) {
-  const scored = (candidates || []).map(c => ({ candidate_id: c.id, name: c.name || '', ...scoreCandidate(opportunity, c, weights) }));
+  // P1 hardening: every candidate score ships as {value, evidenceTier, band} — the band is
+  // wide for thin evidence and tightens as verification hardens. Never a bare number.
+  const scored = (candidates || []).map(c => {
+    const result = scoreCandidate(opportunity, c, weights);
+    return {
+      candidate_id: c.id,
+      name: c.name || '',
+      ...result,
+      presentation: presentScore(result.score, evidenceTierFromClaims(c.claims)),
+    };
+  });
   const passing = scored.filter(s => s.hard_filter_pass && s.score >= MATCH_FLOOR)
     .sort((a, b) => b.score - a.score)
     .slice(0, k);

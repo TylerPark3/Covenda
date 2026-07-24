@@ -305,7 +305,7 @@ function applicantCard(application,project){
   const head=document.createElement('div');head.className='applicant-head';
   const av=document.createElement('div');av.className='applicant-avatar';paintAvatarSlot(av,a?.avatar_url,initial(a?.display_name||'C'));head.append(av);
   const id=document.createElement('div');id.className='applicant-id';const name=document.createElement('h3');name.textContent=a?.display_name||'Student applicant';if(a?.identity_verified)name.append(identityBadge());const sub=document.createElement('p');sub.textContent=[a?.headline,a?.school_name,a?.graduation_year&&`Class of ${a.graduation_year}`].filter(Boolean).join(' · ')||'Student member';id.append(name,sub);head.append(id);
-  if(application.fit_score!=null)head.append(fitPill(application.fit_score));
+  if(application.fit_score!=null)head.append(fitPill(application.fit_score,application.fit&&application.fit.presentation));
   if(application.fit)card.append(fitWhyBlock({reasons:application.fit.reasons,concerns:application.fit.concerns,approach:application.fit.recommendedApproach}));
   card.append(head);
   const meta=document.createElement('div');meta.className='activity-meta';meta.append(pill(applicationStatusLabels[application.status]||titleCase(application.status),'status-pill',application.status));if(project)meta.append(pill(project.title,'status-pill'));card.append(meta);
@@ -720,7 +720,11 @@ function loadSavedProjects(){try{return new Set(JSON.parse(localStorage.getItem(
 const discoverState={tab:'best',saved:loadSavedProjects()};
 function persistSavedProjects(){try{localStorage.setItem(SAVED_KEY,JSON.stringify([...discoverState.saved]));}catch{}}
 function discoverFilters(){return{query:($('#discoverSearch')?.value||'').trim().toLowerCase(),vertical:$('#filterVertical')?.value||'',workType:$('#filterWorkType')?.value||'',minCredits:Number($('#filterMinCredits')?.value)||0,within:Number($('#filterWithin')?.value)||0,matchedOnly:$('#filterMatched')?.checked||false};}
-function fitPill(score){const s=Math.round(Number(score)||0);const el=document.createElement('span');el.className='fit-pill '+(s>=70?'is-high':s>=40?'is-mid':'is-low');el.textContent=`${s}% fit`;return el;}
+// P1 hardening: a fit score is shown with its uncertainty band and evidence tier, never as a
+// bare number — a wide band on thin evidence is the honest display.
+function fitPill(score,pres){const s=Math.round(Number(score)||0);const el=document.createElement('span');el.className='fit-pill '+(s>=70?'is-high':s>=40?'is-mid':'is-low');el.textContent=`${s}% fit`;
+  if(pres&&pres.band){const b=document.createElement('small');b.className='fit-band';b.textContent=`${pres.band.low}–${pres.band.high}`;el.append(b);el.title=`${pres.evidenceTier.replace('_','-')} evidence · likely range ${pres.band.low}–${pres.band.high} — the band tightens as verification hardens`;}
+  return el;}
 // A5: explainable fit card — ✓ reasons, △ concerns, a recommended approach, and the honest
 // early-signal + decision-support label. Same block on student Discover and applicant review.
 function fitWhyBlock({reasons=[],concerns=[],approach=''}={}){
@@ -763,7 +767,7 @@ function renderDiscover(){
 }
 function discoverCard(project,isApplied){
   const row=document.createElement('article');row.className='discover-card'+(project.matched?' is-matched':'');
-  const top=document.createElement('div');top.className='discover-card-top';const h=document.createElement('h3');h.textContent=project.title;top.append(h,fitPill(project.fitScore));row.append(top);
+  const top=document.createElement('div');top.className='discover-card-top';const h=document.createElement('h3');h.textContent=project.title;top.append(h,fitPill(project.fitScore,project.fitPresentation));row.append(top);
   const meta=document.createElement('div');meta.className='discover-meta';const pay=Number(project.credits_listed)||0;meta.append(discoverChip('Payout',pay?`${pay.toLocaleString()} credits`:'—'),discoverChip('Target',project.target_date?dateLabel(project.target_date):'Flexible'));if((project.verticals||[]).length)meta.append(discoverChip('Vertical',project.verticals[0]));row.append(meta);
   const p=document.createElement('p');p.className='discover-card-summary';p.textContent=project.summary;row.append(p);
   if((project.fitReasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';project.fitReasons.slice(0,3).forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});row.append(rs);}
@@ -977,7 +981,7 @@ function renderBriefDocument(root,brief,fallbackSummary){
 function openDiscoverDetail(project,isApplied){
   $('#discoverDetailTitle').textContent=project.title;const body=$('#discoverDetailBody');
   renderBriefDocument(body,project.ai_brief,project.summary);
-  const head=document.createElement('div');head.className='detail-head';head.append(fitPill(project.fitScore));const pay=Number(project.credits_listed)||0;const payS=document.createElement('span');payS.className='detail-pay';payS.textContent=pay?`${pay.toLocaleString()} credits payout`:'Payout TBD';head.append(payS);body.prepend(head);
+  const head=document.createElement('div');head.className='detail-head';head.append(fitPill(project.fitScore,project.fitPresentation));const pay=Number(project.credits_listed)||0;const payS=document.createElement('span');payS.className='detail-pay';payS.textContent=pay?`${pay.toLocaleString()} credits payout`:'Payout TBD';head.append(payS);body.prepend(head);
   if((project.fitReasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';project.fitReasons.forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});body.insertBefore(rs,head.nextSibling);}
   const footer=$('#discoverDetailFooter');footer.replaceChildren();const apply=document.createElement('button');apply.type='button';apply.className='portal-primary';apply.textContent=isApplied?'Interest already sent':'Apply to this project';apply.disabled=isApplied;apply.addEventListener('click',()=>{$('#discoverDetail').close();openApply(project);});footer.append(apply);
   $('#discoverDetail').showModal();
@@ -1143,7 +1147,21 @@ function githubAnalysisCard(a){
 }
 
 function updateProfileFields(){const role=$('[name="role"]:checked',$('#profileForm'))?.value||state.dashboard?.profile?.role||'student';$$('[data-profile-field="organization"]').forEach(el=>el.hidden=role==='student');$$('[data-profile-field="school"],[data-profile-field="graduation"],[data-student-profile]').forEach(el=>el.hidden=role!=='student');}
-function openProfile({required=false}={}){const form=$('#profileForm');const p=state.dashboard?.profile;form.reset();if(p){form.elements.role.value=p.role;form.elements.displayName.value=p.display_name||'';form.elements.organizationName.value=p.organization_name||'';form.elements.schoolName.value=p.school_name||'';form.elements.graduationYear.value=p.graduation_year||'';form.elements.headline.value=p.headline||'';form.elements.bio.value=p.bio||'';form.elements.skills.value=(p.skills||[]).join(', ');form.elements.portfolioVisibility.checked=p.portfolio_visibility!=='private';if(form.elements.emailNotifications)form.elements.emailNotifications.checked=p.email_opt_out!==true;if(form.elements.spotlightConsent)form.elements.spotlightConsent.checked=p.spotlight_consent===true;$$('[name="role"]',form).forEach(input=>input.disabled=true);}else{$$('[name="role"]',form).forEach(input=>input.disabled=false);const inferred=state.dashboard?.user?.metadata?.full_name||state.dashboard?.user?.metadata?.name||'';form.elements.displayName.value=inferred;}form.dataset.required=required?'true':'false';$$('[data-close-dialog]',form).forEach(button=>button.hidden=required);updateProfileFields();setDialogMessage('#profileMessage','');$('#profileDialog').showModal();}
+function openProfile({required=false}={}){const form=$('#profileForm');const p=state.dashboard?.profile;form.reset();if(p){form.elements.role.value=p.role;form.elements.displayName.value=p.display_name||'';form.elements.organizationName.value=p.organization_name||'';form.elements.schoolName.value=p.school_name||'';form.elements.graduationYear.value=p.graduation_year||'';form.elements.headline.value=p.headline||'';form.elements.bio.value=p.bio||'';form.elements.skills.value=(p.skills||[]).join(', ');form.elements.portfolioVisibility.checked=p.portfolio_visibility!=='private';if(form.elements.emailNotifications)form.elements.emailNotifications.checked=p.email_opt_out!==true;if(form.elements.spotlightConsent)form.elements.spotlightConsent.checked=p.spotlight_consent===true;
+  const appealBtn=document.getElementById('appealSubmitBtn');
+  if(appealBtn&&!appealBtn.dataset.wired){appealBtn.dataset.wired='1';appealBtn.addEventListener('click',async()=>{
+    const subject=form.elements.appealSubject?form.elements.appealSubject.value.trim():'';
+    const evidence=form.elements.appealEvidence?form.elements.appealEvidence.value.trim():'';
+    const status=document.getElementById('appealStatus');
+    appealBtn.disabled=true;if(status)status.textContent='Submitting…';
+    try{
+      await portalRequest({method:'PATCH',body:JSON.stringify({action:'appeal-score',subject,evidence})});
+      if(status)status.textContent='Appeal filed — an operator will review it and write a resolution.';
+      if(form.elements.appealSubject)form.elements.appealSubject.value='';
+      if(form.elements.appealEvidence)form.elements.appealEvidence.value='';
+    }catch(error){if(status)status.textContent=error.message;}
+    appealBtn.disabled=false;
+  });}$$('[name="role"]',form).forEach(input=>input.disabled=true);}else{$$('[name="role"]',form).forEach(input=>input.disabled=false);const inferred=state.dashboard?.user?.metadata?.full_name||state.dashboard?.user?.metadata?.name||'';form.elements.displayName.value=inferred;}form.dataset.required=required?'true':'false';$$('[data-close-dialog]',form).forEach(button=>button.hidden=required);updateProfileFields();setDialogMessage('#profileMessage','');$('#profileDialog').showModal();}
 function openProject(){setDialogMessage('#projectMessage','');$('#projectForm').reset();$('#projectDialog').showModal();}
 // A "Create Project" click on the marketing site stashes the typed brief and routes here. Once
 // the visitor is signed in as a COMPANY, open the project intake pre-filled with that brief.

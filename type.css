@@ -18,8 +18,8 @@
   --step-h2: clamp(22px, 2.8vw, 30px);
   --step-h3: clamp(16px, 1.8vw, 20px);
   --step-body-lg: 17px;
-  --step-body: 15px;
-  --step-small: 12px;
+  --step-body: 16px;
+  --step-small: 12.5px;
   --step-eyebrow: 11px;
 }
 

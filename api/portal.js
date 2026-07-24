@@ -4,6 +4,7 @@ import { supabaseConfiguration } from './submissions.js';
 import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail } from './notify.js';
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
+import { presentScore, normalizeAppeal } from './hardening.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
@@ -242,7 +243,9 @@ export async function loadMemberDashboard(member, env = process.env) {
       // server-side (reasons + >=1 concern + recommended approach). Decision support only.
       const project = projectById.get(a.project_id);
       const fit = (full && project) ? computeFitScore(project, full) : null;
-      return { ...a, applicant, fit };
+      // P1: never a bare number — the owner sees value + evidence tier + uncertainty band.
+      const fitWithBand = fit ? { ...fit, presentation: presentScore(fit.score, studentEvidenceTier(full)) } : null;
+      return { ...a, applicant, fit: fitWithBand };
     });
   }
   const studentDirectory = profile.role === 'company'
@@ -590,6 +593,16 @@ export function computeFitScore(project, profile, context = {}) {
 // vertical.
 // context (optional): { completedCount, positiveOutcomes } for the student, feeding the
 // execution dimension. Now emits fitConcerns + fitApproach too so the UI card is explainable.
+// P1 hardening: the tier a student's displayed scores carry, derived only from VERIFIED
+// evidence available at the call site — completed Covenda projects are trial-tier (gold),
+// analyzed GitHub history is artifact-tier (bronze), everything else is self-reported.
+export function studentEvidenceTier(profile, completedCount = 0) {
+  if (Number(completedCount) > 0) return 'gold';
+  const github = profile && profile.skill_signals && profile.skill_signals.github;
+  if (Array.isArray(github) && github.length) return 'bronze';
+  return 'self_reported';
+}
+
 export function rankOpportunities(opportunities, profile, context = {}) {
   const profileVerticals = new Set(profile?.verticals || []);
   const profileWorkTypes = new Set(profile?.work_types || []);
@@ -602,7 +615,7 @@ export function rankOpportunities(opportunities, profile, context = {}) {
     return Boolean((verticals.length && verticalMatch) || (workTypes.length && workTypeMatch));
   };
   return (opportunities || [])
-    .map(project => { const fit = computeFitScore(project, profile, context); return { ...project, matched: isMatch(project), fitScore: fit.score, fitReasons: fit.reasons, fitConcerns: fit.concerns, fitApproach: fit.recommendedApproach }; })
+    .map(project => { const fit = computeFitScore(project, profile, context); return { ...project, matched: isMatch(project), fitScore: fit.score, fitPresentation: presentScore(fit.score, studentEvidenceTier(profile, context.completedCount)), fitReasons: fit.reasons, fitConcerns: fit.concerns, fitApproach: fit.recommendedApproach }; })
     .sort((a, b) => b.fitScore - a.fitScore || Number(b.matched) - Number(a.matched));
 }
 
@@ -654,6 +667,7 @@ export function computeReadinessScore(intake = {}) {
   for (const s of [clarity, access, suitability]) {
     s.score = Math.max(0, Math.min(100, Math.round(s.score)));
     if (!s.concerns.length) s.concerns.push('No major concern flagged — still your call to confirm.');
+    s.presentation = presentScore(s.score, 'self_reported'); // intake answers are self-reported
   }
   const lengthLabel = Number.isFinite(weeks) && weeks > 0 ? `${Math.round(weeks)}-week` : '4–6 week';
   return {
@@ -1358,6 +1372,15 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'GET') return res.status(200).json({ ok: true, ...(await loadMemberDashboard(member, dependencies.env || process.env)) });
 
     const input = parseBody(req);
+    if (req.method === 'PATCH' && input.action === 'appeal-score') {
+      const { data: appellant } = await member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle();
+      if (appellant?.role !== 'student') throw new Error('Only students can contest a score.');
+      const appeal = normalizeAppeal(input);
+      const { data, error } = await member.supabase.from('score_appeals')
+        .insert({ student_user_id: member.user.id, ...appeal }).select('id, subject, status, created_at').single();
+      if (error) throw new Error('Appeals are almost ready — please try again shortly.');
+      return res.status(200).json({ ok: true, appeal: data });
+    }
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
     if (req.method === 'POST' && input.action === 'respond-packet') return res.status(200).json({ ok: true, project: await respondToPacket(member, input) });

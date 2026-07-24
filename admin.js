@@ -9,6 +9,7 @@ let batches = [];
 let companies = [];
 let members = [];
 let projects = [];
+let appeals=[];
 const batchTierLabels = { open:'Open', elite:'Elite' };
 const batchStatusLabels = { draft:'Draft', open:'Open', reviewing:'Reviewing', closed:'Closed', archived:'Archived' };
 const batchAppStatusLabels = { submitted:'Applied', reviewing:'In review', accepted:'Accepted', waitlisted:'Waitlisted', declined:'Declined' };
@@ -294,10 +295,10 @@ async function loadInbox({ announce = false } = {}) {
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {
-    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; companies=result.companies||[]; members=result.users||[]; projects=result.projects||[]; $('#operatorEmail').textContent=result.operator.email;
+    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; companies=result.companies||[]; members=result.users||[]; projects=result.projects||[]; appeals=result.appeals||[]; $('#operatorEmail').textContent=result.operator.email;
     if (!selectedReference && submissions[0]) selectedReference=submissions[0].reference;
     if (selectedReference && !submissions.some(item=>item.reference===selectedReference)) selectedReference=submissions[0]?.reference || '';
-    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies(); renderMembers(); renderProjects(); renderMatcherOptions();
+    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies(); renderMembers(); renderProjects(); renderMatcherOptions(); renderAppeals();
     $('#adminSyncStatus').textContent=`Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }
@@ -353,6 +354,11 @@ function renderMetrics(m){
       ['Acceptance rate',`${n(cs.acceptanceRate)}%`,'of applications','good'],
       ['Avg project value',n(cs.avgDeliveredCredits),'credits','money'],
       ['Active batches',n(b.active),'',''],
+    ]],
+    ['Score credibility',[
+      ['Rater agreement κ',(m.hardening&&m.hardening.irr&&m.hardening.irr.kappa!=null)?String(m.hardening.irr.kappa):'—',(m.hardening&&m.hardening.irr&&m.hardening.irr.n)?`${m.hardening.irr.n} pairs`:'no pairs yet',''],
+      ['Labeled rows',n(m.hardening&&m.hardening.labeledRows),'adjudicated',''],
+      ['Scorer review',m.hardening&&m.hardening.scorerReview&&m.hardening.scorerReview.ready?'READY':'gated',`${(m.hardening&&m.hardening.scorerReview&&m.hardening.scorerReview.have)||0}/${(m.hardening&&m.hardening.scorerReview&&m.hardening.scorerReview.needed)||50} outcomes`,''],
     ]],
   ];
   for(const [label,tiles] of groups){
@@ -484,9 +490,135 @@ function renderProjects(){
     if(pr.created_at){const d=document.createElement('small');d.textContent=`Created ${dateLabel(pr.created_at)}`;meta.append(d);}
     const del=document.createElement('button');del.type='button';del.className='admin-user-delete';del.textContent='Delete';
     del.addEventListener('click',()=>deleteProject(pr,del));
-    row.append(info,meta,del);root.append(row);
+    const harden=document.createElement('button');harden.type='button';harden.className='admin-user-feature';
+    const adjNeeded=Object.values(pr.rubric_scores||{}).some(e=>{const s=Object.values(e?.raters||{}).map(r=>r.score);return s.length===2&&Math.abs(s[0]-s[1])>1&&!e.adjudicated;});
+    harden.textContent=adjNeeded?'Rubric ⚠ adjudicate':'Rubric & defense';
+    harden.addEventListener('click',()=>toggleHardenPanel(row,pr));
+    row.append(info,meta,harden,del);root.append(row);
   }
 }
+
+// P2/P3 operator console: dual-rater rubric scoring (independent, anchored), adjudication
+// when raters disagree by >1, and the ownership-defense record. Lives inline on the project
+// row so scoring happens where the operator already works.
+function toggleHardenPanel(row,pr){
+  const existing=row.nextElementSibling;
+  if(existing&&existing.classList.contains('admin-harden-panel')){existing.remove();return;}
+  document.querySelectorAll('.admin-harden-panel').forEach(x=>x.remove());
+  const panel=document.createElement('div');panel.className='admin-harden-panel';
+  panel.append(hardenRubricBlock(pr,panel),hardenDefenseBlock(pr));
+  row.after(panel);
+}
+function hardenRubricBlock(pr,panel){
+  const box=document.createElement('div');box.className='harden-block';
+  const h=document.createElement('h4');h.textContent='Anchored rubric — two independent raters';box.append(h);
+  const state=document.createElement('div');state.className='harden-state';box.append(state);
+  const paint=()=>{
+    state.replaceChildren();
+    const book=pr.rubric_scores||{};
+    if(!Object.keys(book).length){const p=document.createElement('p');p.className='harden-empty';p.textContent='No rubric scores yet. Each rater scores 0–10 against the anchors without seeing the other\u2019s number.';state.append(p);return;}
+    for(const [skill,entry] of Object.entries(book)){
+      const line=document.createElement('p');line.className='harden-line';
+      const raters=Object.entries(entry.raters||{});
+      const adj=entry.adjudicated;
+      const delta=raters.length===2?Math.abs(raters[0][1].score-raters[1][1].score):null;
+      line.textContent=`${skill}: ${raters.map(([n,r])=>`${n} ${r.score}`).join(' · ')}`+(adj?` → label ${adj.score} (${adj.method})`:delta!=null&&delta>1?' → DISAGREE — adjudicate below':raters.length<2?' — awaiting second rater':'');
+      if(adj)line.classList.add('is-labeled');else if(delta!=null&&delta>1)line.classList.add('is-conflict');
+      state.append(line);
+    }
+  };
+  paint();
+  const form=document.createElement('div');form.className='harden-form';
+  const skill=inputEl('text','Skill (e.g. Financial modeling)');const rater=inputEl('text','Rater name');
+  const score=inputEl('number','0–10');score.min=0;score.max=10;const notes=inputEl('text','Notes (optional)');
+  const send=miniBtn('Submit rating');
+  send.addEventListener('click',async()=>{
+    send.disabled=true;
+    try{
+      const out=await adminRequest({method:'PATCH',body:JSON.stringify({action:'rubric-score',projectId:pr.id,skill:skill.value.trim(),rater:rater.value.trim(),score:Number(score.value),notes:notes.value.trim()})});
+      pr.rubric_scores=out.result.rubric_scores;paint();score.value='';notes.value='';
+      if(out.result.anchors){anchors.textContent=`Anchors — 4: ${out.result.anchors[4]} | 6: ${out.result.anchors[6]} | 9: ${out.result.anchors[9]}`;anchors.hidden=false;}
+    }catch(error){alert(error.message);}
+    send.disabled=false;
+  });
+  form.append(skill,rater,score,notes,send);box.append(form);
+  const anchors=document.createElement('p');anchors.className='harden-anchors';anchors.hidden=true;box.append(anchors);
+  const adjForm=document.createElement('div');adjForm.className='harden-form';
+  const aSkill=inputEl('text','Skill to adjudicate');const aScore=inputEl('number','Adjudicated 0–10');aScore.min=0;aScore.max=10;aScore.step='0.5';
+  const aWho=inputEl('text','Adjudicator');const aNote=inputEl('text','Why (short)');
+  const aBtn=miniBtn('Adjudicate');
+  aBtn.addEventListener('click',async()=>{
+    aBtn.disabled=true;
+    try{
+      const out=await adminRequest({method:'PATCH',body:JSON.stringify({action:'rubric-adjudicate',projectId:pr.id,skill:aSkill.value.trim(),score:Number(aScore.value),adjudicator:aWho.value.trim(),note:aNote.value.trim()})});
+      pr.rubric_scores=out.result.rubric_scores;paint();
+    }catch(error){alert(error.message);}
+    aBtn.disabled=false;
+  });
+  adjForm.append(aSkill,aScore,aWho,aNote,aBtn);box.append(adjForm);
+  return box;
+}
+function hardenDefenseBlock(pr){
+  const box=document.createElement('div');box.className='harden-block';
+  const h=document.createElement('h4');h.textContent='Ownership defense — recorded walkthrough';box.append(h);
+  const d=pr.ownership_defense;
+  const cur=document.createElement('p');cur.className='harden-line';
+  cur.textContent=d?`Recorded: verdict ${d.verdict} · communication ${d.communication}/10 · depth ${d.depth}/10${d.forensics&&d.forensics.anomaly?' · forensics anomaly (human-reviewed)':''}`:'Not recorded yet. Anomalous commit timelines are NEVER auto-scored — they land here.';
+  if(d)cur.classList.add('is-labeled');box.append(cur);
+  const form=document.createElement('div');form.className='harden-form';
+  const url=inputEl('url','Recording link (https…)');const comm=inputEl('number','Communication 0–10');comm.min=0;comm.max=10;
+  const depth=inputEl('number','Depth 0–10');depth.min=0;depth.max=10;
+  const verdict=document.createElement('select');[['verified','Verified — genuine author'],['inconclusive','Inconclusive'],['flagged','Flagged — needs follow-up']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;verdict.append(o);});
+  const btn=miniBtn('Record defense');
+  btn.addEventListener('click',async()=>{
+    btn.disabled=true;
+    try{
+      const out=await adminRequest({method:'PATCH',body:JSON.stringify({action:'record-defense',projectId:pr.id,url:url.value.trim(),communication:Number(comm.value),depth:Number(depth.value),verdict:verdict.value})});
+      pr.ownership_defense=out.result.ownership_defense;
+      cur.textContent=`Recorded: verdict ${pr.ownership_defense.verdict} · communication ${pr.ownership_defense.communication}/10 · depth ${pr.ownership_defense.depth}/10`;cur.classList.add('is-labeled');
+    }catch(error){alert(error.message);}
+    btn.disabled=false;
+  });
+  form.append(url,comm,depth,verdict,btn);box.append(form);
+  return box;
+}
+function inputEl(type,ph){const i=document.createElement('input');i.type=type;i.placeholder=ph;i.className='harden-input';return i;}
+function miniBtn(label){const b=document.createElement('button');b.type='button';b.className='admin-primary compactish';b.textContent=label;return b;}
+
+// M8: score appeals — students contesting with new evidence. Never closed silently.
+function renderAppeals(){
+  const section=$('#adminAppealsSection');const root=$('#adminAppeals');if(!root)return;
+  root.replaceChildren();
+  const count=$('#adminAppealsCount');if(count)count.textContent=appeals.length;
+  if(section)section.hidden=!appeals.length;
+  for(const ap of appeals){
+    const row=document.createElement('div');row.className='admin-user-row';
+    const info=document.createElement('div');info.className='admin-user-info';
+    const nm=document.createElement('strong');nm.textContent=ap.subject;
+    const em=document.createElement('span');em.className='admin-user-email';em.textContent=ap.evidence.length>140?ap.evidence.slice(0,140)+'…':ap.evidence;
+    info.append(nm,em);
+    const meta=document.createElement('div');meta.className='admin-user-meta';
+    const pill=document.createElement('span');pill.className='admin-user-role';pill.textContent=ap.status;meta.append(pill);
+    if(ap.created_at){const dd=document.createElement('small');dd.textContent=dateLabel(ap.created_at);meta.append(dd);}
+    row.append(info,meta);
+    if(ap.status==='open'){
+      const sel=document.createElement('select');[['revised','Revise score'],['upheld','Uphold score'],['dismissed','Dismiss']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;sel.append(o);});
+      const rez=inputEl('text','Written resolution (required)');
+      const btn=miniBtn('Resolve');
+      btn.addEventListener('click',async()=>{
+        if(!rez.value.trim()){rez.focus();return;}
+        btn.disabled=true;
+        try{
+          const out=await adminRequest({method:'PATCH',body:JSON.stringify({action:'resolve-appeal',appealId:ap.id,status:sel.value,resolution:rez.value.trim()})});
+          Object.assign(ap,out.result);renderAppeals();
+        }catch(error){alert(error.message);btn.disabled=false;}
+      });
+      row.append(sel,rez,btn);
+    }
+    root.append(row);
+  }
+}
+
 async function deleteProject(pr,button){
   const label=pr.title||'this project';
   const heldWarn=Number(pr.credits_held)?` It still holds ${Number(pr.credits_held).toLocaleString()} credits in escrow.`:'';
@@ -512,7 +644,10 @@ function matchCandidateCard(entry){
   const card=document.createElement('article');card.className='match-card';
   const top=document.createElement('div');top.className='match-card-top';
   const nm=document.createElement('strong');nm.textContent=entry.name||entry.candidate_id;
-  const sc=document.createElement('span');sc.className='match-score';sc.textContent=`${entry.score}`;
+  const sc=document.createElement('span');sc.className='match-score';
+  const pres=entry.presentation;
+  sc.textContent=pres?`${pres.value} · band ${pres.band.low}–${pres.band.high}`:`${entry.score}`;
+  if(pres){const tier=document.createElement('span');tier.className='match-tier is-'+pres.evidenceTier;tier.textContent=pres.evidenceTier.replace('_',' ')+' evidence';sc.append(tier);}
   top.append(nm,sc);card.append(top);
   const why=document.createElement('pre');why.className='match-why';why.textContent=entry.explanation;card.append(why);
   const row=document.createElement('div');row.className='match-decide';

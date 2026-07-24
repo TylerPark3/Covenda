@@ -4,6 +4,7 @@ import { supabaseConfiguration } from './submissions.js';
 import { sendPartnerDigests } from './digest.js';
 import { notifyMember, batchDecisionEmail } from './notify.js';
 import { matchOpportunity } from './match.js';
+import { recordRubricScore, adjudicateRubric, adjudicationStatus, interRaterReliability, normalizeDefense, forensicsAnomaly, labeledRows, scorerGate, rubricAnchorsFor } from './hardening.js';
 
 const ADMIN_STATUSES = new Set(['received', 'reviewing', 'needs_information', 'packet_proposed', 'approval_pending', 'approved', 'declined', 'archived']);
 const linkBuckets = new Map();
@@ -533,6 +534,23 @@ export async function loadAdminMetrics(supabase) {
     const { data } = await supabase.from('member_projects').select('owner_user_id, credits_listed').eq('status', 'complete').limit(5000);
     completedProjectRows = Array.isArray(data) ? data : [];
   } catch { completedProjectRows = []; }
+  // P2/G1: rubric books feed inter-rater reliability; conversion outcomes feed the
+  // score-the-scorer gate (which stays closed until >= 50 real outcomes exist).
+  let rubricRows = [];
+  let outcomeCount = 0;
+  try {
+    const { data } = await supabase.from('member_projects').select('id, rubric_scores, complexity_rating, ambiguity_rating').not('rubric_scores', 'is', null).limit(2000);
+    rubricRows = Array.isArray(data) ? data : [];
+    const { count } = await supabase.from('member_projects').select('id', { count: 'exact', head: true }).not('conversion_outcome', 'is', null).neq('conversion_outcome', 'none');
+    if (Number.isFinite(count)) outcomeCount = count;
+  } catch { rubricRows = []; }
+  const raterPairs = [];
+  for (const row of rubricRows) {
+    for (const entry of Object.values(row.rubric_scores || {})) {
+      const scores = Object.values((entry && entry.raters) || {}).map(r => r.score);
+      if (scores.length === 2) raterPairs.push(scores);
+    }
+  }
   return {
     funnel: { submissions, profiles, applications, accepted, projects, completed },
     thisWeek: { submissions: wkSubmissions, applications: wkApplications, completed: wkCompleted },
@@ -547,6 +565,13 @@ export async function loadAdminMetrics(supabase) {
       completed,
       successRate: matchedProjects ? completed / matchedProjects : 0,
       repeat: repeatCompanyRate(completedProjectRows),
+    },
+    // Credibility hardening: IRR gates when the AI scorer may be automated; the labeled rows
+    // are its only legitimate training set; the scorer review is gated on real outcomes.
+    hardening: {
+      irr: interRaterReliability(raterPairs),
+      labeledRows: labeledRows(rubricRows).length,
+      scorerReview: scorerGate(outcomeCount),
     },
   };
 }
@@ -724,10 +749,53 @@ export async function decideMatch(supabase, input) {
 }
 
 // Operator project management: list every member project, and permanently delete one.
+// Load-modify-save a project's rubric_scores through one of the hardening reducers.
+async function applyRubricUpdate(supabase, input, reduce) {
+  const projectId = text(input.projectId, 50);
+  if (!projectId) throw new Error('projectId is required.');
+  const { data: project, error } = await supabase.from('member_projects').select('id, rubric_scores').eq('id', projectId).maybeSingle();
+  if (error || !project) throw new Error('Project not found (has the hardening migration run?).');
+  const book = reduce(project.rubric_scores || {});
+  const { error: saveError } = await supabase.from('member_projects').update({ rubric_scores: book, updated_at: new Date().toISOString() }).eq('id', projectId);
+  if (saveError) throw new Error('Could not save the rubric — has the Stage-0 migration run?');
+  const skill = text(input.skill, 120);
+  return { rubric_scores: book, status: adjudicationStatus(book[skill]), anchors: rubricAnchorsFor(skill) };
+}
+
+async function recordOwnershipDefense(supabase, input) {
+  const projectId = text(input.projectId, 50);
+  if (!projectId) throw new Error('projectId is required.');
+  const defense = normalizeDefense(input);
+  // Snapshot forensics context alongside the verdict so the record is self-contained.
+  defense.forensics = { anomaly: forensicsAnomaly(input.forensics || {}), flags: (input.forensics && input.forensics.flags) || [] };
+  const { error } = await supabase.from('member_projects').update({ ownership_defense: defense, updated_at: new Date().toISOString() }).eq('id', projectId);
+  if (error) throw new Error('Could not save the defense record — has the hardening migration run?');
+  return { ownership_defense: defense };
+}
+
+export async function listScoreAppeals(supabase) {
+  const { data, error } = await supabase.from('score_appeals').select('*').order('created_at', { ascending: false }).limit(200);
+  return error ? [] : (data || []);
+}
+
+async function resolveScoreAppeal(supabase, input, resolvedBy) {
+  const appealId = text(input.appealId, 50);
+  const status = text(input.status, 20);
+  const resolution = text(input.resolution, 1000);
+  if (!appealId) throw new Error('appealId is required.');
+  if (!['upheld', 'revised', 'dismissed'].includes(status)) throw new Error('Status must be upheld, revised, or dismissed.');
+  if (!resolution) throw new Error('A written resolution is required — appeals are never closed silently.');
+  const { data, error } = await supabase.from('score_appeals')
+    .update({ status, resolution, resolved_by: resolvedBy || 'operator', resolved_at: new Date().toISOString() })
+    .eq('id', appealId).select('*').single();
+  if (error) throw new Error('Could not resolve the appeal.');
+  return data;
+}
+
 export async function listAdminProjects(supabase) {
   const { data, error } = await supabase
     .from('member_projects')
-    .select('id,title,status,owner_user_id,credits_listed,credits_held,created_at,updated_at')
+    .select('id,title,status,owner_user_id,credits_listed,credits_held,created_at,updated_at,rubric_scores,ownership_defense,complexity_rating,ambiguity_rating')
     .order('created_at', { ascending: false })
     .limit(500);
   return error ? [] : (data || []);
@@ -822,10 +890,10 @@ export default async function handler(req, res, dependencies = {}) {
     if (!admin) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
 
     if (req.method === 'GET') {
-      const [submissions, requests, batches, metrics, companies, users, projects] = await Promise.all([
-        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase), listAdminCompanies(admin.supabase), listAdminUsers(admin.supabase), listAdminProjects(admin.supabase),
+      const [submissions, requests, batches, metrics, companies, users, projects, appeals] = await Promise.all([
+        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase), listAdminCompanies(admin.supabase), listAdminUsers(admin.supabase), listAdminProjects(admin.supabase), listScoreAppeals(admin.supabase),
       ]);
-      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches, metrics, companies, users, projects });
+      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches, metrics, companies, users, projects, appeals });
     }
 
     const patchInput = body(req);
@@ -849,6 +917,24 @@ export default async function handler(req, res, dependencies = {}) {
     }
     if (patchInput.action === 'decide-match') {
       return res.status(200).json({ ok: true, match: await decideMatch(admin.supabase, patchInput) });
+    }
+    // P2: one rater submits an INDEPENDENT anchored-rubric score. Two raters within 1 point
+    // auto-adjudicate to the mean; a wider gap demands a human adjudication below.
+    if (patchInput.action === 'rubric-score') {
+      return res.status(200).json({ ok: true, result: await applyRubricUpdate(admin.supabase, patchInput, book => recordRubricScore(book, patchInput)) });
+    }
+    if (patchInput.action === 'rubric-adjudicate') {
+      return res.status(200).json({ ok: true, result: await applyRubricUpdate(admin.supabase, patchInput, book => adjudicateRubric(book, patchInput)) });
+    }
+    // P3: record the ownership-defense walkthrough (scored interview). Commit-forensics
+    // anomalies must land here — they are never auto-scored.
+    if (patchInput.action === 'record-defense') {
+      return res.status(200).json({ ok: true, result: await recordOwnershipDefense(admin.supabase, patchInput) });
+    }
+    // M8: resolve a student's score appeal (upheld / revised / dismissed) with a written
+    // resolution — the full trail stays queryable for adverse-impact audits.
+    if (patchInput.action === 'resolve-appeal') {
+      return res.status(200).json({ ok: true, result: await resolveScoreAppeal(admin.supabase, patchInput, admin.email) });
     }
     if (patchInput.action === 'set-featured') {
       return res.status(200).json({ ok: true, result: await setFeaturedStudent(admin.supabase, patchInput) });

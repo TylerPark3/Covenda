@@ -2921,7 +2921,6 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     $('#studentPathfinder').scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => $('.work-option.is-selected')?.focus(), 420);
   }
-  if (action === 'explore-work') $('#studentPathfinder')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (action === 'explore-back') closeWorkDetail();
   if (action === 'flow-prev') { flowStep -= 1; renderFlowStep(); }
   if (action === 'flow-next') { flowStep += 1; renderFlowStep(); }
