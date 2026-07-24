@@ -252,6 +252,33 @@ function cancelProjectButton(project){
   });
   return b;
 }
+// Deleting a draft is safe (no escrow, no applicants) but still irreversible, so it arms on
+// the first click like the cancel button.
+function deleteDraftButton(project){
+  const label='Delete draft';
+  const b=document.createElement('button');b.type='button';b.className='portal-ghost cancel-project';b.textContent=label;
+  let armed=false,timer=0;
+  b.addEventListener('click',async()=>{
+    if(!armed){armed=true;b.textContent='Click again to delete';b.classList.add('is-armed');timer=window.setTimeout(()=>{armed=false;b.textContent=label;b.classList.remove('is-armed');},5000);return;}
+    window.clearTimeout(timer);b.disabled=true;b.textContent='Deleting…';
+    try{await portalRequest({method:'POST',body:JSON.stringify({action:'delete-project',projectId:project.id})});await loadDashboard();setView('projects');}
+    catch(error){b.textContent=error.message;b.disabled=false;armed=false;b.classList.remove('is-armed');}
+  });
+  return b;
+}
+// A student withdraws (removes) an application they haven't been accepted into; arms once.
+function withdrawApplicationButton(application){
+  const label='Withdraw';
+  const b=document.createElement('button');b.type='button';b.className='row-action';b.textContent=label;
+  let armed=false,timer=0;
+  b.addEventListener('click',async()=>{
+    if(!armed){armed=true;b.textContent='Click to confirm';timer=window.setTimeout(()=>{armed=false;b.textContent=label;},5000);return;}
+    window.clearTimeout(timer);b.disabled=true;b.textContent='Withdrawing…';
+    try{await portalRequest({method:'POST',body:JSON.stringify({action:'withdraw-application',applicationId:application.id})});await loadDashboard();setView('activity');}
+    catch(error){b.textContent=error.message;b.disabled=false;armed=false;}
+  });
+  return b;
+}
 async function runAcceptApplication(applicationId,button){button.disabled=true;const original=button.textContent;button.textContent='Accepting…';try{await portalRequest({method:'POST',body:JSON.stringify({action:'accept-application',applicationId})});await loadDashboard();setView('overview');}catch(error){button.textContent=error.message;button.disabled=false;setTimeout(()=>{button.textContent=original;},4000);}}
 async function runDeclineApplication(applicationId,button){button.disabled=true;const original=button.textContent;button.textContent='Declining…';try{await portalRequest({method:'POST',body:JSON.stringify({action:'decline-application',applicationId})});await loadDashboard();setView('activity');}catch(error){button.textContent=error.message;button.disabled=false;setTimeout(()=>{button.textContent=original;},4000);}}
 // §4b Greenhouse-style candidate card — the owner's view of an applicant: profile, fit score
@@ -317,7 +344,7 @@ function renderActions(){const root=$('#nextActions');root.replaceChildren();con
 
 function emptyList(root,iconId,title,copy,action){root.replaceChildren();const box=document.createElement('div');box.className='list-empty';const mark=document.createElement('span');mark.append(icon(iconId));const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=copy;box.append(mark,h,p);if(action&&action.label&&typeof action.run==='function'){const b=document.createElement('button');b.type='button';b.className='empty-cta';b.textContent=action.label;b.addEventListener('click',action.run);box.append(b);}root.append(box);}
 
-function renderProjects(){const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();if(!items.length){const isStudent=state.dashboard.profile?.role==='student';emptyList(root,'p-project','No projects in this workspace yet.',isStudent?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.',isStudent?{label:'Discover projects →',run:()=>setView('discover')}:{label:'Post a project →',run:openIntake});return;}for(const project of items){if(project.status==='complete'){root.append(verifiedCard(project,{full:true}));continue;}if(project.status==='proposed'){root.append(packetCard(project));continue;}const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');const visibility=cell('Visibility',titleCase(project.visibility));row.append(main,status,due,visibility);root.append(row);}}
+function renderProjects(){const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();if(!items.length){const isStudent=state.dashboard.profile?.role==='student';emptyList(root,'p-project','No projects in this workspace yet.',isStudent?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.',isStudent?{label:'Discover projects →',run:()=>setView('discover')}:{label:'Post a project →',run:openIntake});return;}for(const project of items){if(project.status==='archived')continue;if(project.status==='complete'){root.append(verifiedCard(project,{full:true}));continue;}if(project.status==='proposed'){root.append(packetCard(project));continue;}const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');const visibility=cell('Visibility',titleCase(project.visibility));row.append(main,status,due,visibility);if(project.status==='draft'&&['company','university'].includes(state.dashboard.profile?.role))row.append(deleteDraftButton(project));root.append(row);}}
 function cell(label,value){const div=document.createElement('div');div.className='list-cell';const small=document.createElement('small');small.textContent=label;const strong=document.createElement('strong');strong.textContent=value;div.append(small,strong);return div;}
 // Packet-first intake (GTM Move 1): a Covenda-scoped packet the company accepts (funds it) or declines.
 function packetCard(project){
@@ -361,7 +388,7 @@ function renderActivity(){
   applicationRoot.replaceChildren();
   if(!applications.length){const isStudent=d.profile?.role==='student';emptyList(applicationRoot,'p-compass',isStudent?'No project applications yet.':'No student applications yet.',isStudent?'When you send interest in a project, its review status will appear here.':'Applications will appear after students express interest in your open projects.',isStudent?{label:'Explore open projects →',run:()=>setView('discover')}:null);return;}
   const knownProjects=[...(d.projects||[]),...(d.opportunities||[])];
-  for(const application of applications){const project=knownProjects.find(item=>item.id===application.project_id);if(d.profile?.role!=='student'){applicationRoot.append(applicantCard(application,project));continue;}const row=document.createElement('article');row.className='activity-row';const marker=document.createElement('span');marker.className='activity-marker';marker.append(icon('p-project'));const main=document.createElement('div');const meta=document.createElement('div');meta.className='activity-meta';meta.append(pill(applicationStatusLabels[application.status]||titleCase(application.status),'status-pill',application.status));const h=document.createElement('h3');h.textContent=project?.title||'Covenda project application';const details=document.createElement('p');details.textContent=`Updated ${dateLabel(application.updated_at||application.created_at)}`;main.append(meta,h,details);if(d.profile?.role!=='student'&&project&&['open','matched'].includes(project.status)&&['submitted','reviewing','shortlisted'].includes(application.status)){const accept=document.createElement('button');accept.type='button';accept.className='row-action';accept.textContent='Accept applicant';accept.addEventListener('click',()=>runAcceptApplication(application.id,accept));main.append(accept);}row.append(marker,main);applicationRoot.append(row);}
+  for(const application of applications){const project=knownProjects.find(item=>item.id===application.project_id);if(d.profile?.role!=='student'){applicationRoot.append(applicantCard(application,project));continue;}const row=document.createElement('article');row.className='activity-row';const marker=document.createElement('span');marker.className='activity-marker';marker.append(icon('p-project'));const main=document.createElement('div');const meta=document.createElement('div');meta.className='activity-meta';meta.append(pill(applicationStatusLabels[application.status]||titleCase(application.status),'status-pill',application.status));const h=document.createElement('h3');h.textContent=project?.title||'Covenda project application';const details=document.createElement('p');details.textContent=`Updated ${dateLabel(application.updated_at||application.created_at)}`;main.append(meta,h,details);if(d.profile?.role==='student'&&['submitted','reviewing','shortlisted'].includes(application.status))main.append(withdrawApplicationButton(application));if(d.profile?.role!=='student'&&project&&['open','matched'].includes(project.status)&&['submitted','reviewing','shortlisted'].includes(application.status)){const accept=document.createElement('button');accept.type='button';accept.className='row-action';accept.textContent='Accept applicant';accept.addEventListener('click',()=>runAcceptApplication(application.id,accept));main.append(accept);}row.append(marker,main);applicationRoot.append(row);}
 }
 
 // ===== Wallet & credits (company/university) =====
@@ -953,8 +980,16 @@ function portfolioAvatar(profile,note){
 // §0/§3: the company's primary surface — a curated, searchable talent directory of vetted
 // students. Filter state lives module-level so only the card list re-renders on a keystroke
 // (keeps the search input focused). Hiring still flows through projects (§6 anti-bypass).
-const talentFilters={query:'',vertical:'',verifiedOnly:false};
+const talentFilters={query:'',vertical:'',verifiedOnly:false,skill:'',minScore:0};
 const TALENT_VERTICALS=['Accounting & finance','Software & AI','Healthcare operations','Consumer & retail','Professional services'];
+// Flatten a student's GitHub skill scores (from skill_signals) to the best score per skill —
+// this is what makes founder discovery filter on proven skill, not self-declared tags.
+function githubSkills(s){
+  const g=(s&&s.skill_signals&&Array.isArray(s.skill_signals.github))?s.skill_signals.github:[];
+  const map=new Map();
+  g.forEach(a=>(a.skills||[]).forEach(sk=>{const cur=map.get(sk.skill);if(!cur||Number(sk.score)>cur.score)map.set(sk.skill,{skill:sk.skill,score:Number(sk.score)});}));
+  return [...map.values()].sort((a,b)=>b.score-a.score);
+}
 function talentCard(s){
   const card=document.createElement('article');card.className='talent-card';
   const head=document.createElement('div');head.className='talent-card-head';
@@ -963,15 +998,19 @@ function talentCard(s){
   if((s.verticals||[]).length){const v=document.createElement('div');v.className='talent-verticals';s.verticals.forEach(x=>v.append(pill(x,'status-pill')));card.append(v);}
   if(s.bio){const b=document.createElement('p');b.className='talent-bio';b.textContent=s.bio;card.append(b);}
   if((s.skills||[]).length){const sk=document.createElement('div');sk.className='skills';s.skills.forEach(x=>sk.append(pill(x)));card.append(sk);}
+  const gs=githubSkills(s).slice(0,3);
+  if(gs.length){const g=document.createElement('div');g.className='talent-scores';gs.forEach(x=>{const chip=document.createElement('span');chip.className='talent-score-chip';const nm=document.createElement('b');nm.textContent=x.skill;const sc=document.createElement('i');sc.textContent=x.score.toFixed(1);chip.append(nm,sc);g.append(chip);});card.append(g);}
   return card;
 }
 function renderTalentCards(){
   const root=$('#talentResults');if(!root)return;root.replaceChildren();
   const f=talentFilters;const dir=state.dashboard?.studentDirectory||[];
   const filtered=dir.filter(s=>{
-    if(f.query){const hay=[s.display_name,s.headline,s.school_name,...(s.skills||[]),...(s.verticals||[])].join(' ').toLowerCase();if(!hay.includes(f.query))return false;}
+    if(f.query){const hay=[s.display_name,s.headline,s.school_name,...(s.skills||[]),...(s.verticals||[]),...githubSkills(s).map(x=>x.skill)].join(' ').toLowerCase();if(!hay.includes(f.query))return false;}
     if(f.vertical&&!(s.verticals||[]).includes(f.vertical))return false;
     if(f.verifiedOnly&&!s.identity_verified)return false;
+    if(f.skill){const needle=f.skill.toLowerCase();const names=[...(s.skills||[]).map(x=>String(x).toLowerCase()),...githubSkills(s).map(x=>x.skill.toLowerCase())];if(!names.some(n=>n.includes(needle)))return false;}
+    if(f.minScore){const gs=githubSkills(s);const relevant=f.skill?gs.filter(x=>x.skill.toLowerCase().includes(f.skill.toLowerCase())):gs;if(!relevant.some(x=>x.score>=f.minScore))return false;}
     return true;
   });
   const count=$('#talentCount');if(count)count.textContent=`${filtered.length} ${filtered.length===1?'student':'students'}`;
@@ -983,9 +1022,11 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   const bar=document.createElement('div');bar.className='talent-bar';
   const search=document.createElement('input');search.type='search';search.className='talent-search';search.placeholder='Search name, skill, school…';search.value=talentFilters.query;search.addEventListener('input',()=>{talentFilters.query=search.value.trim().toLowerCase();renderTalentCards();});
   const vsel=document.createElement('select');vsel.className='talent-vsel';const anyOpt=document.createElement('option');anyOpt.value='';anyOpt.textContent='Any vertical';vsel.append(anyOpt);TALENT_VERTICALS.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;if(v===talentFilters.vertical)o.selected=true;vsel.append(o);});vsel.addEventListener('change',()=>{talentFilters.vertical=vsel.value;renderTalentCards();});
+  const skl=document.createElement('input');skl.type='search';skl.className='talent-search talent-skill';skl.placeholder='Proven skill (e.g. Python)';skl.value=talentFilters.skill;skl.addEventListener('input',()=>{talentFilters.skill=skl.value.trim();renderTalentCards();});
+  const msel=document.createElement('select');msel.className='talent-vsel';[['0','Any score'],['6','Score ≥ 6'],['7','Score ≥ 7'],['8','Score ≥ 8']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;if(Number(v)===talentFilters.minScore)o.selected=true;msel.append(o);});msel.addEventListener('change',()=>{talentFilters.minScore=Number(msel.value);renderTalentCards();});
   const vchk=document.createElement('label');vchk.className='talent-check';const cb=document.createElement('input');cb.type='checkbox';cb.checked=talentFilters.verifiedOnly;cb.addEventListener('change',()=>{talentFilters.verifiedOnly=cb.checked;renderTalentCards();});const cbt=document.createElement('span');cbt.textContent='Identity-verified only';vchk.append(cb,cbt);
   const count=document.createElement('span');count.className='talent-count';count.id='talentCount';
-  bar.append(search,vsel,vchk,count);
+  bar.append(search,vsel,skl,msel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
   $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student')renderProofOfWork(root,profile);}

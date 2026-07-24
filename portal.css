@@ -420,6 +420,12 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .talent-verticals { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
 .talent-bio { margin:12px 0 0; color:#31312e; font-size:11px; line-height:1.6; }
 .talent-card .skills { margin-top:12px; }
+/* Proven GitHub skill scores on a talent card — what founders filter/browse on. */
+.talent-scores { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.talent-score-chip { display:inline-flex; align-items:center; gap:6px; padding:4px 6px 4px 9px; border:1px solid rgba(180,123,32,.32); border-radius:8px; background:var(--gold-pale); font-size:10px; }
+.talent-score-chip b { font-weight:600; color:#5c4a26; }
+.talent-score-chip i { font-style:normal; font-weight:700; color:#fff; background:var(--gold); border-radius:5px; padding:1px 6px; }
+.talent-skill { flex:0 1 200px; }
 .coming-soon { display:grid; max-width:650px; min-height:calc(100vh - 190px); place-content:center; justify-items:start; margin:auto; }
 .coming-soon > span { display:grid; width:55px; height:55px; place-items:center; margin-bottom:27px; border:1px solid var(--line); border-radius:50%; color:var(--gold-deep); }
 .coming-soon h1 { margin:0; font-size:clamp(38px,5vw,62px); line-height:1; letter-spacing:-.065em; }

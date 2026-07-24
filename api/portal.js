@@ -234,7 +234,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     applications = applications.map(a => ({ ...a, applicant: byId.get(a.student_user_id) || null }));
   }
   const studentDirectory = profile.role === 'company'
-    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,work_types,avatar_url').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
+    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,work_types,avatar_url,skill_signals').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
     : [];
   const messages = projectIds.length
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
@@ -972,6 +972,25 @@ export async function declineApplication(member, input) {
   return declined;
 }
 
+// A student can withdraw an application that has not been accepted. The row is removed so
+// they can cleanly re-apply later (the unique (project, student) constraint would otherwise
+// block a fresh application); the 'applied' match event stays as the audit trail.
+export async function deleteApplication(member, input) {
+  const applicationId = cleanText(input.applicationId, 50);
+  if (!PROJECT_ID_PATTERN.test(applicationId)) throw new Error('Choose a valid application.');
+  const application = await checked(
+    member.supabase.from('project_applications').select('id,student_user_id,status').eq('id', applicationId).maybeSingle(),
+    null,
+  );
+  if (!application || application.student_user_id !== member.user.id) throw new Error('Only the applicant can withdraw this application.');
+  if (application.status === 'accepted') throw new Error('This application was accepted — message the company to step back from the project instead.');
+  await checked(
+    member.supabase.from('project_applications').delete().eq('id', applicationId).eq('student_user_id', member.user.id),
+    null,
+  );
+  return { id: applicationId, withdrawn: true };
+}
+
 export async function submitDeliverable(member, input) {
   const projectId = cleanText(input.projectId, 50);
   if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
@@ -1064,6 +1083,28 @@ export async function cancelProject(member, input) {
   return Array.isArray(refunded) ? refunded[0] : refunded;
 }
 
+// A company can delete a project only while it is still a private draft — nothing is posted,
+// so there is no escrow to refund and no applicant to strand. An active project must be ended
+// with cancel-project (cancelProject), which refunds the held escrow through the DB function.
+export async function deleteProject(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(
+    member.supabase.from('member_projects').select('id,owner_user_id,status,credits_held,platform_fee_credits').eq('id', projectId).maybeSingle(),
+    null,
+  );
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can delete a project.');
+  if (project.status !== 'draft') throw new Error('Only a draft can be deleted — end an active project instead so its escrow is refunded.');
+  if (((Number(project.credits_held) || 0) + (Number(project.platform_fee_credits) || 0)) > 0) throw new Error('This draft is holding credits — end it instead so they are refunded.');
+  const applicants = await checked(member.supabase.from('project_applications').select('id').eq('project_id', projectId).limit(1), []);
+  if (applicants.length) throw new Error('This project already has applicants — end it instead of deleting.');
+  await checked(
+    member.supabase.from('member_projects').delete().eq('id', projectId).eq('owner_user_id', member.user.id),
+    null,
+  );
+  return { id: projectId, deleted: true };
+}
+
 function portalFailure(error) {
   if (error instanceof PortalOperationalError) return { status: 503, code: error.code, message: error.publicMessage };
   const message = cleanText(error?.message, 2_000);
@@ -1138,10 +1179,12 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'get-messages') return res.status(200).json({ ok: true, ...(await loadNewMessages(member, input)) });
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
     if (req.method === 'POST' && input.action === 'decline-application') return res.status(200).json({ ok: true, application: await declineApplication(member, input) });
+    if (req.method === 'POST' && input.action === 'withdraw-application') return res.status(200).json({ ok: true, result: await deleteApplication(member, input) });
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });
     if (req.method === 'POST' && input.action === 'cancel-project') return res.status(200).json({ ok: true, project: await cancelProject(member, input) });
+    if (req.method === 'POST' && input.action === 'delete-project') return res.status(200).json({ ok: true, result: await deleteProject(member, input) });
     if (req.method === 'POST' && input.action === 'record-conversion') return res.status(200).json({ ok: true, project: await recordConversion(member, input) });
     if (req.method === 'POST' && input.action === 'request-payout') return res.status(201).json({ ok: true, payout: await requestPayout(member, input) });
     if (req.method === 'POST' && input.action === 'cancel-payout') return res.status(200).json({ ok: true, payout: await cancelPayoutRequest(member, input) });
