@@ -207,7 +207,8 @@ export async function loadMemberDashboard(member, env = process.env) {
       ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
       : [];
     const verifiedCount = projects.filter(project => project.status === 'complete').length;
-    const rankedOpportunities = rankOpportunities(opportunities, profile);
+    const positiveOutcomes = projects.filter(project => project.conversion_outcome && project.conversion_outcome !== 'none').length;
+    const rankedOpportunities = rankOpportunities(opportunities, profile, { completedCount: verifiedCount, positiveOutcomes });
     const matchedCount = rankedOpportunities.filter(project => project.matched).length;
     // Students hold credits too once escrow is released, so they get a balance (the
     // Wallet view itself stays company/university only).
@@ -278,6 +279,9 @@ export async function saveMemberProfile(member, input) {
   if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
   if (input.avatarUrl !== undefined) row.avatar_url = cleanText(input.avatarUrl, 500) || null;
   if (input.emailOptOut !== undefined) row.email_opt_out = input.emailOptOut === true;
+  // Startup work-style prefs (optional). Only touch the column when provided, so onboarding
+  // keeps working before the startup_fit migration is applied.
+  if (input.workStyle !== undefined) row.work_style = cleanWorkStyle(input.workStyle);
   return checked(supabase.from('member_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
 }
 
@@ -461,13 +465,47 @@ function sanitizeBrief(brief) {
 }
 
 // §5 fit score: a per-project↔student compatibility signal (NEVER a universal student
-// rating). Transparent, tunable weights over legitimate signals only — no protected
-// attributes or proxies (e.g. school prestige is deliberately excluded). Returns 0–100 plus
-// human-readable reasons so the score is always explainable.
-export const FIT_WEIGHTS = { vertical: 35, workType: 30, skills: 20, compensation: 8, deadline: 7 };
+// rating). Transparent, tunable weights over legitimate signals only — no protected attributes
+// or proxies (e.g. school prestige is deliberately excluded; the fairness-invariance test
+// enforces it). This is decision SUPPORT — the company always decides — and is explainable:
+// every score ships with reasons, at least one concern, and a recommended approach. Rule-based,
+// not a predictive/learned model.
+export const SCORER_VERSION = 'fit-2.0.0';
+// Weights cap at 100. startupFit > skills on purpose: for an ambiguous startup, environment fit
+// should be able to outrank raw skill (the adversarial case in the eval harness). Tunable via
+// the ablation test — evidence, not intuition.
+export const FIT_WEIGHTS = { vertical: 29, workType: 24, startupFit: 18, skills: 16, execution: 6, compensation: 4, deadline: 3 };
 
-export function computeFitScore(project, profile) {
+// Startup environment ↔ student work-style dimensions. Missing data on either side is skipped
+// (never lowers a score). No protected attributes appear here.
+const ENV_DIMS = [['env_structure', 'structure'], ['env_autonomy', 'autonomy'], ['env_pace', 'pace'], ['env_stage', 'stage']];
+export const WORK_STYLE_ENUMS = { structure: ['structured', 'ambiguous'], autonomy: ['guided', 'independent'], pace: ['steady', 'fast'], stage: ['idea', 'seed', 'growth'] };
+export function cleanWorkStyle(value) {
+  if (!value || typeof value !== 'object') return null;
+  const out = {};
+  for (const [k, allowed] of Object.entries(WORK_STYLE_ENUMS)) {
+    if (typeof value[k] === 'string' && allowed.includes(value[k])) out[k] = value[k];
+  }
+  return Object.keys(out).length ? out : null;
+}
+function startupFitReason(matchMap) {
+  const bits = [matchMap.structure, matchMap.autonomy].filter(Boolean);
+  return bits.length ? `Thrives in ${bits.join(', ')} settings` : 'Work-style fits this environment';
+}
+function recommendApproach(project) {
+  const s = project.env_structure, a = project.env_autonomy, p = project.env_pace;
+  if (s === 'ambiguous' && a === 'independent') return 'Give a broad objective and a weekly checkpoint — this student can run with ambiguity.';
+  if (s === 'structured') return 'Hand over a clearly scoped brief with explicit acceptance criteria.';
+  if (a === 'guided') return 'Plan a short daily or twice-weekly check-in.';
+  if (p === 'fast') return 'Set a tight first milestone to confirm the pace fits.';
+  return 'Start with a bounded, reviewable deliverable and a named reviewer.';
+}
+
+// context (optional): { completedCount, positiveOutcomes } — the ranked student's own proven
+// track record, used for the execution dimension with a cold-start guard.
+export function computeFitScore(project, profile, context = {}) {
   const reasons = [];
+  const concerns = [];
   const pV = new Set(profile?.verticals || []);
   const pW = new Set(profile?.work_types || []);
   const pS = new Set((profile?.skills || []).map(s => String(s).toLowerCase().trim()).filter(Boolean));
@@ -484,16 +522,56 @@ export function computeFitScore(project, profile) {
   if (projW.length && wMatches.length) { score += FIT_WEIGHTS.workType; reasons.push(`Your work type: ${wMatches.slice(0, 2).join(', ')}`); }
   const sMatches = projS.filter(s => pS.has(s));
   if (projS.length && sMatches.length) { score += Math.round(FIT_WEIGHTS.skills * Math.min(1, sMatches.length / projS.length)); reasons.push(`${sMatches.length} skill${sMatches.length > 1 ? 's' : ''} in common`); }
+  const sMissing = projS.filter(s => !pS.has(s));
+  if (projS.length && sMissing.length) concerns.push(`Limited evidence in ${sMissing.slice(0, 2).join(', ')} yet`);
+
+  // Startup-Fit: work-style prefs vs the project environment. Missing data is skipped; a
+  // mismatch adds a concern but no penalty beyond the un-earned points.
+  const ws = (profile?.work_style && typeof profile.work_style === 'object') ? profile.work_style : {};
+  let sfConsidered = 0, sfMatched = 0; const sfMatchMap = {};
+  for (const [envKey, wsKey] of ENV_DIMS) {
+    const env = project[envKey]; const pref = ws[wsKey];
+    if (!env || !pref) continue;
+    sfConsidered++;
+    if (env === pref) { sfMatched++; sfMatchMap[wsKey] = env; }
+    else concerns.push(`Prefers ${pref}; this role is ${env}`);
+  }
+  if (sfConsidered) {
+    score += Math.round(FIT_WEIGHTS.startupFit * (sfMatched / sfConsidered));
+    if (sfMatched) reasons.push(startupFitReason(sfMatchMap));
+  }
+
+  // Execution: the student's own proven track record, with a cold-start guard. Under 2 completed
+  // projects contributes nothing (no penalty) and says so honestly — the flywheel starts here.
+  const completed = Number(context?.completedCount) || 0;
+  const positive = Number(context?.positiveOutcomes) || 0;
+  if (completed >= 2) {
+    score += Math.round(FIT_WEIGHTS.execution * Math.min(1, completed / 3));
+    reasons.push(`Proven execution — ${completed} completed project${completed > 1 ? 's' : ''}${positive ? `, ${positive} advanced further` : ''}`);
+  } else {
+    reasons.push('New to Covenda — execution unproven');
+  }
+
   const credits = Number(project.credits_listed) || 0;
   if (credits > 0) { score += FIT_WEIGHTS.compensation; reasons.push(`Pays ${credits.toLocaleString()} credits`); }
   if (project.target_date) { const due = new Date(project.target_date); if (!Number.isNaN(due.getTime()) && due.getTime() > Date.now()) score += FIT_WEIGHTS.deadline; }
-  return { score: Math.max(0, Math.min(100, Math.round(score))), reasons };
+
+  if (!concerns.length) concerns.push('No major concern flagged — still your call to confirm fit.');
+  return {
+    score: Math.max(0, Math.min(100, Math.round(score))),
+    reasons,
+    concerns,
+    recommendedApproach: recommendApproach(project),
+    scorerVersion: SCORER_VERSION,
+  };
 }
 
 // Rank open opportunities by fit score. `matched` (vertical or work-type overlap) is kept for
 // the existing badge + matchedCount. A student who picked "show me everything" matches every
 // vertical.
-export function rankOpportunities(opportunities, profile) {
+// context (optional): { completedCount, positiveOutcomes } for the student, feeding the
+// execution dimension. Now emits fitConcerns + fitApproach too so the UI card is explainable.
+export function rankOpportunities(opportunities, profile, context = {}) {
   const profileVerticals = new Set(profile?.verticals || []);
   const profileWorkTypes = new Set(profile?.work_types || []);
   const everything = profileVerticals.has('Not sure yet — show me everything');
@@ -505,7 +583,7 @@ export function rankOpportunities(opportunities, profile) {
     return Boolean((verticals.length && verticalMatch) || (workTypes.length && workTypeMatch));
   };
   return (opportunities || [])
-    .map(project => { const fit = computeFitScore(project, profile); return { ...project, matched: isMatch(project), fitScore: fit.score, fitReasons: fit.reasons }; })
+    .map(project => { const fit = computeFitScore(project, profile, context); return { ...project, matched: isMatch(project), fitScore: fit.score, fitReasons: fit.reasons, fitConcerns: fit.concerns, fitApproach: fit.recommendedApproach }; })
     .sort((a, b) => b.fitScore - a.fitScore || Number(b.matched) - Number(a.matched));
 }
 

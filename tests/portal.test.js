@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, deleteApplication, deleteProject, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, respondToPacket, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
+import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, cleanWorkStyle, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, deleteApplication, deleteProject, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, respondToPacket, reviewDeliverable, saveMemberProfile, SCORER_VERSION, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
 
 test('accepting a packet funds it — escrow held, status opens', async () => {
   const cap = {};
@@ -338,9 +338,61 @@ test('fit score reflects vertical, work-type, skill and pay overlap, with explai
   const strong = computeFitScore({ verticals: ['Software & AI'], work_types: ['Research'], desired_skills: 'Python, R', credits_listed: 200, target_date: '2035-01-01' }, profile);
   const weak = computeFitScore({ verticals: ['Healthcare operations'], work_types: ['Operations'], desired_skills: 'Excel' }, profile);
   assert.ok(strong.score > weak.score);
-  assert.ok(strong.score >= 65); // at least vertical (35) + work type (30)
+  assert.ok(strong.score >= 65); // vertical + work type + partial skills
   assert.ok(strong.reasons.some(r => /skill/i.test(r)));
   assert.equal(weak.score, 0); // no overlap on any legitimate signal
+});
+
+test('fit score is explainable: reasons, >=1 concern, a recommended approach, and a version', () => {
+  const out = computeFitScore({ verticals: ['Software & AI'], desired_skills: 'Rust' }, { verticals: ['Software & AI'], skills: ['Python'] });
+  assert.ok(Array.isArray(out.reasons) && out.reasons.length);
+  assert.ok(Array.isArray(out.concerns) && out.concerns.length >= 1); // never black-box: always a concern
+  assert.ok(out.concerns.some(c => /Rust/i.test(c))); // names the un-evidenced desired skill
+  assert.ok(typeof out.recommendedApproach === 'string' && out.recommendedApproach.length);
+  assert.equal(out.scorerVersion, SCORER_VERSION);
+});
+
+test('startup-fit rewards work-style overlap and missing data never lowers the score', () => {
+  const project = { env_structure: 'ambiguous', env_autonomy: 'independent' };
+  const noPrefs = computeFitScore(project, { skills: [] });
+  const aligned = computeFitScore(project, { skills: [], work_style: { structure: 'ambiguous', autonomy: 'independent' } });
+  const mismatched = computeFitScore(project, { skills: [], work_style: { structure: 'structured', autonomy: 'guided' } });
+  assert.ok(aligned.score > noPrefs.score); // alignment earns points
+  assert.equal(mismatched.score, noPrefs.score); // a mismatch never dips below the no-data baseline
+  assert.ok(aligned.reasons.some(r => /ambiguous|independent/i.test(r)));
+  assert.ok(mismatched.concerns.some(c => /Prefers/i.test(c)));
+});
+
+test('execution has a cold-start guard: under 2 completed projects contributes nothing, honestly', () => {
+  const project = { verticals: ['Software & AI'] };
+  const profile = { verticals: ['Software & AI'] };
+  const cold = computeFitScore(project, profile, { completedCount: 1 });
+  const proven = computeFitScore(project, profile, { completedCount: 3, positiveOutcomes: 1 });
+  assert.ok(proven.score > cold.score);
+  assert.ok(cold.reasons.some(r => /unproven/i.test(r)));
+  assert.ok(proven.reasons.some(r => /Proven execution/i.test(r)));
+});
+
+test('ADVERSARIAL: for an ambiguous startup, the env-fit student beats the higher-skill student', () => {
+  const project = { env_structure: 'ambiguous', verticals: ['Software & AI'], work_types: ['Data & spreadsheets'], desired_skills: 'python' };
+  const base = { verticals: ['Software & AI'], work_types: ['Data & spreadsheets'] };
+  const higherSkill = computeFitScore(project, { ...base, skills: ['python'], work_style: { structure: 'structured' } });
+  const higherAmbiguityTolerance = computeFitScore(project, { ...base, skills: [], work_style: { structure: 'ambiguous' } });
+  assert.ok(higherAmbiguityTolerance.score > higherSkill.score); // environment fit can outrank raw skill
+});
+
+test('FAIRNESS: score is invariant to protected proxies (school prestige, gender-coded name)', () => {
+  const project = { verticals: ['Software & AI'], work_types: ['Research'], desired_skills: 'Python' };
+  const core = { verticals: ['Software & AI'], work_types: ['Research'], skills: ['Python'] };
+  const a = computeFitScore(project, { ...core, display_name: 'Emily', school_name: 'Harvard University' });
+  const b = computeFitScore(project, { ...core, display_name: 'Jamal', school_name: 'Community College' });
+  assert.equal(a.score, b.score); // protected proxies MUST NOT move the score
+});
+
+test('cleanWorkStyle keeps only valid enum values and drops the rest', () => {
+  assert.deepEqual(cleanWorkStyle({ structure: 'ambiguous', autonomy: 'nope', pace: 'fast', junk: 'x' }), { structure: 'ambiguous', pace: 'fast' });
+  assert.equal(cleanWorkStyle({ structure: 'bad' }), null);
+  assert.equal(cleanWorkStyle('not an object'), null);
 });
 
 test('applying stores skills, links, a referral and a snapshotted fit score, and logs a match event', async () => {
