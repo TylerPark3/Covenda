@@ -490,6 +490,20 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 @keyframes cue { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
 
 .hero-company { display: none; }
+/* Company hero: two clear segments — delegate work, and find talent. */
+.company-jobs { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 22px; margin: clamp(30px, 4vw, 46px) auto 0; max-width: 1040px; text-align: left; }
+.company-job { display: flex; flex-direction: column; padding: clamp(22px, 2.6vw, 32px); border: 1px solid var(--line); border-radius: 22px; background: #fff; }
+.company-job-talent { border-color: var(--gold-light); background: linear-gradient(180deg, var(--gold-pale), #fff 62%); }
+.company-job-eyebrow { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--gold-deep); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.company-job-eyebrow svg { width: 15px; height: 15px; }
+.company-job h2 { margin: 12px 0 0; font-size: clamp(22px, 2.4vw, 30px); line-height: 1.08; letter-spacing: -.03em; }
+.company-job > p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.company-job .selector-orbit { margin: 18px 0 0; }
+.company-job .selector-orbit::after { display: none; }
+.company-job-points { list-style: none; margin: 20px 0 auto; padding: 0; display: grid; gap: 12px; }
+.company-job-points li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink); }
+.company-job-points svg { width: 17px; height: 17px; color: var(--gold-deep); flex: none; }
+.company-job-talent .cta-actions { margin-top: 24px; }
 .company-composer {
   position: relative;
   z-index: 2;

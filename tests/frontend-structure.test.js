@@ -55,7 +55,9 @@ test('the initial path chooser uses a continuous responsive glass control', () =
 test('audience switch supports student and company site states', () => {
   assert.match(html, /data-audience-option="student"/);
   assert.match(html, /data-audience-option="company"/);
-  assert.match(html, /What work keeps getting pushed\?/);
+  // Company hero leads with two segments: delegate work + find talent.
+  assert.match(html, /Work that keeps getting pushed back/);
+  assert.match(html, /Find elite talent/);
   assert.match(script, /document\.body\.dataset\.audience = audience/);
   assert.match(styles, /body\[data-audience="company"\] \.hero-student/);
   assert.match(script, /covendaAudience/);
