@@ -2876,7 +2876,7 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     $('#studentPathfinder').scrollIntoView({ behavior: 'smooth', block: 'start' });
     window.setTimeout(() => $('.work-option.is-selected')?.focus(), 420);
   }
-  if (action === 'explore-work') $('#workTypes').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (action === 'explore-work') $('#studentPathfinder')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   if (action === 'explore-back') closeWorkDetail();
   if (action === 'flow-prev') { flowStep -= 1; renderFlowStep(); }
   if (action === 'flow-next') { flowStep += 1; renderFlowStep(); }
@@ -4295,7 +4295,7 @@ function initScrollReveal() {
     '.work-record', '.packet', '.risk-note',
     '.feature-copy', '.feature-panel',
     '.value-col',
-    '.why-section .why-copy', '.why-section .fit-table', '.why-section .work-types',
+    '.why-section .why-copy', '.why-section .fit-table',
     '.batches-section .section-heading', '.batch-card',
     '.final-cta .audience-content',
   ].join(',');

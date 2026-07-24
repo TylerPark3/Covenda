@@ -178,6 +178,11 @@ Menlo enterprise GenAI spend $11.5B→$37B ('24→'25); the four "Why now" band 
 
 ---
 
+## Copy bank (student voice — implement where it lands)
+- **"I know I could contribute to this startup, but I don't know how to get in front of the
+  founder."** — the exact pain Covenda removes; strong candidate for the student hero or the
+  contrast section. (Per Tyler; hold for a good placement.)
+
 ### The unproven crux (say it plainly internally)
 `[R]` The weakest links are **small-firm willingness-to-pay** (Pangea stalled exactly here) and
 **peer-to-peer referral as a *predictive* signal** (no research validates it; referral data is about
