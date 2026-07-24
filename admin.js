@@ -7,6 +7,7 @@ let submissions = [];
 let requests = [];
 let batches = [];
 let companies = [];
+let members = [];
 const batchTierLabels = { open:'Open', elite:'Elite' };
 const batchStatusLabels = { draft:'Draft', open:'Open', reviewing:'Reviewing', closed:'Closed', archived:'Archived' };
 const batchAppStatusLabels = { submitted:'Applied', reviewing:'In review', accepted:'Accepted', waitlisted:'Waitlisted', declined:'Declined' };
@@ -290,10 +291,10 @@ async function loadInbox({ announce = false } = {}) {
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {
-    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; companies=result.companies||[]; $('#operatorEmail').textContent=result.operator.email;
+    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; companies=result.companies||[]; members=result.users||[]; $('#operatorEmail').textContent=result.operator.email;
     if (!selectedReference && submissions[0]) selectedReference=submissions[0].reference;
     if (selectedReference && !submissions.some(item=>item.reference===selectedReference)) selectedReference=submissions[0]?.reference || '';
-    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies();
+    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies(); renderMembers();
     $('#adminSyncStatus').textContent=`Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }
@@ -384,6 +385,47 @@ async function runDigests(send){
 }
 $('#digestPreviewBtn')?.addEventListener('click',()=>runDigests(false));
 $('#digestSendBtn')?.addEventListener('click',()=>{if(confirm('Send the monthly digest to every partner with an email on file?'))runDigests(true);});
+// Member management: filterable list of every account, with delete.
+const memberRoleLabels={student:'Student',company:'Company',university:'University'};
+function filteredMembers(){
+  const q=($('#adminUsersSearch')?.value||'').trim().toLowerCase();
+  const role=$('#adminUsersRole')?.value||'';
+  return members.filter(m=>{
+    if(role==='none'){if(m.role)return false;}else if(role&&m.role!==role)return false;
+    if(q){const hay=[m.name,m.email].join(' ').toLowerCase();if(!hay.includes(q))return false;}
+    return true;
+  });
+}
+function renderMembers(){
+  const root=$('#adminUsers');if(!root)return;root.replaceChildren();
+  const count=$('#adminUsersCount');if(count)count.textContent=members.length;
+  const rows=filteredMembers();
+  const shown=$('#adminUsersShown');if(shown)shown.textContent=`${rows.length} of ${members.length}`;
+  if(!members.length){const p=document.createElement('p');p.className='admin-requests-empty';p.textContent='No member accounts yet.';root.append(p);return;}
+  if(!rows.length){const p=document.createElement('p');p.className='admin-requests-empty';p.textContent='No members match this filter.';root.append(p);return;}
+  for(const m of rows){
+    const row=document.createElement('div');row.className='admin-user-row';
+    const info=document.createElement('div');info.className='admin-user-info';
+    const nm=document.createElement('strong');nm.textContent=m.name||'(no name)';const em=document.createElement('span');em.className='admin-user-email';em.textContent=m.email||'(no email)';info.append(nm,em);
+    const meta=document.createElement('div');meta.className='admin-user-meta';
+    const rolePill=document.createElement('span');rolePill.className='admin-user-role';rolePill.textContent=m.role?(memberRoleLabels[m.role]||m.role):'No profile';if(!m.role)rolePill.classList.add('is-none');meta.append(rolePill);
+    if(m.created_at){const d=document.createElement('small');d.textContent=`Joined ${dateLabel(m.created_at)}`;meta.append(d);}
+    const del=document.createElement('button');del.type='button';del.className='admin-user-delete';del.textContent='Delete';
+    del.addEventListener('click',()=>deleteMember(m,del));
+    row.append(info,meta,del);root.append(row);
+  }
+}
+async function deleteMember(m,button){
+  const label=m.name||m.email||'this member';
+  if(!confirm(`Delete ${label}? This permanently removes their account, profile, projects, and applications. This cannot be undone.`))return;
+  button.disabled=true;const original=button.textContent;button.textContent='Deleting…';
+  try{
+    await adminRequest({method:'PATCH',body:JSON.stringify({action:'delete-user',userId:m.id})});
+    members=members.filter(x=>x.id!==m.id);renderMembers();
+  }catch(error){alert(error.message);button.disabled=false;button.textContent=original;}
+}
+$('#adminUsersSearch')?.addEventListener('input',renderMembers);
+$('#adminUsersRole')?.addEventListener('change',renderMembers);
 // Packet-first intake (GTM Move 1): operator scopes a packet for a company.
 function renderPacketCompanies(){
   const sel=$('#packetCompany');if(!sel)return;

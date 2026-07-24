@@ -565,6 +565,45 @@ export async function createPacket(supabase, input, operatorEmail = '') {
   return data;
 }
 
+// Member management: list accounts (auth users joined to their profile) so the operator can
+// review and, if needed, remove them. Degrades to [] if the admin API is unavailable.
+export async function listAdminUsers(supabase) {
+  let users = [];
+  try {
+    const { data } = await supabase.auth.admin.listUsers({ page: 1, perPage: 500 });
+    users = Array.isArray(data?.users) ? data.users : (Array.isArray(data) ? data : []);
+  } catch { return []; }
+  if (!users.length) return [];
+  const ids = users.map(u => u.id).filter(Boolean);
+  let byId = new Map();
+  try {
+    const { data: profiles } = await supabase.from('member_profiles').select('user_id, display_name, organization_name, role').in('user_id', ids);
+    byId = new Map((profiles || []).map(p => [p.user_id, p]));
+  } catch { byId = new Map(); }
+  return users.map(u => {
+    const p = byId.get(u.id) || {};
+    return {
+      id: u.id,
+      email: u.email || '',
+      role: p.role || null,
+      name: p.display_name || p.organization_name || '',
+      created_at: u.created_at || '',
+    };
+  });
+}
+
+// Delete a member account (cascades their data via FK on delete). Operator can't delete self.
+export async function deleteAdminUser(supabase, input, operatorEmail = '') {
+  const userId = text(input.userId, 50);
+  if (!UUID_PATTERN.test(userId)) throw new Error('Choose a valid user.');
+  let targetEmail = '';
+  try { const { data } = await supabase.auth.admin.getUserById(userId); targetEmail = email(data?.user?.email); } catch { targetEmail = ''; }
+  if (targetEmail && operatorEmail && targetEmail === email(operatorEmail)) throw new Error('You cannot delete your own operator account.');
+  const { error } = await supabase.auth.admin.deleteUser(userId);
+  if (error) throw error;
+  return { deleted: userId };
+}
+
 function adminFailure(error) {
   if (error instanceof AdminOperationalError) {
     return { status: 503, code: error.code, message: error.publicMessage };
@@ -644,10 +683,10 @@ export default async function handler(req, res, dependencies = {}) {
     if (!admin) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
 
     if (req.method === 'GET') {
-      const [submissions, requests, batches, metrics, companies] = await Promise.all([
-        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase), listAdminCompanies(admin.supabase),
+      const [submissions, requests, batches, metrics, companies, users] = await Promise.all([
+        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase), listAdminCompanies(admin.supabase), listAdminUsers(admin.supabase),
       ]);
-      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches, metrics, companies });
+      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches, metrics, companies, users });
     }
 
     const patchInput = body(req);
@@ -659,6 +698,9 @@ export default async function handler(req, res, dependencies = {}) {
     }
     if (patchInput.action === 'review-batch-application') {
       return res.status(200).json({ ok: true, application: await reviewBatchApplication(admin.supabase, patchInput, admin.email) });
+    }
+    if (patchInput.action === 'delete-user') {
+      return res.status(200).json({ ok: true, result: await deleteAdminUser(admin.supabase, patchInput, admin.email) });
     }
     const submission = await updateAdminSubmission(admin.supabase, patchInput, admin.email);
     return res.status(200).json({ ok: true, submission });

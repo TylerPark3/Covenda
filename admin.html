@@ -102,6 +102,15 @@
       <div class="admin-queue-heading"><div><h2>Brokered work requests <b id="adminRequestsCount">0</b></h2><p>Companies asking Covenda to package work. Set a status and reply — the company sees it in their portal.</p></div></div>
       <div class="admin-requests" id="adminRequests"></div>
     </section>
+    <section class="admin-users-section">
+      <div class="admin-queue-heading"><div><h2>Members <b id="adminUsersCount">0</b></h2><p>Every account on Covenda. Filter to find one, and remove accounts that shouldn’t be here. Deleting a member also removes their profile, projects, and applications — it can’t be undone.</p></div></div>
+      <div class="admin-users-controls">
+        <label class="admin-search"><svg><use href="#a-search"/></svg><input id="adminUsersSearch" type="search" placeholder="Search name or email" aria-label="Search members"></label>
+        <select id="adminUsersRole" aria-label="Filter by role"><option value="">All roles</option><option value="student">Students</option><option value="company">Companies</option><option value="university">Universities</option><option value="none">No profile yet</option></select>
+        <span id="adminUsersShown" class="admin-users-shown"></span>
+      </div>
+      <div class="admin-users" id="adminUsers"></div>
+    </section>
     <section class="admin-batches-section">
       <div class="admin-queue-heading"><div><h2>Elite batches <b id="adminBatchesCount">0</b></h2><p>Curated cohorts. Create a batch, then review every application — accept, waitlist, or decline. Admitted students are surfaced to partner companies.</p></div></div>
       <form class="admin-batch-form" id="adminBatchForm">

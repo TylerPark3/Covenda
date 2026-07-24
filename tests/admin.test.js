@@ -1,7 +1,34 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import adminHandler, { AdminOperationalError, authorizeAdmin, caseStudyMetrics, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission, verifyAdminCode } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, caseStudyMetrics, deleteAdminUser, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission, verifyAdminCode } from '../api/admin.js';
+
+test('deleteAdminUser removes a member but never the operator themselves', async () => {
+  const uid = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  let deletedId = '';
+  const supabase = {
+    auth: { admin: {
+      getUserById: async (id) => ({ data: { user: { email: id === uid ? 'member@x.com' : 'ops@covenda.com' } } }),
+      deleteUser: async (id) => { deletedId = id; return { error: null }; },
+    } },
+  };
+  const out = await deleteAdminUser(supabase, { userId: uid }, 'ops@covenda.com');
+  assert.equal(out.deleted, uid);
+  assert.equal(deletedId, uid);
+
+  // Self-delete: the target's email matches the operator → blocked, deleteUser never called.
+  deletedId = '';
+  const selfSupabase = { auth: { admin: {
+    getUserById: async () => ({ data: { user: { email: 'ops@covenda.com' } } }),
+    deleteUser: async (id) => { deletedId = id; return { error: null }; },
+  } } };
+  await assert.rejects(deleteAdminUser(selfSupabase, { userId: uid }, 'ops@covenda.com'), /cannot delete your own/);
+  assert.equal(deletedId, '');
+});
+
+test('deleteAdminUser rejects a malformed user id', async () => {
+  await assert.rejects(deleteAdminUser({}, { userId: 'nope' }, 'ops@covenda.com'), /valid user/);
+});
 
 const codeEnv = { COVENDA_ADMIN_EMAILS: 'ops@covenda.com', SUPABASE_URL: 'https://x.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'pub' };
 
