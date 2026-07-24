@@ -592,16 +592,22 @@ export async function listAdminUsers(supabase) {
   });
 }
 
-// Delete a member account (cascades their data via FK on delete). Operator can't delete self.
+// Delete a member account (cascades their app data via FK on delete). Operator can't delete self.
+// Hard delete first; if the DB blocks it, fall back to a soft delete (bans the account so it can
+// no longer sign in) so the operator's action still takes effect. Surfaces the real error if both
+// fail, instead of a generic 503.
 export async function deleteAdminUser(supabase, input, operatorEmail = '') {
   const userId = text(input.userId, 50);
   if (!UUID_PATTERN.test(userId)) throw new Error('Choose a valid user.');
   let targetEmail = '';
   try { const { data } = await supabase.auth.admin.getUserById(userId); targetEmail = email(data?.user?.email); } catch { targetEmail = ''; }
-  if (targetEmail && operatorEmail && targetEmail === email(operatorEmail)) throw new Error('You cannot delete your own operator account.');
-  const { error } = await supabase.auth.admin.deleteUser(userId);
-  if (error) throw error;
-  return { deleted: userId };
+  if (targetEmail && operatorEmail && targetEmail === email(operatorEmail)) throw new Error('Please pick another account — you cannot delete your own operator account.');
+  const hard = await supabase.auth.admin.deleteUser(userId);
+  if (!hard?.error) return { deleted: userId, mode: 'removed' };
+  const soft = await supabase.auth.admin.deleteUser(userId, true);
+  if (!soft?.error) return { deleted: userId, mode: 'disabled' };
+  const detail = String(hard.error?.message || hard.error || 'unknown error').slice(0, 300);
+  throw new Error(`Please try again — deleting this member failed: ${detail}`);
 }
 
 function adminFailure(error) {
