@@ -4485,5 +4485,44 @@ initFlowDemo();
 initIcosahedron();
 initHeroField();
 initScrollReveal();
+
+// ---- Stat count-up: "Why now" band numbers rise 0 -> value when they scroll into view. ----
+// Parses the existing text (e.g. "52%") so the markup stays the single source of truth.
+// Reduced-motion or no IntersectionObserver: numbers just stay as authored.
+(function initStatCountUp() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!('IntersectionObserver' in window)) return;
+  const stats = $$('.stat-list b');
+  if (!stats.length) return;
+  const animate = el => {
+    const raw = el.textContent.trim();
+    const match = raw.match(/^(\d+(?:\.\d+)?)(.*)$/);
+    if (!match) return;
+    const target = parseFloat(match[1]);
+    const suffix = match[2] || '';
+    const decimals = (match[1].split('.')[1] || '').length;
+    const t0 = performance.now();
+    const dur = 1200;
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic — fast rise, gentle landing
+      el.textContent = (target * eased).toFixed(decimals) + suffix;
+      if (p < 1) requestAnimationFrame(tick);
+      else el.textContent = raw; // land exactly on the authored value
+    };
+    el.textContent = (0).toFixed(decimals) + suffix;
+    requestAnimationFrame(tick);
+  };
+  const seen = new WeakSet();
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting || seen.has(en.target)) return;
+      seen.add(en.target);
+      animate(en.target);
+      io.unobserve(en.target);
+    });
+  }, { threshold: 0.6 });
+  stats.forEach(el => io.observe(el));
+})();
 initMemberNav();
 window.requestAnimationFrame(() => openIntro());

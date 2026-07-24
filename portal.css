@@ -154,6 +154,11 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .request-details { margin:0; color:var(--muted); font-size:11px; line-height:1.6; }
 .request-resolution { margin:8px 0 0; padding:8px 10px; border-radius:8px; background:var(--gold-pale); color:var(--gold-deep); font-size:11px; line-height:1.55; }
 .request-time { display:block; margin-top:8px; color:var(--soft); font-size:9px; }
+/* Scroll-reveal: modules rise in as they enter the viewport (reduced-motion safe). */
+.prv { opacity:0; transform:translateY(12px); }
+.prv-in { opacity:1; transform:none; transition:opacity .5s ease, transform .5s ease; }
+@media (prefers-reduced-motion: reduce) { .prv { opacity:1; transform:none; } }
+
 /* Live credibility meter (student profile) — real earned signals, not a black-box score. */
 .cred-meter { margin:22px 0 0; padding:22px; border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,var(--gold-pale),#fff 70%); }
 .cred-meter-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }

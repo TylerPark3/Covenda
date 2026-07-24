@@ -118,6 +118,22 @@ function setView(view) {
   // Opening Messages clears the unread indicator and pulls the latest immediately.
   if(state.view==='messages'){state.unreadMessages=0;paintUnread();pollMessages();}
   window.scrollTo({top:0,behavior:'smooth'});
+  revealify();
+}
+
+// ---- Scroll-reveal: portal modules rise in as they enter the viewport, on every view. ----
+// Purely presentational; reduced-motion (or no IntersectionObserver) leaves everything visible.
+const prvIO=('IntersectionObserver' in window)&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  ? new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('prv-in');prvIO.unobserve(e.target);}}),{threshold:.08})
+  : null;
+function revealify(){
+  if(!prvIO)return;
+  $$('.overview-grid > section, .focus-section, .list-row, .packet-card, .verified-record, .activity-row, .discover-card, .opportunity-card, .batch-card, .talent-card, .pow-card, .cred-meter, .proof-of-work, .wallet-grid > section, .wallet-ledger, .portfolio-profile, .work-trial-ladder, .request-list > *').forEach(el=>{
+    if(el.dataset.prv)return;
+    el.dataset.prv='1';
+    el.classList.add('prv');
+    prvIO.observe(el);
+  });
 }
 
 // Show the uploaded profile image when there is one, else fall back to the initial.
@@ -156,7 +172,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet();
+  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
