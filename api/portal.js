@@ -5,6 +5,7 @@ import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicatio
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
+import { evidenceMetaFromTimeline } from './connectors.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
@@ -1371,12 +1372,30 @@ export async function analyzeGithub(member, input, env = process.env) {
     const { error } = await member.supabase.from('member_profiles').update({ skill_signals: signals }).eq('user_id', member.user.id);
     analysis.persisted = !error;
   } catch { analysis.persisted = false; }
+  // Proof Connector Framework — Connector A. OWNERSHIP: if the student has connected their own
+  // GitHub account (connector_accounts) and its login matches this repo's owner, the claim is
+  // ownership_verified; the paste path stays ownership_verified:false, honestly labelled.
+  // HISTORY: the shared forensics service reads the commit timeline; a flagged (backfilled)
+  // timeline routes to human review and is never auto-credited.
+  let ownershipVerified = false;
+  try {
+    const { data: conn } = await member.supabase.from('connector_accounts')
+      .select('external_login, revoked_at').eq('student_user_id', member.user.id).eq('connector_id', 'github').maybeSingle();
+    if (conn && !conn.revoked_at && conn.external_login && analysis.ownerLogin
+      && conn.external_login.toLowerCase() === String(analysis.ownerLogin).toLowerCase()) {
+      ownershipVerified = true;
+    }
+  } catch { /* connector_accounts not migrated yet — treat as paste flow */ }
+  const { meta, forensics } = evidenceMetaFromTimeline({ connectorId: 'github', ownershipVerified, timestamps: analysis.commitTimestamps });
+  analysis.ownershipVerified = ownershipVerified;
+  analysis.evidenceMeta = meta;
+
   // Stage 1 (profile extractor): also emit evidence-tiered skill_claim rows for the matcher.
-  // Anti-gaming per the master prompt: a flagged repo (fork/one-shot) is routed to human
-  // review and NEVER auto-credited at artifact tier — we skip claim writes entirely for it.
+  // Anti-gaming per the master prompt: a flagged repo (fork/one-shot) OR a forensics anomaly is
+  // routed to human review and NEVER auto-credited at artifact tier — we skip claim writes for it.
   // Best-effort: before the Stage-0 migration exists this quietly no-ops.
   try {
-    if (!analysis.needsReview && analysis.repo.url) {
+    if (!analysis.needsReview && !forensics.anomaly && analysis.repo.url) {
       await member.supabase.from('skill_claim').delete().eq('student_user_id', member.user.id).eq('evidence_pointer', analysis.repo.url);
       const rows = analysis.skills.map(s => ({
         student_user_id: member.user.id,
@@ -1385,8 +1404,13 @@ export async function analyzeGithub(member, input, env = process.env) {
         level: `${s.score}/10 (${s.confidence})`,
         verification_tier: 'artifact',
         evidence_pointer: analysis.repo.url,
+        evidence_meta: meta,
       }));
-      if (rows.length) await member.supabase.from('skill_claim').insert(rows);
+      if (rows.length) {
+        // If evidence_meta hasn't been migrated yet, retry without it so claims still land.
+        let { error } = await member.supabase.from('skill_claim').insert(rows);
+        if (error) await member.supabase.from('skill_claim').insert(rows.map(({ evidence_meta, ...r }) => r));
+      }
     }
   } catch { /* skill_claim not migrated yet — analysis still returns for display */ }
   return analysis;

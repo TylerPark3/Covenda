@@ -82,7 +82,8 @@ function inspectCommits(commits, ownerLogin) {
   // Cadence quality: sustained work across many weeks is the hard-to-fake signal.
   const sustained = spanMonths >= 2 && activeWeeks >= 4;
   const oneShot = count <= 2 || (spanMonths < (1 / 30.44) && count >= 1); // <=2 commits, or all in a day
-  return { count, spanMonths, activeWeeks, ownedFraction, sustained, oneShot };
+  // `dates` (epoch ms, ascending) is the commit timeline the shared forensics service reads.
+  return { count, spanMonths, activeWeeks, ownedFraction, sustained, oneShot, timestamps: dates };
 }
 
 // Health multiplier in [0.45, 1]: how much the repo's own maturity should scale skill scores.
@@ -196,7 +197,10 @@ export function analyzeRepo(raw = {}) {
     skills: finalSkills,
     flags,
     needsReview,
-    // Deliberately NO overall score. Consumers must render per-skill.
+    // The commit timeline (epoch ms) for the shared forensics service, and the repo owner login
+    // so a connected account can be checked for OWNERSHIP. No overall score — render per-skill.
+    commitTimestamps: commits.timestamps,
+    ownerLogin: repo.ownerLogin,
   };
 }
 
