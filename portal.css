@@ -161,6 +161,21 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .request-details { margin:0; color:var(--muted); font-size:11px; line-height:1.6; }
 .request-resolution { margin:8px 0 0; padding:8px 10px; border-radius:8px; background:var(--gold-pale); color:var(--gold-deep); font-size:11px; line-height:1.55; }
 .request-time { display:block; margin-top:8px; color:var(--soft); font-size:9px; }
+/* Live credibility meter (student profile) — real earned signals, not a black-box score. */
+.cred-meter { margin:22px 0 0; padding:22px; border:1px solid var(--line); border-radius:16px; background:linear-gradient(180deg,var(--gold-pale),#fff 70%); }
+.cred-meter-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.cred-meter-head h3 { margin:0; font-size:15px; letter-spacing:-.02em; }
+.cred-meter-tag { font-size:11px; font-weight:700; color:var(--gold-deep); }
+.cred-meter-track { height:8px; margin:12px 0 16px; border-radius:99px; background:rgba(180,123,32,.14); overflow:hidden; }
+.cred-meter-track i { display:block; height:100%; border-radius:99px; background:linear-gradient(90deg,var(--gold),var(--gold-deep)); transition:width .5s ease; }
+.cred-meter-list { list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+.cred-meter-list li { display:flex; align-items:flex-start; gap:10px; }
+.cred-mark { flex:0 0 auto; display:grid; place-items:center; width:22px; height:22px; border-radius:99px; background:#fff; border:1px solid var(--line-strong); color:var(--soft); font-size:12px; font-weight:700; }
+.cred-meter-list li.is-met .cred-mark { background:var(--gold); border-color:var(--gold-deep); color:#1c1300; }
+.cred-meter-list strong { display:block; font-size:12.5px; color:var(--ink); font-weight:600; }
+.cred-meter-list li:not(.is-met) strong { color:var(--muted); }
+.cred-meter-list small { display:block; margin-top:2px; color:var(--soft); font-size:11px; }
+.cred-meter-note { margin:14px 0 0; color:var(--soft); font-size:11px; line-height:1.5; }
 /* Proof of work · GitHub skill analysis (student profile). */
 .proof-of-work { margin:22px 0 0; padding:22px; border:1px solid var(--line); border-radius:16px; background:#fff; }
 .proof-of-work h3 { margin:0; font-size:15px; letter-spacing:-.02em; }

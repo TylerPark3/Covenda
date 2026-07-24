@@ -1029,7 +1029,34 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   bar.append(search,vsel,skl,msel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student')renderProofOfWork(root,profile);}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderProofOfWork(root,profile);}}
+
+// Live credibility meter — a checklist of REAL, earned signals (identity, completeness, proven
+// GitHub skills, completed reviewed work-trials). Not a black-box score; each rung is concrete
+// and links to how to earn it. Honest by construction: it only counts things that actually happened.
+function renderCredibility(root,d){
+  const p=d?.profile; if(p?.role!=='student') return;
+  const completed=(d.projects||[]).filter(x=>x.status==='complete').length;
+  const ghSkills=githubSkills(p).length;
+  const signals=[
+    {ok:!!p.identity_verified,label:'Identity verified',hint:'Verify your identity to add trust.'},
+    {ok:profileCompletion(p)>=100,label:'Profile complete',hint:'Fill out your headline, bio, and skills.'},
+    {ok:ghSkills>0,label:ghSkills?`${ghSkills} proven skill${ghSkills===1?'':'s'} from real work`:'Proven skills from real work',hint:'Analyze a GitHub repo below.'},
+    {ok:completed>0,label:completed?`${completed} completed work-trial${completed===1?'':'s'}`:'Completed a reviewed work-trial',hint:'Clear a Stage 1 work-trial to compound your record.'},
+  ];
+  const met=signals.filter(s=>s.ok).length;
+  const sec=document.createElement('section');sec.className='cred-meter';
+  const head=document.createElement('div');head.className='cred-meter-head';
+  const h=document.createElement('h3');h.textContent='Your credibility';
+  const tag=document.createElement('span');tag.className='cred-meter-tag';tag.textContent=`${met} of ${signals.length} signals`;
+  head.append(h,tag);sec.append(head);
+  const track=document.createElement('div');track.className='cred-meter-track';const fill=document.createElement('i');fill.style.width=`${(met/signals.length)*100}%`;track.append(fill);sec.append(track);
+  const list=document.createElement('ul');list.className='cred-meter-list';
+  signals.forEach(s=>{const li=document.createElement('li');li.className=s.ok?'is-met':'';const mark=document.createElement('span');mark.className='cred-mark';mark.textContent=s.ok?'✓':'○';const txt=document.createElement('div');const strong=document.createElement('strong');strong.textContent=s.label;txt.append(strong);if(!s.ok){const hint=document.createElement('small');hint.textContent=s.hint;txt.append(hint);}li.append(mark,txt);list.append(li);});
+  sec.append(list);
+  const note=document.createElement('p');note.className='cred-meter-note';note.textContent='Not a black-box score — every signal is something you earned through real work or a vouch.';sec.append(note);
+  root.append(sec);
+}
 
 // Skill-inference (GitHub): link a public repo -> per-skill scores with evidence. Scores from
 // code alone are anchored by trials + referrals, never proof on their own (anti-gaming).
