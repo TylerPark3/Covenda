@@ -222,7 +222,7 @@ function conversionControl(project){
   wrap.append(label,status);return wrap;
 }
 function loopNote(iconId,title,copy){const d=document.createElement('div');d.className='loop-note';d.append(icon(iconId));const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=copy;box.append(strong,small);d.append(box);return d;}
-function verifiedCard(project,{full=false}={}){const card=document.createElement('div');card.className='verified-record';const head=document.createElement('div');head.className='verified-head';head.append(icon('p-check'));const badge=document.createElement('span');badge.textContent='Verified work record';head.append(badge);const h=document.createElement('h3');h.textContent=project.title;card.append(head,h);if(full&&project.summary){const s=document.createElement('p');s.className='verified-summary';s.textContent=project.summary;card.append(s);}const p=document.createElement('p');p.textContent=`Reviewer accepted${project.completed_at?` · ${dateLabel(project.completed_at)}`:''}`;card.append(p);return card;}
+function verifiedCard(project,{full=false}={}){const card=document.createElement('div');card.className='verified-record';const head=document.createElement('div');head.className='verified-head';head.append(icon('p-check'));const badge=document.createElement('span');badge.textContent='Verified work record';head.append(badge);const h=document.createElement('h3');h.textContent=project.title;card.append(head,h);if(full&&project.summary){const s=document.createElement('p');s.className='verified-summary';s.textContent=project.summary;card.append(s);}const p=document.createElement('p');p.textContent=`Reviewer accepted${project.completed_at?` · ${dateLabel(project.completed_at)}`:''}`;card.append(p);const earned=document.createElement('p');earned.className='verified-earned';earned.textContent='Stage 1 cleared — eligible for deeper, higher-access work.';card.append(earned);return card;}
 function projectActionNode(project){
   const d=state.dashboard;const role=d.profile?.role;const isOwner=project.owner_user_id===d.user.id;const isAssigned=project.assigned_student_user_id===d.user.id;
   const wrap=document.createElement('div');wrap.className='project-actions';
@@ -323,7 +323,7 @@ function cell(label,value){const div=document.createElement('div');div.className
 function packetCard(project){
   const card=document.createElement('article');card.className='packet-card';
   const top=document.createElement('div');top.className='packet-card-top';
-  const eyebrow=document.createElement('p');eyebrow.className='packet-eyebrow';eyebrow.textContent='Scoped by Covenda for you';
+  const eyebrow=document.createElement('p');eyebrow.className='packet-eyebrow';eyebrow.textContent='Stage 1 · Work-trial — scoped by Covenda, no systems access';
   const h=document.createElement('h3');h.textContent=project.title;
   top.append(eyebrow,h);card.append(top);
   const rows=[['Deliverable',project.deliverable],['Acceptance criteria',project.acceptance_criteria],['Target',project.target_date?dateLabel(project.target_date):'Flexible']];

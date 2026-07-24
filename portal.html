@@ -111,8 +111,13 @@
       </section>
 
       <section class="portal-view" data-portal-view="projects">
-        <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every active and completed project in one place.</p></div><div class="page-heading-actions"><button class="portal-secondary" id="requestWork" type="button" data-org-only hidden><svg><use href="#p-message"/></svg>Request work</button><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Post a project</button></div></div>
+        <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every work-trial and verified record in one place. Proof precedes access — clear a Stage 1 trial, and deeper work opens up.</p></div><div class="page-heading-actions"><button class="portal-secondary" id="requestWork" type="button" data-org-only hidden><svg><use href="#p-message"/></svg>Request work</button><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Post a project</button></div></div>
         <div class="request-list" id="requestList"></div>
+        <div class="work-trial-ladder" aria-label="How work-trials work">
+          <div class="wtl-step"><span class="wtl-num">1</span><div><strong>Work-trial</strong><span>A bounded deliverable with no systems access, reviewed against a clear finish line.</span></div></div>
+          <svg class="wtl-arrow" aria-hidden="true"><use href="#p-arrow"/></svg>
+          <div class="wtl-step"><span class="wtl-num">2</span><div><strong>Deeper access, earned</strong><span>A strong Stage 1 unlocks more scope and trust — proof precedes access.</span></div></div>
+        </div>
         <div class="project-list" id="projectList"></div>
       </section>
 

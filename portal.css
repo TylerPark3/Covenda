@@ -161,6 +161,16 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .request-details { margin:0; color:var(--muted); font-size:11px; line-height:1.6; }
 .request-resolution { margin:8px 0 0; padding:8px 10px; border-radius:8px; background:var(--gold-pale); color:var(--gold-deep); font-size:11px; line-height:1.55; }
 .request-time { display:block; margin-top:8px; color:var(--soft); font-size:9px; }
+/* Work-trial ladder: names the "proof precedes access" model on the projects view. */
+.work-trial-ladder { display:flex; align-items:stretch; gap:14px; max-width:1240px; margin:0 auto 24px; }
+.wtl-step { flex:1; display:flex; align-items:flex-start; gap:12px; padding:16px 18px; border:1px solid var(--line); border-radius:14px; background:#fff; }
+.wtl-step:last-of-type { border-color:rgba(180,123,32,.4); background:linear-gradient(180deg,var(--gold-pale),#fff 65%); }
+.wtl-num { flex:0 0 auto; display:grid; place-items:center; width:26px; height:26px; border-radius:999px; background:var(--gold); color:#1c1300; font-size:13px; font-weight:700; }
+.wtl-step strong { display:block; font-size:13px; color:var(--ink); }
+.wtl-step > div > span { display:block; margin-top:3px; color:var(--muted); font-size:11.5px; line-height:1.5; }
+.wtl-arrow { flex:0 0 auto; align-self:center; width:18px; height:18px; color:var(--gold-deep); }
+.verified-earned { margin:8px 0 0; color:var(--gold-deep); font-size:11.5px; font-weight:600; }
+@media (max-width:680px) { .work-trial-ladder { flex-direction:column; } .wtl-arrow { transform:rotate(90deg); } }
 .packet-card { margin:0 0 16px; padding:22px; border:1px solid rgba(180,123,32,.4); border-radius:16px; background:linear-gradient(180deg,var(--gold-pale),#fff 60%); }
 .packet-eyebrow { margin:0; color:var(--gold-deep); font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
 .packet-card-top h3 { margin:4px 0 0; font-size:17px; letter-spacing:-.02em; }
