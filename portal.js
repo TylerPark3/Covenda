@@ -156,10 +156,30 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet();
+  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
+// Company home leads with the two jobs it does: delegate stuck work, and find elite talent.
+function renderCompanySegments(role){
+  const root=$('#companySegments');if(!root)return;
+  if(role!=='company'){root.hidden=true;root.replaceChildren();return;}
+  root.replaceChildren();
+  const seg=(iconId,title,copy,actions)=>{
+    const card=document.createElement('article');card.className='company-segment';
+    const mark=document.createElement('span');mark.className='company-segment-icon';mark.append(icon(iconId));
+    const h=document.createElement('h2');h.textContent=title;
+    const p=document.createElement('p');p.textContent=copy;
+    const row=document.createElement('div');row.className='company-segment-actions';
+    actions.forEach(([label,run,primary])=>{const b=document.createElement('button');b.type='button';b.className=primary?'portal-primary compact':'portal-ghost compact';b.textContent=label;b.addEventListener('click',run);row.append(b);});
+    card.append(mark,h,p,row);return card;
+  };
+  root.append(
+    seg('p-clock','Work that keeps getting pushed back','That task that slips every week — hand it off as a scoped, reviewed project. Covenda carries the scoping; you only approve the result.',[['Post a project',()=>openIntake(),true],['Ask Covenda to scope it',()=>openRequest()]]),
+    seg('p-spark','Find elite talent','Vetted, referral-backed students. Search the talent base, or browse curated elite batches.',[['Browse talent',()=>setView('portfolio'),true],['Elite batches',()=>setView('batches')]]),
+  );
+  root.hidden=false;
+}
 
 function renderFocus(){
   const root=$('#focusProject');root.replaceChildren();const role=state.dashboard.profile?.role;

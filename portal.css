@@ -93,6 +93,14 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .welcome-row h1,.page-heading h1 { margin:0; font-family:var(--font-display); font-weight:500; font-size:clamp(36px,4.1vw,58px); line-height:1.02; letter-spacing:-.03em; }
 .welcome-row > div > p:last-child,.page-heading > div > p:last-child { max-width:650px; margin:14px 0 0; color:var(--muted); font-size:12px; line-height:1.7; }
 .welcome-row .portal-primary { flex:0 0 auto; margin-top:4px; }
+.company-segments { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:36px; }
+.company-segment { display:flex; flex-direction:column; padding:24px; border:1px solid var(--line); border-radius:18px; background:linear-gradient(180deg,var(--gold-pale),#fff 62%); }
+.company-segment-icon { display:grid; width:42px; height:42px; place-items:center; border:1px solid rgba(180,123,32,.3); border-radius:12px; color:var(--gold-deep); background:#fff; }
+.company-segment-icon svg { width:20px; height:20px; }
+.company-segment h2 { margin:16px 0 0; font-size:18px; letter-spacing:-.02em; }
+.company-segment p { margin:8px 0 0; color:var(--muted); font-size:12px; line-height:1.6; }
+.company-segment-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; padding-top:18px; }
+.company-segment-actions .portal-primary,.company-segment-actions .portal-ghost { min-height:36px; padding:8px 14px; font-size:12px; }
 .focus-section,.plain-section { margin-top:54px; }
 .section-heading { align-items:flex-end; padding-bottom:15px; border-bottom:1px solid var(--line); }
 .section-heading h2 { margin:0; font-family:var(--font-display); font-weight:500; font-size:21px; letter-spacing:-.02em; }
