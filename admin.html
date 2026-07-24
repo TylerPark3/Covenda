@@ -120,6 +120,15 @@
       </div>
       <div class="admin-users" id="adminProjects"></div>
     </section>
+    <section class="admin-users-section admin-matcher-section">
+      <div class="admin-queue-heading"><div><h2>Matcher <b id="adminMatchVersion"></b></h2><p>The system drafts, you decide. Pick an opportunity and draft a shortlist — at most 3 candidates, each with evidence-cited reasons and one honest gap, or an honest refusal. Every decision you record requires a rationale; those rationales are the training labels.</p></div></div>
+      <div class="admin-users-controls">
+        <select id="matchOpportunity" aria-label="Choose an opportunity"><option value="">Choose an opportunity…</option></select>
+        <button class="admin-primary" id="runMatchBtn" type="button">Draft shortlist</button>
+        <span id="matchStatus" class="admin-users-shown" aria-live="polite"></span>
+      </div>
+      <div class="admin-match-results" id="matchResults"></div>
+    </section>
     <section class="admin-batches-section">
       <div class="admin-queue-heading"><div><h2>Elite batches <b id="adminBatchesCount">0</b></h2><p>Curated cohorts. Create a batch, then review every application — accept, waitlist, or decline. Admitted students are surfaced to partner companies.</p></div></div>
       <form class="admin-batch-form" id="adminBatchForm">

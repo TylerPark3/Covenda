@@ -286,3 +286,22 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .admin-digest-reason { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 999px; background: var(--pale); color: var(--soft); font-size: 10px; }
 .admin-digest-reason.is-sent { background: #f4faf5; color: var(--success); }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; } }
+
+/* ---- Operator matcher panel (Compatibility Engine Stage 2) ---- */
+.admin-primary { min-height:40px; padding:9px 16px; border:1px solid var(--gold-deep,#8d5b0f); border-radius:10px; background:var(--gold,#b47b20); color:#fff; font-size:12px; font-weight:700; cursor:pointer; }
+.admin-primary:hover { background:var(--gold-deep,#8d5b0f); }
+.admin-primary:disabled { opacity:.55; cursor:not-allowed; }
+.admin-primary.compactish { min-height:34px; padding:7px 12px; font-size:11px; }
+#matchOpportunity { min-width:280px; }
+.admin-match-results { display:grid; gap:12px; margin-top:14px; }
+.match-card { padding:16px 18px; border:1px solid var(--line,#e7e4dd); border-radius:12px; background:#fff; }
+.match-card.is-decided { border-color:#24753a; }
+.match-card-top { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.match-score { font-weight:800; color:var(--gold-deep,#8d5b0f); font-size:18px; }
+.match-why { margin:10px 0 0; padding:10px 12px; border-left:3px solid var(--gold,#b47b20); background:#fbf7ed; white-space:pre-wrap; font-family:var(--font-mono,ui-monospace,monospace); font-size:11.5px; line-height:1.6; overflow-x:auto; }
+.match-decide { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:12px; }
+.match-rationale { flex:1 1 260px; min-height:38px; padding:8px 11px; border:1px solid var(--line-strong,#d5d0c5); border-radius:9px; }
+.match-rationale.is-missing { border-color:#a43124; }
+.match-note { margin:0; color:#7a5a17; font-size:11.5px; }
+.match-refusal { border-left:3px solid #a43124; }
+.match-refusal ul { margin:8px 0 0; padding-left:18px; color:#65635d; font-size:12px; }

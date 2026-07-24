@@ -668,9 +668,10 @@ export async function runOpportunityMatch(supabase, input) {
   }));
   const result = matchOpportunity(opportunity, candidates);
   if (!result.refused) {
-    // Audit log — best-effort (graceful before the Stage-0 migration runs).
+    // Audit log — best-effort (graceful before the Stage-0 migration runs). The inserted row
+    // ids ride back on the shortlist so the operator's decision can attach to the right row.
     try {
-      await supabase.from('matches').insert(result.shortlist.map(s => ({
+      const { data: rows } = await supabase.from('matches').insert(result.shortlist.map(s => ({
         opportunity_id: opportunityId,
         student_user_id: s.candidate_id,
         hard_filter_pass: true,
@@ -678,7 +679,9 @@ export async function runOpportunityMatch(supabase, input) {
         score_components: s.score_components,
         explanation: s.explanation,
         scorer_version: s.scorer_version,
-      })));
+      }))).select('id, student_user_id');
+      const idByStudent = new Map((rows || []).map(r => [r.student_user_id, r.id]));
+      result.shortlist = result.shortlist.map(s => ({ ...s, match_id: idByStudent.get(s.candidate_id) || null }));
     } catch { /* matches table not migrated yet — shortlist still returns for display */ }
   }
   return result;

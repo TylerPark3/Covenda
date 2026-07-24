@@ -297,7 +297,7 @@ async function loadInbox({ announce = false } = {}) {
     const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; companies=result.companies||[]; members=result.users||[]; projects=result.projects||[]; $('#operatorEmail').textContent=result.operator.email;
     if (!selectedReference && submissions[0]) selectedReference=submissions[0].reference;
     if (selectedReference && !submissions.some(item=>item.reference===selectedReference)) selectedReference=submissions[0]?.reference || '';
-    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies(); renderMembers(); renderProjects();
+    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies(); renderMembers(); renderProjects(); renderMatcherOptions();
     $('#adminSyncStatus').textContent=`Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }
@@ -486,6 +486,63 @@ async function deleteProject(pr,button){
 }
 $('#adminProjectsSearch')?.addEventListener('input',renderProjects);
 $('#adminProjectsStatus')?.addEventListener('change',renderProjects);
+
+// ---- Compatibility Engine Stage 2: operator-as-matcher panel. The system drafts, the
+// operator decides — and every decision requires a rationale (the training labels).
+function renderMatcherOptions(){
+  const sel=$('#matchOpportunity');if(!sel)return;
+  const current=sel.value;sel.replaceChildren();
+  const ph=document.createElement('option');ph.value='';ph.textContent='Choose an opportunity…';sel.append(ph);
+  projects.filter(p=>!['archived'].includes(p.status)).forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=`${p.title||'(untitled)'} · ${p.status}`;if(p.id===current)o.selected=true;sel.append(o);});
+}
+function matchCandidateCard(entry){
+  const card=document.createElement('article');card.className='match-card';
+  const top=document.createElement('div');top.className='match-card-top';
+  const nm=document.createElement('strong');nm.textContent=entry.name||entry.candidate_id;
+  const sc=document.createElement('span');sc.className='match-score';sc.textContent=`${entry.score}`;
+  top.append(nm,sc);card.append(top);
+  const why=document.createElement('pre');why.className='match-why';why.textContent=entry.explanation;card.append(why);
+  const row=document.createElement('div');row.className='match-decide';
+  if(!entry.match_id){
+    const note=document.createElement('p');note.className='match-note';note.textContent='Run the Stage-0 migration to record decisions (this draft was not persisted).';row.append(note);
+  }else{
+    const sel=document.createElement('select');[['selected','Select'],['rejected','Reject'],['proposed','Keep proposed']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;sel.append(o);});
+    const why2=document.createElement('input');why2.type='text';why2.placeholder='Rationale (required — this is a training label)';why2.className='match-rationale';
+    const save=document.createElement('button');save.type='button';save.className='admin-primary compactish';save.textContent='Record decision';
+    save.addEventListener('click',async()=>{
+      if(!why2.value.trim()){why2.focus();why2.classList.add('is-missing');return;}
+      save.disabled=true;save.textContent='Recording…';
+      try{
+        await adminRequest({method:'PATCH',body:JSON.stringify({action:'decide-match',matchId:entry.match_id,decision:sel.value,rationale:why2.value.trim()})});
+        save.textContent='Recorded ✓';card.classList.add('is-decided');
+      }catch(error){alert(error.message);save.disabled=false;save.textContent='Record decision';}
+    });
+    row.append(sel,why2,save);
+  }
+  card.append(row);return card;
+}
+async function runMatch(){
+  const oppId=$('#matchOpportunity')?.value;const status=$('#matchStatus');const results=$('#matchResults');const btn=$('#runMatchBtn');
+  if(!oppId){status.textContent='Pick an opportunity first.';return;}
+  btn.disabled=true;status.textContent='Drafting shortlist…';results.replaceChildren();
+  try{
+    const out=await adminRequest({method:'PATCH',body:JSON.stringify({action:'run-match',opportunityId:oppId})});
+    const m=out.match;
+    $('#adminMatchVersion').textContent=m.scorer_version||'';
+    if(m.refused){
+      const card=document.createElement('article');card.className='match-card match-refusal';
+      const h=document.createElement('strong');h.textContent=m.message;
+      const ul=document.createElement('ul');(m.reasons||[]).forEach(r=>{const li=document.createElement('li');li.textContent=r;ul.append(li);});
+      card.append(h,ul);results.append(card);
+      status.textContent='Refused — honestly.';
+    }else{
+      m.shortlist.forEach(entry=>results.append(matchCandidateCard(entry)));
+      status.textContent=`${m.shortlist.length} candidate${m.shortlist.length===1?'':'s'} — evidence-cited, capped at 3.`;
+    }
+  }catch(error){status.textContent=error.message;}
+  finally{btn.disabled=false;}
+}
+$('#runMatchBtn')?.addEventListener('click',runMatch);
 // Packet-first intake (GTM Move 1): operator scopes a packet for a company.
 function renderPacketCompanies(){
   const sel=$('#packetCompany');if(!sel)return;
