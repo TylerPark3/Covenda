@@ -568,6 +568,11 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .review-actions .portal-primary,.review-actions .portal-secondary { min-width:0; }
 
 /* ---- Wallet & credits ---- */
+/* The wallet grid/ledger are full-width (not capped at 1240 like other views), so the
+   heading must be full-width too — otherwise it's centered and looks inset with side
+   whitespace while the content below spans wider. Flush-left, no side margins. */
+[data-portal-view="wallet"] .page-heading { max-width:none; margin-left:0; margin-right:0; }
+[data-portal-view="wallet"] .page-heading > div > p:last-child { max-width:900px; }
 .wallet-grid { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr); gap:22px; align-items:start; }
 .wallet-balance-card { padding:26px; border:1px solid #eadfca; border-radius:20px; background:linear-gradient(160deg,var(--gold-pale),#fff); }
 .wallet-balance-card strong { display:block; margin-top:6px; font-size:56px; line-height:1; letter-spacing:-.05em; font-variant-numeric:tabular-nums; }
