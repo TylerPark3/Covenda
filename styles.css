@@ -2245,7 +2245,9 @@ body[data-audience="student"] .feature-band { display: none; }
 .credibility-ladder { margin-top: clamp(40px, 5vw, 72px); }
 .why-section > .credibility-ladder { display: block; margin-top: clamp(48px, 6vw, 88px); }
 /* The dead air above the section becomes a statement: a big display-serif gold "2". */
-.cred-big-num { display: block; margin-bottom: clamp(4px, 1vw, 12px); font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: clamp(88px, 11vw, 168px); line-height: .85; letter-spacing: -.04em; background: linear-gradient(96deg, #8A6A2F 0%, #A9822F 42%, #C9A24B 66%, #A9822F 88%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+/* Big italic display numeral. line-height:.85 cropped the glyph's ascender under
+   background-clip:text; give it a full line box + a little top padding so nothing clips. */
+.cred-big-num { display: block; margin-bottom: clamp(4px, 1vw, 12px); padding-top: .12em; font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: clamp(88px, 11vw, 168px); line-height: 1; letter-spacing: -.04em; background: linear-gradient(96deg, #8A6A2F 0%, #A9822F 42%, #C9A24B 66%, #A9822F 88%); -webkit-background-clip: text; background-clip: text; color: transparent; overflow: visible; }
 .cred-doors { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
 .cred-door { padding: clamp(20px, 2.4vw, 28px); border-radius: var(--radius-sm); }
 .cred-tag {
@@ -2565,13 +2567,16 @@ body[data-audience="university"] .stat-band { display: none; }
 /* ---- "Vouched in. Matched out." sourcing/matching flow (company audience, #how). ----
    Flat + monospace per the approved mockup: 1px hairlines, no gradients/shadows; gold accent
    ONLY on the engine + top-candidates nodes. Site tokens, light-theme site. */
-.match-flow { max-width: 640px; margin: clamp(48px, 6vw, 84px) auto 0; }
+.match-flow { max-width: 660px; margin: clamp(48px, 6vw, 84px) auto 0; }
 /* Inside the narrow flow column the two-column section-heading collapses awkwardly (splits the
-   kicker onto two lines, floats the title off-center). Force a single centered stack so the
-   heading reads as one unit leading into the centered diagram. */
-.match-flow .section-heading { display: block; text-align: center; max-width: 540px; margin: 0 auto clamp(30px, 4vw, 44px); }
-.match-flow .section-heading h2 { font-size: clamp(34px, 3.4vw, 50px); }
-.match-flow .section-heading p:last-child { max-width: 46ch; margin: 16px auto 0; }
+   kicker onto two lines, floats the title off-center). Force a single centered stack — the
+   kicker sits inline above the title, the intro reads as a wide horizontal line, and the whole
+   header leads cleanly into the centered diagram. `grid-template-columns: none` kills the grid
+   outright so the block layout is bulletproof against the base .section-heading rule. */
+.match-flow .section-heading { display: block; grid-template-columns: none; text-align: center; max-width: 620px; margin: 0 auto clamp(26px, 3.4vw, 38px); }
+.match-flow .section-heading .feature-kicker { margin-bottom: 12px; }
+.match-flow .section-heading h2 { font-size: clamp(32px, 3.2vw, 46px); line-height: 1.04; }
+.match-flow .section-heading p:last-child { max-width: 52ch; margin: 14px auto 0; font-size: 15.5px; line-height: 1.6; }
 .mflow { display: flex; flex-direction: column; align-items: stretch; margin: 0; }
 .mf-node { border: 1px solid var(--line-strong); background: #fff; padding: 13px 16px; text-align: center; border-radius: 3px; }
 .mf-label { display: block; font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: .13em; text-transform: uppercase; color: var(--ink); }
@@ -2867,6 +2872,8 @@ body[data-audience="university"] #referrerDashboard { display: block; }
 #covendaModel.ct-pre .ct-branches path { stroke-dasharray: 1; stroke-dashoffset: 1; }
 #covendaModel.ct-pre .ct-trunk { transform: scaleY(0); transform-origin: 700px 566px; }
 #covendaModel.ct-pre .ct-glow, #covendaModel.ct-pre .ct-card { opacity: 0; }
+/* The heading text (eyebrow + title) waits for the tree to finish forming, then fades in. */
+#covendaModel.ct-pre .ct-head { opacity: 0; }
 
 #covendaModel.ct-grow .ct-roots path { animation: ct-draw .9s ease-out forwards; }
 #covendaModel.ct-grow .ct-roots path:nth-child(2), #covendaModel.ct-grow .ct-roots path:nth-child(5) { animation-delay: .25s; }
@@ -2883,6 +2890,8 @@ body[data-audience="university"] #referrerDashboard { display: block; }
 #covendaModel.ct-grow .ct-card--roots { animation-delay: .8s; }
 #covendaModel.ct-grow .ct-card--trunk { animation-delay: 1.3s; }
 #covendaModel.ct-grow .ct-card--canopy { animation-delay: 2.1s; }
+/* Heading text arrives last — after roots, trunk, branches, glow and cards have all landed. */
+#covendaModel.ct-grow .ct-head { animation: ct-fade .7s ease-out 2.9s forwards; }
 
 @keyframes ct-draw { to { stroke-dashoffset: 0; } }
 @keyframes ct-rise { to { transform: scaleY(1); } }
@@ -2890,8 +2899,14 @@ body[data-audience="university"] #referrerDashboard { display: block; }
 @media (prefers-reduced-motion: reduce) {
   #covendaModel.ct-pre .ct-roots path, #covendaModel.ct-pre .ct-branches path { stroke-dasharray: none; stroke-dashoffset: 0; }
   #covendaModel.ct-pre .ct-trunk { transform: none; }
-  #covendaModel.ct-pre .ct-glow, #covendaModel.ct-pre .ct-card { opacity: 1; }
+  #covendaModel.ct-pre .ct-glow, #covendaModel.ct-pre .ct-card, #covendaModel.ct-pre .ct-head { opacity: 1; }
 }
+
+/* Dedup: the "Why now" stats + founder note + tree, and the "Why Covenda" contrast, are the
+   general top-of-funnel pitch. They live on the HOME landing; once a visitor picks a path
+   (student/company/university) the audience-specific flow shouldn't repeat them. */
+body:not([data-audience="home"]) #whyNow,
+body:not([data-audience="home"]) #why-covenda { display: none; }
 
 /* ---- Student of the Week (flat, consent-first; hidden until real data). ---- */
 body:not([data-audience="home"]) .spotlight-section { display: none; }
