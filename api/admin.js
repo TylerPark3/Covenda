@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { supabaseConfiguration } from './submissions.js';
 import { sendPartnerDigests } from './digest.js';
 import { notifyMember, batchDecisionEmail } from './notify.js';
+import { matchOpportunity } from './match.js';
 
 const ADMIN_STATUSES = new Set(['received', 'reviewing', 'needs_information', 'packet_proposed', 'approval_pending', 'approved', 'declined', 'archived']);
 const linkBuckets = new Map();
@@ -635,6 +636,70 @@ export async function deleteAdminUser(supabase, input, operatorEmail = '') {
   throw new Error(`Please try again — deleting this member failed: ${detail}`);
 }
 
+// ---- Compatibility Engine Stage 2: operator-as-matcher (the system DRAFTS, a human DECIDES). ----
+// Runs the pure matcher over the student pool for one opportunity, persists the drafted
+// shortlist to public.matches (audit log: scorer_version + score_components + explanation),
+// and returns it. Human decisions land via decideMatch with a MANDATORY rationale — those
+// rationales are the training labels.
+export async function runOpportunityMatch(supabase, input) {
+  const opportunityId = text(input.opportunityId, 50);
+  if (!UUID_PATTERN.test(opportunityId)) throw new Error('Choose a valid opportunity.');
+  const { data: opportunity } = await supabase.from('member_projects').select('*').eq('id', opportunityId).maybeSingle();
+  if (!opportunity) throw new Error('Choose a valid opportunity.');
+  const { data: students } = await supabase.from('member_profiles')
+    .select('user_id, display_name, verticals, work_types')
+    .eq('role', 'student').limit(500);
+  let claims = [];
+  try {
+    const { data } = await supabase.from('skill_claim').select('student_user_id, skill, verification_tier, evidence_pointer').limit(5000);
+    claims = Array.isArray(data) ? data : [];
+  } catch { claims = []; }
+  const claimsByStudent = new Map();
+  for (const c of claims) {
+    if (!claimsByStudent.has(c.student_user_id)) claimsByStudent.set(c.student_user_id, []);
+    claimsByStudent.get(c.student_user_id).push(c);
+  }
+  const candidates = (students || []).map(p => ({
+    id: p.user_id,
+    name: p.display_name || '',
+    verticals: p.verticals || [],
+    work_types: p.work_types || [],
+    claims: claimsByStudent.get(p.user_id) || [],
+  }));
+  const result = matchOpportunity(opportunity, candidates);
+  if (!result.refused) {
+    // Audit log — best-effort (graceful before the Stage-0 migration runs).
+    try {
+      await supabase.from('matches').insert(result.shortlist.map(s => ({
+        opportunity_id: opportunityId,
+        student_user_id: s.candidate_id,
+        hard_filter_pass: true,
+        score: s.score,
+        score_components: s.score_components,
+        explanation: s.explanation,
+        scorer_version: s.scorer_version,
+      })));
+    } catch { /* matches table not migrated yet — shortlist still returns for display */ }
+  }
+  return result;
+}
+
+// Record the human decision on a drafted match. The rationale is REQUIRED — enforced here
+// AND by the DB CHECK — because these decisions are the golden labels the engine learns from.
+export async function decideMatch(supabase, input) {
+  const matchId = text(input.matchId, 50);
+  if (!UUID_PATTERN.test(matchId)) throw new Error('Choose a valid match.');
+  const decision = text(input.decision, 20);
+  if (!['proposed', 'selected', 'rejected'].includes(decision)) throw new Error('Choose a decision: proposed, selected, or rejected.');
+  const rationale = text(input.rationale, 2_000);
+  if (!rationale) throw new Error('Please add a short rationale — every human decision is a training label.');
+  const { data, error } = await supabase.from('matches')
+    .update({ human_decision: decision, human_rationale: rationale, decided_at: new Date().toISOString() })
+    .eq('id', matchId).select('*').single();
+  if (error) throw new Error(`Please try again — recording the decision failed: ${String(error?.message || error).slice(0, 200)}`);
+  return data;
+}
+
 // Operator project management: list every member project, and permanently delete one.
 export async function listAdminProjects(supabase) {
   const { data, error } = await supabase
@@ -755,6 +820,12 @@ export default async function handler(req, res, dependencies = {}) {
     }
     if (patchInput.action === 'delete-project') {
       return res.status(200).json({ ok: true, result: await deleteAdminProject(admin.supabase, patchInput) });
+    }
+    if (patchInput.action === 'run-match') {
+      return res.status(200).json({ ok: true, match: await runOpportunityMatch(admin.supabase, patchInput) });
+    }
+    if (patchInput.action === 'decide-match') {
+      return res.status(200).json({ ok: true, match: await decideMatch(admin.supabase, patchInput) });
     }
     const submission = await updateAdminSubmission(admin.supabase, patchInput, admin.email);
     return res.status(200).json({ ok: true, submission });

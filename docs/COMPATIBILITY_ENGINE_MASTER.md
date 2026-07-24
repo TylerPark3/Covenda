@@ -157,3 +157,29 @@ UI (NOT Next.js); milestone-release via the existing credits/escrow
 (`release_project_escrow`); Stripe already integrated for top-ups/identity (direct Stripe
 milestone payouts later). No fine-tuning, no external vector DB service, no ML infra until
 Stage 5's gate is met.
+
+---
+
+# Delta Patch (additive — stage order, schema, gates, guardrails UNCHANGED)
+
+1. **Reverse-audit intake mode (opt-in, never default):** founder pastes their OWN public
+   repo/Figma link → the Brief extractor proposes THREE scoped draft opportunities
+   (deliverable, boundary, acceptance criteria, hour estimate, founder-time line). Strictly
+   opt-in; drafts the founder edits and confirms; reuses the Structured Outputs intake.
+2. **Micro-bounty rung:** smallest engagement unit — bounded ~5-hour task (~$100–200 anchor,
+   priced through the existing credits flow). Ladder: 5-hour task → 2-week project → 6-week
+   project → part-time → internship → full-time. `engagement_rung` (nullable, CHECK'd) on the
+   opportunity; micro-bounties are the de-risked first bet, NOT the price ceiling; rung
+   progression respects the stage1→stage2 access gate + conversion-fee hooks.
+3. **Three-candidate shortlist as a HARD UI constraint:** company-facing match surface shows
+   AT MOST 3 evidence-cited candidates (strong-fit bullets + one honest gap), no "see all N";
+   fewer than 3 pass → show what passed or the refusal path; NEVER pad. (Engine already
+   enforces k=3 + refusal in api/match.js.)
+
+**Pilot framing (committed as the top-of-file note in api/match.js):** for the pilot the
+engine IS a config of weights + an LLM that extracts/explains + a human making the final
+call with mandatory rationale. Correct for this stage, not a compromise; at 50+ outcomes the
+regression audits the human's judgment rather than replacing it.
+
+**Delta status:** #3 SHIPPED in the engine (match-1.0.0, k=3 cap + refusal path + eval
+harness). #1 (reverse-audit) and #2 (micro-bounty rung) are queued build items.

@@ -311,3 +311,16 @@ test('repeatCompanyRate: companies with a second accepted project over companies
   assert.deepEqual(repeatCompanyRate(rows), { companiesWithOne: 3, companiesWithRepeat: 2, rate: 2 / 3 });
   assert.deepEqual(repeatCompanyRate([]), { companiesWithOne: 0, companiesWithRepeat: 0, rate: 0 });
 });
+
+test('decideMatch demands a rationale — every human decision is a training label', async () => {
+  const { decideMatch } = await import('../api/admin.js');
+  const mid = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  await assert.rejects(decideMatch({}, { matchId: mid, decision: 'selected', rationale: '' }), /rationale/);
+  await assert.rejects(decideMatch({}, { matchId: 'nope', decision: 'selected', rationale: 'x' }), /valid match/);
+  await assert.rejects(decideMatch({}, { matchId: mid, decision: 'hired', rationale: 'x' }), /Choose a decision/);
+  let updated = null;
+  const supabase = { from: () => ({ update(row) { updated = row; return this; }, eq() { return this; }, select() { return this; }, async single() { return { data: { id: mid, ...updated }, error: null }; } }) };
+  const out = await decideMatch(supabase, { matchId: mid, decision: 'selected', rationale: 'Trial-proven ROS work; vouch from coach.' });
+  assert.equal(out.human_decision, 'selected');
+  assert.ok(out.human_rationale.length > 0);
+});
