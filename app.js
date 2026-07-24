@@ -331,8 +331,6 @@ function restoreDraft(form) {
     else delete form.dataset.revisionOf;
     renderRevisionContext();
   }
-  const status = $('[data-draft-status]', form);
-  if (status) status.textContent = 'Draft restored from this device';
   return Math.max(0, Math.min(Number(draft.step || 0), $$('.form-step', form).length - 1));
 }
 
