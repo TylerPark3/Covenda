@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, respondToPacket, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
+import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, deleteApplication, deleteProject, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, respondToPacket, reviewDeliverable, saveMemberProfile, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
 
 test('accepting a packet funds it — escrow held, status opens', async () => {
   const cap = {};
@@ -65,7 +65,7 @@ function queuedSupabase(steps) {
       const step = steps[index++] || { result: null };
       const query = {};
       const same = () => query;
-      for (const method of ['select', 'eq', 'neq', 'in', 'order', 'limit']) query[method] = same;
+      for (const method of ['select', 'eq', 'neq', 'in', 'order', 'limit', 'delete']) query[method] = same;
       query.update = value => { step.capture?.(value); return query; };
       query.insert = value => { step.capture?.(value); return query; };
       query.maybeSingle = () => Promise.resolve({ data: step.result, error: null });
@@ -583,5 +583,51 @@ test('a deliverable can only be reviewed while the project is in review', async 
   await assert.rejects(
     reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' }),
     /no submitted deliverable/,
+  );
+});
+
+test('a student can withdraw their own pending application, but not another student\'s or an accepted one', async () => {
+  const supabase = queuedSupabase([
+    { result: { id: PROJECT_UUID, student_user_id: 'stu-1', status: 'submitted' } },
+    { result: null },
+  ]);
+  const out = await deleteApplication({ user: { id: 'stu-1' }, supabase }, { applicationId: PROJECT_UUID });
+  assert.equal(out.withdrawn, true);
+  await assert.rejects(
+    deleteApplication({ user: { id: 'intruder' }, supabase: queuedSupabase([{ result: { id: PROJECT_UUID, student_user_id: 'stu-1', status: 'submitted' } }]) }, { applicationId: PROJECT_UUID }),
+    /Only the applicant/,
+  );
+  await assert.rejects(
+    deleteApplication({ user: { id: 'stu-1' }, supabase: queuedSupabase([{ result: { id: PROJECT_UUID, student_user_id: 'stu-1', status: 'accepted' } }]) }, { applicationId: PROJECT_UUID }),
+    /was accepted/,
+  );
+});
+
+test('a company can delete only a draft with no held escrow and no applicants', async () => {
+  const ok = queuedSupabase([
+    { result: { id: PROJECT_UUID, owner_user_id: 'co-1', status: 'draft', credits_held: 0, platform_fee_credits: 0 } },
+    { result: [] },
+    { result: null },
+  ]);
+  const out = await deleteProject({ user: { id: 'co-1' }, supabase: ok }, { projectId: PROJECT_UUID });
+  assert.equal(out.deleted, true);
+  await assert.rejects(
+    deleteProject({ user: { id: 'intruder' }, supabase: queuedSupabase([{ result: { id: PROJECT_UUID, owner_user_id: 'co-1', status: 'draft' } }]) }, { projectId: PROJECT_UUID }),
+    /Only the project owner/,
+  );
+  await assert.rejects(
+    deleteProject({ user: { id: 'co-1' }, supabase: queuedSupabase([{ result: { id: PROJECT_UUID, owner_user_id: 'co-1', status: 'open', credits_held: 100, platform_fee_credits: 10 } }]) }, { projectId: PROJECT_UUID }),
+    /Only a draft can be deleted/,
+  );
+  await assert.rejects(
+    deleteProject({ user: { id: 'co-1' }, supabase: queuedSupabase([{ result: { id: PROJECT_UUID, owner_user_id: 'co-1', status: 'draft', credits_held: 50, platform_fee_credits: 5 } }]) }, { projectId: PROJECT_UUID }),
+    /holding credits/,
+  );
+  await assert.rejects(
+    deleteProject({ user: { id: 'co-1' }, supabase: queuedSupabase([
+      { result: { id: PROJECT_UUID, owner_user_id: 'co-1', status: 'draft', credits_held: 0, platform_fee_credits: 0 } },
+      { result: [{ id: 'app-1' }] },
+    ]) }, { projectId: PROJECT_UUID }),
+    /already has applicants/,
   );
 });

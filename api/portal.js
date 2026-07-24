@@ -537,6 +537,9 @@ export async function createMemberProject(member, input) {
   if (input.budgetCents !== undefined) row.budget_cents = Number.isFinite(input.budgetCents) ? Math.max(0, Math.min(Math.round(input.budgetCents), 100_000_00)) : null;
   if (input.attachments !== undefined) row.attachments = cleanAttachments(input.attachments);
   if (input.aiBrief && typeof input.aiBrief === 'object') row.ai_brief = sanitizeBrief(input.aiBrief);
+  // Work-trial ladder: only touch access_stage when explicitly Stage 2, so default (Stage 1)
+  // project creation keeps working before the access_stage migration is applied.
+  if (Number(input.accessStage) === 2) row.access_stage = 2;
 
   // Credits: charge the reach fee and hold escrow (listed + platform fee) at post time.
   const priced = input.creditsListed !== undefined;
@@ -916,11 +919,21 @@ export async function acceptApplication(member, input) {
   );
   if (!application) throw new Error('This application is no longer available.');
   const project = await checked(
-    member.supabase.from('member_projects').select('id,title,owner_user_id,status').eq('id', application.project_id).maybeSingle(),
+    member.supabase.from('member_projects').select('*').eq('id', application.project_id).maybeSingle(),
     null,
   );
   if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can accept an applicant.');
   if (!['open', 'matched'].includes(project.status)) throw new Error('This project is not open for accepting an applicant.');
+  // Work-trial ladder: a Stage 2 project (deeper access) can only go to a student who has already
+  // completed a Stage 1 work-trial with THIS company — proof precedes access. Projects with no
+  // access_stage column/value are Stage 1, so this never changes behaviour until Stage 2 is used.
+  if (Number(project.access_stage) >= 2) {
+    const prior = await checked(
+      member.supabase.from('member_projects').select('id').eq('owner_user_id', member.user.id).eq('assigned_student_user_id', application.student_user_id).eq('status', 'complete').limit(1),
+      [],
+    );
+    if (!prior.length) throw new Error('This is a Stage 2 project (deeper access). This student has not completed a Stage 1 work-trial with you yet — proof precedes access.');
+  }
   const now = new Date().toISOString();
   const accepted = await checked(
     member.supabase.from('project_applications').update({ status: 'accepted', updated_at: now }).eq('id', applicationId).select('*').single(),
