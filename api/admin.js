@@ -486,12 +486,28 @@ async function countRows(supabase, table, apply) {
 
 // Real operator metrics. Every number is a live count/sum; anything unmigrated degrades to 0 so
 // the dashboard renders honest zeros rather than breaking.
+// A6 wedge metric (pure, testable): Repeat Company Project Rate — of companies with >=1
+// accepted (complete) project, what share came back for a second? The single best early
+// signal that the premium promise is real. rows = [{ owner_user_id }] of completed projects.
+export function repeatCompanyRate(rows) {
+  const byOwner = new Map();
+  for (const row of rows || []) {
+    const id = row?.owner_user_id;
+    if (!id) continue;
+    byOwner.set(id, (byOwner.get(id) || 0) + 1);
+  }
+  const withOne = byOwner.size;
+  const withTwo = [...byOwner.values()].filter(n => n >= 2).length;
+  return { companiesWithOne: withOne, companiesWithRepeat: withTwo, rate: withOne ? withTwo / withOne : 0 };
+}
+
 export async function loadAdminMetrics(supabase) {
   const weekAgo = new Date(Date.now() - 7 * 86_400_000).toISOString();
   const [
     submissions, profiles, applications, accepted, projects, completed,
     activeBatches, pendingPayouts,
     wkSubmissions, wkApplications, wkCompleted,
+    matchedProjects,
   ] = await Promise.all([
     countRows(supabase, 'submissions'),
     countRows(supabase, 'member_profiles'),
@@ -504,6 +520,7 @@ export async function loadAdminMetrics(supabase) {
     countRows(supabase, 'submissions', q => q.gte('created_at', weekAgo)),
     countRows(supabase, 'project_applications', q => q.gte('created_at', weekAgo)),
     countRows(supabase, 'member_projects', q => q.eq('status', 'complete').gte('updated_at', weekAgo)),
+    countRows(supabase, 'member_projects', q => q.not('assigned_student_user_id', 'is', null)),
   ]);
   let ledgerRows = [];
   try {
@@ -522,6 +539,14 @@ export async function loadAdminMetrics(supabase) {
     batches: { active: activeBatches },
     payouts: { pending: pendingPayouts },
     caseStudy: caseStudyMetrics(completedProjectRows, { applications, accepted }),
+    // A6 wedge metrics: north star = accepted work ÷ matched projects; primary early metric =
+    // companies that came back for a second accepted project.
+    matchQuality: {
+      matched: matchedProjects,
+      completed,
+      successRate: matchedProjects ? completed / matchedProjects : 0,
+      repeat: repeatCompanyRate(completedProjectRows),
+    },
   };
 }
 

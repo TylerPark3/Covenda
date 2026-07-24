@@ -301,3 +301,13 @@ test('admin workflow update validates and records private follow-up context', as
     /valid follow-up date/,
   );
 });
+
+test('repeatCompanyRate: companies with a second accepted project over companies with one', async () => {
+  const { repeatCompanyRate } = await import('../api/admin.js');
+  const rows = [
+    { owner_user_id: 'a' }, { owner_user_id: 'a' }, { owner_user_id: 'b' },
+    { owner_user_id: 'c' }, { owner_user_id: 'c' }, { owner_user_id: 'c' }, { owner_user_id: null },
+  ];
+  assert.deepEqual(repeatCompanyRate(rows), { companiesWithOne: 3, companiesWithRepeat: 2, rate: 2 / 3 });
+  assert.deepEqual(repeatCompanyRate([]), { companiesWithOne: 0, companiesWithRepeat: 0, rate: 0 });
+});

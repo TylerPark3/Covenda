@@ -683,3 +683,25 @@ test('a company can delete only a draft with no held escrow and no applicants', 
     /already has applicants/,
   );
 });
+
+test('computeReadinessScore is explainable, versioned, and never a gate', async () => {
+  const { computeReadinessScore, READINESS_VERSION } = await import('../api/portal.js');
+  const strong = computeReadinessScore({
+    goal: 'Build a public-source competitor pricing scan across our top eight rivals with tiers.',
+    blocked: 'Sales keeps asking for an up-to-date sheet and nobody owns it.',
+    skills: ['Research', 'Spreadsheets'], supervisionHoursWeekly: 1, projectWeeks: 4, budget: 500, hireIntent: 'yes',
+  });
+  for (const key of ['projectClarity', 'talentAccessibility', 'suitabilityForEmergingTalent']) {
+    const s = strong[key];
+    assert.ok(s.score >= 0 && s.score <= 100);
+    assert.ok(Array.isArray(s.reasons) && Array.isArray(s.concerns) && s.concerns.length >= 1);
+  }
+  assert.match(strong.recommendedTalentProfile, /Research student/);
+  assert.equal(strong.nextStep, 'Submit your project to Covenda');
+  assert.equal(strong.readinessVersion, READINESS_VERSION);
+  // Weak intake: low scores arrive with how-to-fix concerns, and the door stays open.
+  const weak = computeReadinessScore({});
+  assert.ok(weak.projectClarity.score < strong.projectClarity.score);
+  assert.ok(weak.projectClarity.concerns.some(c => /goal/i.test(c)));
+  assert.equal(weak.nextStep, 'Submit your project to Covenda');
+});

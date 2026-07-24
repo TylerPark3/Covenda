@@ -306,6 +306,7 @@ function applicantCard(application,project){
   const av=document.createElement('div');av.className='applicant-avatar';paintAvatarSlot(av,a?.avatar_url,initial(a?.display_name||'C'));head.append(av);
   const id=document.createElement('div');id.className='applicant-id';const name=document.createElement('h3');name.textContent=a?.display_name||'Student applicant';if(a?.identity_verified)name.append(identityBadge());const sub=document.createElement('p');sub.textContent=[a?.headline,a?.school_name,a?.graduation_year&&`Class of ${a.graduation_year}`].filter(Boolean).join(' · ')||'Student member';id.append(name,sub);head.append(id);
   if(application.fit_score!=null)head.append(fitPill(application.fit_score));
+  if(application.fit)card.append(fitWhyBlock({reasons:application.fit.reasons,concerns:application.fit.concerns,approach:application.fit.recommendedApproach}));
   card.append(head);
   const meta=document.createElement('div');meta.className='activity-meta';meta.append(pill(applicationStatusLabels[application.status]||titleCase(application.status),'status-pill',application.status));if(project)meta.append(pill(project.title,'status-pill'));card.append(meta);
   if((application.fit_reasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';application.fit_reasons.slice(0,3).forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});card.append(rs);}
@@ -720,6 +721,18 @@ const discoverState={tab:'best',saved:loadSavedProjects()};
 function persistSavedProjects(){try{localStorage.setItem(SAVED_KEY,JSON.stringify([...discoverState.saved]));}catch{}}
 function discoverFilters(){return{query:($('#discoverSearch')?.value||'').trim().toLowerCase(),vertical:$('#filterVertical')?.value||'',workType:$('#filterWorkType')?.value||'',minCredits:Number($('#filterMinCredits')?.value)||0,within:Number($('#filterWithin')?.value)||0,matchedOnly:$('#filterMatched')?.checked||false};}
 function fitPill(score){const s=Math.round(Number(score)||0);const el=document.createElement('span');el.className='fit-pill '+(s>=70?'is-high':s>=40?'is-mid':'is-low');el.textContent=`${s}% fit`;return el;}
+// A5: explainable fit card — ✓ reasons, △ concerns, a recommended approach, and the honest
+// early-signal + decision-support label. Same block on student Discover and applicant review.
+function fitWhyBlock({reasons=[],concerns=[],approach=''}={}){
+  const wrap=document.createElement('details');wrap.className='fit-why';
+  const sum=document.createElement('summary');sum.textContent='Why this fits';wrap.append(sum);
+  const box=document.createElement('div');box.className='fit-why-body';
+  reasons.slice(0,4).forEach(t=>{const p=document.createElement('p');p.className='fit-why-line is-good';p.textContent=`✓ ${t}`;box.append(p);});
+  concerns.slice(0,2).forEach(t=>{const p=document.createElement('p');p.className='fit-why-line is-gap';p.textContent=`△ ${t}`;box.append(p);});
+  if(approach){const p=document.createElement('p');p.className='fit-why-approach';p.textContent=`How to run it: ${approach}`;box.append(p);}
+  const note=document.createElement('p');note.className='fit-why-note';note.textContent='Early compatibility signal — improves as projects complete. Decision support; you decide.';box.append(note);
+  wrap.append(box);return wrap;
+}
 function discoverChip(label,value){const c=document.createElement('div');c.className='discover-chip';const s=document.createElement('small');s.textContent=label;const b=document.createElement('span');b.textContent=value;c.append(s,b);return c;}
 function skillsText(project){const s=project.desired_skills;return Array.isArray(s)?s.join(', '):(s||'');}
 function renderDiscover(){
@@ -754,6 +767,7 @@ function discoverCard(project,isApplied){
   const meta=document.createElement('div');meta.className='discover-meta';const pay=Number(project.credits_listed)||0;meta.append(discoverChip('Payout',pay?`${pay.toLocaleString()} credits`:'—'),discoverChip('Target',project.target_date?dateLabel(project.target_date):'Flexible'));if((project.verticals||[]).length)meta.append(discoverChip('Vertical',project.verticals[0]));row.append(meta);
   const p=document.createElement('p');p.className='discover-card-summary';p.textContent=project.summary;row.append(p);
   if((project.fitReasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';project.fitReasons.slice(0,3).forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});row.append(rs);}
+  if((project.fitConcerns||[]).length||project.fitApproach)row.append(fitWhyBlock({reasons:project.fitReasons||[],concerns:project.fitConcerns||[],approach:project.fitApproach||''}));
   const actions=document.createElement('div');actions.className='discover-actions';
   const view=document.createElement('button');view.type='button';view.className='portal-secondary compact';view.textContent='View details';view.addEventListener('click',()=>openDiscoverDetail(project,isApplied));
   const apply=document.createElement('button');apply.type='button';apply.className='portal-primary compact';apply.textContent=isApplied?'Interest sent':'Apply';apply.disabled=isApplied;apply.addEventListener('click',()=>openApply(project));

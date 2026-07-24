@@ -347,8 +347,10 @@ function renderMetrics(m){
       ['Payouts pending',n(p.pending),p.pending?'review':'','warn'],
     ]],
     ['Quality & demand',[
+      // A6 wedge metrics: north star + primary early metric, straight from matchQuality.
+      ['Match success',`${Math.round(((m.matchQuality||{}).successRate||0)*100)}%`,'accepted ÷ matched','good'],
+      ['Repeat companies',`${Math.round((((m.matchQuality||{}).repeat||{}).rate||0)*100)}%`,`${((m.matchQuality||{}).repeat||{}).companiesWithRepeat||0} of ${((m.matchQuality||{}).repeat||{}).companiesWithOne||0}`,'good'],
       ['Acceptance rate',`${n(cs.acceptanceRate)}%`,'of applications','good'],
-      ['Repeat rate',`${n(cs.repeatRate)}%`,'2+ delivered','good'],
       ['Avg project value',n(cs.avgDeliveredCredits),'credits','money'],
       ['Active batches',n(b.active),'',''],
     ]],

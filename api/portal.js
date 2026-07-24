@@ -229,10 +229,20 @@ export async function loadMemberDashboard(member, env = process.env) {
   if (applications.length) {
     const applicantIds = [...new Set(applications.map(a => a.student_user_id).filter(Boolean))];
     const applicantProfiles = applicantIds.length
-      ? await checked(supabase.from('member_profiles').select('user_id,display_name,headline,school_name,graduation_year,skills,avatar_url,identity_verified').in('user_id', applicantIds))
+      ? await checked(supabase.from('member_profiles').select('*').in('user_id', applicantIds))
       : [];
     const byId = new Map(applicantProfiles.map(p => [p.user_id, p]));
-    applications = applications.map(a => ({ ...a, applicant: byId.get(a.student_user_id) || null }));
+    const projectById = new Map(projects.map(p => [p.id, p]));
+    applications = applications.map(a => {
+      const full = byId.get(a.student_user_id) || null;
+      // Expose only review-safe profile fields to the owner (same set as before).
+      const applicant = full ? { user_id: full.user_id, display_name: full.display_name, headline: full.headline, school_name: full.school_name, graduation_year: full.graduation_year, skills: full.skills, avatar_url: full.avatar_url, identity_verified: full.identity_verified } : null;
+      // A5: the SAME explainable card the student saw — fresh fit for THIS project, computed
+      // server-side (reasons + >=1 concern + recommended approach). Decision support only.
+      const project = projectById.get(a.project_id);
+      const fit = (full && project) ? computeFitScore(project, full) : null;
+      return { ...a, applicant, fit };
+    });
   }
   const studentDirectory = profile.role === 'company'
     ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,work_types,avatar_url,skill_signals').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
@@ -585,6 +595,66 @@ export function rankOpportunities(opportunities, profile, context = {}) {
   return (opportunities || [])
     .map(project => { const fit = computeFitScore(project, profile, context); return { ...project, matched: isMatch(project), fitScore: fit.score, fitReasons: fit.reasons, fitConcerns: fit.concerns, fitApproach: fit.recommendedApproach }; })
     .sort((a, b) => b.fitScore - a.fitScore || Number(b.matched) - Number(a.matched));
+}
+
+// A4 — Talent Readiness Assessment: a free, explainable company diagnostic (lead-gen).
+// Pure + versioned; decision-support, NEVER a gate — low scores come with how-to-fix reasons,
+// and the next step is always an invitation. No protected attributes; no I/O.
+export const READINESS_VERSION = 'readiness-1.0.0';
+export function computeReadinessScore(intake = {}) {
+  const goal = String(intake.goal || '').trim();
+  const blocked = String(intake.blocked || '').trim();
+  const skills = (Array.isArray(intake.skills) ? intake.skills : String(intake.skills || '').split(/[,\n]/))
+    .map(s => String(s).trim()).filter(Boolean);
+  const supervision = Number(intake.supervisionHoursWeekly);
+  const weeks = Number(intake.projectWeeks);
+  const budget = Number(intake.budgetCents ?? intake.budget);
+  const hire = intake.hireIntent === true || intake.hireIntent === 'yes';
+  const needsAccess = intake.systemsAccess === true || intake.systemsAccess === 'yes';
+  const sub = () => ({ score: 0, reasons: [], concerns: [] });
+  const clarity = sub(), access = sub(), suitability = sub();
+
+  // Project clarity — can this be scoped into a bounded deliverable?
+  if (goal.length >= 40) { clarity.score += 45; clarity.reasons.push('The goal is specific enough to scope'); }
+  else if (goal) { clarity.score += 20; clarity.concerns.push('Sharpen the goal — one sentence on what a useful finish unlocks'); }
+  else clarity.concerns.push('Describe the goal — what would a finished result let your team do?');
+  if (blocked) { clarity.score += 30; clarity.reasons.push('You can name what is blocked — that anchors the deliverable'); }
+  else clarity.concerns.push('Name what is currently blocked or delayed');
+  if (skills.length) { clarity.score += 25; clarity.reasons.push(`Skills are identified (${skills.slice(0, 3).join(', ')})`); }
+  else clarity.concerns.push('List the skills you think the work needs — Covenda refines them with you');
+
+  // Talent accessibility — can a student actually succeed here?
+  if (Number.isFinite(supervision) && supervision > 0) {
+    access.score += 40; access.reasons.push(`${supervision} hr/week of review time is available`);
+    if (supervision > 5) access.concerns.push('More than ~5 hrs/week of supervision usually means the scope should tighten');
+  } else access.concerns.push('Plan ~30–60 min/week to review checkpoints — bounded, not babysitting');
+  if (Number.isFinite(weeks) && weeks >= 1 && weeks <= 8) { access.score += 35; access.reasons.push(`A ${weeks}-week window fits a bounded work-trial`); }
+  else if (Number.isFinite(weeks) && weeks > 8) { access.score += 15; access.concerns.push('Longer than 8 weeks — consider splitting into stages'); }
+  else access.concerns.push('Pick a rough length — 2–6 weeks is the sweet spot');
+  if (Number.isFinite(budget) && budget > 0) { access.score += 25; access.reasons.push('A budget is set'); }
+  else access.concerns.push('Set a budget — fixed and agreed before any student is assigned');
+
+  // Suitability for emerging talent — is this Stage-1 shaped?
+  if (!needsAccess) { suitability.score += 40; suitability.reasons.push('No production/system access needed — Stage 1 safe'); }
+  else suitability.concerns.push('Redesign so Stage 1 needs no systems access — deeper access is earned later');
+  if (Number.isFinite(weeks) && weeks >= 1 && weeks <= 8) { suitability.score += 30; suitability.reasons.push('Bounded scope suits a work-trial'); }
+  if (skills.length && skills.length <= 4) { suitability.score += 30; suitability.reasons.push('A focused skill set one strong student can cover'); }
+  else if (skills.length > 4) { suitability.score += 10; suitability.concerns.push('Five or more skills usually means two scoped roles, not one'); }
+  if (hire) suitability.reasons.push('Open to hiring after — a work-trial is the low-risk path there');
+
+  for (const s of [clarity, access, suitability]) {
+    s.score = Math.max(0, Math.min(100, Math.round(s.score)));
+    if (!s.concerns.length) s.concerns.push('No major concern flagged — still your call to confirm.');
+  }
+  const lengthLabel = Number.isFinite(weeks) && weeks > 0 ? `${Math.round(weeks)}-week` : '4–6 week';
+  return {
+    projectClarity: clarity,
+    talentAccessibility: access,
+    suitabilityForEmergingTalent: suitability,
+    recommendedTalentProfile: `1 ${skills[0] || 'generalist'} student${skills[1] ? ` + 1 ${skills[1]} student` : ''}, ${lengthLabel} bounded project`,
+    nextStep: 'Submit your project to Covenda',
+    readinessVersion: READINESS_VERSION,
+  };
 }
 
 export async function createMemberProject(member, input) {
@@ -1243,6 +1313,8 @@ export default async function handler(req, res, dependencies = {}) {
         return res.status(200).json({ ok: true, message: 'Check your inbox for a secure Covenda sign-in link.' });
       }
       if (input.action === 'auth-readiness') return res.status(200).json({ ok: true, ...(await memberAuthReadiness(dependencies)) });
+      // A4: free, pre-auth talent-readiness diagnostic (pure fn, no DB writes, no PII stored).
+      if (input.action === 'readiness-check') return res.status(200).json({ ok: true, readiness: computeReadinessScore(input) });
       if (input.action === 'google-login') return res.status(200).json({ ok: true, ...(await requestGoogleLogin(req, dependencies)) });
       if (input.action === 'refresh-session') return res.status(200).json({ ok: true, ...(await refreshSession(input.refreshToken, dependencies)) });
     }
