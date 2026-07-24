@@ -181,5 +181,4 @@ engine IS a config of weights + an LLM that extracts/explains + a human making t
 call with mandatory rationale. Correct for this stage, not a compromise; at 50+ outcomes the
 regression audits the human's judgment rather than replacing it.
 
-**Delta status:** #3 SHIPPED in the engine (match-1.0.0, k=3 cap + refusal path + eval
-harness). #1 (reverse-audit) and #2 (micro-bounty rung) are queued build items.
+**Delta status:** ALL THREE SHIPPED — #1 reverse-audit (opt-in, web_fetch-grounded, <=3 labeled drafts, pause_turn-safe), #2 micro-bounty engagement_rung (migration 20260726340000 + intake preset), #3 k=3 cap + refusal in match-1.0.0.

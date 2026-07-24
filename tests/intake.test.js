@@ -171,3 +171,35 @@ test('normalizeBrief emits the Project Engine fields, clamped and honest', () =>
   assert.equal(empty.complexityRating, null);
   assert.equal(empty.founderTimeMinWeek, null);
 });
+
+test('normalizeReverseAudit caps at 3 labeled drafts and gates safeToPropose', async () => {
+  const { normalizeReverseAudit } = await import('../api/project-intake.js');
+  const out = normalizeReverseAudit({
+    safeToPropose: true,
+    proposals: [1, 2, 3, 4].map(i => ({ title: `Fix ${i}`, summary: 's', deliverable: 'd', acceptanceCriteria: 'a', boundary: 'b', estimatedHours: 8, founderTimeMinWeek: 45 })),
+  });
+  assert.equal(out.proposals.length, 3);
+  assert.ok(out.proposals.every(p => p.draft === true)); // always labeled drafts
+  assert.equal(out.safeToPropose, true);
+  // No proposals -> never safe to propose, regardless of the model's flag
+  assert.equal(normalizeReverseAudit({ safeToPropose: true, proposals: [] }).safeToPropose, false);
+});
+
+test('generateReverseAudit fetches with web_fetch, resumes pause_turn, and parses drafts', async () => {
+  const { generateReverseAudit } = await import('../api/project-intake.js');
+  const bodies = [];
+  let call = 0;
+  const fetchImpl = async (url, options) => {
+    bodies.push(JSON.parse(options.body));
+    call++;
+    if (call === 1) return { ok: true, status: 200, json: async () => ({ stop_reason: 'pause_turn', content: [{ type: 'server_tool_use', name: 'web_fetch' }] }) };
+    return { ok: true, status: 200, json: async () => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ safeToPropose: true, safetyFlags: [], proposals: [{ title: 'Fix docs', summary: 's', deliverable: 'd', acceptanceCriteria: 'a', boundary: 'b', estimatedHours: 6, founderTimeMinWeek: 30 }] }) }] }) };
+  };
+  const out = await generateReverseAudit({ linkUrl: 'https://github.com/you/product', env: { ANTHROPIC_API_KEY: 'k' }, fetchImpl });
+  assert.equal(out.proposals.length, 1);
+  assert.equal(out.proposals[0].draft, true);
+  assert.equal(bodies[0].tools[0].type, 'web_fetch_20260209'); // the model can actually read the link
+  assert.match(bodies[0].messages[0].content, /opted in/i);
+  assert.equal(bodies.length, 2); // pause_turn was resumed once
+  await assert.rejects(generateReverseAudit({ linkUrl: 'not-a-url', env: { ANTHROPIC_API_KEY: 'k' }, fetchImpl }), /valid public link/);
+});

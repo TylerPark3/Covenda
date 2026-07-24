@@ -203,6 +203,106 @@ export async function generateProjectBrief({ problemText, attachments = [], env 
   return normalizeBrief(parsed);
 }
 
+// ---- Reverse-audit intake (delta #1) — OPT-IN, never default. -----------------------------
+// The founder pastes their OWN public repo/Figma/product link; Covenda proposes THREE scoped
+// draft opportunities. Strictly opt-in (the founder supplies the link themselves — we never
+// scan uninvited); the proposals are labeled DRAFTS the founder edits and confirms before
+// anything publishes. Uses the same Structured Outputs intake + the web_fetch server tool so
+// the model can actually read the linked page.
+const REVERSE_AUDIT_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['proposals', 'safeToPropose', 'safetyFlags'],
+  properties: {
+    proposals: {
+      type: 'array',
+      description: 'Up to 3 scoped draft opportunities, each grounded in something observable at the link. No invented facts.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['title', 'summary', 'deliverable', 'acceptanceCriteria', 'boundary', 'estimatedHours', 'founderTimeMinWeek'],
+        properties: {
+          title: { type: 'string', description: 'Short, specific draft-opportunity title.' },
+          summary: { type: 'string', description: '2-3 sentences: the observed gap and the scoped fix.' },
+          deliverable: { type: 'string', description: 'The single concrete deliverable.' },
+          acceptanceCriteria: { type: 'string', description: 'How a reviewer decides it is done and correct.' },
+          boundary: { type: 'string', description: 'What is explicitly out of scope / the information boundary (no production access, no restricted data).' },
+          estimatedHours: { type: 'integer', description: 'Bounded student-hours estimate (5-40).' },
+          founderTimeMinWeek: { type: 'integer', description: 'Honest founder review minutes per week (typically 30-60; never 0).' },
+        },
+      },
+    },
+    safeToPropose: { type: 'boolean' },
+    safetyFlags: { type: 'array', items: { type: 'string' } },
+  },
+};
+
+const REVERSE_AUDIT_SYSTEM = `You are Covenda's reverse-audit analyst. A founder has OPTED IN by pasting their own public link (repo, Figma, or product page). Fetch and read that link, then propose exactly up to THREE scoped draft opportunities a vetted student could complete as a bounded work-trial.
+
+Rules:
+- Ground every proposal in something OBSERVABLE at the link (a real file, page, gap, or rough edge). Never invent facts about the company.
+- Each proposal is a DRAFT the founder edits and confirms — never a commitment.
+- Stay inside Covenda's safety boundary: no production access, no client/personal data, no regulated decisions. Prefer public sources and bounded deliverables.
+- Be terse and concrete. Honest founderTimeMinWeek (typically 30-60; never 0). estimatedHours bounded 5-40.
+Return ONLY the JSON object described by the schema.`;
+
+export function normalizeReverseAudit(input) {
+  const obj = input && typeof input === 'object' ? input : {};
+  const str = (v, max) => (typeof v === 'string' ? v.replace(/\0/g, '').trim().slice(0, max) : '');
+  const intIn = (v, lo, hi) => (Number.isInteger(v) && v >= lo && v <= hi ? v : null);
+  const proposals = (Array.isArray(obj.proposals) ? obj.proposals : []).slice(0, 3).map(p => ({
+    title: str(p?.title, 160),
+    summary: str(p?.summary, 1000),
+    deliverable: str(p?.deliverable, 600),
+    acceptanceCriteria: str(p?.acceptanceCriteria, 600),
+    boundary: str(p?.boundary, 600),
+    estimatedHours: intIn(p?.estimatedHours, 1, 60),
+    founderTimeMinWeek: intIn(p?.founderTimeMinWeek, 1, 600),
+    draft: true, // always labeled — the founder edits and confirms before anything publishes
+  })).filter(p => p.title && p.deliverable);
+  return {
+    proposals,
+    safeToPropose: obj.safeToPropose === true && proposals.length > 0,
+    safetyFlags: (Array.isArray(obj.safetyFlags) ? obj.safetyFlags : []).map(f => str(f, 300)).filter(Boolean).slice(0, 6),
+  };
+}
+
+export async function generateReverseAudit({ linkUrl, env = process.env, fetchImpl = fetch }) {
+  const url = typeof linkUrl === 'string' ? linkUrl.trim() : '';
+  if (!/^https?:\/\/\S+$/i.test(url)) throw new Error('Paste a valid public link (your repo, Figma, or product page).');
+  const key = env.ANTHROPIC_API_KEY;
+  if (!key) throw new IntakeConfigError('AI project understanding is not configured yet. Add ANTHROPIC_API_KEY in Vercel to enable it.');
+  const base = {
+    model: MODEL,
+    max_tokens: 4096,
+    system: REVERSE_AUDIT_SYSTEM,
+    tools: [{ type: 'web_fetch_20260209', name: 'web_fetch', max_uses: 4 }],
+    output_config: { format: { type: 'json_schema', schema: REVERSE_AUDIT_SCHEMA } },
+    messages: [{ role: 'user', content: `The founder opted in and pasted their own public link: ${url}\n\nFetch it, read what is actually there, and propose up to 3 scoped draft opportunities as JSON.` }],
+  };
+  const call = payload => fetchImpl('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify(payload),
+  });
+  let payload = base;
+  let data = null;
+  // Server-tool turns can pause (stop_reason: pause_turn) — resume up to 3 times by
+  // re-sending with the assistant turn appended, per the API's continuation contract.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const response = await call(payload);
+    if (!response || !response.ok) throw new Error('The AI reverse-audit could not be reached. Try again shortly.');
+    data = await response.json();
+    if (data?.stop_reason !== 'pause_turn') break;
+    payload = { ...payload, messages: [...base.messages, { role: 'assistant', content: data.content }] };
+  }
+  if (data?.stop_reason === 'refusal') throw new Error('The AI declined this link — it may cross a safety boundary.');
+  const raw = (data?.content || []).filter(b => b && b.type === 'text').map(b => b.text).join('').trim();
+  const parsed = parseBriefJson(raw);
+  if (!parsed) throw new Error('The AI reverse-audit returned an unreadable response. Try again.');
+  return normalizeReverseAudit(parsed);
+}
+
 function sameOrigin(req) {
   const origin = req.headers.origin;
   if (!origin) return true;
@@ -232,6 +332,17 @@ export default async function handler(req, res, dependencies = {}) {
       const balance = await creditBalance(member);
       if (balance < fee) return res.status(402).json({ ok: false, code: 'INSUFFICIENT_CREDITS', error: `Generating an AI brief costs ${fee} credits — your balance is ${balance}. Top up in Wallet first.` });
     }
+    // Reverse-audit mode (opt-in): the founder pasted their OWN public link — return up to
+    // 3 draft opportunities instead of one brief. Same metering, same safety posture.
+    if (body.action === 'reverse-audit') {
+      const audit = await generateReverseAudit({ linkUrl: body.linkUrl, env, fetchImpl: dependencies.fetchImpl || fetch });
+      let auditCharged = 0;
+      if (metering && fee > 0) {
+        const { error } = await member.supabase.from('credit_ledger').insert({ user_id: member.user.id, entry_type: 'ai_brief', credits: -fee, note: `AI reverse-audit · ${fee} credits` });
+        if (!error) auditCharged = fee;
+      }
+      return res.status(200).json({ ok: true, audit, charged: auditCharged });
+    }
     const brief = await generateProjectBrief({
       problemText: body.problemText,
       attachments: Array.isArray(body.attachments) ? body.attachments : [],
@@ -250,7 +361,7 @@ export default async function handler(req, res, dependencies = {}) {
   } catch (error) {
     if (error instanceof IntakeConfigError) return res.status(503).json({ ok: false, code: 'INTAKE_NOT_CONFIGURED', error: error.message });
     const message = (error && error.message) || 'AI intake failed.';
-    const expected = /^(Describe|The AI)/.test(message);
+    const expected = /^(Describe|Paste|The AI)/.test(message);
     return res.status(expected ? 400 : 502).json({ ok: false, error: message });
   }
 }

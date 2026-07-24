@@ -1498,3 +1498,38 @@ $('#mobileMenu').addEventListener('click',()=>$('.member-nav').classList.toggle(
 const authError=captureAuthRedirect();
 checkAuthReadiness();
 if(authError)showAuth(authError,true);else if(session().accessToken)loadDashboard();else showAuth();
+
+// ---- Reverse-audit (opt-in): founder's own link -> 3 editable draft opportunities. --------
+$('#reverseAuditBtn')?.addEventListener('click',async()=>{
+  const url=($('#reverseAuditUrl')?.value||'').trim();
+  const status=$('#reverseAuditStatus');const results=$('#reverseAuditResults');const btn=$('#reverseAuditBtn');
+  if(!/^https?:\/\/\S+$/i.test(url)){status.textContent='Paste a valid public link first.';status.classList.add('is-error');return;}
+  if(!$('#intakeForm [name="aiConsent"]')?.checked){status.textContent='Tick the AI consent box above first — the audit uses AI to read your link.';status.classList.add('is-error');return;}
+  btn.disabled=true;status.classList.remove('is-error');status.textContent='Reading your link and drafting…';results.replaceChildren();
+  try{
+    const res=await fetch('/api/project-intake',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'reverse-audit',linkUrl:url})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.error||'Reverse-audit failed.');
+    const audit=data.audit||{};
+    if(!audit.safeToPropose||!(audit.proposals||[]).length){
+      status.textContent=(audit.safetyFlags||[])[0]||'Nothing safely proposable was found at that link.';
+      return;
+    }
+    status.textContent=`${audit.proposals.length} draft${audit.proposals.length===1?'':'s'} — edit anything, then use one to start the intake.`;
+    audit.proposals.forEach(p=>{
+      const card=document.createElement('article');card.className='ra-card';
+      const h=document.createElement('strong');h.textContent=`DRAFT · ${p.title}`;card.append(h);
+      const s=document.createElement('p');s.textContent=p.summary;card.append(s);
+      const meta=document.createElement('p');meta.className='ra-meta';meta.textContent=[`Deliverable: ${p.deliverable}`,p.estimatedHours?`~${p.estimatedHours} hrs`:'',p.founderTimeMinWeek?`~${p.founderTimeMinWeek} min/week of your time`:''].filter(Boolean).join(' · ');card.append(meta);
+      const use=document.createElement('button');use.type='button';use.className='portal-primary compact';use.textContent='Use this draft';
+      use.addEventListener('click',()=>{
+        const ta=$('#intakeForm [name="problem"]');
+        ta.value=`${p.summary}\n\nDeliverable: ${p.deliverable}\nDone when: ${p.acceptanceCriteria}\nOut of scope: ${p.boundary}`;
+        ta.dispatchEvent(new Event('input',{bubbles:true}));ta.focus();
+        status.textContent='Draft loaded into the description — edit it, then continue to Understand.';
+      });
+      card.append(use);results.append(card);
+    });
+  }catch(error){status.textContent=error.message;status.classList.add('is-error');}
+  finally{btn.disabled=false;}
+});

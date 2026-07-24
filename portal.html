@@ -312,6 +312,16 @@
         <section class="intake-step is-active" data-intake-step="1">
           <label>What is not getting done, and why does it matter?<textarea name="problem" rows="10" minlength="10" maxlength="8000" placeholder="e.g. Our competitor pricing sheet is always out of date. We need a public-source scan of the top 8 competitors with pricing tiers and positioning."></textarea></label>
           <label class="intake-consent"><input type="checkbox" name="aiConsent"><span>I consent to Covenda using AI to read what I submit (including files) to draft a project brief. This is an assistive draft; a human finalizes scope.</span></label>
+          <details class="reverse-audit">
+            <summary>Not sure where to start? Paste your own link — we’ll propose 3 drafts</summary>
+            <p class="ra-hint">Opt-in only: paste <b>your own</b> public repo, Figma, or product page. Covenda reads it and proposes three scoped draft opportunities — drafts you edit and confirm. Nothing publishes on its own.</p>
+            <div class="ra-row">
+              <input type="url" id="reverseAuditUrl" placeholder="https://github.com/you/product" aria-label="Your own public link">
+              <button type="button" class="portal-secondary" id="reverseAuditBtn">Propose 3 drafts</button>
+            </div>
+            <p class="ra-status" id="reverseAuditStatus" aria-live="polite"></p>
+            <div class="ra-results" id="reverseAuditResults"></div>
+          </details>
           <p class="intake-hint">Describe the work in plain words. The AI drafts a structured brief on the next step — you can edit everything before posting.</p>
         </section>
         <section class="intake-step" data-intake-step="2">
