@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Covenda · Student join QR</title>
+  <meta name="robots" content="noindex">
+  <style>
+    :root { --ink:#1a1a17; --muted:#6b6b66; --line:#e6e4dd; --gold:#a9822f; --gold-deep:#8a6a2f; --paper:#faf9f6; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:28px 20px;
+           font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+           color:var(--ink); background:var(--paper); }
+    .card { width:100%; max-width:420px; text-align:center; background:#fff; border:1px solid var(--line);
+            border-radius:20px; padding:28px 24px 24px; box-shadow:0 20px 50px -30px rgba(0,0,0,.35); }
+    .kicker { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--gold-deep); margin:0; }
+    h1 { font-size:22px; margin:8px 0 4px; letter-spacing:-.01em; }
+    p.sub { margin:0 0 18px; color:var(--muted); font-size:14px; line-height:1.5; }
+    .qr { width:min(280px,72vw); height:auto; border:1px solid var(--line); border-radius:14px; padding:14px; background:#fff; }
+    .actions { display:flex; flex-direction:column; gap:10px; margin-top:20px; }
+    a.btn { display:block; padding:14px 16px; border-radius:12px; font-size:15px; font-weight:650; text-decoration:none; }
+    a.download { background:linear-gradient(96deg,#a9822f,#c9a24b); color:#fff; }
+    a.open { border:1px solid var(--line); color:var(--ink); }
+    .link { margin-top:16px; font-size:12px; color:var(--muted); word-break:break-all; }
+    .hint { margin-top:14px; font-size:12.5px; color:var(--muted); line-height:1.5; }
+    @media (prefers-color-scheme: dark) {
+      body { background:#14140f; color:#f3f0e6; }
+      .card { background:#1c1b15; border-color:#33322a; }
+      .qr { background:#fff; }
+      a.open { border-color:#33322a; color:#f3f0e6; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="kicker">Covenda</p>
+    <h1>Join as a student</h1>
+    <p class="sub">Scan with any phone camera, or download the code to print and share.</p>
+    <img class="qr" alt="QR code linking to covenda.app join-as-student" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA9gAAAPYAQMAAAAb5MMyAAAABlBMVEUaGhf////gCl4lAAADl0lEQVR42u3dy07DMBAF0BH//8+wQKoiz8NuioBKJ4squK7PwpuLNZnE599dwWaz2Ww2m81ms9lsNpvNZrPZbDabzWaz2Ww2m81ms9lsNpvNZrPZ7Pe0o7qu49/3j8/uq+VXy2qP6yP+7mKz2Ww2m81ms/+jvebzNb6nyL0M5nyeM3y3vv1ms9lsNpvNZrO3+TxH7jKEX8/Ph7g+/NZ+s9lsNpvNZrPZN/J5eVMesJen6PI5m81ms9lsNpv9C/m8vJfP2Ww2m81ms9nsH8znZWJfKlgOT87Vn7PZbDabzWaz2a/k83LC7c+Zs99sNpvNZrPZbPYQmNsmjGMXl7KU5eSy32w2m81ms9ls9jafX7+KVMRS1qtEaoe+rF9y9pvNZrPZbDabzZ7zeaTS8SWr5wAfzel6pKdH5XM2m81ms9lsNvs8n3eRe65j2c7vTuDtN5vNZrPZbDabPefzaA69ywQeu7r0XPQin7PZbDabzWaz2Yf5PKf02NWu5NW6e8+HstlsNpvNZrPZT+XznLS7pzvneN+9vSicn7PZbDabzWaz2cf5fNsIvcvq2wL18nVF9pvNZrPZbDabzZ7zeQ7ew/n5tqHifNhuv9lsNpvNZrPZ7CGfXwejesyz7LgYuyqXUH/OZrPZbDabzWbfyuddw/PyAdJyneXbrjmMfM5ms9lsNpvNZs/5vMvq15nLSPQNz8vML5+z2Ww2m81ms9mH+Tz6SpUcyMsY3x2by+dsNpvNZrPZbPaz+bzr3BLNo6B5najeQBrNEbr9ZrPZbDabzWazh3y+jMTu7UXlnDgucbHfbDabzWaz2Wz2nM/n14Z2bV66uD7MlM/ZbDabzWaz2ezzfB7VMfg1bJd/zm87ks/ZbDabzWaz2ex7+byM1tsVumn6n7PZbDabzWaz2c/m85Nei+X4UMoS/ZuM7DebzWaz2Ww2mz3k82FCl72XOV3Vevm/gP1ms9lsNpvNZrPnfD43Y4ld3UvX4KXk7DebzWaz2Ww2m73N50vYHpq0bNN7zvDyOZvNZrPZbDab/Xo+76J4NxgHzRjtN5vNZrPZbDabfTufDyN5wWXxqB5Etd9sNpvNZrPZbPY2n88d0Zff5kW2FenyOZvNZrPZbDabfZjPuwmRKsy71ovXWD6UxMjnbDabzWaz2Wz2nM9/+WKz2Ww2m81ms9lsNpvNZrPZbDabzWaz2Ww2m81ms9lsNpvNZrPZbPb72F/KuC5STUJ+hAAAAABJRU5ErkJggg==">
+    <div class="actions">
+      <a class="btn download" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA9gAAAPYAQMAAAAb5MMyAAAABlBMVEUaGhf////gCl4lAAADl0lEQVR42u3dy07DMBAF0BH//8+wQKoiz8NuioBKJ4squK7PwpuLNZnE599dwWaz2Ww2m81ms9lsNpvNZrPZbDabzWaz2Ww2m81ms9lsNpvNZrPZ7Pe0o7qu49/3j8/uq+VXy2qP6yP+7mKz2Ww2m81ms/+jvebzNb6nyL0M5nyeM3y3vv1ms9lsNpvNZrO3+TxH7jKEX8/Ph7g+/NZ+s9lsNpvNZrPZN/J5eVMesJen6PI5m81ms9lsNpv9C/m8vJfP2Ww2m81ms9nsH8znZWJfKlgOT87Vn7PZbDabzWaz2a/k83LC7c+Zs99sNpvNZrPZbPYQmNsmjGMXl7KU5eSy32w2m81ms9ls9jafX7+KVMRS1qtEaoe+rF9y9pvNZrPZbDabzZ7zeaTS8SWr5wAfzel6pKdH5XM2m81ms9lsNvs8n3eRe65j2c7vTuDtN5vNZrPZbDabPefzaA69ywQeu7r0XPQin7PZbDabzWaz2Yf5PKf02NWu5NW6e8+HstlsNpvNZrPZT+XznLS7pzvneN+9vSicn7PZbDabzWaz2cf5fNsIvcvq2wL18nVF9pvNZrPZbDabzZ7zeQ7ew/n5tqHifNhuv9lsNpvNZrPZ7CGfXwejesyz7LgYuyqXUH/OZrPZbDabzWbfyuddw/PyAdJyneXbrjmMfM5ms9lsNpvNZs/5vMvq15nLSPQNz8vML5+z2Ww2m81ms9mH+Tz6SpUcyMsY3x2by+dsNpvNZrPZbPaz+bzr3BLNo6B5najeQBrNEbr9ZrPZbDabzWazh3y+jMTu7UXlnDgucbHfbDabzWaz2Wz2nM/n14Z2bV66uD7MlM/ZbDabzWaz2ezzfB7VMfg1bJd/zm87ks/ZbDabzWaz2ex7+byM1tsVumn6n7PZbDabzWaz2c/m85Nei+X4UMoS/ZuM7DebzWaz2Ww2mz3k82FCl72XOV3Vevm/gP1ms9lsNpvNZrPnfD43Y4ld3UvX4KXk7DebzWaz2Ww2m73N50vYHpq0bNN7zvDyOZvNZrPZbDab/Xo+76J4NxgHzRjtN5vNZrPZbDabfTufDyN5wWXxqB5Etd9sNpvNZrPZbPY2n88d0Zff5kW2FenyOZvNZrPZbDabfZjPuwmRKsy71ovXWD6UxMjnbDabzWaz2Wz2nM9/+WKz2Ww2m81ms9lsNpvNZrPZbDabzWaz2Ww2m81ms9lsNpvNZrPZbPb72F/KuC5STUJ+hAAAAABJRU5ErkJggg==" download="covenda-join-student-qr.png">Download QR code</a>
+      <a class="btn open" href="https://covenda.app/?join=student">Open the join page</a>
+    </div>
+    <p class="hint">On a phone: tap <b>Download QR code</b>, then save the image to your Photos. Or press-and-hold the code above and choose “Save Image.”</p>
+    <p class="link">https://covenda.app/?join=student</p>
+  </main>
+</body>
+</html>
