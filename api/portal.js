@@ -8,6 +8,30 @@ import { presentScore, normalizeAppeal } from './hardening.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
+// Opportunity model (Stage-0 schema). The full enum ships in the DB; the MVP intake UI exposes
+// only the first three so the pilot stays project-shaped, but the API accepts any valid value.
+export const OPPORTUNITY_TYPES = new Set(['project', 'internship', 'part_time', 'research', 'apprenticeship', 'talent_pipeline', 'full_time']);
+export const REFERRAL_REQUIREMENTS = new Set(['required', 'preferred', 'none']);
+// Experience is expressed as job-relevant, EVIDENCE-observable thresholds — never degree/major
+// (protected proxies, deliberately not collected or scored; see cleanTalentPrefs).
+export const EXPERIENCE_REQUIREMENTS = new Set(['none', 'relevant_project', 'prior_internship', 'professional']);
+export const TALENT_SOURCES = new Set(['open_network', 'university', 'professor', 'research_lab', 'team_club', 'student_referral', 'founder_referral']);
+
+// Talent-acquisition preferences: a whitelisted, protected-proxy-free targeting object. We
+// intentionally do NOT capture degree, major, school prestige, age, or location — those are
+// protected attributes or proxies for them, and the fairness posture excludes them from
+// scoring entirely. Only job-relevant, evidence-checkable signals are kept.
+function cleanTalentPrefs(input) {
+  const prefs = {};
+  if (Array.isArray(input.talentSources)) {
+    const sources = [...new Set(input.talentSources.filter(s => TALENT_SOURCES.has(s)))];
+    if (sources.length) prefs.sources = sources.slice(0, TALENT_SOURCES.size);
+  }
+  if (input.availabilityHoursMin !== undefined && Number.isFinite(Number(input.availabilityHoursMin))) {
+    prefs.availabilityHoursMin = Math.max(0, Math.min(40, Math.round(Number(input.availabilityHoursMin))));
+  }
+  return Object.keys(prefs).length ? prefs : null;
+}
 // Fixed taxonomies shared with the marketing site (BATCHES industries + work types).
 // The vertical project-matcher reads these exact strings, so onboarding must write them verbatim.
 export const VERTICALS = new Set(['Accounting & finance', 'Software & AI', 'Healthcare operations', 'Consumer & retail', 'Professional services', 'Not sure yet — show me everything']);
@@ -574,6 +598,16 @@ export function computeFitScore(project, profile, context = {}) {
     reasons.push('New to Covenda — execution unproven');
   }
 
+  // Opportunity requirements as HONEST soft signals for the student's view (the operator
+  // matcher enforces them as hard filters). Evidence-based only — never degree/major/location.
+  if (project.experience_requirement && project.experience_requirement !== 'none') {
+    const meets = completed >= 1;
+    if (meets) reasons.push('Meets the prior-experience bar with your completed work');
+    else concerns.push('Asks for prior experience — a work-trial is how you build that record');
+  }
+  if (project.referral_requirement === 'required') concerns.push('A staked referral is required to be considered');
+  else if (project.referral_requirement === 'preferred') reasons.push('A referral helps here, but is not required');
+
   const credits = Number(project.credits_listed) || 0;
   if (credits > 0) { score += FIT_WEIGHTS.compensation; reasons.push(`Pays ${credits.toLocaleString()} credits`); }
   if (project.target_date) { const due = new Date(project.target_date); if (!Number.isNaN(due.getTime()) && due.getTime() > Date.now()) score += FIT_WEIGHTS.deadline; }
@@ -714,6 +748,21 @@ export async function createMemberProject(member, input) {
   // Engagement ladder rung (delta #2). 'micro' = bounded ~5-hour task, the de-risked first
   // bet. Only written when explicitly provided, so creation works before the migration.
   if (['micro', 'project_short', 'project_long', 'part_time', 'internship', 'full_time'].includes(input.engagementRung)) row.engagement_rung = input.engagementRung;
+
+  // Talent-acquisition preferences (opportunity model). All additive + only-when-supplied, so
+  // creation keeps working before the Stage-0 migration is applied. Requirements below become
+  // HARD FILTERS in the operator matcher; preferences are soft signals. Protected proxies are
+  // never collected (see cleanTalentPrefs).
+  if (OPPORTUNITY_TYPES.has(input.opportunityType)) row.opportunity_type = input.opportunityType;
+  if (REFERRAL_REQUIREMENTS.has(input.referralRequirement)) row.referral_requirement = input.referralRequirement;
+  if (EXPERIENCE_REQUIREMENTS.has(input.experienceRequirement)) row.experience_requirement = input.experienceRequirement;
+  const talentPrefs = cleanTalentPrefs(input);
+  if (talentPrefs) row.talent_source_prefs = talentPrefs;
+  if (input.founderTimeBudgetMinWeek !== undefined && Number.isFinite(Number(input.founderTimeBudgetMinWeek))) {
+    row.founder_time_budget_min_week = Math.max(0, Math.min(2400, Math.round(Number(input.founderTimeBudgetMinWeek))));
+  }
+  if (input.complexityRating !== undefined && Number(input.complexityRating) >= 1 && Number(input.complexityRating) <= 5) row.complexity_rating = Math.round(Number(input.complexityRating));
+  if (input.ambiguityRating !== undefined && Number(input.ambiguityRating) >= 1 && Number(input.ambiguityRating) <= 5) row.ambiguity_rating = Math.round(Number(input.ambiguityRating));
 
   // Credits: charge the reach fee and hold escrow (listed + platform fee) at post time.
   const priced = input.creditsListed !== undefined;

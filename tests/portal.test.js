@@ -508,6 +508,37 @@ test('only organization roles can create projects', async () => {
   assert.deepEqual(project.desired_skills,['Research','Writing']);
 });
 
+test('createMemberProject persists talent-acquisition prefs and ignores protected proxies', async () => {
+  let inserted;
+  const supabase={from(table){if(table==='member_profiles')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{role:'company'},error:null};}};return {insert(value){inserted=value;return this;},select(){return this;},async single(){return {data:{id:'project-1',...inserted},error:null};}};}};
+  const project=await createMemberProject({user:{id:'company-1'},supabase},{
+    title:'Robotics research assist',summary:'Help wire up a ROS perception pipeline.',visibility:'members',
+    opportunityType:'internship',experienceRequirement:'relevant_project',referralRequirement:'preferred',
+    founderTimeBudgetMinWeek:45,complexityRating:4,ambiguityRating:3,
+    talentSources:['university','research_lab'],availabilityHoursMin:10,
+    // Protected proxies — must be silently dropped, never persisted.
+    degree:'BS',major:'Robotics',location:'Boston',age:21,
+  });
+  assert.equal(project.opportunity_type,'internship');
+  assert.equal(project.experience_requirement,'relevant_project');
+  assert.equal(project.referral_requirement,'preferred');
+  assert.equal(project.founder_time_budget_min_week,45);
+  assert.equal(project.complexity_rating,4);
+  assert.deepEqual(project.talent_source_prefs.sources.sort(),['research_lab','university']);
+  assert.equal(project.talent_source_prefs.availabilityHoursMin,10);
+  // No protected attribute leaked into the stored row.
+  for(const k of Object.keys(project)) assert.ok(!/degree|major|location|age/i.test(k),`leaked ${k}`);
+});
+
+test('computeFitScore surfaces requirement signals honestly (evidence-based, no proxies)', async () => {
+  const proj={verticals:['Software & AI'],desired_skills:'Python',experience_requirement:'relevant_project',referral_requirement:'required'};
+  const proven=computeFitScore(proj,{verticals:['Software & AI'],skills:['Python']},{completedCount:2});
+  const green=computeFitScore(proj,{verticals:['Software & AI'],skills:['Python']},{completedCount:0});
+  assert.ok(proven.reasons.some(r=>/prior-experience bar/.test(r)));
+  assert.ok(green.concerns.some(c=>/prior experience/.test(c)));
+  assert.ok(green.concerns.some(c=>/staked referral is required/.test(c)));
+});
+
 test('project messages require project membership and store only bounded text', async () => {
   let inserted;
   const supabase={from(table){if(table==='member_projects')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{id:'f65be0ad-7607-4c38-a1e1-095c34ad4f11',owner_user_id:'company-1',assigned_student_user_id:'student-1'},error:null};}};assert.equal(table,'project_messages');return {insert(value){inserted=value;return this;},select(){return this;},async single(){return {data:{id:'message-1',created_at:'2026-07-22T00:00:00Z',...inserted},error:null};}};}};

@@ -886,3 +886,14 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .appeal-box input, .appeal-box textarea { width: 100%; margin-bottom: 8px; }
 .appeal-actions { display: flex; align-items: center; gap: 10px; }
 .appeal-actions span { font-size: 12px; color: var(--muted); }
+
+/* ---- Opportunity model: talent-acquisition preferences fieldset. ---- */
+.form-fieldset { margin: 4px 0 0; padding: 15px 16px; border: 1px solid var(--line); border-radius: 12px; }
+.form-fieldset legend { padding: 0 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.form-fieldset legend small { display: block; font-weight: 400; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.fieldset-hint { margin: 12px 0 8px; font-size: 12.5px; color: var(--ink); font-weight: 550; }
+.fieldset-hint small { font-weight: 400; color: var(--muted); }
+.chip-check-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-check { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; font-size: 12.5px; transition: border-color .16s ease, background-color .16s ease; }
+.chip-check input { width: 15px; min-height: 15px; margin: 0; accent-color: var(--gold); }
+.chip-check:has(input:checked) { border-color: var(--gold); background: var(--gold-pale, #fbf6e9); }

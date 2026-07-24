@@ -106,6 +106,19 @@ test('REFUSAL PATH: no padding — a weak pool gets an honest refusal with reaso
   assert.ok(out.reasons.length >= 1);
 });
 
+test('experience_requirement=relevant_project filters ONLY on observable evidence', () => {
+  const opp = { experience_requirement: 'relevant_project', verticals: [], work_types: [] };
+  const noEvidence = { id: 'a', claims: [], completed_projects: 0 };
+  const hasClaim = { id: 'b', claims: [claim('Python', 'artifact')], completed_projects: 0 };
+  const hasProject = { id: 'c', claims: [], completed_projects: 1 };
+  assert.equal(hardFilters(opp, noEvidence).pass, false);
+  assert.ok(hardFilters(opp, noEvidence).failures.some(f => /Experience/.test(f)));
+  assert.equal(hardFilters(opp, hasClaim).pass, true);   // evidence-backed skill satisfies it
+  assert.equal(hardFilters(opp, hasProject).pass, true); // a completed project satisfies it
+  // prior_internship/professional are NOT hard-failed — no reliable signal, excluding is unfair.
+  assert.equal(hardFilters({ ...opp, experience_requirement: 'professional' }, noEvidence).pass, true);
+});
+
 test('every explanation line with a claim carries its evidence pointer + one honest gap', () => {
   const opp = { required_skills: 'Python, Rust', verticals: [], work_types: [] };
   const cand = { id: 'a', claims: [claim('Python', 'artifact', 'https://github.com/a/repo')] };

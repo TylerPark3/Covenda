@@ -85,6 +85,13 @@ export function hardFilters(opportunity, candidate) {
   if (opportunity?.referral_requirement === 'required' && !hasVouch(candidate)) {
     failures.push('Referral required — candidate has no staked vouch yet');
   }
+  // Experience requirement, filtered ONLY on evidence Covenda can observe: a relevant completed
+  // project or an evidence-backed skill claim. prior_internship/professional are NOT hard-failed
+  // here — we have no reliable signal for them, and excluding on missing data would be unfair.
+  if (opportunity?.experience_requirement === 'relevant_project') {
+    const hasRelevant = Number(candidate?.completed_projects) >= 1 || usableClaims(candidate).length > 0;
+    if (!hasRelevant) failures.push('Experience: needs a relevant completed project or evidence-backed skill');
+  }
   return { pass: failures.length === 0, failures };
 }
 
