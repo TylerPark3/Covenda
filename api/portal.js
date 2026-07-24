@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { supabaseConfiguration } from './submissions.js';
 import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail } from './notify.js';
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
+import { canonicalizeSkill } from './skills-taxonomy.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
 const PROJECT_VISIBILITY = new Set(['private', 'members', 'open']);
@@ -1314,6 +1315,7 @@ export async function analyzeGithub(member, input, env = process.env) {
       const rows = analysis.skills.map(s => ({
         student_user_id: member.user.id,
         skill: s.skill,
+        skill_canonical: canonicalizeSkill(s.skill).canonical,
         level: `${s.score}/10 (${s.confidence})`,
         verification_tier: 'artifact',
         evidence_pointer: analysis.repo.url,

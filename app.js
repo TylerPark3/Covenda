@@ -4480,6 +4480,24 @@ function initHeroField() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
 }
 
+// Covenda tree: arm the grow-from-the-roots animation, fired when the tree enters view.
+// No-JS / no-IO / reduced-motion paths never hide the tree (classes are simply not added).
+(function initTreeGrow() {
+  const tree = document.getElementById('covendaModel');
+  if (!tree) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!('IntersectionObserver' in window)) return;
+  tree.classList.add('ct-pre');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (!en.isIntersecting) return;
+      tree.classList.add('ct-grow');
+      io.disconnect();
+    });
+  }, { threshold: 0.3 });
+  io.observe(tree);
+})();
+
 initCovendaMotion();
 initFlowDemo();
 initIcosahedron();

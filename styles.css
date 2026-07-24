@@ -2853,3 +2853,37 @@ body[data-audience="university"] #referrerDashboard { display: block; }
 .referrer-note svg { flex: 0 0 auto; width: 17px; height: 17px; margin-top: 1px; color: var(--gold-deep); }
 .referrer-note b { color: var(--ink); font-weight: 600; }
 .referrer-deferred { margin-top: 12px; font-size: 11.5px; color: var(--soft); font-style: italic; }
+
+/* ---- Covenda tree: grows bottom -> top when it enters view. --------------------------
+   Gated on JS-added classes so no-JS and reduced-motion always see the full tree:
+   .ct-pre arms the hidden initial state; .ct-grow runs the sequence
+   (roots -> trunk -> branches -> glow -> cards). */
+#covendaModel.ct-pre .ct-roots path,
+#covendaModel.ct-pre .ct-branches path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+#covendaModel.ct-pre .ct-trunk { transform: scaleY(0); transform-origin: 700px 566px; }
+#covendaModel.ct-pre .ct-glow, #covendaModel.ct-pre .ct-card { opacity: 0; }
+
+#covendaModel.ct-grow .ct-roots path { animation: ct-draw .9s ease-out forwards; }
+#covendaModel.ct-grow .ct-roots path:nth-child(2), #covendaModel.ct-grow .ct-roots path:nth-child(5) { animation-delay: .25s; }
+#covendaModel.ct-grow .ct-roots path:nth-child(3), #covendaModel.ct-grow .ct-roots path:nth-child(4),
+#covendaModel.ct-grow .ct-roots path:nth-child(6), #covendaModel.ct-grow .ct-roots path:nth-child(7),
+#covendaModel.ct-grow .ct-roots path:nth-child(8), #covendaModel.ct-grow .ct-roots path:nth-child(9) { animation-delay: .5s; }
+#covendaModel.ct-grow .ct-trunk { animation: ct-rise .6s ease-out .8s forwards; }
+#covendaModel.ct-grow .ct-branches path { animation: ct-draw .8s ease-out 1.3s forwards; }
+#covendaModel.ct-grow .ct-branches path:nth-child(n+3) { animation-delay: 1.7s; }
+#covendaModel.ct-grow .ct-branches path:nth-child(n+8) { animation-delay: 2s; }
+#covendaModel.ct-grow .ct-glow { animation: ct-fade .9s ease-out 2s forwards; }
+#covendaModel.ct-grow .ct-card { animation: ct-fade .7s ease-out forwards; }
+#covendaModel.ct-grow .ct-card--nutrients { animation-delay: .5s; }
+#covendaModel.ct-grow .ct-card--roots { animation-delay: .8s; }
+#covendaModel.ct-grow .ct-card--trunk { animation-delay: 1.3s; }
+#covendaModel.ct-grow .ct-card--canopy { animation-delay: 2.1s; }
+
+@keyframes ct-draw { to { stroke-dashoffset: 0; } }
+@keyframes ct-rise { to { transform: scaleY(1); } }
+@keyframes ct-fade { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  #covendaModel.ct-pre .ct-roots path, #covendaModel.ct-pre .ct-branches path { stroke-dasharray: none; stroke-dashoffset: 0; }
+  #covendaModel.ct-pre .ct-trunk { transform: none; }
+  #covendaModel.ct-pre .ct-glow, #covendaModel.ct-pre .ct-card { opacity: 1; }
+}

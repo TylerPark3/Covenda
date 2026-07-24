@@ -41,7 +41,10 @@ export const MATCH_WEIGHTS = {
   referral_presence: 8,  // a staked vouch exists (referral- or trial-tier evidence)
 };
 
+import { canonicalizeSkill } from './skills-taxonomy.js';
+
 const norm = s => String(s || '').toLowerCase().trim();
+const canon = s => canonicalizeSkill(s).canonical.toLowerCase();
 const asList = v => (Array.isArray(v) ? v : String(v || '').split(/[,\n]/)).map(norm).filter(Boolean);
 
 // A claim is usable evidence only when its tier is above 'claimed' AND it carries a pointer.
@@ -51,10 +54,12 @@ function usableClaims(candidate) {
 }
 function claimFor(candidate, skill) {
   const target = norm(skill);
+  const targetCanon = canon(skill);
   let best = null;
   for (const c of usableClaims(candidate)) {
     const s = norm(c.skill);
-    if (s === target || s.includes(target) || target.includes(s)) {
+    // Canonical match first (Phase-1 normalization: "JS" === "JavaScript"), then substring.
+    if (canon(c.skill) === targetCanon || s === target || s.includes(target) || target.includes(s)) {
       if (!best || TIER_WEIGHT[c.verification_tier] > TIER_WEIGHT[best.verification_tier]) best = c;
     }
   }

@@ -151,3 +151,22 @@ test('four-fifths report flags a group selected below 0.8x the top rate', async 
   assert.equal(out.groups.find(g => g.name === 'group-b').flagged, false);
   assert.deepEqual(fourFifthsReport([]).groups, []);
 });
+
+test('TAXONOMY: synonyms unify — an opportunity wanting JavaScript matches a "JS" claim', async () => {
+  const { canonicalizeSkill } = await import('../../api/skills-taxonomy.js');
+  assert.equal(canonicalizeSkill('JS').canonical, 'JavaScript');
+  assert.equal(canonicalizeSkill('ms excel').canonical, 'Spreadsheets');
+  assert.equal(canonicalizeSkill('dcf modeling').canonical, 'Financial modeling');
+  assert.equal(canonicalizeSkill('ros2').canonical, 'Robotics (ROS)');
+  // Unmatched skills pass through unchanged — normalization never drops a skill.
+  const odd = canonicalizeSkill('Underwater basket weaving');
+  assert.equal(odd.matched, false);
+  assert.equal(odd.canonical, 'Underwater basket weaving');
+  // End-to-end through the matcher:
+  const out = matchOpportunity(
+    { required_skills: 'JavaScript', verticals: [], work_types: [] },
+    [{ id: 'a', claims: [claim('JS', 'artifact', 'https://github.com/a/app')] }],
+  );
+  assert.equal(out.refused, false);
+  assert.equal(out.shortlist[0].candidate_id, 'a');
+});
