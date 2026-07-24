@@ -290,6 +290,7 @@ export function studentQuickRecord(body) {
     contact: contact(body.contact),
     school: text(body.school, 160),
     interest: text(body.interest, 240),   // optional selected work path, if any
+    industries: textArray(body.industries), // interest domains tapped at quick-join (chips)
     stage: 'quick_added',
   };
   if (!record.contact.name || !record.contact.email) {

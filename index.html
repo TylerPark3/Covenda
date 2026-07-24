@@ -160,6 +160,7 @@
             <button class="gold-button work-detail-cta" type="button" data-action="student-form">This fits me → make an account<svg><use href="#icon-arrow-right"/></svg></button>
           </div>
           <button class="gold-button selector-submit" type="button" data-action="student-form">Make a student account<svg><use href="#icon-arrow-right"/></svg></button>
+          <button class="quiet-link selector-quickjoin" type="button" data-action="student-quick">In a rush? Just get on the list — name, email, 30 seconds</button>
           <nav class="student-journey" aria-label="Student journey">
             <button type="button" data-action="focus-pathfinder"><i>1</i><span><b>Explore</b><small>Choose a work path</small></span></button>
             <button type="button" data-action="student-form"><i>2</i><span><b>Profile</b><small>Tell us what fits</small></span></button>
@@ -185,13 +186,12 @@
                 <svg class="composer-icon"><use href="#icon-file"/></svg>
                 <label class="sr-only" for="companyProblemSeed">Describe the company problem</label>
                 <textarea id="companyProblemSeed" rows="2" placeholder="Tell us what is not getting done, why it matters, and what a useful finish looks like…"></textarea>
-                <button class="gold-button" type="button" data-action="schedule-demo">Schedule a demo<svg><use href="#icon-arrow-right"/></svg></button>
+                <button class="gold-button" type="button" data-action="company-form">Create Project<svg><use href="#icon-arrow-right"/></svg></button>
               </div>
               <div class="composer-meta">
                 <span class="composer-fit" id="companyFitChip" data-fit="empty" role="status" aria-live="polite">Start typing — we’ll show project fit</span>
-                <p class="composer-hint">On the demo, we turn what you write into a scoped Project Packet — live. What you type is sent ahead so the call starts with your problem.</p>
               </div>
-              <button class="quiet-link company-secondary" type="button" data-action="company-form">Prefer to write it up? Start a Project Packet<svg><use href="#icon-chevron"/></svg></button>
+              <button class="quiet-link company-secondary" type="button" data-action="schedule-demo">Prefer a call first? Schedule a demo<svg><use href="#icon-chevron"/></svg></button>
             </div>
           </article>
           <article class="company-job company-job-talent">
@@ -1007,6 +1007,10 @@
         <label>Full name<input name="quickName" autocomplete="name" required></label>
         <label>Email<input name="quickEmail" type="email" autocomplete="email" required></label>
         <label class="wide">School <span>Optional</span><input name="quickSchool" autocomplete="organization"></label>
+      </div>
+      <div class="quick-interests">
+        <span class="quick-interests-label">What are you into? <span>Optional — tap any that fit</span></span>
+        <div class="quick-interests-chips" id="quickJoinInterests"></div>
       </div>
       <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
       <label class="consent-row"><input name="quickConsent" type="checkbox" required><span>Covenda may email me about the pilot. This is an interest signal, not a job offer or guarantee.</span></label>

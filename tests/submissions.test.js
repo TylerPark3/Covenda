@@ -14,6 +14,7 @@ import handler, {
   primaryStorageHealth,
   REFERENCE_PREFIXES,
   referrerRecord,
+  studentQuickRecord,
   studentRecord,
   submissionDetails,
   submissionRow,
@@ -575,4 +576,23 @@ test('handler absorbs honeypot submissions without writing a record', async () =
   await handler({ method: 'POST', headers: { host: 'proof-path.vercel.app' }, body: { type: 'student_interest', website: 'spam.example' } }, response);
   assert.equal(response.statusCode, 202);
   assert.equal(response.body.reference, 'RECEIVED');
+});
+
+test('studentQuickRecord captures name + email + school and tapped interest domains', () => {
+  const record = studentQuickRecord({
+    contact: { name: 'Jordan Lee', email: 'jordan@school.edu' },
+    school: 'State University',
+    industries: ['Software & AI', 'Accounting & finance'],
+    interest: 'Software & AI, Accounting & finance',
+  });
+  assert.equal(record.contact.name, 'Jordan Lee');
+  assert.equal(record.contact.email, 'jordan@school.edu');
+  assert.equal(record.school, 'State University');
+  assert.deepEqual(record.industries, ['Software & AI', 'Accounting & finance']);
+  assert.equal(record.stage, 'quick_added');
+});
+
+test('studentQuickRecord still requires a name and a valid email', () => {
+  assert.throws(() => studentQuickRecord({ contact: { name: '', email: 'x@y.com' } }), /required contact details/);
+  assert.throws(() => studentQuickRecord({ contact: { name: 'A', email: 'not-an-email' } }), /required contact details/);
 });

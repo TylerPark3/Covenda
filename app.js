@@ -1657,6 +1657,14 @@ function openFullProfilePrefilled() {
   if (saved) {
     const set = (name, val) => { const el = $('[name="' + name + '"]', studentForm); if (el && !el.value && val) el.value = val; };
     set('studentName', saved.name); set('studentEmail', saved.email); set('studentSchool', saved.school);
+    // Carry the interest domains tapped at quick-join into the long form, so the student
+    // doesn't re-pick them. Dispatch change so the vertical-first cascade re-derives.
+    if (Array.isArray(saved.industries) && saved.industries.length) {
+      saved.industries.forEach(val => {
+        const cb = $$('[name="studentIndustry"]', studentForm).find(el => el.value === val);
+        if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
+      });
+    }
     saveDraft(studentForm);
   }
 }
@@ -1678,11 +1686,33 @@ function renderProfileBanner() {
   btn.addEventListener('click', openFullProfilePrefilled);
   banner.append(txt, btn);
 }
+// The quick-join interest chips are the same industry domains the full profile uses, so a
+// tap here pre-selects the long form later. Rendered from INDUSTRY_TREE so they never drift.
+function renderQuickInterests() {
+  const host = $('#quickJoinInterests');
+  if (!host) return;
+  host.innerHTML = '';
+  Object.keys(INDUSTRY_TREE).forEach(name => {
+    const chip = document.createElement('button');
+    chip.type = 'button'; chip.className = 'quick-chip'; chip.textContent = name;
+    chip.setAttribute('aria-pressed', 'false');
+    chip.addEventListener('click', () => {
+      const on = chip.getAttribute('aria-pressed') === 'true';
+      chip.setAttribute('aria-pressed', String(!on));
+      chip.classList.toggle('is-on', !on);
+    });
+    host.append(chip);
+  });
+}
+function selectedQuickInterests() {
+  return $$('#quickJoinInterests .quick-chip[aria-pressed="true"]').map(chip => chip.textContent);
+}
 function openQuickJoin() {
   const done = $('#quickJoinDone');
   done.hidden = true; done.textContent = '';
   quickJoinForm.hidden = false;
   $('#quickJoinMessage').textContent = '';
+  renderQuickInterests();
   quickJoinForm.dataset.startedAt = String(Date.now());
   quickJoinDialog.showModal();
   window.setTimeout(() => $('[name="quickName"]', quickJoinForm)?.focus(), 60);
@@ -1714,6 +1744,7 @@ if (quickJoinForm) {
     if (!name || !emailVal || !consent) { message.textContent = 'Please add your name, email, and agree to be contacted.'; return; }
     const submit = $('button[type="submit"]', quickJoinForm);
     submit.disabled = true; submit.textContent = 'Joining…';
+    const industries = selectedQuickInterests();
     try {
       const result = await sendSubmission({
         type: 'student_quick',
@@ -1722,13 +1753,14 @@ if (quickJoinForm) {
         consent: true,
         contact: { name, email: emailVal },
         school: formValue(quickJoinForm, 'quickSchool'),
-        interest: state.workType || '',
+        industries,
+        interest: industries.join(', ') || state.workType || '',
       });
-      writeStorage(QUICK_KEY, { name, email: emailVal, school: formValue(quickJoinForm, 'quickSchool'), reference: result.reference, stage: 'quick_added', at: new Date().toISOString() });
+      writeStorage(QUICK_KEY, { name, email: emailVal, school: formValue(quickJoinForm, 'quickSchool'), industries, reference: result.reference, stage: 'quick_added', at: new Date().toISOString() });
       saveSubmission({
         type: 'student_quick', reference: result.reference, status: result.status || 'received',
         storage: result.storage || 'confirmed', createdAt: result.createdAt || new Date().toISOString(),
-        title: name + ' · quick join', summary: state.workType ? 'Interested in ' + state.workType : 'Full profile pending',
+        title: name + ' · quick join', summary: industries.length ? 'Interested in ' + industries.join(', ') : (state.workType ? 'Interested in ' + state.workType : 'Full profile pending'),
       });
       renderQuickJoinDone(result.reference);
       renderProfileBanner();
@@ -3911,6 +3943,16 @@ const incomingReferral = readReferralFromUrl();
 if (incomingReferral) {
   writeStorage(referralStorageKey, incomingReferral);
   state.audience = 'student';
+}
+
+// QR / shareable deep-link: covenda.app/?join=student lands on the student surface and pops
+// the 30-second quick join immediately — the frictionless path for handing out a QR code.
+// setTimeout lets the rest of boot (audience + dialog wiring) finish before we open it.
+let joinIntent = null;
+try { joinIntent = new URLSearchParams(location.search).get('join'); } catch { joinIntent = null; }
+if (joinIntent === 'student') {
+  state.audience = 'student';
+  setTimeout(() => { try { openQuickJoin(); } catch (_) { /* dialog not ready — ignore */ } }, 150);
 }
 
 // ---- Vertical-first narrowing -----------------------------------------------
