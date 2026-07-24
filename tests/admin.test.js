@@ -1,7 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import adminHandler, { AdminOperationalError, authorizeAdmin, caseStudyMetrics, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, caseStudyMetrics, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission, verifyAdminCode } from '../api/admin.js';
+
+const codeEnv = { COVENDA_ADMIN_EMAILS: 'ops@covenda.com', SUPABASE_URL: 'https://x.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'pub' };
+
+test('verifyAdminCode exchanges a valid 6-digit code for a session token', async () => {
+  const createSupabaseClient = () => ({ auth: { verifyOtp: async ({ token }) => (
+    token === '123456'
+      ? { data: { session: { access_token: 'tok-123', user: { email: 'ops@covenda.com' } }, user: { email: 'ops@covenda.com' } }, error: null }
+      : { data: null, error: { message: 'invalid' } }
+  ) } });
+  const out = await verifyAdminCode('ops@covenda.com', '123456', { env: codeEnv, createSupabaseClient });
+  assert.equal(out.accessToken, 'tok-123');
+  await assert.rejects(verifyAdminCode('ops@covenda.com', '999999', { env: codeEnv, createSupabaseClient }), /invalid or has expired/);
+});
+
+test('verifyAdminCode rejects a short code and a non-allowlisted operator', async () => {
+  await assert.rejects(verifyAdminCode('ops@covenda.com', '12', { env: codeEnv }), /6-digit code/);
+  const createSupabaseClient = () => ({ auth: { verifyOtp: async () => ({ data: { session: { access_token: 'tok', user: { email: 'evil@x.com' } }, user: { email: 'evil@x.com' } }, error: null }) } });
+  await assert.rejects(verifyAdminCode('evil@x.com', '123456', { env: codeEnv, createSupabaseClient }), /not an authorized operator/);
+});
 
 test('caseStudyMetrics computes acceptance, repeat, and avg value from real rows', () => {
   const completed = [

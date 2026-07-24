@@ -195,6 +195,33 @@ export async function requestAdminLink(address, req, {
   return { accepted: true, delivery: 'requested' };
 }
 
+// Type-the-code sign-in: immune to email link-scanners that consume single-use magic links.
+// Supabase sends the same OTP as both a link and a 6-digit code; verifyOtp exchanges the typed
+// code for a session. Server-mediated so the browser needs no Supabase JS (admin CSP is strict).
+export async function verifyAdminCode(address, code, {
+  env = process.env,
+  createSupabaseClient = createClient,
+} = {}) {
+  const cleanEmail = email(address);
+  if (!cleanEmail) throw new Error('Enter a valid operator email.');
+  const cleanCode = text(code, 12).replace(/\D/g, '');
+  if (cleanCode.length < 6) throw new Error('Enter the 6-digit code from your email.');
+  const allowlist = allowedEmails(env);
+  if (!allowlist.size) {
+    throw new AdminOperationalError(
+      'ADMIN_ALLOWLIST_MISSING',
+      'Admin access is not configured for this deployment. Add a non-empty COVENDA_ADMIN_EMAILS value in Vercel, then redeploy.',
+    );
+  }
+  const supabase = passwordlessClient(env, createSupabaseClient);
+  const { data, error } = await supabase.auth.verifyOtp({ email: cleanEmail, token: cleanCode, type: 'email' });
+  if (error) throw new Error('That code is invalid or has expired. Request a new one.');
+  const token = data?.session?.access_token;
+  const returnedEmail = email(data?.user?.email || data?.session?.user?.email);
+  if (!token || !returnedEmail || !allowlist.has(returnedEmail)) throw new Error('This account is not an authorized operator.');
+  return { accessToken: token };
+}
+
 function adminRequestId(req) {
   const vercelId = text(req.headers['x-vercel-id'], 200);
   if (vercelId) return vercelId.split('::').at(-1).slice(0, 80);
@@ -583,8 +610,12 @@ export default async function handler(req, res, dependencies = {}) {
         return res.status(200).json({
           ok: true,
           requestId,
-          message: 'If this address is authorized, a sign-in link is on its way.',
+          message: 'If this address is authorized, a sign-in link + code is on its way.',
         });
+      }
+      if (input.action === 'verify-code') {
+        const result = await verifyAdminCode(input.email, input.code, dependencies);
+        return res.status(200).json({ ok: true, accessToken: result.accessToken });
       }
       // Every other POST action mutates operator data and requires an authenticated operator.
       const operator = await authorizeAdmin(req, dependencies);

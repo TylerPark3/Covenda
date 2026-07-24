@@ -42,7 +42,7 @@ function captureMagicLink() {
   return error;
 }
 
-function showLogin(message = '', error = false) { $('#adminLogin').hidden = false; $('#adminShell').hidden = true; if (message) setMessage(message, error); }
+function showLogin(message = '', error = false) { $('#adminLogin').hidden = false; $('#adminShell').hidden = true; const cf = $('#adminCodeForm'); if (cf) cf.hidden = true; const lf = $('#adminLoginForm'); if (lf) lf.hidden = false; if (message) setMessage(message, error); }
 function showInbox() { $('#adminLogin').hidden = true; $('#adminShell').hidden = false; }
 
 function updateQueueSummary() {
@@ -298,7 +298,11 @@ async function loadInbox({ announce = false } = {}) {
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }
 
-$('#adminLoginForm').addEventListener('submit',async event=>{ event.preventDefault(); const button=$('button',event.currentTarget); button.disabled=true; setMessage('Requesting a secure sign-in link…'); try { const response=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request-link',email:$('[name="email"]',event.currentTarget).value})}); const result=await response.json(); if (!response.ok||!result.ok) throw new Error(result.error||'Could not request a link.'); const reference=result.requestId ? ` Reference: ${result.requestId}.` : ''; setMessage(result.message+reference); } catch(error) { setMessage(error.message,true); } finally { button.disabled=false; } });
+let pendingOperatorEmail='';
+function setCodeMessage(text,error=false){const m=$('#adminCodeMessage');if(!m)return;m.textContent=text;m.classList.toggle('is-error',error);}
+$('#adminLoginForm').addEventListener('submit',async event=>{ event.preventDefault(); const button=$('button[type="submit"]',event.currentTarget); button.disabled=true; setMessage('Requesting a secure sign-in code…'); const emailVal=$('[name="email"]',event.currentTarget).value; try { const response=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request-link',email:emailVal})}); const result=await response.json(); if (!response.ok||!result.ok) throw new Error(result.error||'Could not request a code.'); pendingOperatorEmail=emailVal; setMessage(''); $('#adminLoginForm').hidden=true; $('#adminCodeForm').hidden=false; setCodeMessage('Code sent. Check your email — it may take a minute.'+(result.requestId?` (ref ${result.requestId})`:'')); $('#adminCodeForm [name="code"]').focus(); } catch(error) { setMessage(error.message,true); } finally { button.disabled=false; } });
+$('#adminCodeForm')?.addEventListener('submit',async event=>{ event.preventDefault(); const button=$('button[type="submit"]',event.currentTarget); const code=$('[name="code"]',event.currentTarget).value.replace(/\D/g,''); if(code.length<6){setCodeMessage('Enter the 6-digit code.',true);return;} button.disabled=true; setCodeMessage('Signing you in…'); try { const response=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'verify-code',email:pendingOperatorEmail,code})}); const result=await response.json(); if(!response.ok||!result.ok||!result.accessToken) throw new Error(result.error||'That code did not work.'); sessionStorage.setItem(TOKEN_KEY,result.accessToken); await loadInbox().catch(err=>{throw err;}); } catch(error){ setCodeMessage(error.message,true); button.disabled=false; } });
+$('#adminCodeBack')?.addEventListener('click',()=>{ $('#adminCodeForm').hidden=true; $('#adminLoginForm').hidden=false; setCodeMessage(''); pendingOperatorEmail=''; });
 $$('[data-admin-type]').forEach(button=>button.addEventListener('click',()=>{ activeType=button.dataset.adminType; $('#adminTypeFilter').value=activeType; $$('[data-admin-type]').forEach(item=>item.classList.toggle('is-active',item===button)); renderRows(); }));
 $('#adminTypeFilter').addEventListener('change',event=>{ activeType=event.target.value; $$('[data-admin-type]').forEach(button=>button.classList.toggle('is-active',button.dataset.adminType===activeType)); renderRows(); });
 $('#adminStatusFilter').addEventListener('change',renderRows); $('#adminSearch').addEventListener('input',renderRows);

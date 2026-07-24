@@ -22,6 +22,10 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .admin-login input:focus, .admin-controls select:focus, .admin-search:focus-within { border-color: var(--gold); outline: 3px solid rgba(180,123,32,.11); }
 .admin-login button { min-height: 50px; border: 1px solid var(--gold-deep); border-radius: 12px; background: var(--gold); color: #fff; font-weight: 700; cursor: pointer; }
 .admin-login button:disabled { opacity: .55; cursor: wait; }
+.admin-code-intro { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.admin-code-intro small { color: var(--soft); }
+.admin-login #adminCodeForm input { letter-spacing: .3em; font-size: 18px; text-align: center; font-variant-numeric: tabular-nums; }
+.admin-login button.admin-code-back { min-height: 40px; border: 1px solid var(--line-strong); background: #fff; color: var(--muted); font-weight: 600; }
 #adminLoginMessage { min-height: 20px; margin: 0; color: var(--success); font-size: 11px; }
 #adminLoginMessage.is-error { color: #a43124; }
 .admin-login-help { margin: -3px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--soft); font-size: 10px; line-height: 1.6; }

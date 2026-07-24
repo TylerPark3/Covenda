@@ -32,12 +32,19 @@
     <section>
       <a class="admin-brand" href="/"><img class="brand-mark-img" src="/assets/covenda-mark.svg" alt="" width="28" height="28">Covenda</a>
       <h1>Private operator inbox.</h1>
-      <p>Use your authorized Covenda email. Supabase will send a one-time sign-in link.</p>
+      <p>Use your authorized Covenda email. We’ll send a one-time 6-digit code (and a link) — type the code to avoid “link expired” issues.</p>
       <form id="adminLoginForm">
         <label>Operator email<input name="email" type="email" autocomplete="email" placeholder="operator@covenda.com" required></label>
-        <button type="submit">Email me a sign-in link</button>
+        <button type="submit">Email me a sign-in code</button>
         <p id="adminLoginMessage" aria-live="polite"></p>
         <p class="admin-login-help" id="adminLoginHelp">No email after two minutes? Confirm this exact address is in <code>COVENDA_ADMIN_EMAILS</code>, exists in Supabase Authentication → Users, and that custom SMTP is connected.</p>
+      </form>
+      <form id="adminCodeForm" hidden>
+        <p class="admin-code-intro">Enter the 6-digit code from your email. <small>(You can also click the link in the email — the code avoids "link expired" issues from email scanners.)</small></p>
+        <label>6-digit code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" placeholder="123456"></label>
+        <button type="submit">Sign in</button>
+        <button type="button" class="admin-code-back" id="adminCodeBack">Use a different email</button>
+        <p id="adminCodeMessage" aria-live="polite"></p>
       </form>
       <a class="back-site" href="/">Back to the website</a>
     </section>
