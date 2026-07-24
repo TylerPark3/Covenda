@@ -9,6 +9,10 @@ const state = {
 };
 let selectorFxController = null;
 let deliveryHealthRequest = null;
+// Set by initIcosahedron(): re-measures + redraws the hero icosahedron. The canvas
+// lives in the home-only section, so when we switch TO home we call this to size the
+// canvas against its now-visible box (otherwise it stays blank until a window resize).
+let icoRemeasure = null;
 
 // Single config spot for the "Schedule a demo" flow. Set the event URL in the
 // <meta name="covenda-calendly-url"> tag in index.html. Must be an https
@@ -424,6 +428,9 @@ function setAudience(audience) {
     label.textContent = audience === 'student' ? label.dataset.studentLabel : label.dataset.companyLabel;
   });
   document.title = audienceTitles[audience] || audienceTitles.student;
+  // The icosahedron's section is only shown on "home"; re-measure now that its box
+  // exists so the shape renders on the first visit, not only after a reload/resize.
+  if (audience === 'home' && icoRemeasure) icoRemeasure();
   renderSubmissionHistory();
 }
 
@@ -4174,7 +4181,10 @@ function initIcosahedron() {
     draw(performance.now());
     raf = requestAnimationFrame(frame);
   }
-  function start() { if (running) return; running = true; raf = requestAnimationFrame(frame); }
+  // Re-measure on start: the panel may have been hidden / not laid out at init (0×0), so the
+  // first correct size is only known once it scrolls into view. Without this the shape stays
+  // blank until a window resize — which is why it "only appeared after reload" before.
+  function start() { if (running) return; resize(); draw(); running = true; raf = requestAnimationFrame(frame); }
   function stop() { running = false; cancelAnimationFrame(raf); }
   function panelVisible() {
     const r = panel.getBoundingClientRect();
@@ -4184,6 +4194,17 @@ function initIcosahedron() {
   resize();
   draw(); // render one static frame immediately so the shape is never blank
   window.addEventListener('resize', () => { resize(); if (!running) draw(); });
+
+  // The canvas lives in an audience-gated section that is display:none until the
+  // "home" surface is shown, so its first real size only exists once it's revealed.
+  // Expose a re-measure hook (called by setAudience on the switch to "home") and add a
+  // ResizeObserver backstop — together they make the shape appear (even the static
+  // reduced-motion frame) on first view instead of only after a reload/window-resize.
+  // These are set BEFORE the reduced-motion early return on purpose.
+  icoRemeasure = () => { resize(); if (!running) draw(); };
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(() => { resize(); if (!running) draw(); }).observe(canvas);
+  }
 
   if (reduceMotion) {
     hint?.classList.add('is-hidden');
