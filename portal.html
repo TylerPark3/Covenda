@@ -46,15 +46,12 @@
     <symbol id="p-google" viewBox="0 0 24 24"><path d="M20.6 12.2c0-.7-.1-1.4-.2-2H12v3.6h4.8a4.1 4.1 0 0 1-1.8 2.7v2.3h3c1.7-1.6 2.6-3.9 2.6-6.6Z"/><path d="M12 21c2.4 0 4.4-.8 6-2.2l-3-2.3c-.8.6-1.9.9-3 .9-2.3 0-4.3-1.6-5-3.7H4v2.4A9 9 0 0 0 12 21Z"/><path d="M7 13.7a5.4 5.4 0 0 1 0-3.4V7.9H4a9 9 0 0 0 0 8.2z"/><path d="M12 6.6c1.3 0 2.5.5 3.4 1.3L18 5.4A8.7 8.7 0 0 0 4 7.9l3 2.4c.7-2.1 2.7-3.7 5-3.7Z"/></symbol>
   </defs></svg>
 
+  <!-- Sign-in: one centered, light card — no dark story panel. Simple on purpose. -->
   <main class="portal-auth" id="portalAuth">
-    <section class="auth-story">
-      <a class="portal-brand" href="/"><img class="brand-mark-img" src="/assets/covenda-mark.svg" alt="" width="29" height="29">Covenda</a>
-      <div><p class="eyebrow">Member workspace</p><h1>Your work has a place to go.</h1><p>Track live projects, discover reviewed opportunities, and build a portfolio from evidence—not claims.</p></div>
-      <ol><li><span>01</span>One private account</li><li><span>02</span>Role-aware workspace</li><li><span>03</span>Every project in one timeline</li></ol>
-    </section>
     <section class="auth-panel">
       <div class="auth-panel-inner">
-        <p class="eyebrow">Welcome to Covenda</p><h2>Sign in or create your account.</h2><p>Students, companies, and university partners start in the same secure place.</p>
+        <a class="portal-brand auth-brand" href="/"><img class="brand-mark-img" src="/assets/covenda-mark.svg" alt="" width="29" height="29">Covenda</a>
+        <p class="eyebrow">Member workspace</p><h2>Sign in or create your account.</h2><p>Students, startups, and referrers start in the same secure place.</p>
         <button class="google-button" id="googleLogin" type="button"><svg><use href="#p-google"/></svg><span>Continue with Google</span></button>
         <p class="auth-provider-note" id="googleReadiness" hidden></p>
         <div class="auth-divider"><span>or use email</span></div>

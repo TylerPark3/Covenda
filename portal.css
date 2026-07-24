@@ -18,20 +18,13 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .portal-brand { display: inline-flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; letter-spacing: -.045em; }
 .portal-brand img { display: block; width: 29px; height: 29px; }
 
-.portal-auth { display: grid; min-height: 100vh; grid-template-columns: minmax(360px, .9fr) minmax(500px, 1.1fr); }
-.auth-story { position: relative; display: flex; min-height: 100vh; padding: clamp(36px, 5vw, 72px); overflow: hidden; background: #12110e; color: #fff; flex-direction: column; justify-content: space-between; }
-.auth-story::before { content:""; position:absolute; width:620px; height:620px; right:-230px; bottom:-250px; border:1px solid rgba(225,185,102,.25); border-radius:50%; box-shadow:0 0 0 78px rgba(225,185,102,.05),0 0 0 158px rgba(225,185,102,.025); }
-.auth-story::after { content:""; position:absolute; width:230px; height:230px; right:12%; top:18%; border-radius:50%; background:radial-gradient(circle at 34% 32%,rgba(255,225,154,.4),rgba(180,123,32,.14) 34%,transparent 67%); filter:blur(1px); }
-.auth-story > * { position: relative; z-index: 1; }
-.auth-story .portal-brand { align-self: flex-start; }
-.auth-story > div { max-width: 650px; }
-.auth-story h1 { max-width: 620px; margin: 0; font-size: clamp(48px, 6vw, 86px); line-height: .95; letter-spacing: -.07em; }
-.auth-story > div > p:last-child { max-width: 520px; margin: 25px 0 0; color: #bdb8ad; font-size: 15px; line-height: 1.75; }
-.auth-story ol { display: flex; max-width: 620px; margin: 0; padding: 0; border-top: 1px solid rgba(255,255,255,.15); list-style: none; }
-.auth-story li { display: grid; flex: 1; gap: 9px; padding: 20px 18px 0 0; color: #d2cec5; font-size: 11px; }
-.auth-story li span { color: var(--gold); font-size: 9px; font-weight: 700; letter-spacing: .14em; }
-.auth-panel { display: grid; min-height: 100vh; place-items: center; padding: 42px; background: radial-gradient(circle at 50% 35%,var(--gold-pale),transparent 35%),#fff; }
-.auth-panel-inner { width: min(430px,100%); }
+/* Sign-in: one centered, light column — the dark split panel is gone on purpose. */
+.portal-auth { display: grid; min-height: 100vh; grid-template-columns: 1fr; }
+.auth-panel { display: grid; min-height: 100vh; place-items: center; padding: 42px 20px; background: radial-gradient(circle at 50% 30%,var(--gold-pale),transparent 42%),#fff; }
+.auth-panel-inner { width: min(430px,100%); text-align: center; }
+.auth-brand { justify-content: center; margin-bottom: clamp(28px, 5vh, 48px); color: var(--ink); text-decoration: none; }
+.auth-panel form { text-align: left; }
+.auth-panel-inner > small, .auth-back { display: block; }
 .auth-panel h2 { margin: 0; font-size: clamp(38px,5vw,56px); line-height: 1; letter-spacing: -.065em; }
 .auth-panel-inner > p:nth-of-type(2) { margin: 18px 0 34px; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .google-button,.portal-primary,.portal-secondary { display: inline-flex; min-height: 50px; align-items: center; justify-content: center; gap: 10px; padding: 11px 17px; border-radius: 12px; cursor: pointer; font-size: 12px; font-weight: 700; }
