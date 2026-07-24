@@ -491,7 +491,9 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 
 .hero-company { display: none; }
 /* Company hero: two clear segments — delegate work, and find talent. */
-.company-jobs { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 22px; margin: clamp(30px, 4vw, 46px) auto 0; max-width: 1040px; text-align: left; }
+/* Delegate card wider than the talent card, so the problem composer has room to breathe. */
+.company-jobs { display: grid; grid-template-columns: 1.55fr 1fr; gap: 22px; margin: clamp(30px, 4vw, 46px) auto 0; max-width: 1140px; text-align: left; }
+@media (max-width: 800px) { .company-jobs { grid-template-columns: 1fr; } }
 .company-job { display: flex; flex-direction: column; padding: clamp(22px, 2.6vw, 32px); border: 1px solid var(--line); border-radius: 22px; background: #fff; }
 .company-job-talent { border-color: var(--gold-light); background: linear-gradient(180deg, var(--gold-pale), #fff 62%); }
 .company-job-eyebrow { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--gold-deep); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
