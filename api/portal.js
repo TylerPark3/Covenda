@@ -471,6 +471,11 @@ function sanitizeBrief(brief) {
     suggestedWorkTypes: cleanTaxonomy(brief.suggestedWorkTypes, WORK_TYPES),
     safetyFlags: list(brief.safetyFlags, 8),
     safeToPost: brief.safeToPost === true,
+    // Project Engine fields (nullable; persisted with the brief for the opportunity record).
+    opportunityType: ['project', 'internship', 'part_time', 'research'].includes(brief.opportunityType) ? brief.opportunityType : 'project',
+    complexityRating: Number.isInteger(brief.complexityRating) && brief.complexityRating >= 1 && brief.complexityRating <= 5 ? brief.complexityRating : null,
+    ambiguityRating: Number.isInteger(brief.ambiguityRating) && brief.ambiguityRating >= 1 && brief.ambiguityRating <= 5 ? brief.ambiguityRating : null,
+    founderTimeMinWeek: Number.isInteger(brief.founderTimeMinWeek) && brief.founderTimeMinWeek > 0 ? Math.min(brief.founderTimeMinWeek, 600) : null,
   };
 }
 
@@ -1296,6 +1301,23 @@ export async function analyzeGithub(member, input, env = process.env) {
     const { error } = await member.supabase.from('member_profiles').update({ skill_signals: signals }).eq('user_id', member.user.id);
     analysis.persisted = !error;
   } catch { analysis.persisted = false; }
+  // Stage 1 (profile extractor): also emit evidence-tiered skill_claim rows for the matcher.
+  // Anti-gaming per the master prompt: a flagged repo (fork/one-shot) is routed to human
+  // review and NEVER auto-credited at artifact tier — we skip claim writes entirely for it.
+  // Best-effort: before the Stage-0 migration exists this quietly no-ops.
+  try {
+    if (!analysis.needsReview && analysis.repo.url) {
+      await member.supabase.from('skill_claim').delete().eq('student_user_id', member.user.id).eq('evidence_pointer', analysis.repo.url);
+      const rows = analysis.skills.map(s => ({
+        student_user_id: member.user.id,
+        skill: s.skill,
+        level: `${s.score}/10 (${s.confidence})`,
+        verification_tier: 'artifact',
+        evidence_pointer: analysis.repo.url,
+      }));
+      if (rows.length) await member.supabase.from('skill_claim').insert(rows);
+    }
+  } catch { /* skill_claim not migrated yet — analysis still returns for display */ }
   return analysis;
 }
 

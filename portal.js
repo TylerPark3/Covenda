@@ -969,6 +969,10 @@ function renderBriefDocument(root,brief,fallbackSummary){
   if((brief.candidateDeliverables||[]).length){const s=briefSection('Deliverables');brief.candidateDeliverables.forEach(dd=>{const card=document.createElement('div');card.className='deliverable-card';const st=document.createElement('strong');st.textContent=(dd&&dd.title)||dd||'Deliverable';card.append(st);if(dd&&dd.description){const p=document.createElement('p');p.textContent=dd.description;card.append(p);}if(dd&&dd.acceptanceCriteria){const ac=document.createElement('p');ac.className='deliverable-ac';const b=document.createElement('span');b.textContent='Done when: ';ac.append(b,document.createTextNode(dd.acceptanceCriteria));card.append(ac);}s.append(card);});root.append(s);}
   if((brief.approvedInputs||[]).length){const s=briefSection('Approved inputs');s.append(briefBullets(brief.approvedInputs));root.append(s);}
   add('Estimated effort',brief.estimatedEffort);
+  // Founder time required — disclosed on every generated brief (kills the management-overhead
+  // objection at the point of sale; ~30-60 min/week is typical).
+  if(brief.founderTimeMinWeek)add('Founder time required',`~${brief.founderTimeMinWeek} min/week of your review time — bounded checkpoints, not babysitting.`);
+  if(brief.followUpQuestions&&brief.followUpQuestions.length){const s=briefSection('To sharpen the scope');s.append(briefBullets(brief.followUpQuestions));root.append(s);}
 }
 function openDiscoverDetail(project,isApplied){
   $('#discoverDetailTitle').textContent=project.title;const body=$('#discoverDetailBody');

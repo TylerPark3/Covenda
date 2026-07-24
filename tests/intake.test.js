@@ -152,3 +152,22 @@ test('avatar uploads are image-only, capped at 5MB, and stored under their own p
   assert.equal(uploadPolicy('project').access, 'private');
   assert.equal(uploadPolicy('avatar').access, 'public');
 });
+
+test('normalizeBrief emits the Project Engine fields, clamped and honest', () => {
+  const brief = normalizeBrief({
+    opportunityType: 'internship', complexityRating: 4, ambiguityRating: 2,
+    durationWeeks: 6, hoursPerWeek: 10, founderTimeMinWeek: 45,
+    followUpQuestions: ['You mention a pricing sheet — which competitors does it cover today?', 'q2', 'q3', 'q4'],
+  });
+  assert.equal(brief.opportunityType, 'internship');
+  assert.equal(brief.complexityRating, 4);
+  assert.equal(brief.ambiguityRating, 2);
+  assert.equal(brief.durationWeeks, 6);
+  assert.equal(brief.founderTimeMinWeek, 45);
+  assert.equal(brief.followUpQuestions.length, 3); // capped at 3, extractive-only by prompt
+  // Invalid/missing values: type defaults to project; ratings become null (never lower a match)
+  const empty = normalizeBrief({ opportunityType: 'full_time', complexityRating: 9, founderTimeMinWeek: 0 });
+  assert.equal(empty.opportunityType, 'project');
+  assert.equal(empty.complexityRating, null);
+  assert.equal(empty.founderTimeMinWeek, null);
+});

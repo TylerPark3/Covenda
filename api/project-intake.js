@@ -27,7 +27,7 @@ const MODEL = 'claude-opus-4-8';
 const BRIEF_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['title', 'summary', 'context', 'objective', 'scopeInclusions', 'scopeExclusions', 'candidateDeliverables', 'approvedInputs', 'suggestedVerticals', 'suggestedWorkTypes', 'estimatedEffort', 'safetyFlags', 'safeToPost'],
+  required: ['title', 'summary', 'context', 'objective', 'scopeInclusions', 'scopeExclusions', 'candidateDeliverables', 'approvedInputs', 'suggestedVerticals', 'suggestedWorkTypes', 'estimatedEffort', 'opportunityType', 'complexityRating', 'ambiguityRating', 'durationWeeks', 'hoursPerWeek', 'founderTimeMinWeek', 'followUpQuestions', 'safetyFlags', 'safeToPost'],
   properties: {
     title: { type: 'string', description: 'A short, specific project title (max ~8 words).' },
     summary: { type: 'string', description: '2-3 sentence plain-language summary of the work.' },
@@ -53,6 +53,14 @@ const BRIEF_SCHEMA = {
     suggestedVerticals: { type: 'array', items: { type: 'string', enum: [...VERTICALS] } },
     suggestedWorkTypes: { type: 'array', items: { type: 'string', enum: [...WORK_TYPES] } },
     estimatedEffort: { type: 'string', description: 'A rough effort estimate, e.g. "~15-25 hours".' },
+    // Project Engine (Stage 1): the structured-opportunity fields.
+    opportunityType: { type: 'string', enum: ['project', 'internship', 'part_time', 'research'], description: 'The engagement shape this work fits best. Default to "project" (a bounded work-trial) unless the description clearly implies otherwise.' },
+    complexityRating: { type: 'integer', enum: [1, 2, 3, 4, 5], description: 'Technical/skill complexity of the work, 1 (simple) to 5 (hard).' },
+    ambiguityRating: { type: 'integer', enum: [1, 2, 3, 4, 5], description: 'How ambiguous the scope is as described, 1 (fully specified) to 5 (open-ended).' },
+    durationWeeks: { type: 'integer', description: 'Suggested project length in weeks (bounded; 2-6 is typical).' },
+    hoursPerWeek: { type: 'integer', description: 'Suggested student hours per week.' },
+    founderTimeMinWeek: { type: 'integer', description: 'Minutes per week the founder should budget for reviews and checkpoints. Typically 30-60. Be honest — never zero.' },
+    followUpQuestions: { type: 'array', items: { type: 'string' }, description: 'Up to 3 EXTRACTIVE follow-up questions that mine what the company already said for missing specifics (e.g. "You mention a pricing sheet — which competitors does it cover today?"). NEVER advisory; never prescribe strategy.' },
     safetyFlags: { type: 'array', items: { type: 'string' }, description: 'Boundary concerns to confirm at the consult; empty if none.' },
     safeToPost: { type: 'boolean' },
   },
@@ -69,7 +77,9 @@ Covenda's hard safety boundary — the work is NOT safe to post if it involves a
 - confidential or proprietary material a student should not hold
 If any of these are present or implied, set safeToPost to false and explain why in safetyFlags. Covenda prefers public sources, de-identified examples, and approved copies — put those in approvedInputs.
 
-For suggestedVerticals use only: ${[...VERTICALS].join('; ')}. For suggestedWorkTypes use only: ${[...WORK_TYPES].join('; ')}. Use those exact strings; if unsure of a vertical, use "Not sure yet — show me everything".`;
+For suggestedVerticals use only: ${[...VERTICALS].join('; ')}. For suggestedWorkTypes use only: ${[...WORK_TYPES].join('; ')}. Use those exact strings; if unsure of a vertical, use "Not sure yet — show me everything".
+
+Also emit the structured-opportunity fields: the engagement type (default "project" — a bounded work-trial), complexity and ambiguity ratings (1-5, from what was actually described), a bounded durationWeeks and hoursPerWeek, and founderTimeMinWeek — an HONEST minutes-per-week estimate of the founder's own review time (typically 30-60; never 0, never inflated). Follow-up questions must be EXTRACTIVE ONLY: mine the company's own words for missing specifics; never give advice, never prescribe strategy or priorities.`;
 
 export class IntakeConfigError extends Error {
   constructor(message) { super(message); this.name = 'IntakeConfigError'; }
@@ -116,6 +126,14 @@ export function normalizeBrief(input) {
     suggestedVerticals: fromSet(obj.suggestedVerticals, VERTICALS, 6),
     suggestedWorkTypes: fromSet(obj.suggestedWorkTypes, WORK_TYPES, 5),
     estimatedEffort: str(obj.estimatedEffort, 120),
+    // Project Engine fields — clamped server-side; missing/invalid values become null (never lower a match).
+    opportunityType: ['project', 'internship', 'part_time', 'research'].includes(obj.opportunityType) ? obj.opportunityType : 'project',
+    complexityRating: Number.isInteger(obj.complexityRating) && obj.complexityRating >= 1 && obj.complexityRating <= 5 ? obj.complexityRating : null,
+    ambiguityRating: Number.isInteger(obj.ambiguityRating) && obj.ambiguityRating >= 1 && obj.ambiguityRating <= 5 ? obj.ambiguityRating : null,
+    durationWeeks: Number.isInteger(obj.durationWeeks) && obj.durationWeeks > 0 ? Math.min(obj.durationWeeks, 26) : null,
+    hoursPerWeek: Number.isInteger(obj.hoursPerWeek) && obj.hoursPerWeek > 0 ? Math.min(obj.hoursPerWeek, 40) : null,
+    founderTimeMinWeek: Number.isInteger(obj.founderTimeMinWeek) && obj.founderTimeMinWeek > 0 ? Math.min(obj.founderTimeMinWeek, 600) : null,
+    followUpQuestions: list(obj.followUpQuestions, 3),
     safetyFlags: list(obj.safetyFlags, 8),
     safeToPost: obj.safeToPost === true,
   };
