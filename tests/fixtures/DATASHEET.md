@@ -21,3 +21,23 @@
 O*NET Work Styles / Skills / DWA (public domain, US DOL) and Lightcast Open Skills — commit
 only DERIVED fixtures with source/URL/license/retrieval-date/transform recorded here. No raw
 third-party dumps; no protected attributes enter any feature.
+
+## qr-golden.json — QR encoder goldens
+
+**What:** 10 QR matrices produced by `qrcode.js` (byte mode, ECC level M), spanning versions
+1, 3, 4, 5, 6, 7, 9 and 10 — including realistic per-partner referral URLs.
+
+**Provenance / how they were verified:** each matrix was rendered and then **decoded back by an
+independent decoder** (OpenCV `QRCodeDetector`, v5.0.0) and asserted to return the exact original
+text before being written to this fixture. Decodability — not byte-equality with another
+library — is the correctness criterion, because conformant encoders legitimately differ in
+pad-byte choices without changing what a scanner reads.
+
+**Why not a segno-matrix diff:** an earlier revision compared matrices against `segno` directly.
+That comparison flagged differences that were purely pad-byte convention, while *missing* a real
+Reed–Solomon bug. The current split is stronger: goldens fence decoder-verified output, and the
+RS step is separately asserted byte-exact against segno's error-correction codewords.
+
+**Regeneration:** re-render with `qrcode.js`, decode-verify each entry with an independent
+decoder using a quiet zone of >= 10 modules (OpenCV's detector needs more than the spec minimum
+of 4 for v10-size symbols), then overwrite. Never hand-edit.
