@@ -78,10 +78,10 @@
         <div class="audience-switch has-three" aria-label="Choose audience">
           <button type="button" data-audience-option="student" aria-pressed="true"><svg><use href="#icon-student"/></svg><span>Student</span></button>
           <button type="button" data-audience-option="company" aria-pressed="false"><svg><use href="#icon-company"/></svg><span>Company</span></button>
-          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-building"/></svg><span>Educators</span></button>
+          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-shield"/></svg><span>Referrals</span></button>
         </div>
         <a class="member-login-link" href="/portal.html"><svg><use href="#icon-lock"/></svg><span>Member sign in</span></a>
-        <button class="workspace-link" type="button" data-action="workspace"><svg><use href="#icon-user"/></svg><span>My receipts</span></button>
+        <button class="workspace-link" type="button" data-action="workspace" aria-label="My receipts"><svg><use href="#icon-user"/></svg><span>My receipts</span></button>
       </div>
     </header>
 
@@ -93,9 +93,21 @@
           <p>Covenda turns a company’s delayed, low-risk work into a safe, paid project—and durable evidence of what a student can do. No posting. No guessing. See the work.</p>
         </div>
         <div class="home-paths" role="group" aria-label="Choose your path">
-          <button type="button" class="home-path glass-panel" data-audience-option="student"><svg class="home-path-icon"><use href="#icon-student"/></svg><span><strong>I’m a student</strong><small>Build proof through paid, reviewed work</small></span></button>
-          <button type="button" class="home-path glass-panel" data-audience-option="company"><svg class="home-path-icon"><use href="#icon-company"/></svg><span><strong>I’m a company</strong><small>Turn delayed work into a safe project</small></span></button>
-          <button type="button" class="home-path glass-panel" data-audience-option="university"><svg class="home-path-icon"><use href="#icon-building"/></svg><span><strong>I bring students</strong><small>Educators, clubs & career centers</small></span></button>
+          <button type="button" class="home-path" data-audience-option="student">
+            <span class="home-path-index" aria-hidden="true">01</span>
+            <span class="home-path-copy"><strong>Student</strong><small>Build proof through paid, reviewed work</small></span>
+            <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+          </button>
+          <button type="button" class="home-path" data-audience-option="company">
+            <span class="home-path-index" aria-hidden="true">02</span>
+            <span class="home-path-copy"><strong>Company</strong><small>Turn delayed work into a safe project</small></span>
+            <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+          </button>
+          <button type="button" class="home-path" data-audience-option="university">
+            <span class="home-path-index" aria-hidden="true">03</span>
+            <span class="home-path-copy"><strong>I vouch for talent</strong><small>Refer students through a trusted organization</small></span>
+            <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+          </button>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
@@ -682,7 +694,7 @@
         <div class="audience-switch has-three" aria-label="Choose workspace audience">
           <button type="button" data-audience-option="student" aria-pressed="true"><svg><use href="#icon-student"/></svg><span>Student</span></button>
           <button type="button" data-audience-option="company" aria-pressed="false"><svg><use href="#icon-company"/></svg><span>Company</span></button>
-          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-building"/></svg><span>Educators</span></button>
+          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-shield"/></svg><span>Referrals</span></button>
         </div>
         <button class="back-link" type="button" data-action="site">Back to site<svg><use href="#icon-arrow-right"/></svg></button>
       </div>

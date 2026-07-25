@@ -72,11 +72,20 @@ test('student questionnaire cascades from industries to focus areas and keeps ve
 test('audience switch supports student and company site states', () => {
   assert.match(html, /data-audience-option="student"/);
   assert.match(html, /data-audience-option="company"/);
+  assert.match(html, /<span>Referrals<\/span>/);
+  assert.match(html, /I vouch for talent/);
   assert.match(html, /What work keeps getting pushed\?/);
   assert.match(script, /document\.body\.dataset\.audience = audience/);
   assert.match(styles, /body\[data-audience="company"\] \.hero-student/);
   assert.match(script, /covendaAudience/);
   assert.match(script, /covendaSelectedWorkType/);
+});
+
+test('primary audience navigation uses the sharp editorial treatment', () => {
+  assert.match(styles, /\.site-header \{[\s\S]*background: #11110f/);
+  assert.match(styles, /\.audience-switch \{[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.home-path \{[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.home-path::after/);
 });
 
 test('company story preserves the managed Project Packet workflow and risk boundary', () => {

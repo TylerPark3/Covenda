@@ -389,7 +389,7 @@ const audienceTitles = {
   home: 'Covenda · Real work becomes credible proof',
   student: 'Covenda · Real work becomes credible evidence',
   company: 'Covenda for companies · Turn delayed work into a project',
-  university: 'Covenda for educators · Share your students with the pilot',
+  university: 'Covenda for referrers · Vouch for trusted student talent',
 };
 
 function setAudience(audience) {
