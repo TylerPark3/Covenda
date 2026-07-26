@@ -650,3 +650,12 @@ test('the batch application asks real questions, not a self-rating survey', asyn
   // How each answer is judged is stated up front.
   assert.match(portalJs, /How you bound the problem is the point/);
 });
+
+// Five batches per vertical means five columns on a wide screen, and every card fills its
+// track — ragged heights came from cards sizing to their own summary instead of the row.
+test('the batch grid is five even columns on a wide screen', () => {
+  assert.match(styles, /@media \(min-width: 1180px\) \{ \.batch-row \{ grid-template-columns: repeat\(5/);
+  assert.match(styles, /\.batch-card\.is-pickable \{[\s\S]*?height: 100%/);
+  assert.match(styles, /\.batch-card\.is-pickable \{[\s\S]*?grid-template-rows: auto auto 1fr auto/);
+  assert.match(styles, /\.batch-meta \{[\s\S]*?align-self: end/);
+});

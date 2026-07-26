@@ -5,10 +5,10 @@ import {
   batchBySlug, batchBrief, evaluateBatchAdmission, tierAtLeast,
 } from '../../api/batches.js';
 
-const software = batchBySlug('ml-engineering'); // a specialisation, not the vertical
+const software = batchBySlug('ai-ml'); // a specialisation, not the vertical
 
 test('every vertical has a batch with a named technical vetting rail', () => {
-  assert.ok(BATCH_CATALOG.length >= 10, 'a vertical must split into specialisations');
+  assert.ok(BATCH_CATALOG.length >= 20, 'each vertical splits into five sector-level batches');
   for (const batch of BATCH_CATALOG) {
     assert.ok(batch.slug && batch.name && batch.discipline, `${batch.slug} is missing identity`);
     const rails = batch.vetting?.rails || [];
@@ -33,7 +33,7 @@ test('batches without a connector are labelled human-rail, never API-verified', 
 
 test('a brief publishes the bar and the company walkthrough but never the applicant or weights', () => {
   const brief = batchBrief(software);
-  assert.equal(brief.slug, 'ml-engineering');
+  assert.equal(brief.slug, 'ai-ml');
   assert.ok(brief.requirements.every(r => r.label));
   assert.ok(brief.companyWorkflow.every(s => s.step && s.title && s.detail));
   assert.equal(brief.admissionVersion, BATCH_ADMISSION_VERSION);
@@ -138,4 +138,22 @@ test('no batch emits a single overall person score', () => {
   assert.equal(result.score, undefined);
   assert.equal(result.overallScore, undefined);
   assert.equal(result.rank, undefined);
+});
+
+// Branches are SECTOR level, not skill level: a fund recruits for private equity, not for
+// "financial modelling". Five per vertical keeps the board an even grid.
+test('every vertical carries exactly five sector-level batches', async () => {
+  const { batchesByVertical } = await import('../../api/batches.js');
+  for (const group of batchesByVertical()) {
+    assert.equal(group.batches.length, 5, `${group.vertical} has ${group.batches.length}, expected 5`);
+  }
+});
+
+test('every batch publishes the questions its field actually asks', async () => {
+  const { BATCH_CATALOG: cat, questionsFor } = await import('../../api/batches.js');
+  for (const batch of cat) {
+    const qs = questionsFor(batch.slug);
+    assert.ok(qs.length >= 2, `${batch.slug} has ${qs.length} questions`);
+    for (const q of qs) assert.ok(['technical', 'judgement'].includes(q.kind), `${batch.slug}: bad kind ${q.kind}`);
+  }
 });

@@ -151,64 +151,117 @@ const REQ = {
   hours: (n = 6) => ({ key: 'availability', kind: 'availability_hours', min: n, label: `${n} or more hours a week`, detail: null }),
 };
 
+// Five per vertical, at SECTOR level. The first pass split by skill — "financial modelling",
+// "full-stack" — which is how a curriculum thinks, not how a company hires. A fund recruits
+// for private equity, not for modelling; a robotics team recruits for physical AI, not for
+// "engineering". Sector is also what a club maps onto: a consulting group feeds management
+// consulting, a quant society feeds asset management.
 const SPECIALISATIONS = [
-  // Software & AI
-  ['software-ai', 'ml-engineering', 'ML engineering', 'elite', 24, 25,
-   'Students who have trained and shipped models, evidenced by the repo history behind them.',
-   'Training runs, evaluation harnesses and inference code — read from the account that owns them, with the commit timeline showing how the work accumulated.',
+  // ── Software & AI ───────────────────────────────────────────────────────────────────
+  ['software-ai', 'ai-ml', 'AI & machine learning', 'elite', 24, 25,
+   'Students who have trained, evaluated and shipped models — with the repo history behind it.',
+   'Training runs, evaluation harnesses and inference code, read from the account that owns them so the commit timeline shows how the work accumulated.',
    [REQ.ownership, REQ.history(90), REQ.skills(2), REQ.defense('a model you trained'), REQ.hours(8)]],
-  ['software-ai', 'full-stack', 'Full-stack engineering', 'elite', 24, 25,
-   'Undergraduates who ship product code and can work in a codebase they did not write.',
-   'Application code, reviewed for structure and testing habits rather than line count, with ownership verified through a connected account.',
-   [REQ.ownership, REQ.history(90), REQ.skills(2), REQ.defense('a feature you built'), REQ.hours(8)]],
-  ['software-ai', 'data-engineering', 'Data engineering', 'open', 20, 15,
-   'Pipelines, warehousing and the unglamorous work that makes analysis possible.',
-   'Pipeline and transformation code with its commit history, plus a walkthrough of a failure you had to debug.',
+  ['software-ai', 'physical-ai', 'Physical AI & robotics', 'elite', 20, 25,
+   'Perception, control and hardware-in-the-loop work — where the code has to survive contact with the world.',
+   'Robotics and control code with its history, plus a walkthrough of something that worked in simulation and failed on hardware.',
+   [REQ.ownership, REQ.history(90), REQ.skills(2), REQ.defense('a system you got working'), REQ.hours(8)]],
+  ['software-ai', 'infrastructure-data', 'Infrastructure & data', 'open', 20, 15,
+   'Pipelines, warehousing and the unglamorous work everything else depends on.',
+   'Pipeline and transformation code with its commit history, plus a walkthrough of a failure you had to trace.',
    [REQ.ownership, REQ.history(60), REQ.skills(2), REQ.defense('a pipeline you built'), REQ.hours(6)]],
-  ['software-ai', 'qa-reliability', 'QA & reliability', 'open', 20, 15,
-   'Students who find what breaks — reproducible bug reports, not vibes.',
-   'Test suites and issue histories, read from the account that owns them.',
-   [REQ.ownership, REQ.skills(1), REQ.defense('a bug you traced'), REQ.hours(6)]],
+  ['software-ai', 'product-engineering', 'Product engineering', 'elite', 24, 25,
+   'Undergraduates who ship product and can work in a codebase they did not write.',
+   'Application code judged on structure and testing habits rather than line count, with ownership verified through a connected account.',
+   [REQ.ownership, REQ.history(90), REQ.skills(2), REQ.defense('a feature you shipped'), REQ.hours(8)]],
+  ['software-ai', 'security-reliability', 'Security & reliability', 'open', 18, 15,
+   'Students who find what breaks before a customer does.',
+   'Test suites, incident write-ups and issue histories, read from the account that owns them.',
+   [REQ.ownership, REQ.skills(1), REQ.defense('a bug or incident you traced'), REQ.hours(6)]],
 
-  // Accounting & finance
-  ['accounting-finance', 'financial-modelling', 'Financial modelling', 'elite', 24, 25,
-   'Models parsed formula-by-formula, then defended out loud.',
-   'The workbook itself is read — formula integrity and DCF structure. A model of pasted values scores low by construction.',
+  // ── Accounting & finance ────────────────────────────────────────────────────────────
+  ['accounting-finance', 'investment-banking', 'Investment banking', 'elite', 24, 25,
+   'Modelling and diligence work, parsed formula-by-formula and defended out loud.',
+   'The workbook itself is read — formula integrity and structure against a published rubric. A model of pasted values scores low by construction.',
    [REQ.artifact(1, 'One financial model (.xlsx)'), REQ.skills(2), REQ.defense('your model'), REQ.hours(8)]],
-  ['accounting-finance', 'equity-research', 'Equity research', 'elite', 20, 25,
-   'A thesis you can defend under pressure, not a deck you can format.',
-   'A written thesis plus a live defence scored by two raters against anchored exemplars.',
-   [REQ.artifact(1, 'One research note or pitch'), REQ.skills(2), REQ.defense('your thesis'), REQ.hours(6)]],
-  ['accounting-finance', 'accounting-operations', 'Accounting operations', 'open', 24, 15,
+  ['accounting-finance', 'private-equity', 'Private equity', 'elite', 20, 25,
+   'LBO mechanics and diligence judgement, not a polished deck.',
+   'An LBO or diligence model parsed for structure and circularity handling, plus a live defence of the assumptions driving returns.',
+   [REQ.artifact(1, 'One LBO or diligence model'), REQ.skills(2), REQ.defense('your assumptions'), REQ.hours(8)]],
+  ['accounting-finance', 'venture-capital', 'Venture capital', 'elite', 20, 25,
+   'A thesis you can defend when the numbers do not exist yet.',
+   'A written investment memo plus an unscripted defence — in early-stage work the reasoning is the whole artifact.',
+   [REQ.artifact(1, 'One investment memo'), REQ.skills(2), REQ.defense('your thesis'), REQ.hours(6)]],
+  ['accounting-finance', 'asset-wealth-management', 'Asset & wealth management', 'open', 20, 15,
+   'Portfolio reasoning and risk discipline, scored on the record rather than on returns.',
+   'A portfolio or research note with its assumptions stated, and where a paper-trading account is connected, a timestamped order trail read for risk discipline — never for P&L.',
+   [REQ.artifact(1, 'One portfolio or research note'), REQ.skills(1), REQ.defense('your allocation'), REQ.hours(6)]],
+  ['accounting-finance', 'accounting-audit', 'Accounting & audit', 'open', 24, 15,
    'Reconciliations, close-prep and cleanups — the work that actually slips.',
-   'A worked reconciliation or close checklist, parsed for structure, plus a walkthrough of how you found an error.',
+   'A worked reconciliation or close checklist parsed for structure, plus a walkthrough of how you found an error.',
    [REQ.artifact(1, 'One reconciliation or close artifact'), REQ.skills(1), REQ.defense('a cleanup you ran'), REQ.hours(6)]],
 
-  // Healthcare operations
+  // ── Healthcare operations ───────────────────────────────────────────────────────────
   ['healthcare-operations', 'clinical-operations', 'Clinical operations', 'elite', 16, 25,
    'Process work no API can verify — vetted by walkthrough and referral, and we say so.',
    'A de-identified process artifact, a walkthrough scored by two raters, and a named supervisor answering cross-checked questions.',
    [REQ.artifact(1, 'One de-identified process artifact'), REQ.defense('a process you mapped'), REQ.referral, REQ.hours(5)]],
-  ['healthcare-operations', 'health-data', 'Health data & reporting', 'open', 16, 15,
+  ['healthcare-operations', 'health-analytics', 'Health data & analytics', 'open', 16, 15,
    'Reporting and analysis on de-identified data, with the reasoning shown.',
    'An analysis you can walk through end to end, plus a referral from whoever reviewed it.',
    [REQ.artifact(1, 'One analysis on de-identified data'), REQ.skills(1), REQ.defense('your analysis'), REQ.hours(5)]],
+  ['healthcare-operations', 'revenue-cycle', 'Payer & revenue cycle', 'open', 14, 15,
+   'Claims, denials and the billing work that quietly decides whether a clinic survives.',
+   'A de-identified claims or denials analysis, plus a walkthrough of what you changed and what it recovered.',
+   [REQ.artifact(1, 'One de-identified claims or billing artifact'), REQ.defense('your analysis'), REQ.hours(5)]],
+  ['healthcare-operations', 'regulatory-quality', 'Regulatory & quality', 'elite', 14, 25,
+   'Documentation that has to survive an audit, not just a reader.',
+   'A quality or compliance artifact plus a structured referral from the supervisor who signed off on it.',
+   [REQ.artifact(1, 'One quality or compliance artifact'), REQ.defense('a control you documented'), REQ.referral, REQ.hours(5)]],
+  ['healthcare-operations', 'digital-health-product', 'Digital health product', 'open', 14, 15,
+   'Product work inside the constraints clinical software actually has.',
+   'A product artifact — spec, flow, or research synthesis — with a walkthrough of the constraint that shaped it.',
+   [REQ.artifact(1, 'One product artifact'), REQ.skills(1), REQ.defense('a constraint you designed around'), REQ.hours(5)]],
 
-  // Consumer & retail
+  // ── Consumer & retail ───────────────────────────────────────────────────────────────
   ['consumer-retail', 'growth-performance', 'Growth & performance', 'open', 24, 15,
    'Numbers from an instrumented run, never a self-reported campaign result.',
    'A bounded, budgeted exercise inside Covenda-provisioned tooling, where the platform recorded the outcome.',
    [REQ.trial, REQ.skills(1), REQ.defense('your test and what you changed'), REQ.hours(5)]],
-  ['consumer-retail', 'merchandising-analytics', 'Merchandising & analytics', 'open', 20, 15,
-   'Assortment, pricing and category analysis you can defend.',
+  ['consumer-retail', 'brand-content', 'Brand & content', 'open', 20, 15,
+   'Work judged on the thinking behind it, since anyone can generate the artifact now.',
+   'A campaign or content artifact plus an unscripted defence of the choices — which is the part a model cannot sit for.',
+   [REQ.artifact(1, 'One campaign or content artifact'), REQ.defense('your creative choices'), REQ.hours(5)]],
+  ['consumer-retail', 'merchandising', 'Merchandising & assortment', 'open', 20, 15,
+   'Assortment, pricing and category calls you can defend.',
    'A worked analysis with its assumptions stated, plus a recorded walkthrough.',
    [REQ.artifact(1, 'One category or pricing analysis'), REQ.skills(1), REQ.defense('your analysis'), REQ.hours(5)]],
+  ['consumer-retail', 'supply-chain', 'Supply chain & operations', 'open', 18, 15,
+   'Inventory, forecasting and the operations that decide whether growth is profitable.',
+   'A forecast or inventory analysis, plus a walkthrough of where your model was wrong and why.',
+   [REQ.artifact(1, 'One forecast or inventory analysis'), REQ.skills(1), REQ.defense('a forecast you missed'), REQ.hours(5)]],
+  ['consumer-retail', 'ecommerce-marketplace', 'E-commerce & marketplace', 'open', 18, 15,
+   'Conversion, listings and marketplace mechanics, measured rather than claimed.',
+   'An instrumented exercise or a worked funnel analysis, defended on record.',
+   [REQ.trial, REQ.skills(1), REQ.defense('your funnel analysis'), REQ.hours(5)]],
 
-  // Professional services
-  ['professional-services', 'research-strategy', 'Research & strategy', 'open', 24, 15,
+  // ── Professional services ───────────────────────────────────────────────────────────
+  ['professional-services', 'management-consulting', 'Management consulting', 'elite', 24, 25,
+   'Structured problem-solving, defended live — the closest thing to the actual interview.',
+   'A written case or recommendation plus an unscripted defence of how you framed the problem.',
+   [REQ.artifact(1, 'One case or recommendation'), REQ.defense('how you framed it'), REQ.skills(1), REQ.hours(6)]],
+  ['professional-services', 'strategy-research', 'Strategy & research', 'open', 24, 15,
    'Authorship is the thing being checked, because AI can write the document.',
    'A research sample plus an unscripted defence on sources, method and the choices you made.',
    [REQ.artifact(1, 'One research or strategy sample'), REQ.defense('your research'), REQ.skills(1), REQ.hours(5)]],
+  ['professional-services', 'market-intelligence', 'Market intelligence', 'open', 18, 15,
+   'Getting credible on an unfamiliar industry fast, and showing your working.',
+   'A landscape or competitive analysis with sources cited, defended on record.',
+   [REQ.artifact(1, 'One landscape or competitive analysis'), REQ.defense('your sourcing'), REQ.hours(5)]],
+  ['professional-services', 'legal-operations', 'Legal operations', 'open', 16, 15,
+   'Contract, process and compliance work where precision is the whole job.',
+   'A process or contract-review artifact plus a referral from whoever checked it.',
+   [REQ.artifact(1, 'One process or review artifact'), REQ.defense('a process you tightened'), REQ.referral, REQ.hours(5)]],
   ['professional-services', 'technical-writing', 'Technical writing', 'open', 20, 15,
    'Documentation that survives contact with the thing it documents.',
    'A documentation sample and a walkthrough of what you had to learn to write it.',
@@ -286,64 +339,118 @@ export function whatWeRead(verticalSlug) {
 // Two kinds on purpose: TECHNICAL (a right answer exists, and the reasoning is the signal)
 // and JUDGEMENT (no right answer; how they bound the problem is the signal).
 export const BATCH_QUESTIONS = {
-  'financial-modelling': [
-    ['technical', 'Depreciation increases by $10. Walk me through all three statements, and tell me where cash lands.'],
-    ['technical', 'EBITDA is $100M, the multiple is 8x, net debt is $200M and there are 40M shares. Get me to a share price.'],
-    ['technical', 'Why can a company be profitable on the income statement and still run out of cash?'],
-    ['judgement', 'You are valuing a private company with no clean public comps. What do you actually do?'],
-    ['judgement', 'Your DCF says the company is worth twice the market price. What do you check before you believe it?'],
-  ],
-  'equity-research': [
-    ['technical', 'Two companies in the same sector trade at 12x and 20x earnings. Give me four reasons that gap can be justified.'],
-    ['technical', 'What does a rising days-sales-outstanding tell you, and when is it not a warning?'],
-    ['judgement', 'You publish a buy. The stock falls 30% on nothing you can identify. Walk me through your next week.'],
-    ['judgement', 'What would have to be true for your thesis to be wrong? Be specific enough that we could check it.'],
-  ],
-  'accounting-operations': [
-    ['technical', 'A reconciliation is off by an amount divisible by nine. What does that usually mean, and why?'],
-    ['technical', 'Accrued expenses rise while cash is flat. What has happened, and where does it show?'],
-    ['judgement', 'You find an error in a close that has already been reported. Walk me through what you do first.'],
-  ],
-  'ml-engineering': [
-    ['technical', 'Your model beats baseline on validation and fails in production. Name the four most likely causes in order.'],
+  'ai-ml': [
+    ['technical', 'Your model beats baseline on validation and fails in production. Name the four most likely causes, in order.'],
     ['technical', 'When is accuracy the wrong metric? Give a concrete case and say what you would use instead.'],
-    ['judgement', 'You have two weeks and a noisy dataset. What do you do first, and what do you deliberately not do?'],
+    ['judgement', 'Two weeks, a noisy dataset. What do you do first, and what do you deliberately not do?'],
   ],
-  'full-stack': [
-    ['technical', 'A page is slow. You have no profiler. How do you find the cause?'],
-    ['technical', 'Explain a race condition you have actually hit, and how you fixed it.'],
-    ['judgement', 'You inherit a codebase with no tests and a deadline. Where do you put the first test, and why there?'],
+  'physical-ai': [
+    ['technical', 'It works in simulation and fails on hardware. Walk me through how you find out why.'],
+    ['technical', 'Your sensor drifts over an hour of operation. How do you detect that, and how do you correct for it?'],
+    ['judgement', 'The safe behaviour and the useful behaviour conflict. How do you decide?'],
   ],
-  'data-engineering': [
-    ['technical', 'A nightly pipeline silently produced wrong numbers for a week. How do you find out when it started?'],
+  'infrastructure-data': [
+    ['technical', 'A nightly pipeline silently produced wrong numbers for a week. How do you find when it started?'],
     ['technical', 'When would you denormalise, and what does it cost you?'],
     ['judgement', 'Upstream changes a schema without telling you. How should the pipeline have behaved?'],
   ],
-  'qa-reliability': [
+  'product-engineering': [
+    ['technical', 'A page is slow and you have no profiler. How do you find the cause?'],
+    ['technical', 'Describe a race condition you have actually hit and how you fixed it.'],
+    ['judgement', 'You inherit a codebase with no tests and a deadline. Where does the first test go, and why there?'],
+  ],
+  'security-reliability': [
     ['technical', 'Write the steps of a bug report a developer can act on without asking you a single question.'],
     ['technical', 'A test passes locally and fails in CI. What are your first three hypotheses?'],
-    ['judgement', 'You can only automate ten tests. How do you choose which ten?'],
+    ['judgement', 'You can automate ten tests and no more. How do you choose which ten?'],
   ],
+
+  'investment-banking': [
+    ['technical', 'Depreciation increases by $10. Walk me through all three statements, and tell me where cash lands.'],
+    ['technical', 'EBITDA is $100M, the multiple is 8x, net debt is $200M, 40M shares. Get me to a share price.'],
+    ['technical', 'Why can a company be profitable on the income statement and still run out of cash?'],
+    ['judgement', 'You are valuing a private company with no clean public comps. What do you actually do?'],
+  ],
+  'private-equity': [
+    ['technical', 'In an LBO, what actually drives returns? Rank the drivers and say which you control.'],
+    ['technical', 'Same company, same price, one deal uses 70% debt and one 30%. Where does the IRR difference come from?'],
+    ['judgement', 'Diligence turns up one number that breaks the thesis. Everything else looks good. What do you do?'],
+  ],
+  'venture-capital': [
+    ['judgement', 'A company has no revenue and no comps. How do you decide what it is worth?'],
+    ['judgement', 'The market is right and the team is wrong, or the team is right and the market is wrong. Which do you back?'],
+    ['technical', 'A founder shows you 20% month-on-month growth. What three questions do you ask before believing it?'],
+  ],
+  'asset-wealth-management': [
+    ['technical', 'Two funds returned 12%. One has a Sharpe of 0.4, the other 1.6. What actually happened?'],
+    ['technical', 'What does rebalancing cost you, and when is not rebalancing the bigger risk?'],
+    ['judgement', 'A client wants out at the bottom. Walk me through the conversation.'],
+  ],
+  'accounting-audit': [
+    ['technical', 'A reconciliation is off by an amount divisible by nine. What does that usually mean, and why?'],
+    ['technical', 'Accrued expenses rise while cash is flat. What has happened, and where does it show?'],
+    ['judgement', 'You find an error in a close that has already been reported. What do you do first?'],
+  ],
+
   'clinical-operations': [
     ['judgement', 'Intake takes 40 minutes and should take 15. How do you find where the time actually goes?'],
     ['judgement', 'A process works only because one person knows a workaround. What do you do?'],
-    ['technical', 'What has to be true before a process can be documented for someone on their first day?'],
+    ['technical', 'What has to be true before a process can be run by someone on their first day?'],
   ],
-  'health-data': [
+  'health-analytics': [
     ['technical', 'A report shows a 30% jump week on week. Before you tell anyone, what do you check?'],
-    ['judgement', 'How do you present an analysis when the data is good enough to act on but not good enough to be certain?'],
+    ['judgement', 'How do you present an analysis that is good enough to act on but not good enough to be certain?'],
   ],
+  'revenue-cycle': [
+    ['technical', 'Denials rise 15% in a month with no policy change. Where do you look, in what order?'],
+    ['judgement', 'You can fix one step in the billing chain. How do you decide which one is costing the most?'],
+  ],
+  'regulatory-quality': [
+    ['technical', 'What makes a control auditable rather than merely written down?'],
+    ['judgement', 'A required step is being skipped because it is slow and everyone knows it. What do you do?'],
+  ],
+  'digital-health-product': [
+    ['judgement', 'Clinicians want fewer clicks; compliance wants more confirmation. How do you decide?'],
+    ['technical', 'What changes about a product spec once real patient data is involved?'],
+  ],
+
   'growth-performance': [
-    ['technical', 'A test shows a 20% lift with 200 visitors. Do you ship it? Show your reasoning.'],
+    ['technical', 'A test shows a 20% lift on 200 visitors. Do you ship it? Show your reasoning.'],
     ['judgement', 'Your best channel stops working. What is the first thing you look at?'],
   ],
-  'merchandising-analytics': [
-    ['technical', 'Units are up and revenue is down. Give me three explanations and how you would tell them apart.'],
+  'brand-content': [
+    ['judgement', 'Everyone can generate the asset now. What is left that is actually hard?'],
+    ['judgement', 'A campaign performs well and is off-brand. What do you do?'],
+  ],
+  'merchandising': [
+    ['technical', 'Units are up and revenue is down. Give me three explanations and how to tell them apart.'],
     ['judgement', 'How would you decide which products to stop carrying?'],
   ],
-  'research-strategy': [
-    ['judgement', 'You have two days to get credible on an industry you know nothing about. What do you read, in what order?'],
+  'supply-chain': [
+    ['technical', 'Your forecast was 30% high. How do you work out whether the model or the input was wrong?'],
+    ['judgement', 'Hold more inventory or risk stocking out. How do you frame that decision for a founder?'],
+  ],
+  'ecommerce-marketplace': [
+    ['technical', 'Traffic is flat, conversion is up, revenue is down. What happened?'],
+    ['judgement', 'Supply or demand first on a two-sided marketplace, and why?'],
+  ],
+
+  'management-consulting': [
+    ['judgement', 'A client says revenue is falling and wants a marketing plan. How do you respond?'],
+    ['technical', 'Estimate the annual market for replacement bicycle tyres in one city. Show the structure, not the number.'],
+    ['judgement', 'Your recommendation is right and the client will not act on it. What now?'],
+  ],
+  'strategy-research': [
+    ['judgement', 'Two days to get credible on an industry you know nothing about. What do you read, in what order?'],
     ['technical', 'A source supports your conclusion but you cannot verify it. What do you do with it?'],
+  ],
+  'market-intelligence': [
+    ['technical', 'Two reports give market sizes 4x apart. How do you work out which to trust?'],
+    ['judgement', 'How do you tell a real trend from a well-marketed one?'],
+  ],
+  'legal-operations': [
+    ['technical', 'What are the first three things you check in a contract you have never seen before?'],
+    ['judgement', 'A process is compliant and unusable. Which do you change?'],
   ],
   'technical-writing': [
     ['technical', 'Document a process you do not understand yet. What is your first move?'],
