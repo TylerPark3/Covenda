@@ -144,81 +144,109 @@
               <p class="broken-answer"><strong>What Covenda does:</strong> real work a company needs shipped, not monkey work — you build domain expertise while contributing something. Scores evidence, not background: school, name and age are not inputs.</p>
             </article>
           </div>
-          <!-- Pop-art panel, original artwork in the Lichtenstein IDIOM: hard diagonal
-               burst, Ben-Day halftone, heavy contour. Not figurative — an earlier pass drew
-               little people and read as clip art. The confrontation is two balloons across a
-               black seam, which is the actual point: both sides are asking.
-               The halftone is applied as SOLID shading in defined zones. A translucent veil
-               over the whole panel was what made it read foggy — dots must be opaque and
-               sit ON a flat field, the way a printed panel actually works. -->
-          <figure class="popart">
-            <svg class="popart-svg" viewBox="0 0 900 520" role="img" aria-label="A comic-style panel. Two speech balloons face each other across a hard black seam: a company lists what it needs, and a student answers, I'm right here!">
-              <defs>
-                <pattern id="benday" width="18" height="18" patternUnits="userSpaceOnUse">
-                  <circle cx="4.5" cy="4.5" r="4.2" fill="#c98f26"/>
-                  <circle cx="13.5" cy="13.5" r="4.2" fill="#c98f26"/>
-                </pattern>
-                <pattern id="bendayFine" width="11" height="11" patternUnits="userSpaceOnUse">
-                  <circle cx="2.8" cy="2.8" r="2.6" fill="#a8761d"/>
-                  <circle cx="8.3" cy="8.3" r="2.6" fill="#a8761d"/>
-                </pattern>
-                <clipPath id="panelClip"><rect x="10" y="10" width="880" height="500"/></clipPath>
-              </defs>
+          <!-- How a trial actually runs, five steps you can page through. Replaces the
+               pop-art panel: a picture that made an argument, where what this spot needed was
+               an explanation. Scroll-snap track so it works by swipe, arrows, dots or keyboard;
+               each slide carries its own small diagram in the site's squared language. -->
+          <section class="trial-flow" aria-labelledby="trialFlowTitle">
+            <div class="tf-head">
+              <p class="feature-kicker">How a trial runs</p>
+              <h3 id="trialFlowTitle">Five steps, start to finish.</h3>
+            </div>
 
-              <g clip-path="url(#panelClip)">
-                <!-- flat ground -->
-                <rect x="10" y="10" width="880" height="500" fill="#fbf4e4"/>
+            <div class="tf-viewport" id="tfViewport" tabindex="0" role="group" aria-label="Trial steps, use arrow keys to move between them">
+              <ol class="tf-track" id="tfTrack">
+                <li class="tf-slide" id="tf-1">
+                  <span class="tf-n">01</span>
+                  <h4>A company brings real work</h4>
+                  <p>Something that keeps slipping — a backlog task, a piece of research, a model nobody has time to build.</p>
+                  <svg class="tf-art" viewBox="0 0 260 120" aria-hidden="true">
+                    <rect x="14" y="20" width="94" height="80" fill="none" stroke="#11110f" stroke-width="2"/>
+                    <path d="M28 42h66M28 56h66M28 70h42" stroke="#b47b20" stroke-width="3" stroke-linecap="round"/>
+                    <text x="28" y="94" font-family="ui-monospace,monospace" font-size="9" fill="#60605b">BACKLOG</text>
+                    <path d="M120 60h44" stroke="#11110f" stroke-width="2"/>
+                    <path d="M158 54l8 6-8 6z" fill="#11110f"/>
+                    <rect x="176" y="34" width="70" height="52" fill="#fbf7ed" stroke="#b47b20" stroke-width="2"/>
+                    <text x="187" y="64" font-family="ui-monospace,monospace" font-size="9" fill="#8b5709">COVENDA</text>
+                  </svg>
+                </li>
 
-                <!-- halftone lives in its own wedges at FULL opacity, so the dots stay crisp -->
-                <path d="M450 268 L-120 -140 L120 -140 Z" fill="url(#benday)"/>
-                <path d="M450 268 L380 -140 L520 -140 Z" fill="url(#bendayFine)"/>
-                <path d="M450 268 L820 -140 L1040 -20 Z" fill="url(#benday)"/>
-                <path d="M450 268 L1040 300 L940 560 Z" fill="url(#bendayFine)"/>
-                <path d="M450 268 L300 660 L120 560 Z" fill="url(#benday)"/>
+                <li class="tf-slide" id="tf-2">
+                  <span class="tf-n">02</span>
+                  <h4>We scope it into a trial</h4>
+                  <p>Bounded, paid, with a named reviewer and an agreed finish line. No production access at this stage.</p>
+                  <svg class="tf-art" viewBox="0 0 260 120" aria-hidden="true">
+                    <rect x="60" y="16" width="140" height="88" fill="#fff" stroke="#11110f" stroke-width="2"/>
+                    <path d="M74 38h112" stroke="#11110f" stroke-width="2"/>
+                    <text x="74" y="34" font-family="ui-monospace,monospace" font-size="8" fill="#60605b">TRIAL BRIEF</text>
+                    <path d="M74 52h84M74 66h96M74 80h60" stroke="#deded9" stroke-width="4" stroke-linecap="round"/>
+                    <circle cx="186" cy="80" r="11" fill="#fbf7ed" stroke="#b47b20" stroke-width="2"/>
+                    <path d="M181 80l4 4 7-8" fill="none" stroke="#8b5709" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </li>
 
-                <!-- solid burst wedges between them: flat colour, no transparency -->
-                <path d="M450 268 L120 -140 L380 -140 Z" fill="#f2dcae"/>
-                <path d="M450 268 L520 -140 L820 -140 Z" fill="#e8c476"/>
-                <path d="M450 268 L1040 -20 L1040 300 Z" fill="#f2dcae"/>
-                <path d="M450 268 L940 560 L300 660 Z" fill="#e8c476"/>
-                <path d="M450 268 L120 560 L-120 300 Z" fill="#f2dcae"/>
-                <path d="M450 268 L-120 300 L-120 -140 Z" fill="#e8c476"/>
+                <li class="tf-slide" id="tf-3">
+                  <span class="tf-n">03</span>
+                  <h4>It goes to a vetted bench</h4>
+                  <p>Only students who cleared that bench's published bar — vetted by their club or lab first, then by us.</p>
+                  <svg class="tf-art" viewBox="0 0 260 120" aria-hidden="true">
+                    <rect x="14" y="46" width="52" height="30" fill="#fbf7ed" stroke="#b47b20" stroke-width="2"/>
+                    <text x="22" y="65" font-family="ui-monospace,monospace" font-size="8" fill="#8b5709">TRIAL</text>
+                    <path d="M72 61h26" stroke="#11110f" stroke-width="2"/>
+                    <path d="M92 55l8 6-8 6z" fill="#11110f"/>
+                    <g fill="none" stroke="#b47b20" stroke-width="2">
+                      <rect x="112" y="18" width="26" height="26"/><rect x="112" y="48" width="26" height="26"/><rect x="112" y="78" width="26" height="26"/>
+                    </g>
+                    <g fill="#deded9"><circle cx="168" cy="31" r="6"/><circle cx="192" cy="31" r="6"/><circle cx="216" cy="31" r="6"/>
+                      <circle cx="168" cy="61" r="6"/><circle cx="216" cy="61" r="6"/><circle cx="168" cy="91" r="6"/><circle cx="192" cy="91" r="6"/></g>
+                    <circle cx="192" cy="61" r="7.5" fill="#b47b20"/>
+                    <circle cx="216" cy="91" r="7.5" fill="#b47b20"/>
+                  </svg>
+                </li>
 
-                <!-- the seam where the two voices meet -->
-                <path d="M450 10 L450 510" stroke="#11110f" stroke-width="9"/>
+                <li class="tf-slide" id="tf-4">
+                  <span class="tf-n">04</span>
+                  <h4>The student does the work</h4>
+                  <p>Real output against checkpoints. Late is fine if they say so; going quiet is what gets the work reassigned.</p>
+                  <svg class="tf-art" viewBox="0 0 260 120" aria-hidden="true">
+                    <path d="M24 84h212" stroke="#deded9" stroke-width="3"/>
+                    <g stroke="#b47b20" stroke-width="3">
+                      <path d="M52 84v-26"/><path d="M126 84v-38"/><path d="M200 84v-52"/>
+                    </g>
+                    <circle cx="52" cy="54" r="8" fill="#b47b20"/>
+                    <circle cx="126" cy="42" r="8" fill="#b47b20"/>
+                    <circle cx="200" cy="28" r="8" fill="none" stroke="#b47b20" stroke-width="3"/>
+                    <text x="34" y="106" font-family="ui-monospace,monospace" font-size="8" fill="#60605b">CHECK 1</text>
+                    <text x="108" y="106" font-family="ui-monospace,monospace" font-size="8" fill="#60605b">CHECK 2</text>
+                    <text x="180" y="106" font-family="ui-monospace,monospace" font-size="8" fill="#60605b">DELIVER</text>
+                  </svg>
+                </li>
 
-                <!-- LEFT — the company. textLength pins each line to an exact width so a
-                     font substitution cannot push it outside the balloon; widths scale with
-                     character count so the lettering stays evenly set. -->
-                <g>
-                  <path d="M44 56 h348 a24 24 0 0 1 24 24 v156 a24 24 0 0 1 -24 24 h-96 l-72 54 l10 -54 h-190 a24 24 0 0 1 -24 -24 v-156 a24 24 0 0 1 24 -24 Z"
-                        fill="#fdfaf3" stroke="#11110f" stroke-width="9" stroke-linejoin="round"/>
-                  <g font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-weight="800" font-size="26" lengthAdjust="spacingAndGlyphs" fill="#11110f">
-                    <text x="74" y="116" textLength="282">I NEED SOMEONE WHO</text>
-                    <text x="74" y="152" textLength="313">WRITES PYTHON, KNOWS</text>
-                    <text x="74" y="188" textLength="219">ROBOTICS &#8212; AND</text>
-                    <text x="74" y="224" textLength="235" fill="#a8761d">ACTUALLY CARES.</text>
-                  </g>
-                </g>
-                <rect x="34" y="298" width="166" height="28" fill="#fcf8f0"/>
-                <text x="46" y="318" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="4.5" fill="#11110f">THE COMPANY</text>
+                <li class="tf-slide" id="tf-5">
+                  <span class="tf-n">05</span>
+                  <h4>The company decides</h4>
+                  <p>Accept and it becomes employer-verified evidence the student keeps. Hire them, or don't — the work was still useful.</p>
+                  <svg class="tf-art" viewBox="0 0 260 120" aria-hidden="true">
+                    <rect x="20" y="26" width="96" height="68" fill="#fff" stroke="#11110f" stroke-width="2"/>
+                    <path d="M34 48h68M34 62h68M34 76h44" stroke="#deded9" stroke-width="4" stroke-linecap="round"/>
+                    <path d="M128 60h30" stroke="#11110f" stroke-width="2"/>
+                    <path d="M152 54l8 6-8 6z" fill="#11110f"/>
+                    <rect x="170" y="26" width="70" height="68" fill="#fbf7ed" stroke="#24753a" stroke-width="2"/>
+                    <circle cx="205" cy="52" r="13" fill="none" stroke="#24753a" stroke-width="2.5"/>
+                    <path d="M199 52l4.5 5 8.5-9" fill="none" stroke="#24753a" stroke-width="2.5" stroke-linecap="round"/>
+                    <text x="176" y="82" font-family="ui-monospace,monospace" font-size="8" fill="#24753a">VERIFIED</text>
+                  </svg>
+                </li>
+              </ol>
+            </div>
 
-                <!-- RIGHT — the student, inverted. Tail points back at the company. -->
-                <g>
-                  <path d="M484 250 h348 a24 24 0 0 1 24 24 v150 a24 24 0 0 1 -24 24 h-232 l-64 52 l8 -52 h-60 a24 24 0 0 1 -24 -24 v-150 a24 24 0 0 1 24 -24 Z"
-                        fill="#14140f" stroke="#11110f" stroke-width="9" stroke-linejoin="round"/>
-                  <g font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-weight="800" font-size="58" lengthAdjust="spacingAndGlyphs">
-                    <text x="516" y="332" textLength="286" fill="#fdfaf3">I&#8217;M RIGHT</text>
-                    <text x="516" y="398" textLength="168" fill="#f0c771">HERE!</text>
-                  </g>
-                </g>
-                <rect x="474" y="186" width="152" height="28" fill="#fcf8f0"/>
-                <text x="486" y="206" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="4.5" fill="#11110f">THE STUDENT</text>
-              </g>
-              <rect x="10" y="10" width="880" height="500" fill="none" stroke="#11110f" stroke-width="11"/>
-            </svg>
-            <figcaption>A trial answers both questions at once — it shows a company what a student can do, and shows the student what the company is actually like to work with.</figcaption>
-          </figure>
+            <div class="tf-controls">
+              <button class="tf-arrow" type="button" id="tfPrev" aria-label="Previous step">&#8592;</button>
+              <div class="tf-dots" id="tfDots" role="tablist" aria-label="Choose a step"></div>
+              <button class="tf-arrow" type="button" id="tfNext" aria-label="Next step">&#8594;</button>
+            </div>
+          </section>
+
           <p class="broken-thesis">That top cohort has stopped defaulting to banking, and increasingly to big tech — they would rather build something that matters. Capable students are more abundant than ever, and capability tracks neither age nor school. The résumé was never built to parse that, and it still can't.</p>
         </div>
       </section>

@@ -320,8 +320,11 @@ test('candidate browser is not on the public site', () => {
 // The hero field is the geometric motif the rest of the site borrows from. It gained a
 // pointer-reactive layer; the guardrails around it must survive that.
 test('hero field reacts to the pointer without breaking motion or touch guardrails', () => {
-  // The pointer both wires nearby nodes and drives camera parallax.
+  // The cursor drives camera parallax and carries LIGHT along the gold links that already
+  // exist — it does not spray its own lines, which competed with the network it was lighting.
   assert.match(script, /targetX = -\(\(pointer\.x/);
+  assert.match(script, /const LIGHT = \d+;/);
+  assert.doesNotMatch(script, /const REACH = 155/);
   assert.match(script, /pointerleave/);
   // Reduced-motion returns before any listener is attached (the early `if (reduce) return`),
   // and coarse pointers never get a hover handler at all.
@@ -451,29 +454,24 @@ test('the demo walks each vertical separately and stays labelled illustrative', 
   assert.match(styles, /\.vdemo-beats/);
 });
 
-test('the pop-art panel is original, decorative and captioned', () => {
-  assert.match(html, /class="popart"/);
-  assert.match(html, /benday/);           // dot shading, built as an SVG pattern
-  assert.match(html, /THE STUDENT/);      // the reversal is the point
-  assert.match(html, /THE COMPANY/);
-  assert.match(html, /I NEED SOMEONE WHO/);
-  assert.match(html, /I&#8217;M RIGHT/);
-  // Comic lettering is bold uppercase sans — serif was off-idiom and harder to read fast.
-  const panel = html.match(/<svg class="popart-svg"[\s\S]*?<\/svg>/)?.[0] || '';
-  assert.doesNotMatch(panel, /<text[^>]*Georgia/);
-  assert.match(panel, /font-weight="800"/);
-  // textLength pins every line, so a font substitution cannot push text outside a balloon.
-  assert.match(panel, /textLength="/);
-  assert.match(panel, /lengthAdjust="spacingAndGlyphs"/);
-  assert.match(html, /popart-svg[^>]*role="img"/);
-  assert.match(html, /answers both questions at once/); // meaning carried in visible text
-  // The caption slab was removed; the two balloons carry it.
-  assert.doesNotMatch(html, /Both sides are interviewing/);
-  // Halftone must be solid-filled, never a translucent veil — that is what read as fog.
-  assert.doesNotMatch(panel, /fill="url\(#benday[A-Za-z]*\)"[^>]*opacity=/);
-  // Figurative drawing read as clip art; the panel is typographic and graphic now.
-  assert.doesNotMatch(html, /popart[\s\S]{0,4000}?<circle[^>]*r="6\.5"/);
-  assert.match(styles, /\.popart-svg/);
+// The pop-art panel made an argument where this spot needed an explanation. Replaced with a
+// five-step walkthrough of how a trial actually runs.
+test('the trial walkthrough explains the five steps and stays operable', () => {
+  assert.match(html, /id="tfTrack"/);
+  assert.equal((html.match(/class="tf-slide"/g) || []).length, 5);
+  assert.match(html, /A company brings real work/);
+  assert.match(html, /We scope it into a trial/);
+  assert.match(html, /It goes to a vetted bench/);
+  assert.match(html, /The student does the work/);
+  assert.match(html, /The company decides/);
+  // Native scroll-snap means swipe works with no JS; the rail must still read unscripted.
+  assert.match(styles, /\.tf-viewport \{[\s\S]*?scroll-snap-type: x mandatory/);
+  // Dots follow the scroll rather than assuming they caused it.
+  assert.match(script, /if \(nearest !== index\) sync\(nearest\)/);
+  assert.match(script, /ArrowRight/);
+  // The pop-art panel must not linger.
+  assert.doesNotMatch(html, /popart/);
+  assert.doesNotMatch(styles, /\.popart-svg/);
 });
 
 test('the founder quote stands alone, unattributed and without a portrait', () => {

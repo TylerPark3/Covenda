@@ -4690,13 +4690,14 @@ function initHeroField() {
   const FOCAL = 780;           // perspective strength
   const DEPTH = 620;           // how far back the field runs
   const GOLD_LINK = 380;       // proven nodes reach far for each other; the crowd never links
-  const MAX_GOLD = 9;          // an absolute ceiling, not a ratio — a bigger crowd must not mean more gold
+  const LIGHT = 190;           // how far the cursor's light reaches along the gold network
+  const MAX_GOLD = 11;          // an absolute ceiling, not a ratio — a bigger crowd must not mean more gold
   let W = 0, H = 0, nodes = [], running = false, raf = 0, t = 0;
   let pointer = null, camX = 0, camY = 0, targetX = 0, targetY = 0;
   let proofs = [];             // in-flight "this became proof" rings
 
   function build() {
-    const target = Math.max(220, Math.min(620, Math.round((W * H) / 1900)));
+    const target = Math.max(150, Math.min(420, Math.round((W * H) / 3100)));
     nodes = Array.from({ length: target }, () => ({
       x: (Math.random() - 0.5) * W * 1.5,
       y: (Math.random() - 0.5) * H * 1.5,
@@ -4704,7 +4705,7 @@ function initHeroField() {
       vx: (Math.random() - 0.5) * 0.16,
       vy: (Math.random() - 0.5) * 0.16,
       vz: (Math.random() - 0.5) * 0.12,
-      r: 1.2 + Math.random() * 1.3,
+      r: 2.1 + Math.random() * 1.9,
       gold: Math.random() < 0.014,
       phase: Math.random() * Math.PI * 2,
       lit: 0, // 0..1 conversion progress, drives the gold fade-in
@@ -4780,10 +4781,25 @@ function initHeroField() {
         if (d > GOLD_LINK) continue;
         const strength = Math.min(nodes[litIdx[a]].lit, nodes[litIdx[b]].lit);
         const fade = (1 - d / GOLD_LINK) * ((p1.scale + p2.scale) / 2) * strength;
-        ctx.strokeStyle = `rgba(${GOLD},${0.46 * fade})`;
+
+        // How close the cursor comes to THIS connection — distance to the segment, not to
+        // its midpoint, so a long link lights along its whole length.
+        let glow = 0;
+        if (pointer) {
+          const vx = p2.x - p1.x, vy = p2.y - p1.y;
+          const len2 = vx * vx + vy * vy || 1;
+          let u = ((pointer.x - p1.x) * vx + (pointer.y - p1.y) * vy) / len2;
+          u = Math.max(0, Math.min(1, u));
+          const near = Math.hypot(pointer.x - (p1.x + vx * u), pointer.y - (p1.y + vy * u));
+          if (near < LIGHT) glow = 1 - near / LIGHT;
+        }
+
+        ctx.lineWidth = 1 + glow * 1.4;
+        ctx.strokeStyle = `rgba(${GOLD},${(0.46 + 0.5 * glow) * fade})`;
         ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
       }
     }
+    ctx.lineWidth = 1;
 
     // The proof event: a ring expanding out of the node as it turns gold.
     for (const p of proofs) {
@@ -4822,22 +4838,16 @@ function initHeroField() {
         ctx.stroke();
       } else {
         // The crowd: small, grey, unlinked.
-        ctx.fillStyle = `rgba(${PALE},${0.46 * q.scale})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, r * 0.72, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(${PALE},${0.58 * q.scale})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
       }
     }
 
+    // A quiet mark where the cursor is. No lines out of it — the light on the network above
+    // is the interaction, and spraying extra lines competed with the thing it was lighting.
     if (pointer) {
-      const REACH = 155;
-      for (let i = 0; i < nodes.length; i++) {
-        const q = pts[i];
-        const d = Math.hypot(q.x - pointer.x, q.y - pointer.y);
-        if (d > REACH) continue;
-        ctx.strokeStyle = `rgba(${GOLD},${0.28 * (1 - d / REACH)})`;
-        ctx.beginPath(); ctx.moveTo(pointer.x, pointer.y); ctx.lineTo(q.x, q.y); ctx.stroke();
-      }
-      ctx.fillStyle = `rgba(${GOLD},.24)`;
-      ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 2.6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(${GOLD},.20)`;
+      ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 3, 0, Math.PI * 2); ctx.fill();
     }
   }
 
@@ -5584,6 +5594,73 @@ function initBatchWeb() {
     show(0);
     section.hidden = false;
   }).catch(function () { /* endpoint unavailable — section stays hidden */ });
+})();
+
+
+// The trial walkthrough. Scroll-snap does the moving; this only keeps the dots, the arrows
+// and the scroll position agreeing with each other. Native scrolling means swipe and
+// trackpad work for free, and the track stays usable if this script never runs.
+(function initTrialFlow() {
+  var viewport = document.getElementById('tfViewport');
+  var track = document.getElementById('tfTrack');
+  var dotsHost = document.getElementById('tfDots');
+  if (!viewport || !track || !dotsHost) return;
+  var slides = Array.prototype.slice.call(track.children);
+  if (slides.length < 2) return;
+  var index = 0;
+
+  var dots = slides.map(function (slide, i) {
+    var dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'tf-dot';
+    dot.setAttribute('role', 'tab');
+    dot.setAttribute('aria-label', 'Step ' + (i + 1));
+    dot.setAttribute('aria-selected', String(i === 0));
+    dot.addEventListener('click', function () { go(i); });
+    dotsHost.append(dot);
+    return dot;
+  });
+
+  function sync(next) {
+    index = Math.max(0, Math.min(slides.length - 1, next));
+    dots.forEach(function (d, i) { d.setAttribute('aria-selected', String(i === index)); });
+    document.getElementById('tfPrev').disabled = index === 0;
+    document.getElementById('tfNext').disabled = index === slides.length - 1;
+  }
+  function go(next) {
+    sync(next);
+    // scrollIntoView would also scroll the PAGE to the section; scrollLeft moves only the rail.
+    viewport.scrollTo({ left: slides[index].offsetLeft - track.offsetLeft, behavior: 'smooth' });
+  }
+
+  document.getElementById('tfPrev').addEventListener('click', function () { go(index - 1); });
+  document.getElementById('tfNext').addEventListener('click', function () { go(index + 1); });
+  viewport.addEventListener('keydown', function (event) {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    event.preventDefault();
+    go(index + (event.key === 'ArrowRight' ? 1 : -1));
+  });
+
+  // Swipe and trackpad move the rail without going through go(), so the dots follow the
+  // scroll rather than assuming they caused it.
+  var ticking = false;
+  viewport.addEventListener('scroll', function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () {
+      var mid = viewport.scrollLeft + viewport.clientWidth / 2;
+      var nearest = 0, best = Infinity;
+      slides.forEach(function (slide, i) {
+        var centre = slide.offsetLeft - track.offsetLeft + slide.offsetWidth / 2;
+        var dist = Math.abs(centre - mid);
+        if (dist < best) { best = dist; nearest = i; }
+      });
+      if (nearest !== index) sync(nearest);
+      ticking = false;
+    });
+  }, { passive: true });
+
+  sync(0);
 })();
 
 initMemberNav();
