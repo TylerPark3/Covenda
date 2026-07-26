@@ -3336,6 +3336,92 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .home-path strong { font-family: var(--font-body); font-weight: 650; letter-spacing: -.01em; }
 .home-path small { font-family: var(--font-body); font-weight: 450; }
 
+/* ---- Top bar: even, and each group means one thing ---------------------------------
+   Left = identity. Centre = what Covenda is. Right = who you are, then your account.
+   The rail was three ad-hoc clusters at different heights; it is one baseline now with a
+   single divider between "choose your side" and "your account". */
+.site-header { height: 76px; gap: 32px; }
+.site-header .brand { font-size: 25px; letter-spacing: -.04em; }
+.site-nav { gap: 30px; }
+.site-nav a { font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--muted); }
+.site-nav a:hover { color: var(--ink); }
+.header-actions { gap: 0; }
+.header-actions .audience-switch { margin-right: 22px; }
+.header-actions .member-login-link { padding-left: 22px; border-left: 1px solid var(--line); }
+.audience-switch { padding: 0; border: 0; background: transparent; box-shadow: none; gap: 4px; }
+.audience-switch button {
+  min-width: 0; min-height: 36px; padding: 8px 13px;
+  border: 1px solid transparent; background: transparent;
+  font-size: 13.5px; font-weight: 600; color: var(--muted);
+}
+.audience-switch button:hover { color: var(--ink); }
+.audience-switch button[aria-pressed="true"] { border-color: var(--line-strong); background: #fff; color: var(--ink); }
+
+/* A folded-paper sweep joins the three public paths. It reads like one sheet turning over,
+   rather than the usual fade/slide transition. */
+.audience-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.audience-transition-sheet {
+  position: absolute;
+  inset: -18%;
+  display: block;
+  background: #fff;
+  transform: translateX(-125%) skewX(-13deg) rotate(-2deg);
+  transform-origin: center;
+}
+.audience-transition-sheet--a {
+  box-shadow: 24px 0 70px rgba(77,55,14,.13);
+}
+.audience-transition-sheet--b {
+  background: #f7edcf;
+  opacity: .94;
+  transform: translateX(-142%) skewX(18deg) rotate(3deg);
+}
+.audience-transition span {
+  position: relative;
+  z-index: 2;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(34px, 6vw, 82px);
+  font-weight: 400;
+  letter-spacing: -.055em;
+  opacity: 0;
+  transform: scale(.88) rotate(-2deg);
+}
+body.is-audience-transitioning { overflow: hidden; }
+body.is-audience-transitioning .audience-transition { visibility: visible; }
+body.is-audience-transitioning .audience-transition-sheet--a {
+  animation: audience-sheet-a .84s cubic-bezier(.72,0,.18,1) both;
+}
+body.is-audience-transitioning .audience-transition-sheet--b {
+  animation: audience-sheet-b .84s cubic-bezier(.72,0,.18,1) both;
+}
+body.is-audience-transitioning .audience-transition span {
+  animation: audience-label .84s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes audience-sheet-a {
+  0% { transform: translateX(-125%) skewX(-13deg) rotate(-2deg); }
+  45%, 58% { transform: translateX(0) skewX(0) rotate(0); }
+  100% { transform: translateX(125%) skewX(13deg) rotate(2deg); }
+}
+@keyframes audience-sheet-b {
+  0% { transform: translateX(-142%) skewX(18deg) rotate(3deg); }
+  45%, 58% { transform: translateX(0) skewX(0) rotate(0); }
+  100% { transform: translateX(142%) skewX(-18deg) rotate(-3deg); }
+}
+@keyframes audience-label {
+  0%, 27%, 78%, 100% { opacity: 0; transform: scale(.88) rotate(-2deg); }
+  45%, 60% { opacity: 1; transform: scale(1) rotate(0); }
+}
+ 
 /* The hero kicker needs air above it — it was sitting against the header. */
 .home-kicker { margin-bottom: 20px; }
 
@@ -3378,16 +3464,119 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .tf-dot:hover { border-color: var(--gold); }
 @media (prefers-reduced-motion: reduce) { .tf-viewport { scroll-behavior: auto; } }
 
-/* The break, drawn. Carries what three paragraphs used to, so it gets real width. */
+/* Student entry: one dominant action, then one quiet horizontal decision. */
+.hero-student { padding-top: clamp(56px, 8vh, 92px); }
+.hero-student .hero-copy { max-width: 1040px; }
+.hero-student .hero-copy p { max-width: 660px; }
+.student-entry {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 1440px);
+  margin: clamp(34px, 5vh, 58px) auto 0;
+}
+.student-join-primary {
+  width: min(100%, 860px);
+  min-height: clamp(76px, 9vh, 104px);
+  padding: 18px 34px;
+  font-size: clamp(18px, 1.6vw, 24px);
+  box-shadow: 0 18px 46px rgba(180,123,32,.2), 0 0 54px rgba(231,198,121,.18);
+}
+.student-join-primary svg { width: 24px; height: 24px; transition: transform .24s ease; }
+.student-join-primary:hover svg { transform: translateX(7px); }
+.student-vertical-picker {
+  margin: clamp(42px, 6vh, 70px) 0 0;
+  padding: 0;
+  border: 0;
+  text-align: left;
+}
+.student-vertical-picker legend {
+  margin: 0 0 24px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+.student-vertical-rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--line-strong);
+}
+.student-vertical {
+  position: relative;
+  min-height: 74px;
+  padding: 0 24px 28px 0;
+  border: 0;
+  background: transparent;
+  color: #62615c;
+  font-family: var(--font-display);
+  font-size: clamp(21px, 2vw, 32px);
+  font-weight: 400;
+  letter-spacing: -.035em;
+  text-align: left;
+  cursor: pointer;
+  transition: color .2s ease, transform .32s cubic-bezier(.2,.8,.2,1);
+}
+.student-vertical::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .36s cubic-bezier(.2,.8,.2,1);
+}
+.student-vertical::before {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 36%;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(180,123,32,.32);
+  opacity: 0;
+  transform: scale(.4);
+  transition: opacity .2s ease, transform .32s cubic-bezier(.2,.8,.2,1);
+}
+.student-vertical:hover { color: var(--ink); transform: translateY(-2px); }
+.student-vertical.is-selected { color: var(--ink); }
+.student-vertical.is-selected::after { transform: scaleX(1); }
+.student-vertical.is-selected::before { opacity: 1; transform: scale(1); }
+.student-vertical:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 6px; }
 
-/* ---- The bridge: two networks becoming one system, driven by scroll ----------------
-   The section is deliberately open rather than card-wrapped. Scrolling closes the physical
-   gap, moves vouched talent through a real project, and leaves a durable gold proof trail. */
+@media (max-width: 780px) {
+  .hero-student { padding-top: 42px; }
+  .hero-student h1 { font-size: clamp(46px, 13vw, 68px); }
+  .student-join-primary { min-height: 70px; }
+  .student-vertical-picker { margin-top: 38px; }
+  .student-vertical-rail { grid-template-columns: 1fr 1fr; gap: 0 18px; }
+  .student-vertical { min-height: 70px; padding: 14px 0 18px; font-size: clamp(20px, 6vw, 27px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audience-transition { display: none; }
+  .student-vertical,
+  .student-vertical::before,
+  .student-vertical::after,
+  .student-join-primary svg { transition: none; }
+}
+
+/* ---- The bridge: two readable clouds meeting through project work ------------------
+   No funnel or helix. Scroll simply brings two organic networks together while a small
+   number of gold signals cross the shared project → deliverable → proof route. */
 body:not([data-audience="home"]) .bridge-section { display: none; }
 .bridge-section {
   --bridge-progress: 0;
   position: relative;
-  height: 270vh;
+  height: 245vh;
   scroll-margin-top: var(--header-height);
   border-top: 1px solid var(--line);
   background: #fff;
@@ -3396,144 +3585,132 @@ body:not([data-audience="home"]) .bridge-section { display: none; }
   position: sticky;
   top: var(--header-height);
   display: grid;
-  grid-template-rows: auto minmax(330px, 1fr) auto auto;
+  grid-template-rows: auto minmax(360px, 1fr) auto auto;
   align-items: center;
   gap: clamp(10px, 1.5vh, 18px);
   min-height: calc(100vh - var(--header-height));
-  padding: clamp(24px, 3.4vh, 42px) var(--page-gutter) clamp(18px, 2.4vh, 30px);
+  padding: clamp(26px, 3.5vh, 44px) var(--page-gutter) clamp(18px, 2.4vh, 28px);
   overflow: clip;
 }
-.bridge-head {
-  width: min(100%, 1380px);
-  margin: 0 auto;
-  text-align: center;
-}
+.bridge-head { width: min(100%, 1380px); margin: 0 auto; text-align: center; }
 .bridge-head h2 {
   margin: 0;
-  font-size: clamp(34px, 4vw, 64px);
+  font-size: clamp(36px, 4.2vw, 66px);
   font-weight: 400;
-  letter-spacing: -.045em;
+  letter-spacing: -.05em;
   line-height: .98;
 }
 .bridge-head h2 .word-gold { font-style: normal; }
 .bridge-head > p {
-  max-width: 64ch;
-  margin: 13px auto 0;
+  margin: 12px auto 0;
   color: var(--muted);
-  font-size: clamp(14px, 1.3vw, 17px);
-  line-height: 1.55;
+  font-size: clamp(14px, 1.25vw, 17px);
+  line-height: 1.5;
 }
 .bridge-visual {
   position: relative;
-  width: min(100%, 1320px);
-  height: clamp(360px, 52vh, 590px);
+  width: min(100%, 1420px);
+  height: clamp(390px, 55vh, 610px);
   margin: 0 auto;
 }
-.bridge-canvas {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-}
+.bridge-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .bridge-side {
   position: absolute;
   z-index: 2;
-  top: clamp(12px, 3vh, 34px);
-  display: grid;
-  gap: 5px;
-  width: min(26%, 270px);
+  top: 36%;
+  width: min(25%, 260px);
+  transform: translateY(-50%);
   pointer-events: none;
 }
-.bridge-side--startups { left: 0; }
-.bridge-side--talent { right: 0; text-align: right; }
+.bridge-side--startups { left: 7%; }
+.bridge-side--talent { right: 7%; text-align: right; }
 .bridge-side strong {
-  font-family: var(--font-display);
-  font-size: clamp(22px, 2vw, 30px);
-  font-weight: 500;
-  letter-spacing: -.02em;
-}
-.bridge-side > span {
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.4;
+  display: block;
+  font-family: var(--font-body);
+  font-size: clamp(16px, 1.5vw, 22px);
+  font-weight: 750;
+  letter-spacing: .16em;
+  text-transform: uppercase;
 }
 .bridge-side ul {
   display: grid;
-  gap: 8px;
-  margin: 16px 0 0;
+  gap: 14px;
+  margin: 28px 0 0;
   padding: 0;
   list-style: none;
 }
+.bridge-side--talent ul { justify-items: end; }
 .bridge-side li {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: max-content;
-  color: #54544e;
-  font-size: 11px;
-  font-weight: 650;
+  color: #393936;
+  font-size: clamp(12px, 1vw, 14px);
+  font-weight: 550;
 }
 .bridge-side li::before {
-  content: "!";
-  display: grid;
-  place-items: center;
-  width: 18px;
-  height: 18px;
-  border: 1px solid var(--gold);
+  content: "";
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--line-strong);
   border-radius: 50%;
-  color: var(--gold-deep);
-  font-family: var(--font-mono);
-  font-size: 9px;
+  background: #fff;
 }
+.bridge-side--talent li::before { order: 2; }
 .bridge-process {
   position: absolute;
   z-index: 3;
-  top: 49%;
+  top: 58%;
   left: 50%;
   display: grid;
-  grid-template-columns: repeat(3, minmax(82px, 1fr));
-  width: min(42%, 520px);
+  grid-template-columns: repeat(3, 1fr);
+  width: min(42%, 540px);
   margin: 0;
   padding: 0;
   list-style: none;
-  border-top: 1px solid rgba(180,123,32,.42);
-  border-bottom: 1px solid rgba(180,123,32,.42);
-  background: rgba(255,255,255,.88);
   transform: translate(-50%, -50%);
-  backdrop-filter: blur(8px);
-  opacity: calc(.24 + var(--bridge-progress) * .76);
+  opacity: calc(.35 + var(--bridge-progress) * .65);
 }
-.bridge-process li {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 9px;
-  min-height: 74px;
-  padding: 12px 14px;
-  border-right: 1px solid rgba(180,123,32,.26);
+.bridge-process::before {
+  content: "";
+  position: absolute;
+  top: 11px;
+  left: 16.66%;
+  right: 16.66%;
+  height: 1px;
+  background: rgba(180,123,32,.56);
 }
-.bridge-process li:last-child { border-right: 0; }
-.bridge-process span {
-  color: var(--gold-deep);
-  font-family: var(--font-mono);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .1em;
+.bridge-process li { position: relative; padding-top: 30px; text-align: center; }
+.bridge-process li::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 5px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold-deep), 0 0 18px rgba(180,123,32,.24);
+  transform: translateX(-50%);
 }
 .bridge-process strong {
-  font-family: var(--font-display);
-  font-size: clamp(14px, 1.35vw, 19px);
-  font-weight: 500;
-  line-height: 1.08;
+  font-family: var(--font-body);
+  font-size: clamp(10px, .9vw, 12px);
+  font-weight: 750;
+  letter-spacing: .12em;
+  text-transform: uppercase;
 }
 .bridge-progress {
   display: grid;
-  grid-template-columns: auto minmax(160px, 560px) auto auto;
+  grid-template-columns: auto minmax(180px, 610px) auto auto;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  width: min(100%, 900px);
+  width: min(100%, 940px);
   margin: 0 auto;
   color: var(--muted);
   font-family: var(--font-mono);
@@ -3542,12 +3719,7 @@ body:not([data-audience="home"]) .bridge-section { display: none; }
   letter-spacing: .08em;
   text-transform: uppercase;
 }
-.bridge-progress i {
-  position: relative;
-  display: block;
-  height: 1px;
-  background: var(--line-strong);
-}
+.bridge-progress i { position: relative; display: block; height: 1px; background: var(--line-strong); }
 .bridge-progress i::before {
   content: "";
   position: absolute;
@@ -3560,59 +3732,48 @@ body:not([data-audience="home"]) .bridge-section { display: none; }
   position: absolute;
   top: 50%;
   left: calc(var(--bridge-progress) * 100%);
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
   border: 2px solid #fff;
   border-radius: 50%;
   background: var(--gold);
   box-shadow: 0 0 0 1px var(--gold-deep);
   transform: translate(-50%, -50%);
 }
-.bridge-progress output { min-width: 102px; color: var(--gold-deep); }
-.bridge-illus {
-  margin: 0;
-  color: var(--soft);
-  font-size: 10px;
-  text-align: center;
-}
+.bridge-progress output { min-width: 92px; color: var(--gold-deep); }
+.bridge-illus { margin: 0; color: var(--soft); font-size: 9px; text-align: center; }
 
 @media (max-height: 720px) and (min-width: 721px) {
-  .bridge-section { height: 230vh; }
-  .bridge-sticky { grid-template-rows: auto minmax(280px, 1fr) auto auto; padding-top: 20px; }
-  .bridge-visual { height: clamp(300px, 49vh, 410px); }
-  .bridge-head h2 { font-size: clamp(32px, 4vw, 52px); }
-  .bridge-side ul { margin-top: 8px; gap: 5px; }
+  .bridge-section { height: 220vh; }
+  .bridge-sticky { grid-template-rows: auto minmax(300px, 1fr) auto auto; padding-top: 20px; }
+  .bridge-visual { height: clamp(310px, 49vh, 420px); }
+  .bridge-head h2 { font-size: clamp(32px, 4vw, 54px); }
+  .bridge-side ul { margin-top: 18px; gap: 9px; }
 }
 
 @media (max-width: 720px) {
-  .bridge-section { height: 210vh; }
+  .bridge-section { height: 220vh; }
   .bridge-sticky {
-    grid-template-rows: auto minmax(460px, 1fr) auto auto;
+    grid-template-rows: auto minmax(500px, 1fr) auto auto;
     gap: 8px;
     padding: 22px 16px 18px;
   }
   .bridge-head { text-align: left; }
-  .bridge-head h2 { max-width: 10ch; font-size: clamp(38px, 12vw, 54px); line-height: .94; }
-  .bridge-head > p { margin-left: 0; font-size: 13px; }
-  .bridge-visual { height: min(57vh, 540px); min-height: 460px; }
-  .bridge-side { top: 8px; width: 48%; }
-  .bridge-side--talent { top: auto; right: 0; bottom: 8px; }
-  .bridge-side strong { font-size: 21px; }
-  .bridge-side > span { font-size: 10px; }
-  .bridge-side ul { margin-top: 9px; gap: 5px; }
-  .bridge-side li { font-size: 9px; }
-  .bridge-side li::before { width: 15px; height: 15px; font-size: 8px; }
-  .bridge-process {
-    top: 50%;
-    width: 100%;
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .bridge-process li { gap: 5px; min-height: 62px; padding: 9px 8px; }
-  .bridge-process strong { font-size: 13px; }
+  .bridge-head h2 { max-width: 9ch; font-size: clamp(38px, 12vw, 52px); line-height: .94; }
+  .bridge-head > p { margin-left: 0; max-width: 28ch; font-size: 13px; }
+  .bridge-visual { height: min(60vh, 570px); min-height: 500px; }
+  .bridge-side { top: 21%; width: 70%; transform: none; }
+  .bridge-side--startups { left: 4%; }
+  .bridge-side--talent { top: auto; right: 4%; bottom: 7%; }
+  .bridge-side strong { font-size: 15px; }
+  .bridge-side ul { gap: 7px; margin-top: 12px; }
+  .bridge-side li { font-size: 10px; }
+  .bridge-side li::before { width: 7px; height: 7px; }
+  .bridge-process { top: 54%; width: 88%; }
+  .bridge-process strong { font-size: 8.5px; }
   .bridge-progress { grid-template-columns: auto minmax(80px, 1fr) auto; gap: 8px; font-size: 8px; }
-  .bridge-progress output { min-width: 88px; }
+  .bridge-progress output { min-width: 78px; }
   .bridge-progress > span:last-child { display: none; }
-  .bridge-illus { font-size: 9px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
