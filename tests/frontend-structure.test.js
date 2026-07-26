@@ -44,7 +44,9 @@ test('the initial path chooser uses a continuous responsive glass control', () =
   // Squared deliberately: the pill/rounded-rectangle look was the thing being removed.
   assert.match(styles, /\.work-selector[\s\S]*border-radius: 0/);
   assert.match(styles, /\.work-option\.is-selected[\s\S]*radial-gradient/);
-  assert.match(styles, /scroll-snap-type: x proximity/);
+  // The picker used to force five columns and side-scroll, which squeezed each option to
+  // whatever width was left. It auto-fits on a real minimum now and wraps instead.
+  assert.match(styles, /\.work-selector[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(196px/);
   assert.match(html, /<\/div>\s*<button class="gold-button selector-submit"/);
   assert.match(html, /id="selectorFxCanvas"/);
   assert.match(html, /class="student-journey"/);
