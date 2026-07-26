@@ -6,7 +6,7 @@ import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
 import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical } from './batches.js';
-import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION } from './clubs.js';
+import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION, evaluateClubVerification, memberStanding } from './clubs.js';
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
@@ -1049,6 +1049,98 @@ export async function loadBatchStanding(member) {
   }
 }
 
+
+// ---- §13 slice 7: clubs, backed by real rows ----------------------------------------
+// Registration used to land in the generic submissions inbox and stop, so a club could never
+// actually earn anything. These read and write public.clubs / club_members /
+// club_verifications, and the COUNTS are derived from applications and outcomes rather than
+// stored — a stored count is a number that drifts away from what it claims to summarise.
+
+const CLUB_SLUG_RE = /[^a-z0-9]+/g;
+function clubSlug(name, school) {
+  return [name, school].filter(Boolean).join(' ').toLowerCase().replace(CLUB_SLUG_RE, '-').replace(/^-|-$/g, '').slice(0, 60);
+}
+
+export async function registerClub(member, input) {
+  const name = cleanText(input.clubName, 160);
+  if (name.length < 2) throw new Error('Enter the club name.');
+  const row = {
+    slug: clubSlug(name, cleanText(input.school, 80)),
+    name,
+    school: cleanText(input.school, 120) || null,
+    vertical_slug: cleanText(input.verticalSlug, 60) || null,
+    contact_email: cleanEmail(input.email) || null,
+    contact_role: cleanText(input.role, 80) || null,
+    member_estimate: Number.isFinite(Number(input.memberCount)) ? Math.max(0, Math.round(Number(input.memberCount))) : null,
+    created_by: member.user.id,
+  };
+  // A re-registration updates the existing club rather than creating a duplicate; officers
+  // turn over every year and the second one should not fork the record.
+  const existing = await checked(member.supabase.from('clubs').select('id').eq('slug', row.slug).maybeSingle(), null);
+  if (existing) {
+    return checked(member.supabase.from('clubs').update({ ...row, updated_at: new Date().toISOString() }).eq('id', existing.id).select('*').single(), null);
+  }
+  return checked(member.supabase.from('clubs').insert(row).select('*').single(), null);
+}
+
+// A student claims membership; it counts for nothing until an officer or operator confirms it.
+// Without that gate anyone could attach themselves to a selective club, which would make the
+// club's own screen — the thing that gives the badge its value — meaningless.
+export async function claimClubMembership(member, input) {
+  const clubId = cleanText(input.clubId, 50);
+  if (!PROJECT_ID_PATTERN.test(clubId)) throw new Error('Choose a valid club.');
+  const existing = await checked(member.supabase.from('club_members').select('*').eq('club_id', clubId).eq('student_user_id', member.user.id).maybeSingle(), null);
+  if (existing) return existing;
+  return checked(member.supabase.from('club_members').insert({ club_id: clubId, student_user_id: member.user.id }).select('*').single(), null);
+}
+
+// Derived standing for one club: how many CONFIRMED members were admitted to each batch, and
+// how many of those went on to accepted work. Never stored — recomputed from the rows that
+// actually happened, so the number and the evidence can never disagree.
+export async function clubStanding(member, clubId) {
+  const members = await checked(member.supabase.from('club_members').select('student_user_id').eq('club_id', clubId).eq('status', 'confirmed'), []);
+  const ids = members.map(m => m.student_user_id).filter(Boolean);
+  const club = await checked(member.supabase.from('clubs').select('id,name,slug,vertical_slug').eq('id', clubId).maybeSingle(), null);
+  if (!club || !ids.length) {
+    return { club, byBatch: [], confirmedMembers: ids.length };
+  }
+  const apps = await checked(member.supabase.from('batch_applications').select('batch_id,student_user_id,status').in('student_user_id', ids), []);
+  const admitted = apps.filter(a => a.status === 'accepted');
+  const batchIds = [...new Set(admitted.map(a => a.batch_id))];
+  const batches = batchIds.length
+    ? await checked(member.supabase.from('batches').select('id,slug,name').in('id', batchIds), [])
+    : [];
+  const completed = await checked(
+    member.supabase.from('member_projects').select('assigned_user_id,completed_at,conversion_outcome')
+      .in('assigned_user_id', ids).not('completed_at', 'is', null), []);
+  const acceptedBy = new Set(completed.filter(p => p.conversion_outcome !== 'rejected').map(p => p.assigned_user_id));
+
+  const byBatch = batches.map(batch => {
+    const inBatch = admitted.filter(a => a.batch_id === batch.id).map(a => a.student_user_id);
+    return evaluateClubVerification({
+      clubId: club.id,
+      clubName: club.name,
+      batchSlug: batch.slug,
+      admittedCount: inBatch.length,
+      acceptedWorkCount: inBatch.filter(id => acceptedBy.has(id)).length,
+    });
+  });
+  return { club, byBatch, confirmedMembers: ids.length };
+}
+
+// What a member carries into an application: the club's standing in THAT batch, and nothing
+// more. A badge never satisfies a requirement, because the club did not do the work.
+export async function clubBadgeFor(member, studentUserId, batchSlug) {
+  const rows = await checked(member.supabase.from('club_members').select('club_id').eq('student_user_id', studentUserId).eq('status', 'confirmed'), []);
+  if (!rows.length) return null;
+  for (const row of rows) {
+    const standing = await clubStanding(member, row.club_id);
+    const hit = (standing.byBatch || []).find(b => b.batchSlug === batchSlug && b.tier);
+    if (hit) return memberStanding(hit);
+  }
+  return null;
+}
+
 // ---- §13 slice 3: company credit-gated access to a batch's admitted students. ----
 // Which batches this company has unlocked (id + what it paid), so the UI can gate rosters.
 export async function loadBatchAccess(member) {
@@ -1573,6 +1665,9 @@ export default async function handler(req, res, dependencies = {}) {
       return res.status(200).json({ ok: true, appeal: data });
     }
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
+    if (req.method === 'POST' && input.action === 'register-club') return res.status(201).json({ ok: true, club: await registerClub(member, input) });
+    if (req.method === 'POST' && input.action === 'claim-club') return res.status(201).json({ ok: true, membership: await claimClubMembership(member, input) });
+    if (req.method === 'POST' && input.action === 'club-standing') return res.status(200).json({ ok: true, ...(await clubStanding(member, cleanText(input.clubId, 50))) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
     if (req.method === 'POST' && input.action === 'respond-packet') return res.status(200).json({ ok: true, project: await respondToPacket(member, input) });
     if (req.method === 'POST' && input.action === 'create-request') return res.status(201).json({ ok: true, request: await createProjectRequest(member, input) });

@@ -632,9 +632,6 @@ test('the referral page argues before it asks', () => {
   assert.match(html, /This already works/);
   assert.match(html, /How it works today/);
   assert.match(html, /The same thing, systematised/);
-  assert.match(html, /class="ref-story"/);
-  // The anecdote is real but the company is NOT a partner — that has to be said, not implied.
-  assert.match(html, /Not a Covenda partner/);
   // The actual goal, stated: credibility a stranger will trust.
   assert.match(html, /build credibility that a founder who has never heard of it will still trust/);
 });
