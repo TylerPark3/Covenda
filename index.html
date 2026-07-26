@@ -105,7 +105,7 @@
         </div>
         <div class="home-paths" role="group" aria-label="Choose your path">
           <button type="button" class="home-path glass-panel" data-audience-option="student"><svg class="home-path-icon"><use href="#icon-student"/></svg><span><strong>I’m a student</strong><small>Prove your skills on real, paid work</small></span></button>
-          <button type="button" class="home-path glass-panel" data-audience-option="company"><svg class="home-path-icon"><use href="#icon-company"/></svg><span><strong>I’m a startup</strong><small>Run a low-risk work-trial with vouched talent</small></span></button>
+          <button type="button" class="home-path glass-panel" data-audience-option="company"><svg class="home-path-icon"><use href="#icon-company"/></svg><span><strong>I’m a company</strong><small>Run a low-risk work-trial with vouched talent</small></span></button>
           <button type="button" class="home-path glass-panel" data-audience-option="university"><svg class="home-path-icon"><use href="#icon-building"/></svg><span><strong>I vouch for talent</strong><small>Professors, clubs & industry pros</small></span></button>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
@@ -776,30 +776,13 @@
       </section>
 
 
-      <!-- Step 6 — company-only candidate browser: filter illustrative candidates by
-           referral source, club track record, compatibility, function, and skills, then
-           trace the referral chain. Scoped to the company audience in CSS. -->
-      <section class="candidates-section" id="candidates">
-        <div class="gold-header">
-          <div>
-            <p class="feature-kicker">Candidate browser</p>
-            <h2>Filter students by proof, not just résumés.</h2>
-            <p>Every candidate below is illustrative. Filter by who vouched for them, their club’s track record, compatibility, function, and skills — then trace the referral chain. A high score or endorsement is a <b>signal, not a guarantee</b>.</p>
-          </div>
-          <div class="gold-tile" data-gold-tile data-kicker="Vouched talent" aria-hidden="true"></div>
-        </div>
-        <div class="cand-toolbar" id="candToolbar" role="group" aria-label="Filter candidates"></div>
-        <p class="cand-count" id="candCount"></p>
-        <div class="cand-grid" id="candGrid" data-cand-grid></div>
-        <div class="cand-honest">
-          <svg><use href="#icon-lock"/></svg>
-          <span>Covenda never hires automatically. Scores and endorsements are decision support for a human — students control what they share, and a match is never guaranteed.</span>
-        </div>
-      </section>
+      <!-- The candidate browser lived here and is GONE from the public site on purpose.
+           Gating it to the company audience was not enough: the audience switcher is public,
+           so anyone could click "Company" and browse scored students. It now exists only in
+           the authenticated portal (Talent view), where the viewer is a known company.
+           app.js keeps buildCandidateFilters()/renderCandidates(); both no-op without the
+           #candToolbar / #candGrid nodes. -->
 
-      <!-- Step 3 — university-only referrer dashboard: a referrer's track record and
-           derived (illustrative) credibility, framed as an appreciating reputation
-           asset. Scoped to the university audience in CSS. -->
       <section class="referrer-section" id="referrerDashboard">
         <div class="gold-header">
           <div>
@@ -930,7 +913,7 @@
             <div class="dashboard-grid">
               <div>
                 <section class="path-panel glass-panel">
-                  <header><h2>Who you've added, and how far they've got</h2><button class="outline-button compact" type="button" data-action="university-roster">Edit roster</button></header>
+                  <header><h2>Roster status</h2><button class="outline-button compact" type="button" data-action="university-roster">Edit roster</button></header>
                   <div class="dashboard-paths">
                     <div class="is-primary"><svg><use href="#icon-building"/></svg><span id="workspaceRosterCount">0 students on your roster</span></div>
                     <div><svg><use href="#icon-route"/></svg><span id="workspaceRosterOrg">Add your organization details</span></div>
@@ -939,7 +922,7 @@
               </div>
               <aside class="evidence-panel glass-panel">
                 <small>What Covenda receives</small>
-                <header><svg><use href="#icon-lock"/></svg><div><h2>Your roster stays private to you</h2><p>Names and school emails, tagged by interest. Shared only with the pilot team.</p></div></header>
+                <header><svg><use href="#icon-lock"/></svg><div><h2>A private roster</h2><p>Names and school emails, tagged by interest. Shared only with the pilot team.</p></div></header>
                 <div class="evidence-capabilities"><span>Last roster sent</span><div><b id="workspaceRosterReference">Nothing sent yet</b></div></div>
                 <footer><svg><use href="#icon-lock"/></svg><p><strong>No placement guarantee.</strong>Students still choose every project and keep their own evidence.</p></footer>
               </aside>
@@ -948,7 +931,7 @@
                  counts, interest-area mix, and where the cohort sits on the ladder. -->
             <section class="cohort-dashboard glass-panel" aria-labelledby="cohortHeading">
               <header class="cohort-head">
-                <div><small>Cohort progress</small><h2 id="cohortHeading">How far your students have got</h2></div>
+                <div><small>Cohort progress</small><h2 id="cohortHeading">Where your students stand</h2></div>
                 <span class="cohort-total" id="cohortTotal">0 students</span>
               </header>
               <p class="cohort-empty" id="cohortEmpty">Add students to your roster to see your cohort’s credibility progress here.</p>

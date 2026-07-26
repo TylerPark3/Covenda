@@ -296,13 +296,15 @@ test('batch board degrades without the serverless function', () => {
   assert.match(script, /\.catch\(\(\) => \{ \/\* No serverless in static preview/);
 });
 
-// The candidate browser shows students to companies. index.html long claimed it was "scoped
-// to the company audience in CSS" while no such rule existed, so every audience — including
-// students — got a filterable, scored browser of other students: precisely the cross-student
-// leaderboard the scoring guardrails forbid.
-test('candidate browser is company-only', () => {
-  assert.match(html, /id="candidates"/);
-  assert.match(styles, /\.candidates-section \{ display: none; \}/);
-  assert.match(styles, /body\[data-audience="company"\] \.candidates-section \{ display: block; \}/);
-  assert.match(html, /Every candidate below is illustrative/);
+// The candidate browser is portal-only. index.html long claimed it was "scoped to the company
+// audience in CSS" while no such rule existed — but gating on audience was never sufficient
+// anyway: the switcher is public, so anyone could click "Company" and browse scored students.
+// It is now absent from the public page entirely; the portal is where the viewer is known.
+test('candidate browser is not on the public site', () => {
+  assert.doesNotMatch(html, /id="candidates"/);
+  assert.doesNotMatch(html, /candidates-section/);
+  assert.doesNotMatch(html, /id="candGrid"/);
+  // The renderers stay in app.js and must no-op rather than throw without their nodes.
+  assert.match(script, /const bar = \$\('#candToolbar'\);\n  if \(!bar\) return;/);
+  assert.match(script, /const grid = \$\('#candGrid'\);\n  if \(!grid\) return;/);
 });

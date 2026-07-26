@@ -3110,9 +3110,3 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 .pb-detail .audience-content[data-for-audience="student"] { display: block; }
 body[data-audience="company"] .pb-detail .audience-content[data-for-audience="student"] { display: none; }
 body[data-audience="company"] .pb-detail .audience-content[data-for-audience="company"] { display: block; }
-
-/* The candidate browser is company-only. index.html has always claimed this was "scoped to
-   the company audience in CSS", but no rule existed — students were being shown a filterable
-   browser of other students, which is exactly the leaderboard the guardrails forbid. */
-.candidates-section { display: none; }
-body[data-audience="company"] .candidates-section { display: block; }
