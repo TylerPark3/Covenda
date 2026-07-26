@@ -3325,35 +3325,16 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
    than needing its own font-family, which is how the page drifted. */
 h1, h2, h3, .brand, .ct-title, .bf-label, .bd-head h3, .vdemo-company,
 h4, h5, h6, .feature-kicker, .home-kicker, .company-job-eyebrow,
+/* .site-nav a and .audience-switch button are deliberately ABSENT: the header sets the
+   display face on itself, and a direct rule here would beat that inheritance silently. */
 p, li, small, cite, label, input, textarea, select, button, .home-path strong,
-.home-path small, .site-nav a, .audience-switch button {
+.home-path small {
   font-family: var(--font-body);
 }
 
 /* The three audience buttons read as subtext, not as headings. */
 .home-path strong { font-family: var(--font-body); font-weight: 650; letter-spacing: -.01em; }
 .home-path small { font-family: var(--font-body); font-weight: 450; }
-
-/* ---- Top bar: even, and each group means one thing ---------------------------------
-   Left = identity. Centre = what Covenda is. Right = who you are, then your account.
-   The rail was three ad-hoc clusters at different heights; it is one baseline now with a
-   single divider between "choose your side" and "your account". */
-.site-header { height: 76px; gap: 32px; }
-.site-header .brand { font-size: 25px; letter-spacing: -.04em; }
-.site-nav { gap: 30px; }
-.site-nav a { font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--muted); }
-.site-nav a:hover { color: var(--ink); }
-.header-actions { gap: 0; }
-.header-actions .audience-switch { margin-right: 22px; }
-.header-actions .member-login-link { padding-left: 22px; border-left: 1px solid var(--line); }
-.audience-switch { padding: 0; border: 0; background: transparent; box-shadow: none; gap: 4px; }
-.audience-switch button {
-  min-width: 0; min-height: 36px; padding: 8px 13px;
-  border: 1px solid transparent; background: transparent;
-  font-size: 13.5px; font-weight: 600; color: var(--muted);
-}
-.audience-switch button:hover { color: var(--ink); }
-.audience-switch button[aria-pressed="true"] { border-color: var(--line-strong); background: #fff; color: var(--ink); }
 
 /* The hero kicker needs air above it — it was sitting against the header. */
 .hero-home .hero-copy { padding-top: clamp(18px, 5vh, 54px); }
@@ -3393,8 +3374,9 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .tf-arrow:hover:not(:disabled) { border-color: var(--gold); color: var(--gold-deep); }
 .tf-arrow:disabled { opacity: .3; cursor: default; }
 .tf-dots { display: flex; gap: 8px; }
-.tf-dot { width: 26px; height: 4px; padding: 0; border: 0; background: var(--line-strong); cursor: pointer; transition: background .16s ease; }
-.tf-dot[aria-selected="true"] { background: var(--gold-deep); }
+.tf-dot { width: 30px; height: 8px; padding: 0; border: 1px solid var(--line-strong); background: #fff; cursor: pointer; transition: background .16s ease, border-color .16s ease; }
+.tf-dot[aria-selected="true"] { background: var(--gold-deep); border-color: var(--gold-deep); }
+.tf-dot:hover { border-color: var(--gold); }
 @media (prefers-reduced-motion: reduce) { .tf-viewport { scroll-behavior: auto; } }
 
 /* The break, drawn. Carries what three paragraphs used to, so it gets real width. */

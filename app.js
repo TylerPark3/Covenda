@@ -5648,8 +5648,15 @@ function initBatchWeb() {
       : 'Trial steps, use arrow keys to move between them');
   }
 
+  // A programmatic scroll fires scroll events all the way through its animation, with
+  // scrollLeft still near the OLD position — so the handler below would compute page 0 and
+  // drag the gold marker straight back to the first dot mid-flight. Suppress scroll-driven
+  // syncing until the animation has landed.
+  var settling = 0;
   function go(nextPage) {
     sync(nextPage);
+    window.clearTimeout(settling);
+    settling = window.setTimeout(function () { settling = 0; }, 520);
     viewport.scrollTo({ left: page * viewport.clientWidth, behavior: 'smooth' });
   }
 
@@ -5669,9 +5676,10 @@ function initBatchWeb() {
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(function () {
+      ticking = false;
+      if (settling) return; // an arrow or dot is driving; do not fight it
       var at = Math.round(viewport.scrollLeft / Math.max(1, viewport.clientWidth));
       if (at !== page) sync(at);
-      ticking = false;
     });
   }, { passive: true });
 
