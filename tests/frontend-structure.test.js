@@ -586,23 +586,41 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
   assert.match(script, /if \(reduce\) return; \/\/ static frame only/);
 });
 
-// The bridge replaced three blocks of prose under the hero: two columns converging as the
-// page scrolls, with proven talent crossing once a span completes.
-test('the bridge tells the story and never names a partner it does not have', () => {
+// The bridge is the company in one scroll-controlled picture: constrained startups, a
+// referral-led talent network, and real project work turning into durable proof.
+test('the bridge visual turns referral-led talent into proof without partner claims', () => {
   assert.match(html, /class="bridge-section"/);
+  assert.match(html, /id="bridgeStory"/);
   assert.match(html, /id="bridgeCanvas"/);
-  assert.match(html, /Two sides\. One bridge\./);
+  assert.match(html, /Talent is moving\./);
+  assert.match(html, /The bridge is missing\./);
+  assert.match(html, /Limited capital/);
+  assert.match(html, /No training program/);
+  assert.match(html, /Lean oversight/);
+  for (const stage of ['Projects', 'Work', 'Proof']) assert.match(html, new RegExp(stage));
+  assert.match(html, /href="#bridgeStory"/);
+  assert.match(html, /data-nav-target="bridgeStory"/);
   assert.match(script, /function initBridge\(\)/);
   assert.match(script, /function readProgress\(\)/);
-  // Categories only. A named club or company on a public page reads as a signed partner.
-  assert.match(script, /const RIGHT = \['Robotics club'/);
+  assert.match(script, /function drawCompanyNetwork\(p\)/);
+  assert.match(script, /function drawTalentNetwork\(\)/);
+  assert.match(script, /function drawCrossingTalent\(p, geometry\)/);
+  assert.match(script, /lerp\(geometry\.right, geometry\.left, local\)/);
+  assert.match(script, /section\.style\.setProperty\('--bridge-progress'/);
+  // Categories only. A named club or company on a public page could read as a signed partner.
+  assert.match(script, /Selective consulting club/);
+  assert.match(script, /Professor referral/);
+  assert.match(script, /Industry referral/);
   assert.doesNotMatch(script, /Columbia Consulting Group/);
-  assert.match(html, /Illustrative — categories, not named partners\./);
+  assert.match(html, /Illustrative network — categories, not affiliations or partnership claims\./);
   // The canvas must carry its meaning to a screen reader.
-  assert.match(html, /aria-label="Two columns converge/);
+  assert.match(html, /aria-label="A scroll-controlled network/);
   // Reduced motion gets the FINISHED state, because the connection is the point.
   assert.match(script, /if \(reduce\) return; \/\/ finished state, painted once/);
-  assert.match(styles, /\.bridge-sticky \{ position: sticky/);
+  assert.match(styles, /\.bridge-sticky \{[\s\S]*position: sticky/);
+  assert.match(styles, /\.bridge-visual \{[\s\S]*position: relative/);
+  assert.match(styles, /\.bridge-process \{[\s\S]*grid-template-columns: repeat\(3/);
+  assert.match(styles, /body\[data-audience="home"\] \.stat-band/);
 });
 
 // Machine checks and expert judgement are complementary instruments, not a primary and a
