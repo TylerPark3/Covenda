@@ -7,6 +7,7 @@ import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
 import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission } from './batches.js';
 import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION } from './clubs.js';
+import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
@@ -1472,6 +1473,13 @@ export default async function handler(req, res, dependencies = {}) {
       if (input.action === 'batch-briefs') return res.status(200).json({ ok: true, batches: BATCH_CATALOG.map(batchBrief) });
       // Public too: a club deciding whether to register needs to see what verification takes
       // and what it earns, before handing over a single student.
+      // Pre-auth: a company describes the person they need and gets the requirement card
+      // back with its gaps. Pure — no DB write, nothing stored, no account needed.
+      if (input.action === 'talent-requirement') return res.status(200).json({
+        ok: true,
+        requirement: buildTalentRequirement(input),
+        taxonomy: { verticals: REQUIREMENT_VERTICALS, workTypes: REQUIREMENT_WORK_TYPES },
+      });
       if (input.action === 'club-tiers') return res.status(200).json({
         ok: true,
         tiers: VERIFICATION_TIERS,

@@ -195,7 +195,8 @@
             </div>
             <button class="gold-button work-detail-cta" type="button" data-action="student-form">This fits me → join the talent<svg><use href="#icon-arrow-right"/></svg></button>
           </div>
-          <button class="gold-button selector-submit" type="button" data-action="student-form">Join the talent<svg><use href="#icon-arrow-right"/></svg></button>
+          <button class="gold-button selector-submit" type="button" data-action="student-quick">Join the talent<svg><use href="#icon-arrow-right"/></svg></button>
+          <button class="quiet-link selector-detail" type="button" data-action="student-form">Or add full details now<svg><use href="#icon-chevron"/></svg></button>
           <button class="quiet-link selector-quickjoin" type="button" data-action="student-quick">In a rush? Just get on the list — name, email, 30 seconds</button>
           <nav class="student-journey" aria-label="Student journey">
             <button type="button" data-action="focus-pathfinder"><i>1</i><span><b>Explore</b><small>Choose a work path</small></span></button>
@@ -208,25 +209,52 @@
 
       <section class="hero hero-company" aria-labelledby="companyHeroTitle">
         <div class="hero-copy">
-          <h1 id="companyHeroTitle">Two ways Covenda moves your <span class="word-gold">work</span>.</h1>
-          <p>Hand off the work that keeps slipping — or find vouched talent to do it. A low-risk work-trial, scoped and reviewed. Skills over résumés, not a spam pile.</p>
+          <h1 id="companyHeroTitle">Build the <span class="word-gold">intern</span> you need.</h1>
+          <p>Describe the person, not a job post. Covenda designs a paid trial that does real work for you and shows whether the fit is right — before anyone commits.</p>
         </div>
         <div class="company-jobs">
+          <article class="company-job company-job-builder">
+            <p class="company-job-eyebrow"><svg><use href="#icon-user"/></svg>Build the profile</p>
+            <h2>The intern you actually need</h2>
+            <p>Pick the field and the work. Add what they would help with. We turn that into a scoped trial and a shortlist you can read in a minute.</p>
+            <form class="ideal-builder" id="idealBuilder" novalidate>
+              <fieldset class="ib-field">
+                <legend>Field</legend>
+                <div class="ib-chips" id="ibVerticals" role="group" aria-label="Choose the field"></div>
+              </fieldset>
+              <fieldset class="ib-field">
+                <legend>Kind of work</legend>
+                <div class="ib-chips" id="ibWorkTypes" role="group" aria-label="Choose the kind of work"></div>
+              </fieldset>
+              <div class="ib-row">
+                <label>Must-have skills <span>Comma-separated</span><input name="requiredSkills" placeholder="Python, SQL"></label>
+                <label>Hours / week<input name="hoursPerWeek" type="number" min="1" max="40" inputmode="numeric" placeholder="10"></label>
+                <label>Length <span>Weeks</span><input name="durationWeeks" type="number" min="1" max="26" inputmode="numeric" placeholder="4"></label>
+                <label>Your review time <span>Min / week</span><input name="reviewMinutesPerWeek" type="number" min="0" max="600" inputmode="numeric" placeholder="60"></label>
+              </div>
+              <label class="ib-problem">What would they help with?<textarea name="problem" rows="3" placeholder="The work you'd hand them, and what a useful finish looks like…"></textarea></label>
+              <div class="ib-actions">
+                <button class="gold-button" type="submit">Build the profile<svg><use href="#icon-arrow-right"/></svg></button>
+                <button class="quiet-link" type="button" data-action="schedule-demo">Prefer a call first?<svg><use href="#icon-chevron"/></svg></button>
+              </div>
+              <div class="form-message" id="ibMessage" role="status" aria-live="polite"></div>
+            </form>
+            <div class="ib-result" id="ibResult" hidden></div>
+          </article>
           <article class="company-job">
-            <p class="company-job-eyebrow"><svg><use href="#icon-clock"/></svg>Delegate the backlog</p>
+            <p class="company-job-eyebrow"><svg><use href="#icon-clock"/></svg>Or start from the work</p>
             <h2>Work that keeps getting pushed back</h2>
-            <p>Describe what is not getting done. Covenda turns the safe, useful part into a project your team can approve.</p>
+            <p>Already know the task? Describe it and Covenda turns the safe, useful part into a project your team can approve.</p>
             <div class="selector-orbit company-orbit">
               <div class="company-composer glass-panel">
                 <svg class="composer-icon"><use href="#icon-file"/></svg>
                 <label class="sr-only" for="companyProblemSeed">Describe the company problem</label>
-                <textarea id="companyProblemSeed" rows="4" placeholder="Tell us what is not getting done, why it matters, and what a useful finish looks like…"></textarea>
+                <textarea id="companyProblemSeed" rows="3" placeholder="Tell us what is not getting done…"></textarea>
                 <button class="gold-button" type="button" data-action="portal-create-project">Create Project<svg><use href="#icon-arrow-right"/></svg></button>
               </div>
               <div class="composer-meta">
                 <span class="composer-fit" id="companyFitChip" data-fit="empty" role="status" aria-live="polite">Start typing — we’ll show project fit</span>
               </div>
-              <button class="quiet-link company-secondary" type="button" data-action="schedule-demo">Prefer a call first? Schedule a demo<svg><use href="#icon-chevron"/></svg></button>
             </div>
           </article>
           <article class="company-job company-job-talent">

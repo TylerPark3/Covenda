@@ -334,6 +334,11 @@ test('batch board selects benches and walks through them full-width', () => {
   assert.match(html, /id="batchLearnMore"/);
   assert.match(html, /id="batchDeep"/);
   assert.match(script, /const batchPicks = new Set\(\)/);
+  // The whole card is the control — no separate "Select" button to hunt for — and it stays
+  // keyboard-operable and announced as a toggle rather than a click handler on a div.
+  assert.match(script, /card\.setAttribute\('role', 'button'\)/);
+  assert.match(script, /card\.addEventListener\('keydown'/);
+  assert.doesNotMatch(script, /textContent: 'Select'/);
   assert.match(script, /function renderBatchDeepDive\(\)/);
   assert.match(script, /function batchDiagram\(/);
   assert.match(script, /HOW_TO_APPLY/);
@@ -395,4 +400,16 @@ test('the geometric motif extends past the hero and stays decorative', () => {
   // Decorative layers must never eat clicks.
   const motif = styles.slice(styles.indexOf('Geometric motif, carried past the hero'));
   assert.ok((motif.match(/pointer-events: none/g) || []).length >= 3);
+});
+
+test('batch selection has real feedback and respects reduced motion', () => {
+  assert.match(styles, /@keyframes batchPickPulse/);
+  assert.match(styles, /\.batch-card\.is-picked \.batch-mark/);
+  const rm = styles.slice(styles.indexOf('@keyframes batchPickPulse'));
+  assert.match(rm, /prefers-reduced-motion: reduce[\s\S]*animation: none/);
+});
+
+test('joining the talent pool is name, email and school — not the four-step form', () => {
+  assert.match(html, /data-action="student-quick"[^>]*>Join the talent/);
+  assert.match(html, /Or add full details now/);
 });

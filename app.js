@@ -3341,21 +3341,39 @@ function renderBatchCard(grid, entry, brief) {
   );
   if (brief) batchBriefIndex.set(entry.id, { entry, brief });
 
-  const pick = document.createElement('button');
-  pick.type = 'button';
-  pick.className = 'batch-pick';
-  pick.setAttribute('aria-pressed', 'false');
-  pick.dataset.batchPick = entry.id;
-  pick.append(createIcon('icon-check'), Object.assign(document.createElement('span'), { textContent: 'Select' }));
-  pick.addEventListener('click', () => {
+  // The whole card is the target. A separate "Select" button asked the reader to find a
+  // small control on a big obvious box — the box IS the control. Kept keyboard-operable and
+  // announced as a toggle rather than faking it with a click handler on a div.
+  card.setAttribute('role', 'button');
+  card.tabIndex = 0;
+  card.setAttribute('aria-pressed', 'false');
+  card.dataset.batchPick = entry.id;
+
+  const mark = document.createElement('span');
+  mark.className = 'batch-mark';
+  mark.append(createIcon('icon-check'));
+  card.append(mark);
+
+  const toggle = () => {
     const on = !batchPicks.has(entry.id);
     if (on) batchPicks.add(entry.id); else batchPicks.delete(entry.id);
-    pick.setAttribute('aria-pressed', String(on));
+    card.setAttribute('aria-pressed', String(on));
     card.classList.toggle('is-picked', on);
-    $('span', pick).textContent = on ? 'Selected' : 'Select';
+    if (on) {
+      // A short, one-shot confirmation. Restarted by hand so rapid re-selection still reads.
+      card.classList.remove('just-picked');
+      void card.offsetWidth;
+      card.classList.add('just-picked');
+    }
     syncBatchPickBar();
+  };
+  card.addEventListener('click', toggle);
+  card.addEventListener('keydown', event => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault(); // Space would scroll the page
+    toggle();
   });
-  card.append(pick);
+
   grid.append(card);
 }
 
@@ -3528,8 +3546,7 @@ function renderBatchDeepDive() {
     $$('[data-batch-pick]').forEach(b => {
       if (!batchPicks.has(b.dataset.batchPick)) return;
       b.setAttribute('aria-pressed', 'true');
-      b.closest('.batch-card')?.classList.add('is-picked');
-      $('span', b).textContent = 'Selected';
+      b.classList.add('is-picked');
     });
     syncBatchPickBar();
   };
@@ -3539,8 +3556,7 @@ function renderBatchDeepDive() {
     batchPicks.clear();
     $$('[data-batch-pick]').forEach(b => {
       b.setAttribute('aria-pressed', 'false');
-      b.closest('.batch-card')?.classList.remove('is-picked');
-      $('span', b).textContent = 'Select';
+      b.classList.remove('is-picked', 'just-picked');
     });
     syncBatchPickBar();
     const host = $('#batchDeep');
@@ -5156,6 +5172,143 @@ function renderReadiness(readiness) {
           message.textContent = (body && body.error) || 'That did not go through. Try again shortly.';
         }
       }).catch(function () { message.textContent = 'That did not go through. Try again shortly.'; });
+  });
+})();
+
+
+// "Build the intern you need" — the company-side counterpart to the student's narrowing.
+// Posts to the pre-auth talent-requirement action, which runs the same buildTalentRequirement
+// the matcher consumes, so what a company sees here is what the engine will actually rank on.
+// Nothing is stored: the endpoint is pure and needs no account.
+(function initIdealBuilder() {
+  var form = document.getElementById('idealBuilder');
+  var result = document.getElementById('ibResult');
+  if (!form || !result) return;
+  var message = document.getElementById('ibMessage');
+  var picked = { verticals: new Set(), workTypes: new Set() };
+
+  function chipInto(host, value, bucket) {
+    var chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'ib-chip';
+    chip.setAttribute('aria-pressed', 'false');
+    chip.textContent = value;
+    chip.addEventListener('click', function () {
+      var on = !bucket.has(value);
+      if (on) bucket.add(value); else bucket.delete(value);
+      chip.setAttribute('aria-pressed', String(on));
+    });
+    host.append(chip);
+  }
+
+  // Taxonomy comes from the server so the chips can never offer a vertical the matcher
+  // would silently drop.
+  fetch('/api/portal', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'talent-requirement' }),
+  }).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+    if (!data || !data.ok) return;
+    var vHost = document.getElementById('ibVerticals');
+    var wHost = document.getElementById('ibWorkTypes');
+    (data.taxonomy.verticals || []).forEach(function (v) { chipInto(vHost, v, picked.verticals); });
+    (data.taxonomy.workTypes || []).forEach(function (w) { chipInto(wHost, w, picked.workTypes); });
+  }).catch(function () { /* no serverless in static preview — the rest of the form still posts */ });
+
+  function line(label, value) {
+    var row = document.createElement('div');
+    row.className = 'ib-line';
+    row.append(
+      Object.assign(document.createElement('span'), { textContent: label }),
+      Object.assign(document.createElement('strong'), { textContent: value }),
+    );
+    return row;
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var data = new FormData(form);
+    if (!picked.verticals.size && !String(data.get('requiredSkills') || '').trim()) {
+      message.textContent = 'Pick a field or name one must-have skill — that is enough to start.';
+      return;
+    }
+    message.textContent = 'Building…';
+    fetch('/api/portal', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'talent-requirement',
+        verticals: [].concat(Array.from(picked.verticals)),
+        workTypes: [].concat(Array.from(picked.workTypes)),
+        requiredSkills: String(data.get('requiredSkills') || ''),
+        hoursPerWeek: data.get('hoursPerWeek'),
+        durationWeeks: data.get('durationWeeks'),
+        reviewMinutesPerWeek: data.get('reviewMinutesPerWeek'),
+        problem: String(data.get('problem') || ''),
+      }),
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (body) {
+      if (!body || !body.ok) { message.textContent = 'That did not go through. Try again shortly.'; return; }
+      message.textContent = '';
+      var req = body.requirement;
+      result.replaceChildren();
+
+      var head = document.createElement('div');
+      head.className = 'ib-result-head';
+      head.append(
+        Object.assign(document.createElement('p'), { className: 'feature-kicker', textContent: 'Your talent requirement' }),
+        Object.assign(document.createElement('h3'), { textContent: req.title }),
+      );
+      result.append(head);
+
+      var facts = document.createElement('div');
+      facts.className = 'ib-lines';
+      if (req.verticals.length) facts.append(line('Field', req.verticals.join(', ')));
+      if (req.work_types.length) facts.append(line('Work', req.work_types.join(', ')));
+      if (req.required_skills.length) facts.append(line('Must-have', req.required_skills.join(', ')));
+      if (req.hours_week) facts.append(line('Commitment', req.hours_week + ' hrs/week'));
+      if (req.duration_weeks) facts.append(line('Length', req.duration_weeks + ' weeks'));
+      if (req.founder_time_budget_min_week) facts.append(line('Your review time', req.founder_time_budget_min_week + ' min/week'));
+      result.append(facts);
+
+      // The trial IS the fit test — that is the whole reframe away from a job post.
+      var next = document.createElement('div');
+      next.className = 'ib-next';
+      next.append(
+        Object.assign(document.createElement('h4'), { textContent: 'What happens next' }),
+        Object.assign(document.createElement('p'), { textContent: 'Covenda designs a paid trial from this — real work that is useful to you on its own, and that shows how this person actually operates before either side commits.' })
+      );
+      result.append(next);
+
+      if (req.completeness.gaps.length) {
+        var gaps = document.createElement('div');
+        gaps.className = 'ib-gaps';
+        gaps.append(Object.assign(document.createElement('h4'), { textContent: 'Sharpen the match' }));
+        var ul = document.createElement('ul');
+        req.completeness.gaps.forEach(function (g) {
+          ul.append(Object.assign(document.createElement('li'), { textContent: g.gain }));
+        });
+        gaps.append(ul);
+        result.append(gaps);
+      }
+
+      var cta = document.createElement('div');
+      cta.className = 'ib-cta';
+      var send = document.createElement('button');
+      send.type = 'button'; send.className = 'gold-button';
+      send.append(document.createTextNode('Send this to Covenda'), createIcon('icon-arrow-right'));
+      send.addEventListener('click', function () {
+        var seed = document.getElementById('companyProblemSeed');
+        if (seed && !seed.value.trim()) {
+          seed.value = 'Ideal profile: ' + [req.verticals.join(', '), req.required_skills.join(', ')].filter(Boolean).join(' · ')
+            + (req.problem ? '\n\n' + req.problem : '');
+          seed.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        openDialog(companyDialog, companyForm);
+      });
+      cta.append(send);
+      result.append(cta);
+
+      result.hidden = false;
+      result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }).catch(function () { message.textContent = 'That did not go through. Try again shortly.'; });
   });
 })();
 
