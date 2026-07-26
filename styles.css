@@ -2170,7 +2170,6 @@ html.js-reveal .reveal.is-revealed { opacity: 1; transform: none; }
 .hero-home { display: none; }
 body[data-audience="home"] .hero-home { display: block; }
 /* The official one-liner gets real weight in the hero — larger, ink-dark, tight measure. */
-.hero-home .home-oneliner { max-width: 780px; color: var(--ink); font-size: clamp(18px, 2vw, 23px); line-height: 1.5; font-weight: 500; }
 /* Subtle gold "signal from noise" field behind the home hero. Sits above the soft
    background glows (z-index:-1) but below the content, which we lift to z-index:1. */
 .hero-field { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
@@ -3337,7 +3336,6 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .home-path small { font-family: var(--font-body); font-weight: 450; }
 
 /* The hero kicker needs air above it — it was sitting against the header. */
-.hero-home .hero-copy { padding-top: clamp(18px, 5vh, 54px); }
 .home-kicker { margin-bottom: 20px; }
 
 /* ---- Trial walkthrough: five steps you page through -------------------------------
@@ -3824,3 +3822,14 @@ body:not([data-audience="home"]) .trial-flow { display: none; }
 .ref-illus { display: flex; align-items: flex-start; gap: 9px; margin-top: clamp(20px, 2.4vw, 28px); color: var(--soft); font-size: 13px; }
 .ref-illus svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 2px; color: var(--gold-deep); }
 @media (max-width: 900px) { .ref-grid { grid-template-columns: 1fr; } }
+
+/* ---- Reconciling the dark hero with the gold word ----------------------------------
+   .word-gold paints a gradient via background-clip:text with -webkit-text-fill-color:
+   transparent. That transparent fill beats a plain `color`, so setting one on the dark hero
+   had no effect and the word kept the gradient picked for a white page — too dark on
+   #12120f. Brightened here, where the ground actually is dark. */
+.hero-home .word-gold {
+  background-image:
+    linear-gradient(102deg, transparent 40%, rgba(255,246,224,.95) 50%, transparent 60%),
+    linear-gradient(96deg, #C9A24B 0%, #E8C87E 44%, #FFF0C4 66%, #D8A744 90%);
+}
