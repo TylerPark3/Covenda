@@ -3353,3 +3353,10 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
   .ib-row { grid-template-columns: 1.6fr repeat(3, 1fr); }
   .ib-chips { gap: 9px; }
 }
+
+/* Two subtaps under "Why this exists": the collapse of the signal, and the movement of the
+   talent. Sits above the two audience columns and sets up both of them. */
+.broken-subtaps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: clamp(20px, 3vw, 40px); margin-top: clamp(24px, 3vw, 36px); }
+.bsub { padding-top: 16px; border-top: 2px solid var(--gold-deep); }
+.bsub-tag { margin: 0 0 10px; color: var(--gold-deep); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.bsub p:last-child { max-width: 52ch; margin: 0; color: var(--muted); font-size: var(--step-body); line-height: 1.65; }

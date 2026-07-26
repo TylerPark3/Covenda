@@ -483,3 +483,23 @@ test('the company problem field lives inside the builder, with its fit chip', ()
   assert.ok(builder.includes('companyProblemSeed'), 'problem field must be inside the builder form');
   assert.ok(builder.includes('companyFitChip'), 'fit chip must sit with the field it describes');
 });
+
+// "Why this exists" names both forces: applications became free to generate, and the
+// students worth finding started leaving the places that used to collect them.
+test('why-this-exists names the AI application flood and the talent shift', () => {
+  assert.match(html, /The signal collapsed/);
+  assert.match(html, /The talent moved/);
+  assert.match(html, /AI writes a strong application in seconds/);
+  assert.match(html, /turning down banking and, increasingly, big tech/);
+  // The shift is stated as early and starting, not as an established fact we cannot cite.
+  assert.match(html, /trend is early but it has started/);
+  assert.match(styles, /\.broken-subtaps/);
+});
+
+// The student's case is not only "you get judged unfairly" — it is that the work itself is
+// real: contributing to something and building domain expertise, not monkey work.
+test('the student case names real work and domain expertise, not monkey work', () => {
+  assert.match(html, /not monkey work/);
+  assert.match(html, /build domain expertise while contributing/);
+  assert.match(html, /real problems, real domain expertise/);
+});
