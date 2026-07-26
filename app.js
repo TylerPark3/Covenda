@@ -3315,26 +3315,142 @@ const BATCHES = [
 ];
 function joinBatch(batch) {
   const field = $('#studentBatch');
-  if (field) field.value = batch.id + ' · ' + batch.industry;
+  if (field) field.value = batch.id + ' \u00b7 ' + batch.industry;
   openDialog(studentDialog, studentForm);
   if (field) saveDraft(studentForm);
 }
+
+// The public batch board. Renders the SAME brief the portal renders — fetched from
+// api/batches.js via the pre-auth 'batch-briefs' action — so the bar a visitor reads here
+// and the bar the portal checks them against can never drift apart.
+//
+// Audience-split, matching the wireframes: a student needs the requirements, a company needs
+// the evaluation walkthrough. Both are rendered and CSS shows the one that applies, so
+// switching audience needs no re-render.
+function batchDetailPanel(brief) {
+  const detail = document.createElement('div');
+  detail.className = 'pb-detail';
+  detail.hidden = true;
+
+  const vetting = document.createElement('div');
+  vetting.className = 'pb-block';
+  const vh = document.createElement('p'); vh.className = 'pb-block-t'; vh.textContent = 'How this industry is vetted';
+  const badge = document.createElement('span');
+  badge.className = 'pb-badge' + (brief.vetting.apiVerified ? ' is-api' : '');
+  badge.textContent = brief.vetting.apiVerified ? 'Platform-verified evidence' : 'Human rail \u2014 no API can prove this work';
+  vetting.append(vh, badge);
+  for (const rail of brief.vetting.rails) {
+    const row = document.createElement('div'); row.className = 'pb-rail';
+    row.append(
+      Object.assign(document.createElement('strong'), { textContent: rail.label }),
+      Object.assign(document.createElement('p'), { textContent: rail.how }),
+    );
+    vetting.append(row);
+  }
+  detail.append(vetting);
+
+  // Student: the published bar.
+  const reqs = document.createElement('div');
+  reqs.className = 'pb-block audience-content';
+  reqs.dataset.forAudience = 'student';
+  reqs.append(Object.assign(document.createElement('p'), { className: 'pb-block-t', textContent: 'What it takes to get in' }));
+  const list = document.createElement('ul'); list.className = 'pb-reqs';
+  for (const req of brief.requirements) {
+    const li = document.createElement('li');
+    li.append(createIcon('icon-check'));
+    const body = document.createElement('div');
+    body.append(Object.assign(document.createElement('strong'), { textContent: req.label }));
+    if (req.detail) body.append(Object.assign(document.createElement('p'), { textContent: req.detail }));
+    li.append(body);
+    list.append(li);
+  }
+  reqs.append(list);
+  reqs.append(Object.assign(document.createElement('p'), {
+    className: 'pb-note',
+    textContent: 'Clearing the bar is a recommendation, not an admission \u2014 an operator reviews every application and records why.',
+  }));
+  detail.append(reqs);
+
+  // Company: the evaluation walkthrough.
+  const flow = document.createElement('div');
+  flow.className = 'pb-block audience-content';
+  flow.dataset.forAudience = 'company';
+  flow.append(Object.assign(document.createElement('p'), { className: 'pb-block-t', textContent: 'How you evaluate this bench' }));
+  const ol = document.createElement('ol'); ol.className = 'pb-steps';
+  for (const step of brief.companyWorkflow) {
+    const li = document.createElement('li');
+    li.append(Object.assign(document.createElement('span'), { className: 'pb-n', textContent: String(step.step) }));
+    const body = document.createElement('div');
+    body.append(
+      Object.assign(document.createElement('strong'), { textContent: step.title }),
+      Object.assign(document.createElement('p'), { textContent: step.detail }),
+    );
+    li.append(body);
+    ol.append(li);
+  }
+  flow.append(ol);
+  detail.append(flow);
+  return detail;
+}
+
+function renderBatchCard(grid, entry, brief) {
+  const card = document.createElement('article');
+  card.className = 'batch-card glass-panel' + (brief ? ' has-detail' : '');
+  card.append(
+    Object.assign(document.createElement('p'), { className: 'batch-function', textContent: entry.industry }),
+    Object.assign(document.createElement('h3'), { className: 'batch-title', textContent: entry.title }),
+    Object.assign(document.createElement('p'), { className: 'batch-desc', textContent: brief ? brief.summary : entry.description }),
+    Object.assign(document.createElement('span'), { className: 'batch-status', textContent: entry.status }),
+  );
+  const actions = document.createElement('div');
+  actions.className = 'batch-actions-row';
+  const join = document.createElement('button');
+  join.type = 'button'; join.className = 'gold-button batch-join'; join.textContent = 'Join this batch';
+  join.addEventListener('click', () => joinBatch(entry));
+  actions.append(join);
+  if (brief) {
+    const detail = batchDetailPanel(brief);
+    const toggle = document.createElement('button');
+    toggle.type = 'button'; toggle.className = 'quiet-link pb-toggle';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.append(document.createTextNode('See the bar'), createIcon('icon-chevron'));
+    toggle.addEventListener('click', () => {
+      const open = detail.hidden;
+      detail.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.firstChild.textContent = open ? 'Hide the bar' : 'See the bar';
+    });
+    actions.append(toggle);
+    card.append(actions, detail);
+  } else {
+    card.append(actions);
+  }
+  grid.append(card);
+}
+
 (() => {
   const grid = document.querySelector('[data-batch-grid]');
   if (!grid) return;
-  grid.textContent = '';
-  for (const batch of BATCHES) {
-    const card = document.createElement('article');
-    card.className = 'batch-card glass-panel';
-    const fn = document.createElement('p'); fn.className = 'batch-function'; fn.textContent = batch.industry;
-    const title = document.createElement('h3'); title.className = 'batch-title'; title.textContent = batch.title;
-    const desc = document.createElement('p'); desc.className = 'batch-desc'; desc.textContent = batch.description;
-    const status = document.createElement('span'); status.className = 'batch-status'; status.textContent = batch.status;
-    const join = document.createElement('button'); join.type = 'button'; join.className = 'gold-button batch-join'; join.textContent = 'Join this batch';
-    join.addEventListener('click', () => joinBatch(batch));
-    card.append(fn, title, desc, status, join);
-    grid.append(card);
-  }
+  const paint = briefs => {
+    grid.textContent = '';
+    for (const entry of BATCHES) {
+      // Match on slug; the old hardcoded ids drifted from the catalogue (healthcare-ops vs
+      // healthcare-operations), so fall back to the discipline name.
+      const brief = (briefs || []).find(b => b.slug === entry.id)
+        || (briefs || []).find(b => b.name === entry.industry)
+        || null;
+      renderBatchCard(grid, entry, brief);
+    }
+  };
+  paint(null); // Static-preview safe: cards render before (and without) the serverless call.
+  fetch('/api/portal', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'batch-briefs' }),
+  })
+    .then(res => (res.ok ? res.json() : null))
+    .then(data => { if (data && data.ok && Array.isArray(data.batches)) paint(data.batches); })
+    .catch(() => { /* No serverless in static preview — the plain cards above still stand. */ });
 })();
 
 $('#submissionHistory').addEventListener('click', event => {

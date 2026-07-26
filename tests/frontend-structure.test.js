@@ -269,3 +269,29 @@ test('the how-we-verify section exists and advertises only what is actually buil
   assert.match(block, /m\.status === 'human_rail'/);
   assert.ok(!/status === 'planned'|status === 'stub'/.test(block), 'must not surface planned/stub connectors');
 });
+
+// The public batch board renders the same brief the portal does, fetched from the pre-auth
+// 'batch-briefs' action — so the bar a visitor reads and the bar the portal checks them
+// against cannot drift. The old hardcoded BATCHES array survives only as a static-preview
+// fallback (no serverless locally), never as a second source of truth for the bar.
+test('public batch board renders the shipped brief, split by audience', () => {
+  assert.match(script, /action: 'batch-briefs'/);
+  assert.match(script, /function batchDetailPanel\(/);
+  assert.match(script, /How this industry is vetted/);
+  assert.match(script, /What it takes to get in/);       // student view
+  assert.match(script, /How you evaluate this bench/);   // company view
+  assert.match(script, /data-batch-grid/);
+  // Honest labelling survives the trip to the marketing site.
+  assert.match(script, /Human rail/);
+  assert.match(script, /recommendation, not an admission/);
+  // Audience split is CSS-driven, so switching audience needs no re-render.
+  assert.match(styles, /body\[data-audience="company"\] \.pb-detail \.audience-content\[data-for-audience="company"\]/);
+  assert.match(styles, /\.pb-reqs/);
+  assert.match(styles, /\.pb-steps/);
+});
+
+test('batch board degrades without the serverless function', () => {
+  // paint(null) runs before the fetch, so a static preview still shows the cards.
+  assert.match(script, /paint\(null\)/);
+  assert.match(script, /\.catch\(\(\) => \{ \/\* No serverless in static preview/);
+});

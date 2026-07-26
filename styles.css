@@ -3074,3 +3074,39 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 .verify-col li strong { font-size: 14.5px; letter-spacing: -.01em; }
 .verify-col li span { color: var(--muted); font-size: 13px; line-height: 1.55; }
 .verify-note { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--soft); font-size: 12.5px; line-height: 1.6; }
+
+/* ---- Public batch board detail: the same brief the portal renders, audience-split.
+       Student sees the bar; company sees the evaluation walkthrough. ------------------ */
+.batch-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin-top: 16px; }
+.batch-actions-row .batch-join { margin-top: 0; }
+.pb-toggle { margin-top: 0; font-size: 14px; font-weight: 600; }
+.pb-toggle svg { transition: transform .16s ease; }
+.pb-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+
+.pb-detail { display: grid; gap: 16px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+.pb-block { padding: 16px 18px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: rgba(255,255,255,.6); }
+.pb-block-t { margin: 0 0 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); }
+.pb-badge { display: inline-block; margin-bottom: 12px; padding: 4px 11px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.pb-badge.is-api { border-color: var(--gold); background: var(--gold-pale); color: var(--gold-deep); }
+.pb-rail { padding-left: 13px; border-left: 2px solid var(--gold-light); }
+.pb-rail + .pb-rail { margin-top: 13px; }
+.pb-rail strong { display: block; font-size: 15px; }
+.pb-rail p { margin: 5px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
+
+.pb-reqs { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; }
+.pb-reqs li { display: grid; grid-template-columns: 18px 1fr; gap: 11px; align-items: start; }
+.pb-reqs svg { width: 15px; height: 15px; margin-top: 4px; color: var(--gold-deep); }
+.pb-reqs strong { display: block; font-size: 15px; }
+.pb-reqs p { margin: 4px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
+.pb-note { margin: 13px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+.pb-steps { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; }
+.pb-steps li { display: grid; grid-template-columns: 27px 1fr; gap: 12px; align-items: start; }
+.pb-n { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--gold-deep); border-radius: 50%; color: var(--gold-deep); font-size: 12.5px; font-weight: 700; }
+.pb-steps strong { display: block; font-size: 15px; }
+.pb-steps p { margin: 4px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
+
+/* The detail blocks are audience-split; on the home view show the student bar by default. */
+.pb-detail .audience-content[data-for-audience="student"] { display: block; }
+body[data-audience="company"] .pb-detail .audience-content[data-for-audience="student"] { display: none; }
+body[data-audience="company"] .pb-detail .audience-content[data-for-audience="company"] { display: block; }
