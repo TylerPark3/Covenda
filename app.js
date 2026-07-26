@@ -5613,41 +5613,65 @@ function initBatchWeb() {
   var viewport = document.getElementById('tfViewport');
   var track = document.getElementById('tfTrack');
   var dotsHost = document.getElementById('tfDots');
-  if (!viewport || !track || !dotsHost) return;
+  var prev = document.getElementById('tfPrev');
+  var next = document.getElementById('tfNext');
+  if (!viewport || !track || !dotsHost || !prev || !next) return;
   var slides = Array.prototype.slice.call(track.children);
   if (slides.length < 2) return;
-  var index = 0;
+  var page = 0, pages = 1;
 
-  var dots = slides.map(function (slide, i) {
-    var dot = document.createElement('button');
-    dot.type = 'button';
-    dot.className = 'tf-dot';
-    dot.setAttribute('role', 'tab');
-    dot.setAttribute('aria-label', 'Step ' + (i + 1));
-    dot.setAttribute('aria-selected', String(i === 0));
-    dot.addEventListener('click', function () { go(i); });
-    dotsHost.append(dot);
-    return dot;
-  });
-
-  function sync(next) {
-    index = Math.max(0, Math.min(slides.length - 1, next));
-    dots.forEach(function (d, i) { d.setAttribute('aria-selected', String(i === index)); });
-    document.getElementById('tfPrev').disabled = index === 0;
-    document.getElementById('tfNext').disabled = index === slides.length - 1;
-  }
-  function go(next) {
-    sync(next);
-    // scrollIntoView would also scroll the PAGE to the section; scrollLeft moves only the rail.
-    viewport.scrollTo({ left: slides[index].offsetLeft - track.offsetLeft, behavior: 'smooth' });
+  // One dot per PAGE, not per slide. On a wide screen four of the five cards are already on
+  // show, so five dots and five clicks described a journey that is not there — the controls
+  // have to reflect how far the rail can actually move.
+  function measure() {
+    var span = track.scrollWidth - viewport.clientWidth;
+    if (span < 8) { pages = 1; return; }
+    pages = Math.max(1, Math.ceil(track.scrollWidth / Math.max(1, viewport.clientWidth)));
   }
 
-  document.getElementById('tfPrev').addEventListener('click', function () { go(index - 1); });
-  document.getElementById('tfNext').addEventListener('click', function () { go(index + 1); });
+  function buildDots() {
+    dotsHost.replaceChildren();
+    if (pages < 2) return;
+    for (var i = 0; i < pages; i++) {
+      (function (n) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'tf-dot';
+        dot.setAttribute('role', 'tab');
+        dot.setAttribute('aria-label', 'View ' + (n + 1) + ' of ' + pages);
+        dot.addEventListener('click', function () { go(n); });
+        dotsHost.append(dot);
+      })(i);
+    }
+  }
+
+  function sync(nextPage) {
+    page = Math.max(0, Math.min(pages - 1, nextPage));
+    Array.prototype.forEach.call(dotsHost.children, function (d, i) {
+      d.setAttribute('aria-selected', String(i === page));
+    });
+    prev.disabled = page === 0;
+    next.disabled = page >= pages - 1;
+    // Nothing to page through: hide the controls rather than showing dead arrows.
+    var idle = pages < 2;
+    prev.hidden = idle; next.hidden = idle; dotsHost.hidden = idle;
+    viewport.setAttribute('aria-label', idle
+      ? 'Trial steps'
+      : 'Trial steps, use arrow keys to move between them');
+  }
+
+  function go(nextPage) {
+    sync(nextPage);
+    viewport.scrollTo({ left: page * viewport.clientWidth, behavior: 'smooth' });
+  }
+
+  prev.addEventListener('click', function () { go(page - 1); });
+  next.addEventListener('click', function () { go(page + 1); });
   viewport.addEventListener('keydown', function (event) {
     if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    if (pages < 2) return;
     event.preventDefault();
-    go(index + (event.key === 'ArrowRight' ? 1 : -1));
+    go(page + (event.key === 'ArrowRight' ? 1 : -1));
   });
 
   // Swipe and trackpad move the rail without going through go(), so the dots follow the
@@ -5657,19 +5681,21 @@ function initBatchWeb() {
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(function () {
-      var mid = viewport.scrollLeft + viewport.clientWidth / 2;
-      var nearest = 0, best = Infinity;
-      slides.forEach(function (slide, i) {
-        var centre = slide.offsetLeft - track.offsetLeft + slide.offsetWidth / 2;
-        var dist = Math.abs(centre - mid);
-        if (dist < best) { best = dist; nearest = i; }
-      });
-      if (nearest !== index) sync(nearest);
+      var at = Math.round(viewport.scrollLeft / Math.max(1, viewport.clientWidth));
+      if (at !== page) sync(at);
       ticking = false;
     });
   }, { passive: true });
 
-  sync(0);
+  function refresh() {
+    var before = pages;
+    measure();
+    if (pages !== before) buildDots();
+    sync(Math.min(page, pages - 1));
+  }
+  refresh();
+  window.addEventListener('resize', refresh);
+  if ('ResizeObserver' in window) new ResizeObserver(refresh).observe(viewport);
 })();
 
 

@@ -3368,7 +3368,7 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .tf-head { margin-bottom: clamp(18px, 2.4vw, 26px); }
 .tf-head h3 { margin: 6px 0 0; font-size: clamp(21px, 2.5vw, 28px); }
 
-.tf-viewport { overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.tf-viewport { overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
 .tf-viewport::-webkit-scrollbar { display: none; }
 .tf-viewport:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 4px; }
 .tf-track { display: flex; gap: clamp(14px, 2vw, 22px); margin: 0; padding: 0; list-style: none; }
@@ -3385,6 +3385,8 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .tf-art { display: block; width: 100%; height: auto; margin-top: 6px; }
 
 .tf-controls { display: flex; align-items: center; gap: 16px; margin-top: clamp(16px, 2vw, 22px); }
+.tf-controls:has(> [hidden]) { margin-top: 0; }
+.tf-arrow[hidden], .tf-dots[hidden] { display: none; }
 .tf-arrow {
   width: 40px; height: 40px; display: grid; place-items: center;
   border: 1px solid var(--line-strong); background: #fff; color: var(--ink);

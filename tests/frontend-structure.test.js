@@ -460,7 +460,11 @@ test('the trial walkthrough explains the five steps and stays operable', () => {
   // Native scroll-snap means swipe works with no JS; the rail must still read unscripted.
   assert.match(styles, /\.tf-viewport \{[\s\S]*?scroll-snap-type: x mandatory/);
   // Dots follow the scroll rather than assuming they caused it.
-  assert.match(script, /if \(nearest !== index\) sync\(nearest\)/);
+  assert.match(script, /if \(at !== page\) sync\(at\)/);
+  // One dot per PAGE, not per slide: with four of five cards already visible, five dots
+  // described a journey that does not exist. Controls hide entirely when nothing can move.
+  assert.match(script, /pages = Math\.max\(1, Math\.ceil\(track\.scrollWidth/);
+  assert.match(script, /var idle = pages < 2;/);
   assert.match(script, /ArrowRight/);
   // The pop-art panel must not linger.
   assert.doesNotMatch(html, /popart/);
