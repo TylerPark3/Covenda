@@ -409,14 +409,20 @@ test('batches are described as elite batches', () => {
 });
 
 // Credibility is club-led now, and the geometric motif carries past the hero.
-test('credibility section offers three routes with faculty de-emphasised', () => {
-  assert.match(html, /Credibility is built,/);
-  assert.match(html, /A top club/);
-  assert.match(html, /Research/);
+// The section was three paragraph cards plus a numbered list restating them. It is one
+// figure now: three ways in converging on a ladder that is the same for everyone.
+test('credibility is shown as a diagram, not restated in prose', () => {
+  assert.match(html, /Three ways in/);
+  assert.match(html, /class="cred-fig"/);
+  assert.match(html, /A verified club/);
   assert.match(html, /Vetted work/);
-  assert.doesNotMatch(html, /Two ways to earn/);
-  // Faculty still counts — stated plainly, not deleted.
-  assert.match(html, /still counts — it is just no longer the only door/);
+  // Faculty is present and visibly the lightest — dashed, greyed, stated in the label.
+  assert.match(html, /Lightest of the four/);
+  // The figure must reach a screen reader as the sentence it replaced.
+  assert.match(html, /aria-label="Three entry routes/);
+  // The duplicate rung list is gone; the ladder draws it.
+  assert.doesNotMatch(html, /class="cred-rungs"/);
+  assert.doesNotMatch(html, /class="cred-doors"/);
 });
 
 test('the geometric motif extends past the hero and stays decorative', () => {
@@ -655,4 +661,13 @@ test('the batch grid is five even columns on a wide screen', () => {
   assert.match(styles, /\.batch-card\.is-pickable \{[\s\S]*?height: 100%/);
   assert.match(styles, /\.batch-card\.is-pickable \{[\s\S]*?grid-template-rows: auto auto 1fr auto/);
   assert.match(styles, /\.batch-meta \{[\s\S]*?align-self: end/);
+});
+
+// .batch-grid used to hold cards directly; it now holds five <section class="batch-group">
+// elements. Left as an auto-fit grid it laid the VERTICALS out as columns — five overlapping
+// stacks with the cards crushed inside. Groups stack; only the row inside a group is a grid.
+test('vertical groups stack down the page, not across it', () => {
+  assert.match(styles, /\.batch-grid \{ display: block;/);
+  assert.doesNotMatch(styles, /\.batch-grid \{ display: grid/);
+  assert.match(styles, /\.batch-row \{ display: grid/);
 });

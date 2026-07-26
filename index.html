@@ -868,44 +868,74 @@
         <div class="credibility-ladder audience-content" data-for-audience="student">
           <div class="section-heading">
             <span class="cred-big-num" aria-hidden="true">3</span>
-            <h2>Credibility is built,<br>not assigned.</h2>
-            <p>Three routes carry real weight. Faculty endorsement, once the whole story, is now the lightest.</p>
+            <h2>Three ways in.<br>One ladder up.</h2>
+            <p>Any of the three gets you a start. What you do after is the same for everyone.</p>
           </div>
-          <div class="cred-doors">
-            <div class="cred-door glass-panel">
-              <span class="cred-tag cred-tag-endorsed"><svg><use href="#icon-shield"/></svg>A top club</span>
-              <p>The strongest route. A club admitting the top few percent of its domain — verification carries to every member.</p>
-              <div class="cred-marker">
-                <svg><use href="#icon-check"/></svg>
-                <span><b>Columbia Robotics</b> · Covenda-verified for robotics</span>
-                <small>Illustrative example</small>
-              </div>
-            </div>
-            <div class="cred-door glass-panel">
-              <span class="cred-tag cred-tag-endorsed"><svg><use href="#icon-search"/></svg>Research</span>
-              <p>Research is substance you can defend. Your PI answers narrow, cross-checked questions under their own name.</p>
-              <div class="cred-marker">
-                <svg><use href="#icon-check"/></svg>
-                <span>Structured referral from your PI</span>
-                <small>The primary rail where no API can reach</small>
-              </div>
-            </div>
-            <div class="cred-door glass-panel">
-              <span class="cred-tag cred-tag-building">Vetted work</span>
-              <p>No club, no lab, no contacts. Connect the account that owns your work and clear the published bar.</p>
-              <div class="cred-marker cred-marker-plain">
-                <svg><use href="#icon-route"/></svg>
-                <span>Open to anyone · evidence over introductions</span>
-              </div>
-            </div>
-          </div>
+
+          <!-- The routes and the ladder as one figure. This used to be three paragraph cards
+               plus a numbered list saying the same thing twice; the drawing carries it. -->
+          <figure class="cred-fig">
+            <svg viewBox="0 0 940 400" role="img" aria-label="Three entry routes — a verified club, research with a PI referral, or vetted work on your own — converge into one shared ladder: endorsed or building proof, then role-qualified, then employer-verified, then proven.">
+              <g font-family="ui-monospace,Menlo,monospace" font-size="11" letter-spacing="2" fill="#85857f">
+                <text x="14" y="26">WAYS IN</text>
+                <text x="470" y="26">THE LADDER — SAME FOR EVERYONE</text>
+              </g>
+
+              <!-- three entry routes -->
+              <g>
+                <rect x="14" y="52" width="230" height="70" fill="#fbf7ed" stroke="#8b5709" stroke-width="2"/>
+                <text x="34" y="82" font-family="Georgia,serif" font-size="19" fill="#11110f">A verified club</text>
+                <text x="34" y="104" font-family="system-ui,sans-serif" font-size="13" fill="#60605b">Strongest. Carries to every member.</text>
+
+                <rect x="14" y="140" width="230" height="70" fill="#fff" stroke="#11110f" stroke-width="2"/>
+                <text x="34" y="170" font-family="Georgia,serif" font-size="19" fill="#11110f">Research</text>
+                <text x="34" y="192" font-family="system-ui,sans-serif" font-size="13" fill="#60605b">Your PI answers for the work.</text>
+
+                <rect x="14" y="228" width="230" height="70" fill="#fff" stroke="#11110f" stroke-width="2"/>
+                <text x="34" y="258" font-family="Georgia,serif" font-size="19" fill="#11110f">Vetted work</text>
+                <text x="34" y="280" font-family="system-ui,sans-serif" font-size="13" fill="#60605b">No club, no lab, no contacts.</text>
+
+                <rect x="14" y="316" width="230" height="52" fill="none" stroke="#c9c9c2" stroke-width="2" stroke-dasharray="5 5"/>
+                <text x="34" y="340" font-family="Georgia,serif" font-size="17" fill="#85857f">Faculty endorsement</text>
+                <text x="34" y="358" font-family="system-ui,sans-serif" font-size="12.5" fill="#85857f">Still counts. Lightest of the four.</text>
+              </g>
+
+              <!-- converge -->
+              <g fill="none" stroke="#b47b20" stroke-width="2">
+                <path d="M244 87 H300 V200"/>
+                <path d="M244 175 H300"/>
+                <path d="M244 263 H300 V200"/>
+              </g>
+              <path d="M244 342 H286" fill="none" stroke="#c9c9c2" stroke-width="2" stroke-dasharray="5 5"/>
+              <path d="M286 342 H300 V200" fill="none" stroke="#c9c9c2" stroke-width="2"/>
+              <path d="M300 200 H352" stroke="#b47b20" stroke-width="2.5" fill="none"/>
+              <path d="M346 193 l10 7 -10 7z" fill="#b47b20"/>
+
+              <!-- the ladder: four rungs, rising -->
+              <g>
+                <path d="M392 300 H900" stroke="#deded9" stroke-width="2"/>
+                <g stroke="#b47b20" stroke-width="2.5" fill="none"><path d="M392 300 V262 H520 V214 H648 V166 H776 V118 H900"/></g>
+
+                <rect x="392" y="242" width="112" height="40" fill="#fff" stroke="#11110f" stroke-width="2"/>
+                <text x="404" y="267" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="#11110f">Endorsed</text>
+
+                <rect x="520" y="194" width="112" height="40" fill="#fff" stroke="#11110f" stroke-width="2"/>
+                <text x="532" y="219" font-family="system-ui,sans-serif" font-size="13" font-weight="600" fill="#11110f">Role-qualified</text>
+
+                <rect x="648" y="146" width="112" height="40" fill="#fbf7ed" stroke="#8b5709" stroke-width="2"/>
+                <text x="660" y="164" font-family="system-ui,sans-serif" font-size="12.5" font-weight="600" fill="#8b5709">Employer-</text>
+                <text x="660" y="180" font-family="system-ui,sans-serif" font-size="12.5" font-weight="600" fill="#8b5709">verified</text>
+
+                <rect x="776" y="98" width="112" height="40" fill="#24753a" stroke="#24753a" stroke-width="2"/>
+                <text x="788" y="123" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="#fff">Proven</text>
+
+                <text x="392" y="330" font-family="ui-monospace,monospace" font-size="11" fill="#85857f">A start</text>
+                <text x="776" y="330" font-family="ui-monospace,monospace" font-size="11" fill="#85857f">Hired on the record</text>
+              </g>
+            </svg>
+          </figure>
+
           <p class="cred-faculty"><svg><use href="#icon-lock"/></svg>A professor’s endorsement still counts — it is just no longer the only door, and on its own carries less than a verified club or defended work.</p>
-          <ol class="cred-rungs">
-            <li><span>1</span><div><strong>Endorsed / Building proof</strong><small>Your starting point</small></div></li>
-            <li><span>2</span><div><strong>Role-Qualified</strong><small>A reviewed work sample in your function</small></div></li>
-            <li><span>3</span><div><strong>Employer-Verified</strong><small>Accepted, paid project work</small></div></li>
-            <li><span>4</span><div><strong>Proven</strong><small>A stronger outcome — interview, referral, or offer</small></div></li>
-          </ol>
           <p class="cred-note"><svg><use href="#icon-lock"/></svg>An endorsement is a trust head-start, not a placement. The verified rungs are earned through reviewed work — never a black-box score.</p>
         </div>
         <div class="company-why audience-content" data-for-audience="company">
