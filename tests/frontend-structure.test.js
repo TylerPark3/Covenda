@@ -320,7 +320,8 @@ test('candidate browser is not on the public site', () => {
 // The hero field is the geometric motif the rest of the site borrows from. It gained a
 // pointer-reactive layer; the guardrails around it must survive that.
 test('hero field reacts to the pointer without breaking motion or touch guardrails', () => {
-  assert.match(script, /function drawPointerLinks\(\)/);
+  // The pointer both wires nearby nodes and drives camera parallax.
+  assert.match(script, /targetX = -\(\(pointer\.x/);
   assert.match(script, /pointerleave/);
   // Reduced-motion returns before any listener is attached (the early `if (reduce) return`),
   // and coarse pointers never get a hover handler at all.
@@ -556,4 +557,19 @@ test('the gold word covers its italic overhang', () => {
   const pad = Number(rule.match(/padding-right:\s*([\d.]+)em/)?.[1] || 0);
   assert.ok(pad >= 0.4, `padding-right ${pad}em is too tight for an italic overhang`);
   assert.match(rule, /box-decoration-break: clone/);
+});
+
+// The hero field argues the thesis: a crowd, a few already gold, and pale nodes visibly
+// BECOMING proof. If the conversion goes away the picture stops making the argument.
+test('the hero field converts pale nodes into proof, and keeps gold scarce', () => {
+  assert.match(script, /function proveOne\(\)/);
+  assert.match(script, /proofs\.push\(\{ node: n, age: 0 \}\)/);
+  // Scarcity is load-bearing: a gold field would say the opposite of what this is for.
+  assert.match(script, /goldCount \/ nodes\.length > 0\.13/);
+  // Real 3D: depth, perspective projection, and far-to-near paint order.
+  assert.match(script, /function project\(n\)/);
+  assert.match(script, /FOCAL \/ z/);
+  assert.match(script, /sort\(\(a, b\) => nodes\[b\]\.z - nodes\[a\]\.z\)/);
+  // Reduced motion gets a single static frame — no drift, no conversions, no parallax.
+  assert.match(script, /if \(reduce\) return; \/\/ static frame only/);
 });

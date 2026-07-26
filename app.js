@@ -4667,14 +4667,50 @@ function initScrollReveal() {
 // the right (the curated few), lightly linked like a bench. Deliberately low-contrast and
 // non-intrusive — it lives BEHIND the hero copy and never competes with it. It quietly
 // dramatizes Covenda's whole thesis: curation pulls signal out of the pile.
+// The hero field — the thesis as a moving picture.
+//
+// A crowd of pale nodes drifting in 3D, wired with visible links. A few are gold: the people
+// already worth finding, scattered through everything else. And continuously, one pale node
+// at a time gets PROVEN — a ring expands out of it, it turns gold, and its links brighten.
+// That conversion is the whole argument rendered literally: real work becomes credible proof.
+// The ratio is held near a tenth, so gold always reads as "some of these", never as a field.
+//
+// 3D is real, not faked: nodes carry z, the camera eases toward the pointer, and everything
+// is perspective-projected — so depth changes size, opacity, link reach and parallax together.
+// Nothing depends on the values, so Math.random is fine here.
 function initHeroField() {
   const canvas = document.getElementById('heroFieldCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const GOLD = '180,123,32';
-  let W = 0, H = 0, motes = [], running = false, raf = 0;
+
+  const GOLD = '184,126,32';
+  const PALE = '124,120,108';
+  const FOCAL = 780;           // perspective strength
+  const DEPTH = 620;           // how far back the field runs
+  const LINK = 128;            // projected px within which two nodes wire together
+  let W = 0, H = 0, nodes = [], running = false, raf = 0, t = 0;
+  let pointer = null, camX = 0, camY = 0, targetX = 0, targetY = 0;
+  let proofs = [];             // in-flight "this became proof" rings
+
+  function build() {
+    const target = Math.max(40, Math.min(110, Math.round((W * H) / 14500)));
+    nodes = Array.from({ length: target }, () => ({
+      x: (Math.random() - 0.5) * W * 1.5,
+      y: (Math.random() - 0.5) * H * 1.5,
+      z: Math.random() * DEPTH,
+      vx: (Math.random() - 0.5) * 0.16,
+      vy: (Math.random() - 0.5) * 0.16,
+      vz: (Math.random() - 0.5) * 0.12,
+      r: 1.5 + Math.random() * 1.4,
+      gold: Math.random() < 0.09,
+      phase: Math.random() * Math.PI * 2,
+      lit: 0, // 0..1 conversion progress, drives the gold fade-in
+    }));
+    for (const n of nodes) if (n.gold) n.lit = 1;
+    proofs = [];
+  }
 
   function resize() {
     const r = canvas.getBoundingClientRect();
@@ -4685,118 +4721,137 @@ function initHeroField() {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     build();
   }
-  const focal = () => ({ x: W * 0.76, y: H * 0.46 });
-  // Pointer in canvas space; null when the cursor is elsewhere so the field relaxes back.
-  let pointer = null;
-  function spawn(seed = false) {
+
+  // Perspective projection with the camera offset by the pointer, so the field has parallax:
+  // near nodes swing further than far ones, which is what actually reads as depth.
+  function project(n) {
+    const z = n.z + FOCAL;
+    const scale = FOCAL / z;
     return {
-      x: seed ? Math.random() * W : -12 - Math.random() * 40,
-      y: Math.random() * H,
-      vx: 0.18 + Math.random() * 0.34,
-      r: 0.8 + Math.random() * 1.6,
-      phase: Math.random() * Math.PI * 2,
-      state: 'drift', alpha: 0.05 + Math.random() * 0.06, judged: false,
-      // each selected mote settles near, but not exactly on, the focal point
-      tx: 0, ty: 0,
+      x: W / 2 + (n.x + camX * (1 - n.z / DEPTH) * 60) * scale,
+      y: H / 2 + (n.y + camY * (1 - n.z / DEPTH) * 60) * scale,
+      scale,
     };
   }
-  function build() {
-    const count = Math.round(Math.min(90, Math.max(26, W / 20)));
-    motes = Array.from({ length: count }, () => spawn(true));
+
+  // Promote one pale node. Held near a tenth gold: enough to say "some of these are
+  // exceptional", never enough to say "everyone is".
+  function proveOne() {
+    const goldCount = nodes.filter(n => n.lit > 0.5).length;
+    if (!nodes.length || goldCount / nodes.length > 0.13) return;
+    const candidates = nodes.filter(n => n.lit < 0.05);
+    if (!candidates.length) return;
+    const n = candidates[Math.floor(Math.random() * candidates.length)];
+    n.gold = true;
+    proofs.push({ node: n, age: 0 });
   }
-  function step(mote) {
-    const gate = W * 0.44;
-    if (mote.state === 'drift') {
-      mote.x += mote.vx;
-      mote.y += Math.sin(mote.phase + mote.x * 0.01) * 0.15;
-      mote.alpha = Math.min(0.14, mote.alpha + 0.002);
-      if (!mote.judged && mote.x > gate) {
-        mote.judged = true;
-        if (Math.random() < 0.16) {
-          const f = focal();
-          mote.state = 'selected';
-          mote.tx = f.x + (Math.random() - 0.5) * W * 0.16;
-          mote.ty = f.y + (Math.random() - 0.5) * H * 0.42;
-        } else { mote.state = 'fade'; }
-      }
-    } else if (mote.state === 'fade') {
-      mote.x += mote.vx * 0.6;
-      mote.alpha -= 0.004;
-      if (mote.alpha <= 0 || mote.x > W + 10) Object.assign(mote, spawn(false));
-    } else if (mote.state === 'selected') {
-      mote.x += (mote.tx - mote.x) * 0.03;
-      mote.y += (mote.ty - mote.y) * 0.03;
-      mote.phase += 0.01;
-      mote.tx += Math.cos(mote.phase) * 0.15; // gentle drift so the cluster breathes
-      mote.ty += Math.sin(mote.phase * 0.8) * 0.15;
-      mote.alpha = Math.min(0.42, mote.alpha + 0.006);
-      mote.r = Math.min(2.9, mote.r + 0.012);
+
+  function step() {
+    t += 1;
+    camX += (targetX - camX) * 0.045;
+    camY += (targetY - camY) * 0.045;
+    for (const n of nodes) {
+      n.x += n.vx; n.y += n.vy; n.z += n.vz;
+      const bx = W * 0.9, by = H * 0.9;
+      if (n.x < -bx) n.x = bx; else if (n.x > bx) n.x = -bx;
+      if (n.y < -by) n.y = by; else if (n.y > by) n.y = -by;
+      if (n.z < 0) n.z = DEPTH; else if (n.z > DEPTH) n.z = 0;
+      if (n.gold && n.lit < 1) n.lit = Math.min(1, n.lit + 0.012);
     }
+    proofs = proofs.filter(p => (p.age += 1) < 90);
+    if (t % 150 === 0) proveOne();
   }
+
   function draw() {
     ctx.clearRect(0, 0, W, H);
-    const selected = [];
-    for (const m of motes) {
-      if (m.state === 'selected') selected.push(m);
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${GOLD},${m.alpha})`;
-      ctx.fill();
-    }
-    // faint links between the curated few — a light "bench" constellation
+    const pts = nodes.map(project);
+
+    // Links. Far nodes wire faintly, near ones firmly; a link touching proof is brighter,
+    // because the connection to someone proven is the thing worth drawing.
     ctx.lineWidth = 1;
-    for (let i = 0; i < selected.length; i++) {
-      for (let j = i + 1; j < selected.length; j++) {
-        const a = selected[i], b = selected[j];
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = pts[i], b = pts[j];
         const dx = a.x - b.x, dy = a.y - b.y;
+        if (Math.abs(dx) > LINK || Math.abs(dy) > LINK) continue;
         const d = Math.hypot(dx, dy);
-        if (d < 118) {
-          ctx.strokeStyle = `rgba(${GOLD},${0.07 * (1 - d / 118)})`;
-          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-        }
+        if (d > LINK) continue;
+        const depth = (a.scale + b.scale) / 2;
+        const lit = Math.max(nodes[i].lit, nodes[j].lit);
+        const fade = (1 - d / LINK) * depth;
+        const alpha = (0.13 + 0.30 * lit) * fade;
+        ctx.strokeStyle = `rgba(${lit > 0.35 ? GOLD : PALE},${alpha})`;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
       }
     }
-  }
-  // The reader's cursor becomes another node: nearby motes link to it and lift, so the
-  // "vouched, connected" motif responds to the person reading it. Purely additive — the
-  // ambient field is unchanged when the pointer is away.
-  function drawPointerLinks() {
-    if (!pointer) return;
-    const REACH = 132;
-    ctx.lineWidth = 1;
-    for (const m of motes) {
-      const dx = m.x - pointer.x, dy = m.y - pointer.y;
-      const d = Math.hypot(dx, dy);
-      if (d > REACH) continue;
-      const t = 1 - d / REACH;
-      ctx.strokeStyle = `rgba(${GOLD},${0.20 * t})`;
-      ctx.beginPath(); ctx.moveTo(pointer.x, pointer.y); ctx.lineTo(m.x, m.y); ctx.stroke();
-      ctx.fillStyle = `rgba(${GOLD},${0.28 * t})`;
-      ctx.beginPath(); ctx.arc(m.x, m.y, m.r + 1.1 * t, 0, Math.PI * 2); ctx.fill();
+
+    // The proof event: a ring expanding out of the node as it turns gold.
+    for (const p of proofs) {
+      const q = pts[nodes.indexOf(p.node)];
+      if (!q) continue;
+      const e = p.age / 90;
+      const ease = 1 - Math.pow(1 - e, 3);
+      ctx.strokeStyle = `rgba(${GOLD},${0.5 * (1 - e)})`;
+      ctx.lineWidth = 1.6 * (1 - e) + 0.4;
+      ctx.beginPath(); ctx.arc(q.x, q.y, 4 + ease * 46 * q.scale, 0, Math.PI * 2); ctx.stroke();
     }
-    ctx.fillStyle = `rgba(${GOLD},.20)`;
-    ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 2.4, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 1;
+
+    // Nodes, far to near, so near ones sit on top.
+    const order = nodes.map((n, i) => i).sort((a, b) => nodes[b].z - nodes[a].z);
+    for (const i of order) {
+      const n = nodes[i], q = pts[i];
+      const r = n.r * q.scale;
+      if (n.lit > 0.02) {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 0.02 + n.phase);
+        ctx.fillStyle = `rgba(${GOLD},${(0.45 + 0.4 * pulse) * n.lit * q.scale})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, r + 0.8 + pulse * 0.7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(${GOLD},${0.08 * pulse * n.lit})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 2.2) * 2.8, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.fillStyle = `rgba(${PALE},${0.34 * q.scale})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    if (pointer) {
+      const REACH = 155;
+      for (let i = 0; i < nodes.length; i++) {
+        const q = pts[i];
+        const d = Math.hypot(q.x - pointer.x, q.y - pointer.y);
+        if (d > REACH) continue;
+        ctx.strokeStyle = `rgba(${GOLD},${0.28 * (1 - d / REACH)})`;
+        ctx.beginPath(); ctx.moveTo(pointer.x, pointer.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+      }
+      ctx.fillStyle = `rgba(${GOLD},.24)`;
+      ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 2.6, 0, Math.PI * 2); ctx.fill();
+    }
   }
-  function frame() { for (const m of motes) step(m); draw(); drawPointerLinks(); raf = requestAnimationFrame(frame); }
+
+  function frame() { step(); draw(); raf = requestAnimationFrame(frame); }
   function start() { if (running || reduce) return; running = true; raf = requestAnimationFrame(frame); }
   function stop() { running = false; cancelAnimationFrame(raf); }
 
   resize();
-  draw(); // one static frame immediately (and the only frame under reduced-motion)
+  draw();
   window.addEventListener('resize', () => { resize(); if (!running) draw(); });
   if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); if (!running) draw(); }).observe(canvas);
-  if (reduce) return;
+  if (reduce) return; // static frame only — no drift, no conversions, no parallax
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(es => es.forEach(e => (e.isIntersecting ? start() : stop())), { threshold: 0.02 }).observe(canvas);
   } else { start(); }
   document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
+
   const hero = canvas.closest('.hero') || canvas.parentElement;
   if (hero && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     hero.addEventListener('pointermove', event => {
       const r = canvas.getBoundingClientRect();
       pointer = { x: event.clientX - r.left, y: event.clientY - r.top };
+      // Camera leans the OPPOSITE way to the cursor, which is what parallax does.
+      targetX = -((pointer.x / Math.max(1, W)) - 0.5) * 2;
+      targetY = -((pointer.y / Math.max(1, H)) - 0.5) * 2;
     });
-    hero.addEventListener('pointerleave', () => { pointer = null; });
+    hero.addEventListener('pointerleave', () => { pointer = null; targetX = 0; targetY = 0; });
   }
 }
 
