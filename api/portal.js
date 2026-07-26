@@ -138,13 +138,65 @@ export async function requestMemberLink(address, req, { env = process.env, creat
   const email = cleanEmail(address);
   if (!email) throw new Error('Enter a valid email address.');
   if (rateLimited(req, email)) throw new Error('Please wait before requesting another sign-in link.');
+  const redirectTo = portalRedirectUrl(req);
+
+  // Supabase's BUILT-IN mailer is the weak link: it is rate-limited to a handful of messages
+  // an hour and fails outright until custom SMTP is configured in the dashboard, which is
+  // where sign-in was dying. Resend is already wired for every other transactional email, so
+  // when it is available we mint the magic link ourselves with the service role and send it
+  // through Resend instead — no dashboard SMTP required, no per-hour ceiling.
+  const sent = await sendMagicLinkViaResend(email, redirectTo, { env, createSupabaseClient });
+  if (sent.ok) return { accepted: true, via: 'resend' };
+
+  // Fall back to Supabase's own mailer when Resend is not configured.
   const supabase = publicClient(env, createSupabaseClient);
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true, emailRedirectTo: portalRedirectUrl(req) },
+    options: { shouldCreateUser: true, emailRedirectTo: redirectTo },
   });
-  if (error) throw new PortalOperationalError('PORTAL_EMAIL_FAILED', 'Supabase could not send the sign-in link. Check the Auth logs and custom SMTP configuration.', error);
-  return { accepted: true };
+  if (error) {
+    throw new PortalOperationalError(
+      'PORTAL_EMAIL_FAILED',
+      sent.reason === 'not-configured'
+        ? 'Sign-in email is not configured. Set RESEND_API_KEY and COVENDA_NOTIFICATION_FROM, or configure custom SMTP in Supabase Auth.'
+        : `Could not send the sign-in link (${sent.reason}).`,
+      error,
+    );
+  }
+  return { accepted: true, via: 'supabase' };
+}
+
+// Mint a magic link with the service role and deliver it via Resend. Never throws — the
+// caller falls back to Supabase's mailer, so a Resend outage degrades rather than breaks.
+async function sendMagicLinkViaResend(email, redirectTo, { env = process.env, createSupabaseClient = createClient } = {}) {
+  try {
+    const apiKey = env.RESEND_API_KEY;
+    const from = env.COVENDA_NOTIFICATION_FROM;
+    if (!apiKey || !from) return { ok: false, reason: 'not-configured' };
+
+    const admin = serviceClient(env, createSupabaseClient);
+    // 'magiclink' only mails existing users; 'signup' is used for new ones. Try magiclink
+    // first and fall back, so a first-time member is not silently dropped.
+    let link = await admin.auth.admin.generateLink({ type: 'magiclink', email, options: { redirectTo } });
+    if (link.error) link = await admin.auth.admin.generateLink({ type: 'signup', email, options: { redirectTo } });
+    const actionLink = link?.data?.properties?.action_link;
+    if (link.error || !actionLink) return { ok: false, reason: String(link.error?.message || 'no-link').slice(0, 120) };
+
+    const { Resend } = await import('resend');
+    const resend = new Resend(apiKey);
+    const { error } = await resend.emails.send({
+      from,
+      to: email,
+      subject: 'Your Covenda sign-in link',
+      text: `Sign in to Covenda:\n\n${actionLink}\n\nThis link expires shortly and can be used once. If you did not request it, ignore this email.`,
+      html: `<p>Sign in to Covenda:</p><p><a href="${actionLink}">Open Covenda</a></p>`
+        + '<p><small>This link expires shortly and can be used once. If you did not request it, ignore this email.</small></p>',
+    });
+    if (error) return { ok: false, reason: String(error.message || error).slice(0, 120) };
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, reason: String(error?.message || error).slice(0, 120) };
+  }
 }
 
 export async function requestGoogleLogin(req, { env = process.env, createSupabaseClient = createClient } = {}) {

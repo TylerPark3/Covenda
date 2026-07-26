@@ -530,3 +530,17 @@ test('no module-level binding is assigned before it is declared', () => {
   });
   assert.deepEqual(offenders, [], 'temporal dead zone — these would throw at runtime');
 });
+
+// The tree is the vetting system, told top to bottom. It used to describe the model in the
+// abstract ("the talent", "Covenda") without saying how anyone is actually vetted.
+test('the tree explains the vetting system specifically', () => {
+  assert.match(html, /Vetted twice, then proven/);
+  assert.match(html, /Soil · the first vet/);
+  assert.match(html, /Trunk · the second vet/);
+  assert.match(html, /Three ways to prove it/);
+  // The low-barrier rail must be named, since it is the one most fields actually use.
+  assert.match(html, /recorded walkthrough where neither applies/);
+  // Guardrails survive into the diagram.
+  assert.match(html, /never a person score, never a ranking/);
+  assert.match(html, /an operator decides and records why/);
+});
