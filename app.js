@@ -3324,9 +3324,9 @@ function joinBatch(batch) {
 // api/batches.js via the pre-auth 'batch-briefs' action — so the bar a visitor reads here
 // and the bar the portal checks them against can never drift apart.
 //
-// Selection state for the board. A student is usually weighing two or three benches, so the
+// Selection state for the board. A student is usually weighing two or three batches, so the
 // card is a CHOICE, not a commit — the old per-card "Join this batch" button asked for a
-// decision before showing what the bench actually requires.
+// decision before showing what the batch actually requires.
 const batchPicks = new Set();
 const batchBriefIndex = new Map();
 
@@ -3383,11 +3383,11 @@ function syncBatchPickBar() {
   if (!bar) return;
   const n = batchPicks.size;
   bar.hidden = n === 0;
-  $('#batchPickCount').textContent = n === 1 ? '1 bench selected' : n + ' benches selected';
+  $('#batchPickCount').textContent = n === 1 ? '1 batch selected' : n + ' batches selected';
 }
 
-// A labelled flow diagram per bench: the vetting rails feeding the bar, the bar feeding
-// review, review feeding the bench. Built from the brief so it can never describe a rail
+// A labelled flow diagram per batch: the vetting rails feeding the bar, the bar feeding
+// review, review feeding the batch. Built from the brief so it can never describe a rail
 // the batch does not actually use.
 function batchDiagram(brief) {
   const fig = document.createElement('figure');
@@ -3396,7 +3396,7 @@ function batchDiagram(brief) {
   fig.setAttribute('aria-label',
     brief.name + ' vetting flow: ' + brief.vetting.rails.map(r => r.label).join(', ')
     + ' produce evidence, which is checked against ' + brief.requirements.length
-    + ' published requirements, then reviewed by an operator before admission to the bench.');
+    + ' published requirements, then reviewed by an operator before admission to the batch.');
 
   const rails = document.createElement('div');
   rails.className = 'bd-rails';
@@ -3430,13 +3430,13 @@ function batchDiagram(brief) {
   fig.append(review);
   fig.append(Object.assign(document.createElement('div'), { className: 'bd-arrow', ariaHidden: 'true' }));
 
-  const bench = document.createElement('div');
-  bench.className = 'bd-node bd-bench';
-  bench.append(
-    Object.assign(document.createElement('b'), { textContent: 'The bench' }),
+  const batch = document.createElement('div');
+  batch.className = 'bd-node bd-batch';
+  batch.append(
+    Object.assign(document.createElement('b'), { textContent: 'The batch' }),
     Object.assign(document.createElement('span'), { textContent: 'Companies unlock it and see your evidence, not your résumé.' }),
   );
-  fig.append(bench);
+  fig.append(batch);
   return fig;
 }
 
@@ -3448,7 +3448,7 @@ const HOW_TO_APPLY = [
   ['Operator review', 'A person reads it and records a reason either way. A miss comes back with the specific gap, not a rejection.'],
 ];
 
-// The deep dive: one full-width walkthrough per selected bench.
+// The deep dive: one full-width walkthrough per selected batch.
 function renderBatchDeepDive() {
   const host = $('#batchDeep');
   if (!host) return;
@@ -3463,7 +3463,7 @@ function renderBatchDeepDive() {
     const head = document.createElement('header');
     head.className = 'bd-head';
     head.append(
-      Object.assign(document.createElement('p'), { className: 'feature-kicker', textContent: brief.tier === 'elite' ? 'Elite bench' : 'Open bench' }),
+      Object.assign(document.createElement('p'), { className: 'feature-kicker', textContent: brief.tier === 'elite' ? 'Elite batch' : 'Open batch' }),
       Object.assign(document.createElement('h3'), { textContent: brief.name }),
       Object.assign(document.createElement('p'), { className: 'bd-lede', textContent: brief.description }),
     );
@@ -3478,7 +3478,7 @@ function renderBatchDeepDive() {
 
     const reqs = document.createElement('section');
     reqs.className = 'bd-block';
-    reqs.append(Object.assign(document.createElement('h4'), { textContent: 'What this bench asks of you' }));
+    reqs.append(Object.assign(document.createElement('h4'), { textContent: 'What this batch asks of you' }));
     const list = document.createElement('ol');
     list.className = 'bd-reqs';
     brief.requirements.forEach((req, i) => {
@@ -4664,7 +4664,7 @@ function initScrollReveal() {
 // ---- Home-hero background: a subtle gold "signal from noise" field. -----------------------
 // Many faint gold motes drift in from the left (the mass, the noise). At a soft filter line
 // most dim and fade out; a few brighten to solid gold and converge toward a focal cluster on
-// the right (the curated few), lightly linked like a bench. Deliberately low-contrast and
+// the right (the curated few), lightly linked like a batch. Deliberately low-contrast and
 // non-intrusive — it lives BEHIND the hero copy and never competes with it. It quietly
 // dramatizes Covenda's whole thesis: curation pulls signal out of the pile.
 // The hero field — the thesis as a moving picture.
@@ -4938,7 +4938,7 @@ function initHeroField() {
     rails.forEach(function (m) {
       var note = m.rail === 'instrumented_trial'
         ? 'No API can confirm outreach really landed, so proof comes from an instrumented trial run through Covenda.'
-        : 'Bench skills cannot be checked remotely, so a supervisor’s structured referral is the primary mechanism — by design.';
+        : 'Batch skills cannot be checked remotely, so a supervisor’s structured referral is the primary mechanism — by design.';
       humanList.append(row(m.label, m.example ? m.example.company + ' sees ' + m.example.sees : note));
     });
 
@@ -5400,7 +5400,7 @@ function renderReadiness(readiness) {
 
 
 // The selection web. Covenda's whole thesis is nodes and links — people vouched into a
-// network — so selecting benches draws the link. Hairline gold between every selected pair,
+// network — so selecting batches draws the link. Hairline gold between every selected pair,
 // animated in once, redrawn on resize. Decorative and aria-hidden: the canvas says nothing a
 // screen reader needs, because the cards already announce their pressed state.
 function initBatchWeb() {
@@ -5524,7 +5524,7 @@ function initBatchWeb() {
 })();
 
 
-// The per-vertical demo. Tabs across the five benches; each one walks the same six beats so
+// The per-vertical demo. Tabs across the five batches; each one walks the same six beats so
 // a company can compare shapes, while the substance stays specific to their field. Fed from
 // api/batches.js, so a beat can never describe a rail the batch does not actually use.
 (function initVerticalDemo() {

@@ -72,7 +72,7 @@ export const VETTING_RAILS = {
 
 // One batch per vertical. `vetting` names the technical process that actually applies to that
 // industry; `requirements` is the published bar; `companyWorkflow` is the step-by-step a
-// company walks when evaluating the admitted bench.
+// company walks when evaluating the admitted batch.
 export const BATCH_CATALOG = [
   {
     slug: 'software-ai',
@@ -85,7 +85,7 @@ export const BATCH_CATALOG = [
     accessCredits: 25,
     summary: 'Undergraduates who ship code, evidenced by commit history you can audit rather than a résumé line.',
     description:
-      'The software bench. Admission runs on your own GitHub account — connected, not pasted — so the repos credited to you are provably yours and their history is read from the commit timeline. Months of accumulated work is the signal; a polished one-session repo is not.',
+      'The software batch. Admission runs on your own GitHub account — connected, not pasted — so the repos credited to you are provably yours and their history is read from the commit timeline. Months of accumulated work is the signal; a polished one-session repo is not.',
     vetting: { rails: ['api_forensics', 'rubric_defense'], connectors: ['github'] },
     requirements: [
       { key: 'ownership', kind: 'ownership_verified', min: 1, label: 'Connect the GitHub account that owns your work', detail: 'OAuth, read-only. A pasted repo link still counts as an artifact, but ownership-verified evidence is what clears this bar.' },
@@ -95,7 +95,7 @@ export const BATCH_CATALOG = [
       { key: 'availability', kind: 'availability_hours', min: 6, label: 'Six or more hours a week', detail: 'Bounded projects assume you can hold a weekly checkpoint.' },
     ],
     companyWorkflow: [
-      { step: 1, title: 'Open the bench', detail: 'You see every admitted student in this batch with their evidence attached — not a ranked leaderboard, and not a résumé pile.' },
+      { step: 1, title: 'Open the batch', detail: 'You see every admitted student in this batch with their evidence attached — not a ranked leaderboard, and not a résumé pile.' },
       { step: 2, title: 'Read the proof, not the pedigree', detail: 'Each skill shows the repo, the commit range, and whether the account was ownership-verified. School and name are not scoring inputs.' },
       { step: 3, title: 'Scope one bounded task', detail: 'Describe the work that keeps slipping. Covenda turns the safe part into a fixed-scope, fixed-price packet.' },
       { step: 4, title: 'See at most three candidates', detail: 'Evidence-cited, each with one honest gap. If fewer than three clear your must-haves, you get fewer — never a padded shortlist.' },
@@ -114,7 +114,7 @@ export const BATCH_CATALOG = [
     accessCredits: 25,
     summary: 'Students whose models are parsed formula-by-formula and defended out loud.',
     description:
-      'The finance bench — the deepest technical vetting Covenda runs. You submit a real model and Covenda parses the workbook itself: formula integrity, structure against a DCF rubric, and whether the numbers are computed or hardcoded. Then you defend it live against anchored rubric questions.',
+      'The finance batch — the deepest technical vetting Covenda runs. You submit a real model and Covenda parses the workbook itself: formula integrity, structure against a DCF rubric, and whether the numbers are computed or hardcoded. Then you defend it live against anchored rubric questions.',
     vetting: { rails: ['artifact_parse', 'rubric_defense'], connectors: ['xlsx_model', 'pitch_defense', 'alpaca_track_record'] },
     requirements: [
       { key: 'model', kind: 'artifact_count', min: 1, label: 'One financial model (.xlsx)', detail: 'Parsed for formula integrity and DCF structure. A workbook of pasted values scores low by construction.' },
@@ -123,7 +123,7 @@ export const BATCH_CATALOG = [
       { key: 'availability', kind: 'availability_hours', min: 6, label: 'Six or more hours a week', detail: null },
     ],
     companyWorkflow: [
-      { step: 1, title: 'Open the bench', detail: 'Admitted students, each with a parsed model and a scored defense on file.' },
+      { step: 1, title: 'Open the batch', detail: 'Admitted students, each with a parsed model and a scored defense on file.' },
       { step: 2, title: 'Read the model score', detail: 'You see what the parser found — formula integrity, structure, and where it was weak. Per-skill, never one overall number.' },
       { step: 3, title: 'Scope one bounded task', detail: 'Reconciliations, a model build, diligence support — the safe, self-contained slice.' },
       { step: 4, title: 'See at most three candidates', detail: 'With the specific evidence that fits your task, plus one honest gap each.' },
@@ -151,7 +151,7 @@ export const BATCH_CATALOG = [
       { key: 'availability', kind: 'availability_hours', min: 5, label: 'Five or more hours a week', detail: null },
     ],
     companyWorkflow: [
-      { step: 1, title: 'Open the bench', detail: 'Each student shows a process artifact, a scored walkthrough, and a named referrer.' },
+      { step: 1, title: 'Open the batch', detail: 'Each student shows a process artifact, a scored walkthrough, and a named referrer.' },
       { step: 2, title: 'Read the rail honestly', detail: 'Covenda labels this batch human-rail vetted. There is no API forensic here and we do not claim one.' },
       { step: 3, title: 'Scope one bounded task', detail: 'Intake mapping, documentation, scheduling analysis — de-identified by default.' },
       { step: 4, title: 'See at most three candidates', detail: 'With the referral and the walkthrough attached.' },
@@ -179,7 +179,7 @@ export const BATCH_CATALOG = [
       { key: 'availability', kind: 'availability_hours', min: 5, label: 'Five or more hours a week', detail: null },
     ],
     companyWorkflow: [
-      { step: 1, title: 'Open the bench', detail: 'Students whose numbers came from an instrumented run, not a slide.' },
+      { step: 1, title: 'Open the batch', detail: 'Students whose numbers came from an instrumented run, not a slide.' },
       { step: 2, title: 'Read the challenge result', detail: 'The exercise, the budget, and what the platform measured.' },
       { step: 3, title: 'Scope one bounded task', detail: 'A test, a teardown, a merchandising analysis — one clear deliverable.' },
       { step: 4, title: 'See at most three candidates', detail: 'Evidence-cited, one honest gap each.' },
@@ -207,7 +207,7 @@ export const BATCH_CATALOG = [
       { key: 'availability', kind: 'availability_hours', min: 5, label: 'Five or more hours a week', detail: null },
     ],
     companyWorkflow: [
-      { step: 1, title: 'Open the bench', detail: 'Every student here has defended their own writing on record.' },
+      { step: 1, title: 'Open the batch', detail: 'Every student here has defended their own writing on record.' },
       { step: 2, title: 'Read the defense, not just the document', detail: 'The walkthrough score is the authorship signal. The document alone is not.' },
       { step: 3, title: 'Scope one bounded task', detail: 'A memo, a landscape scan, a documentation set — with a named reviewer.' },
       { step: 4, title: 'See at most three candidates', detail: 'With the sample and the defense attached.' },
@@ -371,7 +371,7 @@ function gapText(requirement, observed, min) {
 // The demo walkthrough. A company asking "what does this look like for US" needs its own
 // vertical, not a generic tour: the evidence a robotics team can audit is nothing like what
 // a search fund can. Each entry names a concrete company type and walks the same six beats,
-// so the shape is comparable across benches while the substance is specific to one.
+// so the shape is comparable across batches while the substance is specific to one.
 // Illustrative by construction — no real company, no real student, no claimed outcome.
 // ---------------------------------------------------------------------------
 export const VERTICAL_DEMOS = {
@@ -380,7 +380,7 @@ export const VERTICAL_DEMOS = {
     need: 'Their regression suite is flaky and nobody owns it, so every release slips a day.',
     beats: [
       ['You describe the person', 'Backend-leaning, comfortable in a codebase they did not write. 10 hrs/week, 4 weeks, 60 min of your review time.'],
-      ['We search the software bench', 'Only students who connected the GitHub account that owns their work — not a pasted link.'],
+      ['We search the software batch', 'Only students who connected the GitHub account that owns their work — not a pasted link.'],
       ['The evidence you actually see', 'Eight months of commit history on one project, the specific files behind each language claim, and whether the cadence looks accumulated or dumped in a weekend.'],
       ['Three candidates, one gap each', 'Evidence-cited. If fewer than three clear your must-haves you get fewer — never a padded list.'],
       ['The trial', 'Fix the three flakiest specs and document why they failed. Useful to you whether or not you hire.'],
@@ -392,7 +392,7 @@ export const VERTICAL_DEMOS = {
     need: 'Diligence models keep arriving as hardcoded numbers nobody can audit.',
     beats: [
       ['You describe the person', 'Modelling-heavy, comfortable being challenged on assumptions. 10 hrs/week, 4 weeks.'],
-      ['We search the finance bench', 'Students whose model was parsed, not skimmed.'],
+      ['We search the finance batch', 'Students whose model was parsed, not skimmed.'],
       ['The evidence you actually see', 'Formula integrity and DCF structure scored by a parser that reads the formula layer — a workbook of pasted values scores low by construction — plus a recorded pitch defence scored by two raters.'],
       ['Three candidates, one gap each', 'With the parsed model and the defence attached.'],
       ['The trial', 'Rebuild one segment of a model from public filings, with assumptions stated.'],
@@ -404,7 +404,7 @@ export const VERTICAL_DEMOS = {
     need: 'Intake is undocumented and every new hire learns it by shadowing.',
     beats: [
       ['You describe the person', 'Process-minded, careful with sensitive material. 5 hrs/week.'],
-      ['We search the operations bench', 'Vetted on the human rail — we say so plainly, because no API can verify this work.'],
+      ['We search the operations batch', 'Vetted on the human rail — we say so plainly, because no API can verify this work.'],
       ['The evidence you actually see', 'A de-identified process artifact, a recorded walkthrough scored by two raters against anchored exemplars, and a named supervisor who answered cross-checked questions.'],
       ['Three candidates, one gap each', 'With the referrer named and the walkthrough attached.'],
       ['The trial', 'Map the intake process end to end from de-identified material.'],
@@ -416,7 +416,7 @@ export const VERTICAL_DEMOS = {
     need: 'Every applicant claims growth numbers nobody can check.',
     beats: [
       ['You describe the person', 'Analytical, willing to be measured. 5 hrs/week.'],
-      ['We search the consumer bench', 'Students whose numbers came from an instrumented run, not a slide.'],
+      ['We search the consumer batch', 'Students whose numbers came from an instrumented run, not a slide.'],
       ['The evidence you actually see', 'A bounded, budgeted challenge executed inside Covenda-provisioned tooling, where the platform recorded the outcome rather than the candidate reporting it.'],
       ['Three candidates, one gap each', 'With the challenge, its budget, and what was measured.'],
       ['The trial', 'Run one bounded test against a hypothesis you already have.'],
@@ -428,7 +428,7 @@ export const VERTICAL_DEMOS = {
     need: 'Written work arrives polished and hollow, and AI made that harder to spot.',
     beats: [
       ['You describe the person', 'Research and writing, sourced. 5 hrs/week.'],
-      ['We search the research bench', 'Where authorship is the thing being checked, not the prose.'],
+      ['We search the research batch', 'Where authorship is the thing being checked, not the prose.'],
       ['The evidence you actually see', 'A writing sample plus a recorded defence with unscripted follow-ups on sources and method — because a strong document proves very little about who wrote it.'],
       ['Three candidates, one gap each', 'With the sample and the defence score.'],
       ['The trial', 'A landscape memo from public sources, with the reasoning shown.'],
@@ -454,7 +454,7 @@ export function demoForVertical(slug) {
 }
 
 // ---------------------------------------------------------------------------
-// The wedge. Software is the only bench whose primary evidence is ownership-verified AND
+// The wedge. Software is the only batch whose primary evidence is ownership-verified AND
 // timestamp-forensic end to end — every other vertical routes at least partly to a human
 // rail. That makes it the cheapest place to prove the thesis: the evidence is strongest, the
 // supply is densest, and a founder can audit a claim themselves in under a minute.
@@ -482,11 +482,11 @@ export function leadVertical() {
       || Number(b.strength.historyForensic) - Number(a.strength.historyForensic)
       || b.strength.liveConnectors - a.strength.liveConnectors);
   const top = ranked[0];
-  if (!top || !top.strength.ownershipVerified) return null; // no bench earns the claim yet
+  if (!top || !top.strength.ownershipVerified) return null; // no batch earns the claim yet
   return {
     slug: top.batch.slug,
     name: top.batch.name,
-    reason: 'The only bench where ownership and history are both machine-verified end to end — a founder can audit a claim themselves in under a minute.',
+    reason: 'The only batch where ownership and history are both machine-verified end to end — a founder can audit a claim themselves in under a minute.',
     strength: top.strength,
   };
 }

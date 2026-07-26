@@ -61,7 +61,7 @@ test('audience switch supports student and company site states', () => {
   // Company hero leads with the profile builder — the backlog card was removed, since
   // "describe the person" is the entry point now and the problem field lives inside it.
   assert.match(html, /Build the profile/);
-  assert.match(html, /Hire from a vetted bench/);
+  assert.match(html, /Hire from a vetted batch/);
   assert.doesNotMatch(html, /Work that keeps getting pushed back/);
   assert.match(script, /document\.body\.dataset\.audience = audience/);
   assert.match(styles, /body\[data-audience="company"\] \.hero-student/);
@@ -286,7 +286,7 @@ test('the how-we-verify section exists and advertises only what is actually buil
 test('public batch board renders the shipped brief in the full-width walkthrough', () => {
   assert.match(script, /action: 'batch-briefs'/);
   assert.match(script, /data-batch-grid/);
-  assert.match(script, /What this bench asks of you/);
+  assert.match(script, /What this batch asks of you/);
   assert.match(script, /How this industry is vetted|batchDiagram/);
   // Honest labelling survives the trip to the marketing site.
   assert.match(script, /Human rail/);
@@ -334,8 +334,8 @@ test('hero field reacts to the pointer without breaking motion or touch guardrai
 });
 
 // The board is a CHOICE, not a commit: per-card "Join this batch" asked a student to decide
-// before the bench had shown what it requires. Select benches, then walk through them.
-test('batch board selects benches and walks through them full-width', () => {
+// before the batch had shown what it requires. Select batches, then walk through them.
+test('batch board selects batches and walks through them full-width', () => {
   assert.match(html, /id="batchPickBar"/);
   assert.match(html, /id="batchLearnMore"/);
   assert.match(html, /id="batchDeep"/);
@@ -378,9 +378,9 @@ test('school clubs can register and see the earned verification ladder', () => {
   assert.match(styles, /\.club-ladder/);
 });
 
-test('batches are described as elite benches', () => {
-  assert.match(html, /Join an elite bench in your field/);
-  assert.match(html, /an elite bench in one field/);
+test('batches are described as elite batches', () => {
+  assert.match(html, /Join an elite batch in your field/);
+  assert.match(html, /an elite batch in one field/);
 });
 
 // Credibility is club-led now, and the geometric motif carries past the hero.
@@ -420,7 +420,7 @@ test('joining the talent pool is name, email and school — not the four-step fo
   assert.match(html, /Or add full details now/);
 });
 
-// The geometry is interactive, not wallpaper: selecting benches knits a link web, and the
+// The geometry is interactive, not wallpaper: selecting batches knits a link web, and the
 // spine tracks reading position. Both are decorative and must stay out of the way.
 test('selection draws a link web that never intercepts clicks', () => {
   assert.match(html, /id="batchWebCanvas"/);
@@ -442,7 +442,7 @@ test('the reading spine is decorative, scroll-passive and reduced-motion safe', 
 });
 
 // The demo is walked per vertical: a company asking "what does this look like for us" needs
-// its own industry, because vetting differs per bench.
+// its own industry, because vetting differs per batch.
 test('the demo walks each vertical separately and stays labelled illustrative', () => {
   assert.match(html, /id="verticalDemo"/);
   assert.match(html, /What this looks like for you/);
@@ -461,7 +461,7 @@ test('the trial walkthrough explains the five steps and stays operable', () => {
   assert.equal((html.match(/class="tf-slide"/g) || []).length, 5);
   assert.match(html, /A company brings real work/);
   assert.match(html, /We scope it into a trial/);
-  assert.match(html, /It goes to a vetted bench/);
+  assert.match(html, /It goes to a vetted batch/);
   assert.match(html, /The student does the work/);
   assert.match(html, /The company decides/);
   // Native scroll-snap means swipe works with no JS; the rail must still read unscripted.

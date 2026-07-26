@@ -900,7 +900,7 @@ function batchDetailSection(title,body){
 
 // §13 slice 4 — the batch detail is audience-split on purpose: a student needs the BAR
 // (what it takes and where they stand), a company needs the WALKTHROUGH (how evaluating
-// this bench actually goes). Both come from the published brief in api/batches.js.
+// this batch actually goes). Both come from the published brief in api/batches.js.
 function batchBriefFor(batch){const briefs=state.dashboard?.batchBriefs||[];return briefs.find(b=>b.slug===batch.slug)||briefs.find(b=>b.name===batch.name)||null;}
 function batchStandingFor(batch){const rows=state.dashboard?.batchStanding||[];return rows.find(r=>r.slug===batch.slug)||rows.find(r=>r.name===batch.name)||null;}
 
@@ -942,7 +942,7 @@ function batchRequirementsBlock(brief,standing){
 
 function batchWorkflowBlock(brief){
   const wrap=document.createElement('div');wrap.className='batch-detail-block batch-workflow';
-  const h=document.createElement('h4');h.textContent='How you evaluate this bench';wrap.append(h);
+  const h=document.createElement('h4');h.textContent='How you evaluate this batch';wrap.append(h);
   const ol=document.createElement('ol');ol.className='batch-workflow-list';
   for(const step of brief.companyWorkflow){
     const li=document.createElement('li');
@@ -1123,25 +1123,25 @@ function renderTalentCards(){
 }
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
   $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Browse students who opted into discovery — startup-fit, building real evidence. Hire by inviting them to a scoped project.';$('#editProfile').hidden=true;
-  const benches=document.createElement('section');benches.className='talent-benches';
-  const bh=document.createElement('div');bh.className='talent-benches-head';
-  bh.append(Object.assign(document.createElement('h3'),{textContent:'Vetted benches'}));
-  bh.append(Object.assign(document.createElement('p'),{textContent:'Every student below opted into discovery. A bench is the vetted subset \u2014 unlock one with credits to see who was admitted.'}));
-  benches.append(bh);
-  const benchGrid=document.createElement('div');benchGrid.className='talent-bench-grid';
+  const batches=document.createElement('section');batches.className='talent-batches';
+  const bh=document.createElement('div');bh.className='talent-batches-head';
+  bh.append(Object.assign(document.createElement('h3'),{textContent:'Vetted batches'}));
+  bh.append(Object.assign(document.createElement('p'),{textContent:'Every student below opted into discovery. A batch is the vetted subset \u2014 unlock one with credits to see who was admitted.'}));
+  batches.append(bh);
+  const batchGrid2=document.createElement('div');batchGrid2.className='talent-batch-grid';
   const openBatches=state.dashboard.batches||[];
   const unlockedMap=new Map((state.dashboard.batchAccess||[]).map(a=>[a.batch_id,a]));
   const admittedMap=state.dashboard.batchAdmitted||{};
   if(openBatches.length){
-    for(const batch of openBatches)benchGrid.append(companyBatchCard(batch,unlockedMap.get(batch.id),admittedMap[batch.id]||0));
+    for(const batch of openBatches)batchGrid2.append(companyBatchCard(batch,unlockedMap.get(batch.id),admittedMap[batch.id]||0));
   }else{
-    benchGrid.append(Object.assign(document.createElement('p'),{className:'batch-roster-empty',textContent:'No benches are open yet. When one opens you can unlock its admitted roster here.'}));
+    batchGrid2.append(Object.assign(document.createElement('p'),{className:'batch-roster-empty',textContent:'No batches are open yet. When one opens you can unlock its admitted roster here.'}));
   }
-  benches.append(benchGrid);
-  root.append(benches);
-  const dirHead=document.createElement('div');dirHead.className='talent-benches-head';
+  batches.append(batchGrid2);
+  root.append(batches);
+  const dirHead=document.createElement('div');dirHead.className='talent-batches-head';
   dirHead.append(Object.assign(document.createElement('h3'),{textContent:'Everyone who opted in'}));
-  dirHead.append(Object.assign(document.createElement('p'),{textContent:'The full directory \u2014 not bench-vetted. Filter by proven skill and evidence.'}));
+  dirHead.append(Object.assign(document.createElement('p'),{textContent:'The full directory \u2014 not batch-vetted. Filter by proven skill and evidence.'}));
   root.append(dirHead);
   const bar=document.createElement('div');bar.className='talent-bar';
   const search=document.createElement('input');search.type='search';search.className='talent-search';search.placeholder='Search name, skill, school…';search.value=talentFilters.query;search.addEventListener('input',()=>{talentFilters.query=search.value.trim().toLowerCase();renderTalentCards();});

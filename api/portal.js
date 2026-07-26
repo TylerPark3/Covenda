@@ -1533,7 +1533,7 @@ export default async function handler(req, res, dependencies = {}) {
         taxonomy: { verticals: REQUIREMENT_VERTICALS, workTypes: REQUIREMENT_WORK_TYPES },
       });
       // The demo, per vertical. A company asking "what does this look like for us" needs
-      // its own industry walked, not a generic tour — verification differs per bench.
+      // its own industry walked, not a generic tour — verification differs per batch.
       if (input.action === 'vertical-demo') return res.status(200).json({
         ok: true,
         demos: BATCH_CATALOG.map(b => demoForVertical(b.slug)).filter(Boolean),

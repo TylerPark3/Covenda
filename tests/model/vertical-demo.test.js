@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BATCH_CATALOG, VERTICAL_DEMOS, demoForVertical, batchBySlug } from '../../api/batches.js';
 
-test('every bench has its own demo — no vertical falls back to a generic tour', () => {
+test('every batch has its own demo — no vertical falls back to a generic tour', () => {
   for (const batch of BATCH_CATALOG) {
     assert.ok(VERTICAL_DEMOS[batch.slug], `${batch.slug} has no demo`);
     const demo = demoForVertical(batch.slug);
@@ -19,9 +19,9 @@ test('demos are labelled illustrative, never a case study', () => {
   }
 });
 
-// The honesty rule has to survive into the demo: a bench with no API forensic must not have
+// The honesty rule has to survive into the demo: a batch with no API forensic must not have
 // its walkthrough imply one.
-test('human-rail benches describe a human rail in their evidence beat', () => {
+test('human-rail batches describe a human rail in their evidence beat', () => {
   for (const batch of BATCH_CATALOG) {
     if ((batch.vetting.connectors || []).length) continue;
     const demo = demoForVertical(batch.slug);
@@ -55,7 +55,7 @@ test('the lead vertical is derived, and today it is software', async () => {
   assert.equal(finance.ownershipVerified, false, 'finance ownership is gated (Alpaca terms), so it cannot lead');
 });
 
-test('human-rail benches are identified as such, not quietly ranked', async () => {
+test('human-rail batches are identified as such, not quietly ranked', async () => {
   const { verticalStrength, batchBySlug } = await import('../../api/batches.js');
   assert.equal(verticalStrength(batchBySlug('healthcare-operations')).humanRailOnly, true);
   assert.equal(verticalStrength(batchBySlug('professional-services')).humanRailOnly, true);

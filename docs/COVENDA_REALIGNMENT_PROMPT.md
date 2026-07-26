@@ -14,7 +14,7 @@ keep them distinct in any external copy (never present `[R]` figures as Covenda'
 ---
 
 ## 0. The thesis in one line
-**Covenda is a curated bench of professor- and club-vouched, high-capability students who earn
+**Covenda is a curated batch of professor- and club-vouched, high-capability students who earn
 their way in through bounded work-trials and compound that into a verified, rubric-scored
 record within a vertical — built for startups that hire on proof, not résumés.**
 
@@ -52,7 +52,7 @@ The site today already says a lot of this. The realignment sharpens five things:
    reviewed-work record, not a résumé.
 
 5. **Language cleanup.** `[R]` Retire "curated repository segmented into task forces" (reads as
-   inventory-of-people) and "multi-sided referral flywheel." Use: **verified talent benches by
+   inventory-of-people) and "multi-sided referral flywheel." Use: **verified talent batches by
    vertical**, **proof of work**, **work-trial**, **staked referrals with accountability scoring**.
 
 ---
@@ -85,7 +85,7 @@ Handshake's structural constraint: **universities are their customer**, which fo
 neutrality, and every-student inclusion. Their Nov-2025 "refounding" concedes small companies get
 crowded out and neither side has skill signal. Covenda's advantage is a **posture they cannot
 adopt** — hard curation, rankings, and reputations that can fall — **not a feature they lack**.
-Frame the contrast as "open marketplace vs. curated bench," never naming them disparagingly.
+Frame the contrast as "open marketplace vs. curated batch," never naming them disparagingly.
 **Corollary:** heavy career-center / university GTM imports the same breadth constraint — so the
 site should *not* lean on institutional partnerships as the story. (Flag the tension with the
 earlier `covenda-outreach` career-center plan.)
@@ -103,7 +103,7 @@ earlier `covenda-outreach` career-center plan.)
 - **Referrals hero** (formerly Educators) → rewrite as the **staked-referral channel**: a vouch is a
   wager, your score moves with outcomes. Remove any "institutional partnership" implication.
 - **Contrast section** ("the pile vs. Covenda") → keep; sharpen to "open marketplace / AI-spam pile"
-  vs. "vouched, reviewed, curated bench."
+  vs. "vouched, reviewed, curated batch."
 - **Why-now stat band** → keep the four grounded stats; only add new figures that clear grounding.
 - **Covenda tree / "The Covenda Model"** → re-caption around **proof precedes access** (roots =
   vouch, trunk = work-trial, canopy = verified record).
@@ -117,7 +117,7 @@ earlier `covenda-outreach` career-center plan.)
   curation; Phase 2 staked once scores are meaningful). Build the surface; gate the scoring on real
   outcomes only.
 - **Batches** (already redesigned: expandable cards, assigned 5-min video prompt, interest
-  questions) → keep; make each batch a **vertical bench** with a domain rubric.
+  questions) → keep; make each batch a **vertical batch** with a domain rubric.
 - **Student profile editor** → the near-term "make it fun + easier" work: chip-based, add club
   activities (structured: club, role, dates), live completeness/credibility meter driven by **real
   inputs only** (verified vouches, reviewed work, real endorsements) — never fabricated exit/LinkedIn
@@ -141,7 +141,7 @@ instrument the experiment.
 ## 7. Tensions to resolve before/while executing
 1. **Finance wedge vs. "no finance exposure."** `GTM_ACCOUNTING_WEDGE.md` targets accounting/
    finance-ops project work for small firms; the new lead is startup-first with no finance-internship
-   exposure. Decide: is accounting-ops kept as *one vertical bench* (fine) while the **headline**
+   exposure. Decide: is accounting-ops kept as *one vertical batch* (fine) while the **headline**
    narrative is startups? Recommended: yes — demote finance-ops from lead story to one vertical.
 2. **Career-center GTM vs. Handshake corollary (§4).** The `covenda-outreach` plan leans on
    educators/career centers. Reconcile: keep professor/club outreach as **staked-referral sourcing**

@@ -83,7 +83,7 @@ export function buildTalentRequirement(input = {}) {
 export function requirementCompleteness(requirement = {}) {
   const checks = [
     { key: 'verticals', ok: (requirement.verticals || []).length > 0,
-      gain: 'Pick an industry — it decides which bench is searched at all.' },
+      gain: 'Pick an industry — it decides which batch is searched at all.' },
     { key: 'required_skills', ok: (requirement.required_skills || []).length > 0,
       gain: 'Name a must-have skill — this becomes a hard filter, not a preference.' },
     { key: 'hours_week', ok: Boolean(requirement.hours_week),
@@ -105,14 +105,14 @@ export function requirementCompleteness(requirement = {}) {
   };
 }
 
-// Narrow a candidate pool to the requirement's bench before ranking. Matching inside a bench
+// Narrow a candidate pool to the requirement's batch before ranking. Matching inside a batch
 // is the whole point of batches: the pool is pre-vetted for that vertical, so the ranking
 // runs over people who already cleared a published bar.
 export function candidatesForRequirement(requirement, candidates = []) {
   const wantVerticals = new Set(requirement?.verticals || []);
-  const bench = requirement?.batchSlug || null;
+  const batch = requirement?.batchSlug || null;
   return (candidates || []).filter(c => {
-    if (bench && c.batch_slug && c.batch_slug !== bench) return false;
+    if (batch && c.batch_slug && c.batch_slug !== batch) return false;
     if (!wantVerticals.size) return true;
     const theirs = Array.isArray(c.verticals) ? c.verticals : [];
     return theirs.length === 0 || theirs.some(v => wantVerticals.has(v));

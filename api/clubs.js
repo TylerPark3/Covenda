@@ -45,7 +45,7 @@ export const VERIFICATION_TIERS = [
     label: 'Distinguished pipeline',
     minAdmitted: 6,
     minAccepted: 5,
-    grants: 'Featured to companies unlocking this bench, plus first look at new openings in the vertical.',
+    grants: 'Featured to companies unlocking this batch, plus first look at new openings in the vertical.',
   },
 ];
 
@@ -97,7 +97,7 @@ export function memberStanding(clubVerification, options = {}) {
   return {
     badge: `${clubVerification.clubName} · ${clubVerification.label}`,
     note: options.verbose
-      ? `Members of this club have cleared this bench before (${clubVerification.admittedCount} admitted, ${clubVerification.acceptedWorkCount} with accepted work).`
+      ? `Members of this club have cleared this batch before (${clubVerification.admittedCount} admitted, ${clubVerification.acceptedWorkCount} with accepted work).`
       : null,
     // Load-bearing: a club badge can never stand in for evidence the student owes.
     satisfiesRequirement: false,
@@ -113,7 +113,7 @@ export const REFERRER_VALUE = {
   club: [
     'Collective standing — every member inherits the club’s verified status in this vertical.',
     'A public track record page the club can show prospective members and its department.',
-    'Priority visibility to companies unlocking this bench.',
+    'Priority visibility to companies unlocking this batch.',
     'A repeatable pipeline that outlives any individual officer.',
   ],
   professor: [

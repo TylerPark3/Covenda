@@ -54,7 +54,7 @@ test('the company problem statement is kept verbatim and never scored', () => {
   assert.equal(req.problemScore, undefined);
 });
 
-test('candidates are narrowed to the requested bench before ranking', () => {
+test('candidates are narrowed to the requested batch before ranking', () => {
   const req = buildTalentRequirement({ verticals: ['Software & AI'], batchSlug: 'software-ai' });
   const pool = [
     { id: 'a', batch_slug: 'software-ai', verticals: ['Software & AI'] },
