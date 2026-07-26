@@ -183,3 +183,33 @@ test('TAXONOMY: synonyms unify — an opportunity wanting JavaScript matches a "
   assert.equal(out.refused, false);
   assert.equal(out.shortlist[0].candidate_id, 'a');
 });
+
+test('availability is scored as SLACK, so the weight can actually change a ranking', () => {
+  // Regression guard for a real bug: the hard filter already rejects anyone below the required
+  // hours, so scoring min(1, have/need) gave every survivor the SAME constant — dead weight
+  // that could never move a shortlist (found by the ablation harness). Headroom is the signal.
+  const opp = { required_skills: 'Python', hours_week: 8, verticals: [], work_types: [] };
+  const base = { verticals: [], work_types: [], claims: [claim('Python', 'artifact')] };
+  const at = scoreCandidate(opp, { id: 'a', ...base, availability_hours_week: 8 });
+  const roomy = scoreCandidate(opp, { id: 'b', ...base, availability_hours_week: 24 });
+  assert.ok(roomy.score_components.availability_fit > at.score_components.availability_fit,
+    'more headroom must score higher than scraping the bar');
+
+  // And it must be able to flip an otherwise-tied ranking.
+  const ranked = matchOpportunity(opp, [
+    { id: 'tight', ...base, availability_hours_week: 8 },
+    { id: 'roomy', ...base, availability_hours_week: 24 },
+  ]).shortlist.map(s => s.candidate_id);
+  assert.equal(ranked[0], 'roomy');
+});
+
+test('unknown availability is neutral — a blank field never penalizes a candidate', () => {
+  const opp = { required_skills: 'Python', hours_week: 8, verticals: [], work_types: [] };
+  const base = { verticals: [], work_types: [], claims: [claim('Python', 'artifact')] };
+  const known = scoreCandidate(opp, { id: 'a', ...base, availability_hours_week: 8 });
+  const unknown = scoreCandidate(opp, { id: 'b', ...base });                  // no hours at all
+  const noRequirement = scoreCandidate({ ...opp, hours_week: undefined }, { id: 'c', ...base });
+  assert.equal(unknown.score_components.availability_fit, known.score_components.availability_fit,
+    'missing availability must score the same as meeting the bar, never zero');
+  assert.equal(noRequirement.score_components.availability_fit, known.score_components.availability_fit);
+});

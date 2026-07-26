@@ -112,4 +112,8 @@ Set in Vercel to enable the GitHub OAuth path:
 - Finance: Alpaca track-record features (gated) + `.xlsx` rubric parse + pitch-defense rubric land
   as tiered, evidence-pointed claims. ✓
 - Honest-limits routing visible for sales/biotech; deferred connectors exist only as stubs. ✓
+  (Surfaced publicly by the **How proof works** section on the homepage — `#verifyMethods` in
+  `index.html`, rendered by `initVerifyMethods` in `app.js` from `/api/proof-methods`. It lists
+  only `status: 'live'` mechanisms plus the `human_rail` verticals, so the terms-gated Alpaca
+  connector and the five stubs are never advertised as available.)
 - No raw third-party dumps stored; OAuth read-only + revocable; `npm run check` green. ✓

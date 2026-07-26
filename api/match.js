@@ -117,11 +117,22 @@ export function scoreCandidate(opportunity, candidate, weights = MATCH_WEIGHTS) 
   const candTags = new Set([...(candidate?.verticals || []), ...(candidate?.work_types || [])].map(norm));
   const overlap = [...oppTags].filter(t => candTags.has(t)).length;
   const relevanceFrac = oppTags.size ? overlap / oppTags.size : 0;
+  // Availability is measured as SLACK, not as pass/fail. The hard filter already rejects anyone
+  // below the requirement, so `min(1, have/need)` scored an identical constant for every
+  // survivor and could never change a ranking — dead weight dressed up as a signal (found by
+  // the ablation in api/eval-metrics.js). Headroom is the real signal: a student with room to
+  // spare absorbs a bad week; one at exactly the limit has no slack when something slips.
+  //
+  // Missing data is NEVER a penalty (the guardrail used throughout the engine): an unstated
+  // requirement or unknown availability scores the same as meeting the bar exactly, so a
+  // candidate is neither rewarded nor punished for a field nobody filled in.
   const needHours = Number(opportunity?.hours_week);
   const haveHours = Number(candidate?.availability_hours_week);
-  const availFrac = (!Number.isFinite(needHours) || needHours <= 0) ? 0
-    : (!Number.isFinite(haveHours) || haveHours <= 0) ? 0
-    : Math.min(1, haveHours / needHours);
+  const AVAIL_MEETS_BAR = 0.35; // credit for exactly meeting it (and the neutral/no-data value)
+  const availFrac = (!Number.isFinite(needHours) || needHours <= 0
+    || !Number.isFinite(haveHours) || haveHours <= 0)
+    ? AVAIL_MEETS_BAR
+    : AVAIL_MEETS_BAR + (1 - AVAIL_MEETS_BAR) * Math.min(1, Math.max(0, haveHours / needHours - 1));
   const vouched = hasVouch(candidate);
 
   const components = {

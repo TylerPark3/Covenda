@@ -36,16 +36,26 @@ from `api/match.js` so evaluating the engine can never change how it scores):
 note saying the result is directional and **not** validation — so a 6-case number can never be
 quoted as if the engine were validated.
 
-### Ablation finding (honest, and a caveat on the weights)
-Running `ablationReport` over the live `MATCH_WEIGHTS`: on a pool where several candidates clear
-the hard filters, `skills_match` (34), `evidence_depth` (26) and `project_relevance` (20) each
-change the top-3 when zeroed — they earn their weight. `availability_fit` (12) and
-`referral_presence` (8) did **not** change the ranking on that pool, because availability is
-already enforced as a hard filter and referral presence only matters when a vouched candidate is
-otherwise borderline. This is expected given the architecture (hard filters do the heavy lifting;
-the weighted sum breaks ties among survivors) but it means those two weights are currently
-**unvalidated** — do not cite them as evidence the model "considers availability and referrals"
-until real outcome data shows them moving decisions.
+### Ablation finding — and the dead-weight bug it caught
+Running `ablationReport` over the live `MATCH_WEIGHTS` found a real defect, not just a
+measurement. `skills_match` (34), `evidence_depth` (26) and `project_relevance` (20) each change
+the top-3 when zeroed — they earn their weight. `availability_fit` (12) did **not**, and the
+reason turned out to be arithmetic: the hard filter already rejects anyone below the required
+hours, so scoring `min(1, have/need)` awarded an identical constant to every survivor. The
+component was mathematically incapable of changing any ranking — dead weight presented as a
+signal.
+
+**Fixed:** availability is now scored as **slack**, not pass/fail. Meeting the bar exactly earns
+partial credit (0.35 of the weight); headroom scales it to full credit at 2× the requirement.
+Headroom is the real signal — a student with room to spare absorbs a bad week, one at exactly
+the limit has none. Missing data (no stated requirement, or unknown availability) scores the
+same as meeting the bar, so a blank field is never a penalty. Regression tests in
+`tests/model/match.test.js` assert both properties.
+
+`referral_presence` (8) remains unmoved in that particular pool, but for a benign reason: it is a
+binary present/absent term, and the vouched candidate simply wasn't in contention there. It does
+differentiate whenever a vouched candidate is otherwise close. Still, it has not been validated
+against outcomes — don't cite it as a proven contributor until the flywheel says so.
 
 ### Calibration status
 Brier/ECE are **implemented and tested**, but have no real predictions to score yet: calibration
