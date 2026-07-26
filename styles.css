@@ -3495,7 +3495,7 @@ body.is-audience-transitioning .audience-transition span {
   0%, 27%, 78%, 100% { opacity: 0; transform: scale(.88) rotate(-2deg); }
   45%, 60% { opacity: 1; transform: scale(1) rotate(0); }
 }
- 
+
 /* The hero kicker needs air above it — it was sitting against the header. */
 .home-kicker { margin-bottom: 20px; }
 
