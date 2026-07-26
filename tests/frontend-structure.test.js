@@ -624,3 +624,29 @@ test('the referral section shows the outcome, labelled illustrative', () => {
   assert.match(html, /Covenda has no outcome data yet/);
   assert.match(html, /No student names, just the numbers/);
 });
+
+// The referral page opened with a roster form — asking for work before making the case.
+// It now leads with the demonstration: how a founder hires undergraduates today, and what
+// changes when the same thing is systematised.
+test('the referral page argues before it asks', () => {
+  assert.match(html, /This already works/);
+  assert.match(html, /How it works today/);
+  assert.match(html, /The same thing, systematised/);
+  assert.match(html, /class="ref-story"/);
+  // The anecdote is real but the company is NOT a partner — that has to be said, not implied.
+  assert.match(html, /Not a Covenda partner/);
+  // The actual goal, stated: credibility a stranger will trust.
+  assert.match(html, /build credibility that a founder who has never heard of it will still trust/);
+});
+
+// Self-rated scales carried no signal and contradicted the platform's own rule that
+// self-report is never evidence. The application asks the batch's real questions instead.
+test('the batch application asks real questions, not a self-rating survey', async () => {
+  const portalJs = await readFile(new URL('../portal.js', import.meta.url), 'utf8');
+  // portal.js is a separate classic script, so it is not the `script` fixture above.
+  assert.match(portalJs, /brief&&brief\.questions/);
+  assert.doesNotMatch(portalJs, /How deep are you in/);
+  assert.doesNotMatch(portalJs, /how set are you on working in/);
+  // How each answer is judged is stated up front.
+  assert.match(portalJs, /How you bound the problem is the point/);
+});

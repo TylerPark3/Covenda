@@ -883,13 +883,37 @@ function pickBatchPrompt(batch){
   return raw.replace(/\{v\}/g,v);
 }
 // Short questions that gauge genuine interest in the batch's vertical (not generic fit).
+// The application asks the batch's REAL screening questions, pulled from api/batches.js.
+//
+// What was here before: "Why this vertical?", then two self-rated scales asking how deep
+// the student was in the field and how committed. Everyone selects the top option, so they carried no
+// signal at all, and a self-rating is the exact thing this platform says never counts as
+// evidence. A student who can answer "depreciation goes up $10, walk the three statements"
+// has told us something; a student who ticks "Deep — it is my main focus" has not.
 function batchInterestQuestions(batch){
-  const v=batchVertical(batch);
-  return [
-    {id:'why',label:`Why ${v}? What pulls you toward this vertical specifically?`,type:'text',placeholder:'A sentence or two — be honest, not polished.'},
-    {id:'depth',label:`How deep are you in ${v} today?`,type:'select',options:['Just starting to explore it','Actively building or studying it','Worked on real projects in it','Deep — it is my main focus']},
-    {id:'commit',label:`If admitted, how set are you on working in ${v}?`,type:'select',options:['Just curious','Interested','Strongly interested','It is the plan']},
-  ];
+  const brief=batchBriefFor(batch);
+  const qs=(brief&&brief.questions)||[];
+  if(qs.length){
+    // Two written answers here; the rest are asked live in the recorded walkthrough, where
+    // they cannot be looked up.
+    return qs.slice(0,2).map((q,i)=>({
+      id:'q'+(i+1),
+      label:q.question,
+      hint:q.kind==='technical'
+        ?'Show your reasoning. Getting there matters more than landing exactly right.'
+        :'No right answer. How you bound the problem is the point.',
+      type:'text',
+      placeholder:q.kind==='technical'?'Work through it in a few sentences.':'A few sentences.',
+    }));
+  }
+  // No published questions for this batch yet — ask the one thing that is always specific.
+  return [{
+    id:'why',
+    label:`What have you actually built or worked on in ${batchVertical(batch)}?`,
+    hint:'Name the thing. Not an interest — a piece of work.',
+    type:'text',
+    placeholder:'What it was, what you did, what went wrong.',
+  }];
 }
 function batchDetailSection(title,body){
   const wrap=document.createElement('div');wrap.className='batch-detail-block';
@@ -1004,9 +1028,12 @@ function renderBatchInterest(batch){
   batchInterestSpec.forEach(q=>{
     const label=document.createElement('label');label.className='batch-interest-q';
     const span=document.createElement('span');span.className='batch-interest-label';span.textContent=q.label;label.append(span);
+    // How the answer is judged, said up front — a student should never be guessing whether
+    // we want a right answer or a way of thinking.
+    if(q.hint){const hint=document.createElement('small');hint.className='batch-interest-hint';hint.textContent=q.hint;label.append(hint);}
     let field;
     if(q.type==='select'){field=document.createElement('select');const ph=document.createElement('option');ph.value='';ph.textContent='Choose one…';field.append(ph);(q.options||[]).forEach(o=>{const opt=document.createElement('option');opt.value=o;opt.textContent=o;field.append(opt);});}
-    else{field=document.createElement('textarea');field.rows=2;field.maxLength=600;field.placeholder=q.placeholder||'';}
+    else{field=document.createElement('textarea');field.rows=4;field.maxLength=900;field.placeholder=q.placeholder||'';}
     field.name='interest_'+q.id;label.append(field);host.append(label);
   });
 }

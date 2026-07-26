@@ -976,3 +976,9 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .rec-actions .portal-ghost { color: rgba(255,255,255,.75); border-color: rgba(255,255,255,.3); }
 .rec-actions .portal-ghost:hover { color: #fff; border-color: #fff; }
 @media (prefers-reduced-motion: reduce) { .rec-overlay::backdrop { backdrop-filter: none; } }
+
+/* The screening questions need room to answer and a line saying how they are judged. */
+.batch-interest-q { display: grid; gap: 6px; }
+.batch-interest-label { font-size: 14.5px; font-weight: 650; line-height: 1.45; color: #31312e; }
+.batch-interest-hint { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.batch-interest-q textarea { min-height: 96px; }
