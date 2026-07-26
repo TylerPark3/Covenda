@@ -8,6 +8,7 @@ import { presentScore, normalizeAppeal } from './hardening.js';
 import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical } from './batches.js';
 import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION, evaluateClubVerification, memberStanding } from './clubs.js';
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
+import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normaliseEmail } from './verification.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
@@ -298,7 +299,8 @@ export async function loadMemberDashboard(member, env = process.env) {
       creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member), loadBatches(member), loadBatchApplications(member),
     ]);
     const batchStanding = await loadBatchStanding(member);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches, batchApplications, batchStanding, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    const verification = await loadVerificationStanding(member);
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches, batchApplications, batchStanding, verification, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -1050,6 +1052,85 @@ export async function loadBatchStanding(member) {
 }
 
 
+
+// ---- §14 student verification --------------------------------------------------------
+// A six-digit code to the school address. The code is checked server-side against a stored
+// row, attempts are counted, and the row is consumed on success — none of which can be
+// enforced from the client.
+
+export async function requestSchoolVerification(member, input, { env = process.env } = {}) {
+  const email = normaliseEmail(input.schoolEmail);
+  const check = checkSchoolEmail(email);
+  if (!check.ok) throw new Error(check.reason);
+
+  // One live code per person: a fresh request invalidates the last, so an old code in an old
+  // email cannot still be used.
+  await member.supabase.from('school_email_codes')
+    .update({ consumed_at: new Date().toISOString() })
+    .eq('user_id', member.user.id).is('consumed_at', null);
+
+  const code = generateCode();
+  await checked(member.supabase.from('school_email_codes').insert({ user_id: member.user.id, email, code }).select('id').single(), null);
+
+  const apiKey = env.RESEND_API_KEY;
+  const from = env.COVENDA_NOTIFICATION_FROM;
+  if (!apiKey || !from) throw new PortalOperationalError('VERIFY_EMAIL_NOT_CONFIGURED', 'Email is not configured for this deployment yet.');
+  const { Resend } = await import('resend');
+  const { error } = await new Resend(apiKey).emails.send({
+    from,
+    to: email,
+    subject: `Covenda verification code: ${code}`,
+    text: `Your Covenda school-email verification code is ${code}. It expires in 20 minutes.\n\nThis confirms you control this address. It is not a sign-in link.`,
+  });
+  if (error) throw new PortalOperationalError('VERIFY_EMAIL_FAILED', 'Could not send the code. Try again shortly.');
+  // The address is never echoed back in full — the client already knows it, and a response
+  // that repeats it is one more place it can leak.
+  return { sent: true, domain: check.domain };
+}
+
+export async function confirmSchoolVerification(member, input) {
+  const record = await checked(member.supabase.from('school_email_codes')
+    .select('*').eq('user_id', member.user.id).is('consumed_at', null)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle(), null);
+
+  const verdict = checkCode(record, input.code, new Date());
+  if (!verdict.ok) {
+    // Count the attempt BEFORE returning, or a wrong guess is free and the limit means nothing.
+    if (record && !verdict.expired) {
+      await member.supabase.from('school_email_codes')
+        .update({ attempts: Number(record.attempts || 0) + 1 }).eq('id', record.id);
+    }
+    throw new Error(verdict.reason);
+  }
+
+  const now = new Date().toISOString();
+  await member.supabase.from('school_email_codes').update({ consumed_at: now }).eq('id', record.id);
+  const check = checkSchoolEmail(record.email);
+  await checked(member.supabase.from('member_profiles').update({
+    school_email: record.email,
+    school_email_domain: check.domain,
+    school_email_verified_at: now,
+  }).eq('user_id', member.user.id), null);
+  return { verified: true, domain: check.domain, doesNotProve: check.doesNotProve };
+}
+
+// The three signals side by side, so what is MISSING is as visible as what is held.
+export async function loadVerificationStanding(member) {
+  try {
+    const [profile, clubs] = await Promise.all([
+      checked(member.supabase.from('member_profiles').select('school_email_verified_at').eq('user_id', member.user.id).maybeSingle(), null),
+      checked(member.supabase.from('club_members').select('id').eq('student_user_id', member.user.id).eq('status', 'confirmed'), []),
+    ]);
+    return verificationStanding({
+      schoolVerifiedAt: profile?.school_email_verified_at || null,
+      confirmedClubs: (clubs || []).length,
+      referrals: 0,
+    });
+  } catch {
+    return verificationStanding({});
+  }
+}
+
 // ---- §13 slice 7: clubs, backed by real rows ----------------------------------------
 // Registration used to land in the generic submissions inbox and stop, so a club could never
 // actually earn anything. These read and write public.clubs / club_members /
@@ -1665,6 +1746,8 @@ export default async function handler(req, res, dependencies = {}) {
       return res.status(200).json({ ok: true, appeal: data });
     }
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
+    if (req.method === 'POST' && input.action === 'verify-school-email') return res.status(200).json({ ok: true, ...(await requestSchoolVerification(member, input, dependencies)) });
+    if (req.method === 'POST' && input.action === 'confirm-school-email') return res.status(200).json({ ok: true, ...(await confirmSchoolVerification(member, input)) });
     if (req.method === 'POST' && input.action === 'register-club') return res.status(201).json({ ok: true, club: await registerClub(member, input) });
     if (req.method === 'POST' && input.action === 'claim-club') return res.status(201).json({ ok: true, membership: await claimClubMembership(member, input) });
     if (req.method === 'POST' && input.action === 'club-standing') return res.status(200).json({ ok: true, ...(await clubStanding(member, cleanText(input.clubId, 50))) });
