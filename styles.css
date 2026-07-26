@@ -495,7 +495,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 .hero-company { display: none; }
 /* Company hero: two clear segments — delegate work, and find talent. */
 /* Delegate card wider than the talent card, so the problem composer has room to breathe. */
-.company-jobs { display: grid; grid-template-columns: 1.55fr 1fr; gap: 22px; margin: clamp(30px, 4vw, 46px) auto 0; max-width: 1140px; text-align: left; }
+.company-jobs { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr); gap: clamp(20px, 2.6vw, 34px); margin: clamp(30px, 4vw, 46px) 0 0; width: min(100%, var(--content)); text-align: left; align-items: start; }
 @media (max-width: 800px) { .company-jobs { grid-template-columns: 1fr; } }
 .company-job { display: flex; flex-direction: column; padding: clamp(22px, 2.6vw, 32px); border: 1px solid var(--line); border-radius: 0; background: #fff; }
 .company-job-talent { border-color: var(--gold-light); background: linear-gradient(180deg, var(--gold-pale), #fff 62%); }
@@ -3350,3 +3350,16 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 .vdemo-beats p { max-width: 44ch; margin: 6px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.62; }
 .vdemo-note { display: flex; align-items: flex-start; gap: 9px; margin: clamp(20px, 2.4vw, 28px) auto 0; color: var(--soft); font-size: 13px; }
 .vdemo-note svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 2px; color: var(--gold-deep); }
+
+/* The builder is the primary company action, so it gets the width. The chip sits under the
+   problem field it describes, where the old composer used to put it. */
+.company-job-builder { padding: clamp(26px, 3.2vw, 40px); }
+.company-job-builder h2 { max-width: 22ch; }
+.company-job-builder > p { max-width: 62ch; }
+.ib-fit { margin-top: 10px; }
+.ideal-builder .ib-problem textarea { min-height: 96px; }
+/* Wide screens: the four numeric fields sit on one row rather than wrapping to two. */
+@media (min-width: 1100px) {
+  .ib-row { grid-template-columns: 1.6fr repeat(3, 1fr); }
+  .ib-chips { gap: 9px; }
+}

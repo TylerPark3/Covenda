@@ -58,9 +58,11 @@ test('the initial path chooser uses a continuous responsive glass control', () =
 test('audience switch supports student and company site states', () => {
   assert.match(html, /data-audience-option="student"/);
   assert.match(html, /data-audience-option="company"/);
-  // Company hero leads with two segments: delegate work + hire from the vetted bench.
-  assert.match(html, /Work that keeps getting pushed back/);
+  // Company hero leads with the profile builder — the backlog card was removed, since
+  // "describe the person" is the entry point now and the problem field lives inside it.
+  assert.match(html, /Build the profile/);
   assert.match(html, /Hire from a vetted bench/);
+  assert.doesNotMatch(html, /Work that keeps getting pushed back/);
   assert.match(script, /document\.body\.dataset\.audience = audience/);
   assert.match(styles, /body\[data-audience="company"\] \.hero-student/);
   assert.match(script, /covendaAudience/);
@@ -466,4 +468,14 @@ test('the founder note carries a portrait and an attribution', () => {
   assert.match(html, /Tyler Park · founder/);
   assert.match(html, /alt="Tyler Park, founder of Covenda"/);
   assert.match(html, /loading="lazy"/);
+});
+
+test('the company problem field lives inside the builder, with its fit chip', () => {
+  // Everything that reads #companyProblemSeed (fit chip, demo prefill, project-fit scroll,
+  // dialog handoff) still resolves after the backlog card was removed.
+  assert.match(html, /<textarea id="companyProblemSeed" name="problem"/);
+  assert.match(html, /id="companyFitChip"/);
+  const builder = html.match(/<form class="ideal-builder"[\s\S]*?<\/form>/)?.[0] || '';
+  assert.ok(builder.includes('companyProblemSeed'), 'problem field must be inside the builder form');
+  assert.ok(builder.includes('companyFitChip'), 'fit chip must sit with the field it describes');
 });

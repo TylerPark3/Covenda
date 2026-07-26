@@ -308,7 +308,8 @@
                 <label>Length <span>Weeks</span><input name="durationWeeks" type="number" min="1" max="26" inputmode="numeric" placeholder="4"></label>
                 <label>Your review time <span>Min / week</span><input name="reviewMinutesPerWeek" type="number" min="0" max="600" inputmode="numeric" placeholder="60"></label>
               </div>
-              <label class="ib-problem">What would they help with?<textarea name="problem" rows="3" placeholder="The work you'd hand them, and what a useful finish looks like…"></textarea></label>
+              <label class="ib-problem">What would they help with?<textarea id="companyProblemSeed" name="problem" rows="3" placeholder="The work you'd hand them, and what a useful finish looks like…"></textarea></label>
+              <div class="composer-meta ib-fit"><span class="composer-fit" id="companyFitChip" data-fit="empty" role="status" aria-live="polite">Start typing — we’ll show project fit</span></div>
               <div class="ib-actions">
                 <button class="gold-button" type="submit">Build the profile<svg><use href="#icon-arrow-right"/></svg></button>
                 <button class="quiet-link" type="button" data-action="schedule-demo">Prefer a call first?<svg><use href="#icon-chevron"/></svg></button>
@@ -316,22 +317,6 @@
               <div class="form-message" id="ibMessage" role="status" aria-live="polite"></div>
             </form>
             <div class="ib-result" id="ibResult" hidden></div>
-          </article>
-          <article class="company-job">
-            <p class="company-job-eyebrow"><svg><use href="#icon-clock"/></svg>Or start from the work</p>
-            <h2>Work that keeps getting pushed back</h2>
-            <p>Already know the task? Describe it and Covenda turns the safe, useful part into a project your team can approve.</p>
-            <div class="selector-orbit company-orbit">
-              <div class="company-composer glass-panel">
-                <svg class="composer-icon"><use href="#icon-file"/></svg>
-                <label class="sr-only" for="companyProblemSeed">Describe the company problem</label>
-                <textarea id="companyProblemSeed" rows="3" placeholder="Tell us what is not getting done…"></textarea>
-                <button class="gold-button" type="button" data-action="portal-create-project">Create Project<svg><use href="#icon-arrow-right"/></svg></button>
-              </div>
-              <div class="composer-meta">
-                <span class="composer-fit" id="companyFitChip" data-fit="empty" role="status" aria-live="polite">Start typing — we’ll show project fit</span>
-              </div>
-            </div>
           </article>
           <article class="company-job company-job-talent">
             <p class="company-job-eyebrow"><svg><use href="#icon-spark"/></svg>Hire vetted students</p>
