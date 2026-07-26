@@ -413,13 +413,15 @@ test('batches are described as elite batches', () => {
 // figure now: three ways in converging on a ladder that is the same for everyone.
 test('credibility is shown as a diagram, not restated in prose', () => {
   assert.match(html, /Three ways in/);
-  assert.match(html, /class="cred-fig"/);
+  assert.match(html, /class="cred-map"/);
   assert.match(html, /A verified club/);
   assert.match(html, /Vetted work/);
   // Faculty is present and visibly the lightest — dashed, greyed, stated in the label.
-  assert.match(html, /Lightest of the four/);
-  // The figure must reach a screen reader as the sentence it replaced.
-  assert.match(html, /aria-label="Three entry routes/);
+  assert.match(html, /lightest of the four/);
+  // Built as markup, not SVG: an SVG diagram cannot inherit the type scale or the tokens,
+  // which is why its labels overflowed their boxes and it read as a foreign flowchart.
+  assert.doesNotMatch(html, /cred-fig/);
+  assert.match(html, /class="cred-ladder"/);
   // The duplicate rung list is gone; the ladder draws it.
   assert.doesNotMatch(html, /class="cred-rungs"/);
   assert.doesNotMatch(html, /class="cred-doors"/);
