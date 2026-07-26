@@ -74,14 +74,14 @@ export const CONNECTORS = {
     oauth_provider: null, extraction_job: null, schema_mapper: null,
     ownership: null, history: 'none', status: 'human_rail', rail: 'instrumented_trial',
     label: 'Sales', note: 'Simulations are entry-ticket only. Real proof = the instrumented trial: outreach through Covenda-provisioned tooling → platform-verified reply rates. Documented config, built later.',
-    example: { company: 'A B2B SaaS startup hiring an SDR', sees: 'a bounded outreach trial run through Covenda-provisioned tooling, so reply rates are platform-measured. No API can confirm outreach landed, so we do not claim one.' },
+    example: { company: 'A B2B SaaS startup hiring an SDR', sees: 'a bounded outreach trial run through Covenda-provisioned tooling, so reply rates are platform-measured \u2014 and a scored debrief on what they changed between attempts, which is the part that predicts the next hire.' },
   },
   biotech_lab: {
     connector_id: 'biotech_lab', industry: 'biotech',
     oauth_provider: null, extraction_job: null, schema_mapper: null,
     ownership: null, history: 'none', status: 'human_rail', rail: 'pi_referral',
     label: 'Biotech / lab', note: 'Bench skills are physically unverifiable remotely. The PI structured-referral rail is the PRIMARY mechanism by design — never fake verification where it cannot exist.',
-    example: { company: 'A biotech lab taking on a research assistant', sees: 'narrow, cross-checked answers from the PI who supervised the bench work, under their own name. Bench skill cannot be verified remotely and we say so rather than invent a score.' },
+    example: { company: 'A biotech lab taking on a research assistant', sees: 'narrow, cross-checked answers from the PI who supervised the bench work, under their own name \u2014 the strongest signal available for work whose quality lives in judgement rather than in a log.' },
   },
 
   // ---- Deferred: registry room only, ZERO feature code ----------------------------------

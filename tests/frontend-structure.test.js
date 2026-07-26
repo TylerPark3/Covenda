@@ -474,9 +474,15 @@ test('the trial walkthrough explains the five steps and stays operable', () => {
   assert.match(html, /The student does the work/);
   assert.match(html, /The company decides/);
   // Native scroll-snap means swipe works with no JS; the rail must still read unscripted.
-  assert.match(styles, /\.tf-viewport \{[\s\S]*?scroll-snap-type: x mandatory/);
+  // Proximity, not mandatory: paging moves a full viewport, and card-level snapping
+  // fought that and landed the rail where the dots did not claim it was.
+  assert.match(styles, /\.tf-viewport \{[\s\S]*?scroll-snap-type: x proximity/);
   // Dots follow the scroll rather than assuming they caused it.
-  assert.match(script, /if \(nearest !== index\) sync\(nearest\)/);
+  assert.match(script, /if \(at !== page\) sync\(at\)/);
+  // One dot per PAGE, not per slide: with four of five cards already visible, five dots
+  // described a journey that does not exist. Controls hide entirely when nothing can move.
+  assert.match(script, /pages = Math\.max\(1, Math\.ceil\(track\.scrollWidth/);
+  assert.match(script, /var idle = pages < 2;/);
   assert.match(script, /ArrowRight/);
   // The pop-art panel must not linger.
   assert.doesNotMatch(html, /popart/);
@@ -580,4 +586,20 @@ test('the bridge tells the story and never names a partner it does not have', ()
   // Reduced motion gets the FINISHED state, because the connection is the point.
   assert.match(script, /if \(reduce\) return; \/\/ finished state, painted once/);
   assert.match(styles, /\.bridge-sticky \{ position: sticky/);
+});
+
+// Machine checks and expert judgement are complementary instruments, not a primary and a
+// fallback. The section used to head "We verify what can be verified" with the human column
+// titled "Where that isn't possible", which framed judgement as a deficiency.
+test('verification reads as two instruments, not a fallback', () => {
+  assert.match(html, /Machines check facts/);
+  assert.match(html, /Experts judge/);
+  assert.match(html, /Machine-checked · objective/);
+  assert.match(html, /Expert-vetted · judgement/);
+  assert.match(html, /the strongest evidence is where they overlap/);
+  assert.doesNotMatch(html, /Where that isn’t possible/);
+  assert.doesNotMatch(html, /We verify what can be/);
+  // Judgement is measured, not vibes — and the honesty line survives the reframe.
+  assert.match(html, /adjudicate where they disagree/);
+  assert.match(html, /simulation or a self-reported number/);
 });
