@@ -2182,6 +2182,7 @@ body[data-audience="home"] .hero-university { display: none; }
 body[data-audience="home"] .audience-content,
 body[data-audience="home"] .value-band,
 body[data-audience="home"] #why,
+body[data-audience="home"] .stat-band,
 body[data-audience="home"] .batches-section,
 body[data-audience="home"] .final-cta { display: none; }
 /* the core story + "What Covenda is" belong to home, not the student surface */
@@ -3355,6 +3356,71 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .audience-switch button:hover { color: var(--ink); }
 .audience-switch button[aria-pressed="true"] { border-color: var(--line-strong); background: #fff; color: var(--ink); }
 
+/* A folded-paper sweep joins the three public paths. It reads like one sheet turning over,
+   rather than the usual fade/slide transition. */
+.audience-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.audience-transition-sheet {
+  position: absolute;
+  inset: -18%;
+  display: block;
+  background: #fff;
+  transform: translateX(-125%) skewX(-13deg) rotate(-2deg);
+  transform-origin: center;
+}
+.audience-transition-sheet--a {
+  box-shadow: 24px 0 70px rgba(77,55,14,.13);
+}
+.audience-transition-sheet--b {
+  background: #f7edcf;
+  opacity: .94;
+  transform: translateX(-142%) skewX(18deg) rotate(3deg);
+}
+.audience-transition span {
+  position: relative;
+  z-index: 2;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(34px, 6vw, 82px);
+  font-weight: 400;
+  letter-spacing: -.055em;
+  opacity: 0;
+  transform: scale(.88) rotate(-2deg);
+}
+body.is-audience-transitioning { overflow: hidden; }
+body.is-audience-transitioning .audience-transition { visibility: visible; }
+body.is-audience-transitioning .audience-transition-sheet--a {
+  animation: audience-sheet-a .84s cubic-bezier(.72,0,.18,1) both;
+}
+body.is-audience-transitioning .audience-transition-sheet--b {
+  animation: audience-sheet-b .84s cubic-bezier(.72,0,.18,1) both;
+}
+body.is-audience-transitioning .audience-transition span {
+  animation: audience-label .84s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes audience-sheet-a {
+  0% { transform: translateX(-125%) skewX(-13deg) rotate(-2deg); }
+  45%, 58% { transform: translateX(0) skewX(0) rotate(0); }
+  100% { transform: translateX(125%) skewX(13deg) rotate(2deg); }
+}
+@keyframes audience-sheet-b {
+  0% { transform: translateX(-142%) skewX(18deg) rotate(3deg); }
+  45%, 58% { transform: translateX(0) skewX(0) rotate(0); }
+  100% { transform: translateX(142%) skewX(-18deg) rotate(-3deg); }
+}
+@keyframes audience-label {
+  0%, 27%, 78%, 100% { opacity: 0; transform: scale(.88) rotate(-2deg); }
+  45%, 60% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
 /* The hero kicker needs air above it — it was sitting against the header. */
 .hero-home .hero-copy { padding-top: clamp(18px, 5vh, 54px); }
 .home-kicker { margin-bottom: 20px; }
@@ -3397,29 +3463,391 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .tf-dot[aria-selected="true"] { background: var(--gold-deep); }
 @media (prefers-reduced-motion: reduce) { .tf-viewport { scroll-behavior: auto; } }
 
-/* The break, drawn. Carries what three paragraphs used to, so it gets real width. */
+/* Student entry: one clear action, then vertical → specialty. */
+.hero-student { padding-top: clamp(56px, 8vh, 92px); }
+.hero-student .hero-copy { max-width: 1040px; }
+.hero-student .hero-copy p { max-width: 660px; }
+.student-entry {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 1440px);
+  margin: clamp(34px, 5vh, 58px) auto 0;
+}
+.student-join-primary {
+  width: min(100%, 430px);
+  min-height: 60px;
+  padding: 14px 22px;
+  border-radius: 0;
+  font-size: 16px;
+  box-shadow: 7px 7px 0 rgba(180,123,32,.16);
+  transition: transform .26s cubic-bezier(.2,.9,.25,1.35), box-shadow .26s ease, background .18s ease;
+}
+.student-join-primary svg { width: 20px; height: 20px; transition: transform .26s cubic-bezier(.2,.9,.25,1.35); }
+.student-join-primary:hover { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 rgba(180,123,32,.15); }
+.student-join-primary:hover svg { transform: translateX(5px); }
+.student-join-primary:active { transform: translate(5px, 5px) scale(.985); box-shadow: 2px 2px 0 rgba(180,123,32,.18); }
+.student-join-primary.is-confirming { animation: student-join-confirm .38s cubic-bezier(.2,.9,.25,1.35); }
+@keyframes student-join-confirm {
+  0% { transform: translate(0); }
+  42% { transform: translate(6px, 6px) scale(.98); box-shadow: 1px 1px 0 rgba(180,123,32,.18); }
+  100% { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 rgba(180,123,32,.15); }
+}
+.student-vertical-picker {
+  margin: clamp(42px, 6vh, 70px) 0 0;
+  padding: 0;
+  border: 0;
+  text-align: left;
+}
+.student-vertical-picker legend {
+  margin: 0 0 24px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+.student-vertical-rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--line-strong);
+}
+.student-vertical {
+  position: relative;
+  min-height: 74px;
+  padding: 0 24px 28px 0;
+  border: 0;
+  background: transparent;
+  color: #62615c;
+  font-family: var(--font-display);
+  font-size: clamp(21px, 2vw, 32px);
+  font-weight: 400;
+  letter-spacing: -.035em;
+  text-align: left;
+  cursor: pointer;
+  transition: color .2s ease, transform .32s cubic-bezier(.2,.8,.2,1);
+}
+.student-vertical::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .36s cubic-bezier(.2,.8,.2,1);
+}
+.student-vertical::before {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 36%;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(180,123,32,.32);
+  opacity: 0;
+  transform: scale(.4);
+  transition: opacity .2s ease, transform .32s cubic-bezier(.2,.8,.2,1);
+}
+.student-vertical:hover { color: var(--ink); transform: translateY(-2px); }
+.student-vertical.is-selected { color: var(--ink); }
+.student-vertical.is-selected::after { transform: scaleX(1); }
+.student-vertical.is-selected::before { opacity: 1; transform: scale(1); }
+.student-vertical:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 6px; }
+.student-specialty-panel {
+  display: grid;
+  grid-template-columns: minmax(180px, .7fr) minmax(0, 2fr);
+  gap: 18px clamp(24px, 4vw, 64px);
+  align-items: start;
+  margin-top: 28px;
+  padding: 28px 0 0;
+  border-top: 1px solid var(--line);
+}
+.student-specialty-heading p {
+  margin: 0 0 7px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.student-specialty-heading strong {
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2vw, 27px);
+  font-weight: 450;
+  letter-spacing: -.035em;
+}
+.student-specialty-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.student-specialty {
+  position: relative;
+  min-height: 48px;
+  padding: 11px 42px 11px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: #fff;
+  color: #555550;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 620;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
+}
+.student-specialty::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  transform: translateY(-50%) rotate(45deg);
+  transition: background .18s ease, border-color .18s ease, transform .24s cubic-bezier(.2,.9,.25,1.35);
+}
+.student-specialty:hover { border-color: var(--gold); color: var(--ink); transform: translateY(-1px); }
+.student-specialty.is-selected { border-color: var(--gold-deep); background: var(--gold-pale); color: var(--ink); }
+.student-specialty.is-selected::after { border-color: var(--gold-deep); background: var(--gold); transform: translateY(-50%) rotate(135deg) scale(1.12); }
+.student-specialty:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 3px; }
+.student-specialty-status {
+  grid-column: 2;
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.quick-selected-direction {
+  margin: -4px 30px 20px;
+  padding: 11px 13px;
+  border-left: 3px solid var(--gold);
+  background: var(--gold-pale);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 650;
+}
 
-/* ---- The bridge: two sides closing, driven by scroll -------------------------------
-   The section is tall and its contents stick, so scrolling THROUGH it is what closes the
-   span. Home-only, like the section it replaced. */
+@media (max-width: 780px) {
+  .hero-student { padding-top: 42px; }
+  .hero-student h1 { font-size: clamp(46px, 13vw, 68px); }
+  .student-join-primary { width: min(100%, 320px); min-height: 56px; }
+  .student-vertical-picker { margin-top: 38px; }
+  .student-vertical-rail { grid-template-columns: 1fr 1fr; gap: 0 18px; }
+  .student-vertical { min-height: 70px; padding: 14px 0 18px; font-size: clamp(20px, 6vw, 27px); }
+  .student-specialty-panel { grid-template-columns: 1fr; gap: 18px; }
+  .student-specialty-options { grid-template-columns: 1fr; }
+  .student-specialty-status { grid-column: 1; }
+  .quick-selected-direction { margin-right: 20px; margin-left: 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audience-transition { display: none; }
+  .student-vertical,
+  .student-vertical::before,
+  .student-vertical::after,
+  .student-join-primary,
+  .student-join-primary svg,
+  .student-specialty,
+  .student-specialty::after { transition: none; animation: none; }
+}
+
+/* ---- First explanation: one sentence, two quiet sides, one three-step route. ------ */
 body:not([data-audience="home"]) .bridge-section { display: none; }
-.bridge-section { position: relative; height: 240vh; border-top: 1px solid var(--line); background: #fff; }
-.bridge-sticky { position: sticky; top: var(--header-height); display: grid; align-content: center; gap: clamp(16px, 2vw, 26px); min-height: calc(100vh - var(--header-height)); padding: clamp(28px, 4vw, 56px) var(--page-gutter); }
-.bridge-head { width: min(100%, 720px); margin: 0 auto; text-align: center; }
-.bridge-head h2 { margin: 8px 0 0; font-size: clamp(28px, 4.2vw, 52px); line-height: 1.04; }
-.bridge-head > p { max-width: 62ch; margin: 14px auto 0; color: var(--muted); font-size: var(--step-body); line-height: 1.6; }
-.bridge-canvas { display: block; width: min(100%, 1180px); height: clamp(300px, 46vh, 460px); margin: 0 auto; }
-.bridge-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 26px; color: var(--muted); font-size: 13px; }
-.bridge-legend span { display: inline-flex; align-items: center; gap: 8px; }
-.bl-dot { width: 9px; height: 9px; border-radius: 50%; }
-.bl-grey { background: #fff; border: 1.5px solid var(--soft); }
-.bl-gold { background: var(--gold); }
-.bridge-illus { color: var(--soft); }
+.bridge-section {
+  --bridge-progress: 0;
+  position: relative;
+  height: 165vh;
+  scroll-margin-top: var(--header-height);
+  border-top: 1px solid var(--line);
+  background: #fff;
+}
+.bridge-sticky {
+  position: sticky;
+  top: var(--header-height);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: center;
+  gap: clamp(24px, 4vh, 42px);
+  min-height: calc(100vh - var(--header-height));
+  padding: clamp(34px, 5vh, 62px) var(--page-gutter);
+  overflow: clip;
+}
+.bridge-head { width: min(100%, 1280px); margin: 0 auto; text-align: center; }
+.bridge-head h2 {
+  margin: 0;
+  font-size: clamp(38px, 4.5vw, 68px);
+  font-weight: 400;
+  letter-spacing: -.05em;
+  line-height: .96;
+}
+.bridge-head h2 .word-gold { font-style: normal; }
+.bridge-head > p {
+  margin: 12px auto 0;
+  color: var(--muted);
+  font-size: clamp(15px, 1.25vw, 18px);
+  line-height: 1.5;
+}
+.bridge-card {
+  position: relative;
+  align-self: center;
+  width: min(100%, 1280px);
+  margin: 0 auto;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  box-shadow: 12px 12px 0 rgba(218,217,210,.3);
+}
+.bridge-visual {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, .92fr) minmax(300px, 1.18fr) minmax(0, .92fr);
+  align-items: center;
+  min-height: clamp(310px, 40vh, 410px);
+  padding: clamp(30px, 4vw, 58px);
+  isolation: isolate;
+}
+.bridge-canvas { position: absolute; z-index: -1; inset: 0; display: block; width: 100%; height: 100%; opacity: .52; }
+.bridge-side {
+  position: relative;
+  z-index: 1;
+  max-width: 260px;
+  padding: 18px;
+  background: rgba(255,255,255,.88);
+}
+.bridge-side--talent { justify-self: end; text-align: right; }
+.bridge-side-label {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--gold-deep);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+.bridge-side strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.2vw, 32px);
+  font-weight: 450;
+  letter-spacing: -.04em;
+  line-height: 1.04;
+}
+.bridge-side p {
+  margin: 13px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+.bridge-route {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  padding: 0 clamp(18px, 3vw, 38px);
+}
+.bridge-route-line {
+  position: absolute;
+  top: 18px;
+  right: 13%;
+  left: 13%;
+  height: 1px;
+  background: linear-gradient(90deg, var(--line-strong), var(--gold), var(--line-strong));
+  transform: scaleX(calc(.32 + var(--bridge-progress) * .68));
+  transition: transform .08s linear;
+}
+.bridge-route ol {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.bridge-route li { text-align: center; }
+.bridge-route li span {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 14px;
+  border: 1px solid var(--gold);
+  border-radius: 0;
+  background: #fff;
+  color: var(--gold-deep);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 750;
+}
+.bridge-route li strong {
+  display: block;
+  max-width: 11ch;
+  margin: 0 auto;
+  font-size: 11px;
+  font-weight: 720;
+  line-height: 1.35;
+}
+.bridge-outcome {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  margin: 0;
+  padding: 18px 24px;
+  border-top: 1px solid var(--line);
+  color: #454540;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+.bridge-outcome span {
+  flex: 0 0 auto;
+  color: var(--gold-deep);
+  font-size: 20px;
+}
 
-/* Short viewports cannot afford 240vh of scroll for one figure. */
-@media (max-height: 620px), (max-width: 720px) {
-  .bridge-section { height: 180vh; }
-  .bridge-canvas { height: clamp(260px, 52vh, 380px); }
+@media (max-height: 720px) and (min-width: 721px) {
+  .bridge-section { height: 150vh; }
+  .bridge-sticky { padding-top: 24px; padding-bottom: 24px; gap: 22px; }
+  .bridge-head h2 { font-size: clamp(32px, 4vw, 54px); }
+  .bridge-visual { min-height: 280px; }
+}
+
+@media (max-width: 720px) {
+  .bridge-section { height: auto; }
+  .bridge-sticky {
+    position: relative;
+    top: auto;
+    min-height: auto;
+    gap: 26px;
+    padding: 48px 16px 56px;
+  }
+  .bridge-head { text-align: left; }
+  .bridge-head h2 { max-width: 11ch; font-size: clamp(38px, 11vw, 50px); line-height: .94; }
+  .bridge-head > p { margin-left: 0; max-width: 28ch; font-size: 13px; }
+  .bridge-card { box-shadow: 7px 7px 0 rgba(218,217,210,.3); }
+  .bridge-visual { grid-template-columns: 1fr; gap: 26px; min-height: 0; padding: 26px 20px 30px; }
+  .bridge-side { max-width: 100%; padding: 10px 0; background: rgba(255,255,255,.94); }
+  .bridge-side--talent { justify-self: stretch; text-align: left; }
+  .bridge-side strong { max-width: 12ch; font-size: 27px; }
+  .bridge-side p { max-width: 36ch; }
+  .bridge-route { padding: 12px 0 0; }
+  .bridge-route-line { top: 30px; }
+  .bridge-route li strong { font-size: 10px; }
+  .bridge-outcome { justify-content: flex-start; padding: 17px 20px; text-align: left; }
+  .bridge-canvas { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bridge-route-line { transition: none; }
 }
 
 /* The hero's scroll cue was too quiet for the one instruction on the page. */

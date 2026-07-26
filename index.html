@@ -57,6 +57,12 @@
     </defs>
   </svg>
 
+  <div class="audience-transition" id="audienceTransition" aria-hidden="true">
+    <i class="audience-transition-sheet audience-transition-sheet--a"></i>
+    <i class="audience-transition-sheet audience-transition-sheet--b"></i>
+    <span id="audienceTransitionLabel"></span>
+  </div>
+
   <dialog class="intro-screen" id="introScreen" aria-labelledby="introStatement" tabindex="-1">
     <div class="intro-shell">
       <div class="intro-brand" aria-label="Covenda">
@@ -81,7 +87,7 @@
         <span>Covenda</span>
       </button>
       <nav class="site-nav" aria-label="Primary navigation">
-        <a href="#covendaModel" data-nav-target="covendaModel" data-nav-audience="home">How it works</a>
+        <a href="#bridgeStory" data-nav-target="bridgeStory" data-nav-audience="home">How it works</a>
         <button type="button" data-audience-option="student" aria-pressed="false">Students</button>
         <button type="button" data-audience-option="company" aria-pressed="false">Companies</button>
         <button type="button" data-audience-option="university" aria-pressed="false">Referrals</button>
@@ -102,7 +108,7 @@
           <p class="home-oneliner">Startups meet undergraduates through work you can audit — not résumés.</p>
         </div>
         <div class="home-paths" role="group" aria-label="Choose your path">
-          <button type="button" class="home-path" data-audience-option="student">
+          <button type="button" class="home-path" data-audience-option="student" data-student-hero-entry>
             <span class="home-path-index" aria-hidden="true">01</span>
             <span class="home-path-copy"><strong>I’m a student</strong><small>Prove your skills on real, paid work</small></span>
             <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
@@ -118,30 +124,46 @@
             <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
           </button>
         </div>
-        <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
+        <a class="scroll-cue" href="#bridgeStory"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
-      <!-- Home-only. The thesis as one scroll-driven picture, replacing three blocks of
-           prose: startups on the left needing senior-level output they cannot yet afford,
-           vouched student talent on the right, and a bridge that closes as you scroll.
-           Gold crosses it once it completes.
-
-           Labels are CATEGORIES, never real names. "Columbia Consulting Group" on a public
-           page reads as a partner, and no club has signed yet — the texture is kept, the
-           false claim is not. -->
-      <section class="bridge-section" aria-labelledby="bridgeTitle">
+      <!-- Home-only. A quiet first explanation: one startup need, one referred-talent
+           source, and one short route from real work to credible proof. -->
+      <section class="bridge-section" id="bridgeStory" aria-labelledby="bridgeTitle">
         <div class="bridge-sticky">
           <div class="bridge-head">
-            <p class="feature-kicker">What we are building</p>
-            <h2 id="bridgeTitle">Two sides. One bridge.</h2>
-            <p>Startups need senior-level output before they can afford a senior hire. The talent is already there — vouched, specific, and unreachable. Covenda closes the gap.</p>
+            <h2 id="bridgeTitle">Startups need help.<br>Talented students need <span class="word-gold">proof.</span></h2>
+            <p>Covenda connects them through trusted referrals and real startup work.</p>
           </div>
-          <canvas id="bridgeCanvas" class="bridge-canvas" role="img"
-                  aria-label="Two columns converge. On the left, startups needing work done; on the right, students vouched by clubs, labs and faculty. A bridge closes between them as the page scrolls, and proven talent crosses it."></canvas>
-          <div class="bridge-legend">
-            <span><i class="bl-dot bl-grey"></i>Vouched talent</span>
-            <span><i class="bl-dot bl-gold"></i>Proven on a trial</span>
-            <span class="bridge-illus">Illustrative — categories, not named partners.</span>
+
+          <div class="bridge-card">
+            <div class="bridge-visual">
+              <div class="bridge-side bridge-side--startups">
+                <span class="bridge-side-label">Lean startup</span>
+                <strong>Real work needs doing.</strong>
+                <p>Small teams cannot spend months screening or training.</p>
+              </div>
+
+              <div class="bridge-route" aria-label="How Covenda connects startups and students">
+                <span class="bridge-route-line" aria-hidden="true"></span>
+                <ol>
+                  <li><span>1</span><strong>Post a scoped project</strong></li>
+                  <li><span>2</span><strong>Complete the work</strong></li>
+                  <li><span>3</span><strong>Review the proof</strong></li>
+                </ol>
+              </div>
+
+              <div class="bridge-side bridge-side--talent">
+                <span class="bridge-side-label">Referred talent</span>
+                <strong>Ability needs a signal.</strong>
+                <p>Students arrive through clubs, professors, and people who know their work.</p>
+              </div>
+
+              <canvas id="bridgeCanvas" class="bridge-canvas" role="img"
+                      aria-label="Two quiet clouds come together: a lean startup with real work and talented students referred by trusted people. A scoped project becomes a reviewed deliverable and credible proof."></canvas>
+            </div>
+
+            <p class="bridge-outcome"><span aria-hidden="true">→</span> The result is a better hiring signal: evidence from work, not another résumé.</p>
           </div>
         </div>
       </section>
@@ -251,8 +273,8 @@
 
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
-          <h1 id="studentHeroTitle">What is your <span class="word-gold">domain expertise</span>?</h1>
-          <p>Pick your field. Paid work on real problems — domain expertise, not filing. The record it builds is what startups hire on.</p>
+          <h1 id="studentHeroTitle">Do work that proves<br><span class="word-gold">what you can do.</span></h1>
+          <p>Join the referred talent network, then choose where you want to prove yourself.</p>
         </div>
         <!-- F3: partner-referral landing. Populated + shown by app.js only when the
              visitor arrives via a partner's ?ref= link. Not identity-verified. -->
@@ -264,56 +286,27 @@
             <button class="referral-banner-dismiss" type="button" data-action="referral-dismiss" aria-label="Dismiss referral note"><svg><use href="#icon-close"/></svg></button>
           </div>
         </div>
-        <div class="selector-orbit" aria-label="Choose a work path">
-          <div class="selector-fx" aria-hidden="true">
-            <canvas id="selectorFxCanvas"></canvas>
-            <i class="selector-fx-glow selector-fx-glow-a"></i>
-            <i class="selector-fx-glow selector-fx-glow-b"></i>
-          </div>
-          <!-- Vertical-first narrowing: industry → focus area → the specific work. Each
-               round is derived from the previous pick, so a student ends on something
-               concrete ("Month-end close · reconciliation cleanup") rather than a generic
-               skill. The final pick still calls selectWorkType(), so everything
-               downstream (detail panel, profile, submissions) is unchanged. -->
-          <div class="narrow-flow" id="narrowFlow" data-narrow-flow></div>
-          <details class="narrow-fallback" id="narrowFallback">
-            <summary>Or pick a work type directly</summary>
-          <div class="work-selector glass-panel">
-            <button class="work-option is-selected" type="button" data-work-type="Research" aria-pressed="true"><svg><use href="#icon-search"/></svg><span>Research</span></button>
-            <button class="work-option" type="button" data-work-type="Data & spreadsheets" aria-pressed="false"><svg><use href="#icon-data"/></svg><span>Data &amp;<br>spreadsheets</span></button>
-            <button class="work-option" type="button" data-work-type="Operations" aria-pressed="false"><svg><use href="#icon-operations"/></svg><span>Operations</span></button>
-            <button class="work-option" type="button" data-work-type="QA & testing" aria-pressed="false"><svg><use href="#icon-shield"/></svg><span>QA &amp; testing</span></button>
-            <button class="work-option" type="button" data-work-type="Writing & documentation" aria-pressed="false"><svg><use href="#icon-write"/></svg><span>Writing &amp;<br>documentation</span></button>
-          </div>
-          </details>
-          <div class="work-detail glass-panel" id="workDetail" hidden aria-live="polite">
-            <div class="work-detail-top">
-              <span class="work-detail-tag" id="workDetailTag"><svg><use href="#icon-search"/></svg><b>Research</b></span>
-              <button class="work-detail-back" type="button" data-action="explore-back"><svg class="flip"><use href="#icon-chevron"/></svg>See all paths</button>
+        <div class="student-entry">
+          <button class="gold-button student-join-primary" type="button" data-action="student-quick">
+            Join the talent network<svg><use href="#icon-arrow-right"/></svg>
+          </button>
+          <fieldset class="student-vertical-picker">
+            <legend>Choose your vertical</legend>
+            <div class="student-vertical-rail">
+              <button class="student-vertical is-selected" type="button" data-work-type="Research" data-vertical-label="Product &amp; strategy" aria-pressed="true">Product &amp; strategy</button>
+              <button class="student-vertical" type="button" data-work-type="Data & spreadsheets" data-vertical-label="Software &amp; data" aria-pressed="false">Software &amp; data</button>
+              <button class="student-vertical" type="button" data-work-type="Operations" data-vertical-label="Finance &amp; operations" aria-pressed="false">Finance &amp; operations</button>
+              <button class="student-vertical" type="button" data-work-type="Writing & documentation" data-vertical-label="Growth &amp; research" aria-pressed="false">Growth &amp; research</button>
             </div>
-            <p class="work-detail-desc" id="workDetailDesc"></p>
-            <div class="work-detail-roles">
-              <span class="work-detail-label">Sample roles</span>
-              <ul id="workDetailRoles"></ul>
+          </fieldset>
+          <div class="student-specialty-panel" id="studentSpecialtyPanel" aria-live="polite">
+            <div class="student-specialty-heading">
+              <p>Now choose a specialty</p>
+              <strong id="studentSpecialtyTitle">Product &amp; strategy</strong>
             </div>
-            <div class="work-detail-flow">
-              <div class="work-detail-flow-head"><span class="work-detail-label">Workflow preview</span><span class="work-detail-step" id="workDetailStep">Step 1 of 3</span></div>
-              <div class="work-flow-frame" id="workFlowFrame"></div>
-              <div class="work-flow-nav">
-                <button type="button" class="work-flow-prev" data-action="flow-prev" aria-label="Previous step"><svg class="flip"><use href="#icon-chevron"/></svg></button>
-                <div class="work-flow-dots" id="workFlowDots"></div>
-                <button type="button" class="work-flow-next" data-action="flow-next" aria-label="Next step"><svg><use href="#icon-chevron"/></svg></button>
-              </div>
-            </div>
-            <button class="gold-button work-detail-cta" type="button" data-action="student-form">This fits me → join the talent<svg><use href="#icon-arrow-right"/></svg></button>
+            <div class="student-specialty-options" id="studentSpecialtyOptions" role="group" aria-label="Choose a specialty"></div>
+            <p class="student-specialty-status" id="studentSpecialtyStatus">Choose one to tell us what kind of work you want to prove.</p>
           </div>
-          <button class="gold-button selector-submit" type="button" data-action="student-quick">Join the talent<svg><use href="#icon-arrow-right"/></svg></button>
-          <button class="quiet-link selector-detail" type="button" data-action="student-form">Or add full details now<svg><use href="#icon-chevron"/></svg></button>
-          <nav class="student-journey" aria-label="Student journey">
-            <button type="button" data-action="focus-pathfinder"><i>1</i><span><b>Explore</b><small>Choose a work path</small></span></button>
-            <button type="button" data-action="student-form"><i>2</i><span><b>Profile</b><small>Tell us what fits</small></span></button>
-            <button type="button" data-action="workspace-submissions"><i>3</i><span><b>Track</b><small>See every receipt</small></span></button>
-          </nav>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
@@ -618,36 +611,6 @@
                   <div class="ct-chips"><span class="ct-chip">Verified clubs</span><span class="ct-chip">Lab PIs</span><span class="ct-chip">Faculty</span></div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="contrast-section" id="why-covenda" aria-labelledby="contrastTitle">
-        <div class="contrast-inner">
-          <div class="contrast-head">
-            <p class="feature-kicker">Why Covenda</p>
-            <h2 id="contrastTitle">The problem isn’t talent.<br>It’s noise.</h2>
-            <p>AI made mass applications free, so whoever can actually deliver disappears into the pile. Covenda is the opposite bet: a short, vouched, reviewed list.</p>
-          </div>
-          <div class="contrast-cols">
-            <div class="contrast-col contrast-col-old">
-              <p class="contrast-col-tag">The open pile</p>
-              <ul>
-                <li>Thousands of look-alike applications, most of them AI-written</li>
-                <li>Founders and HR sift résumés no one wrote by hand</li>
-                <li>The students who’d actually deliver are invisible in the volume</li>
-                <li>Everyone competes on quantity — a race no one wins</li>
-              </ul>
-            </div>
-            <div class="contrast-col contrast-col-new">
-              <p class="contrast-col-tag">Covenda</p>
-              <ul>
-                <li>A short list, vouched by a professor, club, or industry pro</li>
-                <li>Proven on a reviewed work-trial before it reaches you</li>
-                <li>Curated and selective on purpose; the vetting is the value</li>
-                <li>Judged on what they can do, not just where they studied</li>
-              </ul>
             </div>
           </div>
         </div>
@@ -1251,6 +1214,7 @@
     <form id="quickJoinForm" novalidate>
       <header class="dialog-header"><div><small>Join the pilot list</small><h2 id="quickJoinTitle">Get on the list in seconds.</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
       <p class="dialog-copy">Name and email puts you in the talent pool — that is all this does. When a project fits, we reach out.</p>
+      <p class="quick-selected-direction" id="quickJoinSpecialty" hidden></p>
       <div class="field-grid">
         <label>Full name<input name="quickName" autocomplete="name" required></label>
         <label>Email<input name="quickEmail" type="email" autocomplete="email" required></label>

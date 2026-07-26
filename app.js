@@ -5,6 +5,7 @@ const state = {
   audience: 'home',
   surface: 'site',
   workType: 'Research',
+  studentSpecialty: '',
   toastTimer: null,
 };
 let selectorFxController = null;
@@ -89,6 +90,7 @@ const storageKey = 'covendaPilotSubmissions';
 const introStorageKey = 'covendaIntroSeen';
 const audienceStorageKey = 'covendaAudience';
 const workTypeStorageKey = 'covendaSelectedWorkType';
+const studentSpecialtyStorageKey = 'covendaSelectedSpecialty';
 const draftKeys = {
   studentForm: 'covendaStudentInterestDraft',
   companyForm: 'covendaCompanyProblemDraft',
@@ -432,6 +434,40 @@ function setAudience(audience) {
   renderSubmissionHistory();
 }
 
+let audienceTransitionTimer = 0;
+function transitionAudience(audience) {
+  if (audience !== 'student') return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.clearTimeout(audienceTransitionTimer);
+  if (reduceMotion || audience === state.audience) {
+    setAudience(audience);
+    setSurface('site');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    return;
+  }
+
+  const label = $('#audienceTransitionLabel');
+  if (label) label.textContent = 'For students';
+  document.body.classList.remove('is-audience-transitioning');
+  void document.body.offsetWidth;
+  document.body.classList.add('is-audience-transitioning');
+
+  window.setTimeout(() => {
+    setAudience(audience);
+    setSurface('site');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, 380);
+  audienceTransitionTimer = window.setTimeout(() => {
+    document.body.classList.remove('is-audience-transitioning');
+  }, 860);
+}
+
+function showAudience(audience) {
+  setAudience(audience);
+  setSurface('site');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
 function setSurface(surface) {
   state.surface = surface;
   document.body.dataset.surface = surface;
@@ -444,11 +480,59 @@ function setSurface(surface) {
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
+const studentSpecialties = {
+  'Research': ['Product discovery', 'Market strategy', 'Customer research', 'Competitive analysis'],
+  'Data & spreadsheets': ['Frontend engineering', 'Backend engineering', 'Data analysis', 'AI & automation'],
+  'Operations': ['Financial modeling', 'Startup operations', 'Accounting & controls', 'Process design'],
+  'Writing & documentation': ['Growth strategy', 'Market research', 'Content & brand', 'Sales research'],
+};
+
+function selectStudentSpecialty(label) {
+  const choices = studentSpecialties[state.workType] || [];
+  if (!choices.includes(label)) return;
+  state.studentSpecialty = label;
+  writeStorage(studentSpecialtyStorageKey, { workType: state.workType, label });
+  $$('.student-specialty').forEach(button => {
+    const selected = button.dataset.specialty === label;
+    button.classList.toggle('is-selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  const status = $('#studentSpecialtyStatus');
+  if (status) status.textContent = `Selected: ${label}. We’ll use this to show you more relevant project work.`;
+}
+
+function renderStudentSpecialties(workType) {
+  const host = $('#studentSpecialtyOptions');
+  const title = $('#studentSpecialtyTitle');
+  const status = $('#studentSpecialtyStatus');
+  if (!host || !title || !status) return;
+  const vertical = $(`.student-vertical[data-work-type="${workType}"]`);
+  const choices = studentSpecialties[workType] || [];
+  title.textContent = vertical?.dataset.verticalLabel || workType;
+  host.replaceChildren();
+
+  if (!choices.includes(state.studentSpecialty)) state.studentSpecialty = '';
+  choices.forEach(label => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'student-specialty';
+    button.dataset.specialty = label;
+    button.textContent = label;
+    button.setAttribute('aria-pressed', String(label === state.studentSpecialty));
+    button.classList.toggle('is-selected', label === state.studentSpecialty);
+    button.addEventListener('click', () => selectStudentSpecialty(label));
+    host.append(button);
+  });
+  status.textContent = state.studentSpecialty
+    ? `Selected: ${state.studentSpecialty}. We’ll use this to show you more relevant project work.`
+    : 'Choose one to tell us what kind of work you want to prove.';
+}
+
 function selectWorkType(workType) {
   if (!workType) return;
   state.workType = workType;
   writeStorage(workTypeStorageKey, workType);
-  $$('.work-option').forEach(button => {
+  $$('.work-option, .student-vertical').forEach(button => {
     const selected = button.dataset.workType === workType;
     const newlySelected = selected && !button.classList.contains('is-selected');
     button.classList.toggle('is-selected', selected);
@@ -464,6 +548,7 @@ function selectWorkType(workType) {
   $$('input[name="workType"]', $('#studentForm')).forEach(input => {
     if (input.value === workType) input.checked = true;
   });
+  renderStudentSpecialties(workType);
 }
 
 function setWorkspaceTab(tabName) {
@@ -1710,10 +1795,29 @@ function openQuickJoin() {
   done.hidden = true; done.textContent = '';
   quickJoinForm.hidden = false;
   $('#quickJoinMessage').textContent = '';
+  const selectedDirection = $('#quickJoinSpecialty');
+  if (selectedDirection) {
+    const vertical = $(`.student-vertical[data-work-type="${state.workType}"]`)?.dataset.verticalLabel || state.workType;
+    selectedDirection.hidden = !state.studentSpecialty;
+    selectedDirection.textContent = state.studentSpecialty
+      ? `Your direction: ${vertical} · ${state.studentSpecialty}`
+      : '';
+  }
   renderQuickInterests();
   quickJoinForm.dataset.startedAt = String(Date.now());
   quickJoinDialog.showModal();
   window.setTimeout(() => $('[name="quickName"]', quickJoinForm)?.focus(), 60);
+}
+
+function confirmStudentJoin(button) {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  button.classList.remove('is-confirming');
+  void button.offsetWidth;
+  button.classList.add('is-confirming');
+  window.setTimeout(() => {
+    button.classList.remove('is-confirming');
+    openQuickJoin();
+  }, reduceMotion ? 0 : 180);
 }
 function renderQuickJoinDone(reference) {
   quickJoinForm.hidden = true;
@@ -2220,12 +2324,14 @@ $('#rosterList')?.addEventListener('click', event => {
 });
 
 $$('[data-audience-option]').forEach(button => button.addEventListener('click', () => {
-  setAudience(button.dataset.audienceOption);
+  const audience = button.dataset.audienceOption;
+  if (audience === 'student' && button.matches('[data-student-hero-entry]') && state.audience === 'home') {
+    transitionAudience('student');
+  } else {
+    showAudience(audience);
+  }
   // The core-story demo only belongs to the opening/default home view.
   document.body.dataset.audienceSwitched = 'true';
-  // Land on the new audience's hero, not mid-page in its content.
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  window.scrollTo({ top: 0, behavior: reduceMotion ? 'instant' : 'smooth' });
 }));
 $$('[data-workspace-tab]').forEach(button => button.addEventListener('click', () => setWorkspaceTab(button.dataset.workspaceTab)));
 // ---- Work-type explore: per-niche detail panels (explore before the form) ----
@@ -2859,7 +2965,7 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     setSurface('workspace');
     setWorkspaceTab('submissions');
   }
-  if (action === 'student-quick') openQuickJoin();
+  if (action === 'student-quick') confirmStudentJoin(button);
   if (action === 'request-endorsement') openRequestEndorse();
   if (action === 'refresh-delivery') {
     refreshDeliveryHealth({ force: true }).then(primary => {
@@ -3667,6 +3773,10 @@ const restoredWorkTypes = checkedValues(studentForm, 'workType');
 const rememberedWorkType = readStorage(workTypeStorageKey, 'Research');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];
 else if (rememberedWorkType) state.workType = rememberedWorkType;
+const rememberedSpecialty = readStorage(studentSpecialtyStorageKey, null);
+if (rememberedSpecialty?.workType === state.workType && typeof rememberedSpecialty.label === 'string') {
+  state.studentSpecialty = rememberedSpecialty.label;
+}
 // ---- Motion (adapted from design_handoff_covenda_motion/covenda-motion.js) ----
 // Vanilla helper: play anything marked [data-animate] once it scrolls into view.
 function initCovendaMotion(root = document) {
@@ -4675,9 +4785,9 @@ function initScrollReveal() {
 // That conversion is the whole argument rendered literally: real work becomes credible proof.
 // The ratio is held near a tenth, so gold always reads as "some of these", never as a field.
 //
-// 3D is real, not faked: nodes carry z, the camera eases toward the pointer, and everything
-// is perspective-projected — so depth changes size, opacity, link reach and parallax together.
-// Nothing depends on the values, so Math.random is fine here.
+// 3D depth changes size, opacity and link reach, but the field itself does not chase the
+// cursor. The pointer only discovers nearby nodes. Separately, one lasting connection forms
+// between two gold nodes every ten seconds, making the network feel more credible over time.
 function initHeroField() {
   const canvas = document.getElementById('heroFieldCanvas');
   if (!canvas) return;
@@ -4690,9 +4800,9 @@ function initHeroField() {
   const FOCAL = 760;
   const DEPTH = 680;
   const LINK_DISTANCE = 112;
-  let W = 0, H = 0, nodes = [], signals = [], running = false, raf = 0, t = 0;
-  let pointer = null, camX = 0, camY = 0, targetX = 0, targetY = 0;
-  let nextSignalAt = 0;
+  let W = 0, H = 0, nodes = [], signals = [], goldBonds = [], running = false, raf = 0, t = 0;
+  let pointer = null;
+  let nextSignalAt = 0, nextGoldBondAt = 0;
 
   function build() {
     const target = Math.max(140, Math.min(240, Math.round((W * H) / 4200)));
@@ -4708,7 +4818,9 @@ function initHeroField() {
       phase: Math.random() * Math.PI * 2,
     }));
     signals = [];
+    goldBonds = [];
     nextSignalAt = performance.now() + 620;
+    nextGoldBondAt = performance.now() + 10000;
   }
 
   function resize() {
@@ -4725,8 +4837,8 @@ function initHeroField() {
     const z = n.z + FOCAL;
     const scale = FOCAL / z;
     return {
-      x: W / 2 + (n.x + camX * (1 - n.z / DEPTH) * 72) * scale,
-      y: H / 2 + (n.y + camY * (1 - n.z / DEPTH) * 72) * scale,
+      x: W / 2 + n.x * scale,
+      y: H / 2 + n.y * scale,
       scale,
     };
   }
@@ -4740,10 +4852,25 @@ function initHeroField() {
     nextSignalAt = now + 560 + Math.random() * 760;
   }
 
+  function formGoldBond(now) {
+    const goldIndexes = nodes
+      .map((node, index) => node.gold ? index : -1)
+      .filter(index => index >= 0);
+    if (goldIndexes.length < 2) return;
+    const used = new Set(goldBonds.map(bond => `${Math.min(bond.a, bond.b)}:${Math.max(bond.a, bond.b)}`));
+    const candidates = [];
+    for (let i = 0; i < goldIndexes.length; i += 1) {
+      for (let j = i + 1; j < goldIndexes.length; j += 1) {
+        const key = `${goldIndexes[i]}:${goldIndexes[j]}`;
+        if (!used.has(key)) candidates.push({ a: goldIndexes[i], b: goldIndexes[j], born: now });
+      }
+    }
+    if (candidates.length) goldBonds.push(candidates[Math.floor(Math.random() * candidates.length)]);
+    nextGoldBondAt = now + 10000;
+  }
+
   function step(now) {
     t += 1;
-    camX += (targetX - camX) * 0.045;
-    camY += (targetY - camY) * 0.045;
     for (const n of nodes) {
       n.x += n.vx; n.y += n.vy; n.z += n.vz;
       const bx = W * 0.9, by = H * 0.9;
@@ -4753,6 +4880,7 @@ function initHeroField() {
     }
     signals = signals.filter(signal => now - signal.born < signal.duration);
     if (now >= nextSignalAt) spawnSignal(now);
+    if (now >= nextGoldBondAt) formGoldBond(now);
   }
 
   function draw(now = performance.now()) {
@@ -4779,6 +4907,20 @@ function initHeroField() {
         ctx.stroke();
         linkCount += 1;
       }
+    }
+
+    // These are lasting, deliberately slow connections: one new gold-to-gold bond every
+    // ten seconds. They are brighter than the ambient mesh but still sit behind the nodes.
+    for (const bond of goldBonds) {
+      const a = pts[bond.a], b = pts[bond.b];
+      if (!a || !b) continue;
+      const age = Math.min(1, (now - bond.born) / 900);
+      ctx.strokeStyle = `rgba(${GOLD},${.12 + age * .34})`;
+      ctx.lineWidth = 1.1 + age * .55;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
     }
 
     // The cursor discovers the seven closest people and visibly connects to them.
@@ -4808,8 +4950,12 @@ function initHeroField() {
       const r = n.r * q.scale;
       if (n.gold) {
         const pulse = 0.5 + 0.5 * Math.sin(t * 0.03 + n.phase);
-        ctx.fillStyle = `rgba(${GOLD},${.08 + pulse * .05})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 3) * 3.1, 0, Math.PI * 2); ctx.fill();
+        const aura = ctx.createRadialGradient(q.x, q.y, r, q.x, q.y, (r + 5) * 5);
+        aura.addColorStop(0, `rgba(255,224,151,${.22 + pulse * .12})`);
+        aura.addColorStop(.34, `rgba(${GOLD},${.11 + pulse * .08})`);
+        aura.addColorStop(1, `rgba(${GOLD},0)`);
+        ctx.fillStyle = aura;
+        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 5) * 5, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = `rgba(255,224,151,${.78 * q.scale + .18})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r + 1 + pulse * .7, 0, Math.PI * 2); ctx.fill();
         const glint = (5 + pulse * 7) * q.scale;
@@ -4866,10 +5012,8 @@ function initHeroField() {
     hero.addEventListener('pointermove', event => {
       const r = canvas.getBoundingClientRect();
       pointer = { x: event.clientX - r.left, y: event.clientY - r.top };
-      targetX = -((pointer.x / Math.max(1, W)) - 0.5) * 2;
-      targetY = -((pointer.y / Math.max(1, H)) - 0.5) * 2;
     });
-    hero.addEventListener('pointerleave', () => { pointer = null; targetX = 0; targetY = 0; });
+    hero.addEventListener('pointerleave', () => { pointer = null; });
   }
 }
 
@@ -5685,13 +5829,8 @@ function initBatchWeb() {
 })();
 
 
-// The bridge. Two columns converge as you scroll: startups on the left, vouched student
-// talent on the right, and a span that closes between them. Once a connection completes,
-// proven talent crosses it — which is the product in one picture.
-//
-// Scroll progress drives everything, so the reader controls the animation rather than
-// watching a loop. Under reduced motion it paints the FINISHED state immediately: the point
-// is the connection, and someone who cannot take the movement should still get the point.
+// The bridge is intentionally quiet: two sparse fields frame the explanation and move
+// slightly closer on scroll. The words carry the product story; the canvas is atmosphere.
 (function initBridge() {
   const canvas = document.getElementById('bridgeCanvas');
   const section = document.querySelector('.bridge-section');
@@ -5700,16 +5839,33 @@ function initBatchWeb() {
   if (!ctx) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const GOLD = '184,126,32';
-  const INK = '17,17,15';
-  const MUTED = '134,130,118';
+  const GOLD = '180,123,32';
+  const MUTED = '149,146,137';
+  const PALE = '218,217,210';
+  let W = 0, H = 0, progress = 0;
 
-  // Categories, never real names — a named club or company on a public page reads as a
-  // partner, and none have signed.
-  const LEFT = ['Seed-stage AI', 'Robotics startup', 'Fintech, Series A', 'Health ops', 'Consumer brand', 'Dev tools'];
-  const RIGHT = ['Robotics club', 'Consulting group', 'Quant society', 'Research lab', 'CS faculty', 'Design collective'];
+  // Stable point sets keep the clouds organic without shifting on reload. The labels live in
+  // semantic HTML; canvas carries only the spatial relationship and movement.
+  function seeded(index, salt) {
+    const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453;
+    return value - Math.floor(value);
+  }
 
-  let W = 0, H = 0, progress = 0, raf = 0, t = 0;
+  function makeCloud(count, salt, goldRate) {
+    return Array.from({ length: count }, (_, index) => {
+      const angle = seeded(index, salt) * Math.PI * 2;
+      const radius = Math.sqrt(seeded(index, salt + 1));
+      return {
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+        gold: seeded(index, salt + 2) < goldRate,
+        size: .7 + seeded(index, salt + 4) * 1.4,
+      };
+    });
+  }
+
+  const startupCloud = makeCloud(7, 3, .2);
+  const talentCloud = makeCloud(9, 11, .24);
 
   function resize() {
     const r = canvas.getBoundingClientRect();
@@ -5727,105 +5883,103 @@ function initBatchWeb() {
     return Math.min(1, Math.max(0, -r.top / total));
   }
 
+  function setProgress(value) {
+    progress = Math.min(1, Math.max(0, value));
+    section.style.setProperty('--bridge-progress', progress.toFixed(4));
+  }
+
   const ease = p => 1 - Math.pow(1 - p, 3);
   const lerp = (a, b, p) => a + (b - a) * p;
+  const clamp = value => Math.min(1, Math.max(0, value));
+
+  function line(a, b, color, width = 1, alpha = 1) {
+    ctx.strokeStyle = `rgba(${color},${alpha})`;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  function cloudFrame(side, p) {
+    const mobile = W <= 720;
+    if (mobile) {
+      return side === 'startup'
+        ? { x: W * .5, y: lerp(H * .25, H * .4, p), rx: W * .44, ry: H * .17 }
+        : { x: W * .5, y: lerp(H * .78, H * .61, p), rx: W * .44, ry: H * .18 };
+    }
+    return side === 'startup'
+      ? { x: lerp(W * .23, W * .41, p), y: H * .49, rx: W * .24, ry: H * .34 }
+      : { x: lerp(W * .77, W * .59, p), y: H * .49, rx: W * .25, ry: H * .35 };
+  }
+
+  function cloudPoints(cloud, frame) {
+    return cloud.map(node => ({
+      x: frame.x + node.x * frame.rx,
+      y: frame.y + node.y * frame.ry,
+    }));
+  }
+
+  function drawCloud(cloud, side, p) {
+    const frame = cloudFrame(side, p);
+    const points = cloudPoints(cloud, frame);
+    const glow = ctx.createRadialGradient(frame.x, frame.y, 0, frame.x, frame.y, frame.rx);
+    glow.addColorStop(0, side === 'talent' ? `rgba(${GOLD},.055)` : `rgba(${PALE},.12)`);
+    glow.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.ellipse(frame.x, frame.y, frame.rx, frame.ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    cloud.forEach((node, index) => {
+      const q = points[index];
+      if (node.gold) {
+        ctx.fillStyle = `rgba(${GOLD},.08)`;
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, 15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = node.gold ? `rgba(${GOLD},.96)` : '#fff';
+      ctx.strokeStyle = node.gold ? `rgba(${GOLD},1)` : `rgba(${MUTED},.72)`;
+      ctx.lineWidth = node.gold ? 1.35 : .9;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, node.gold ? 3.8 + node.size : 2.3 + node.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+    return { frame, points };
+  }
+
+  function drawCrossCloudLinks(p, startup, talent) {
+    const strength = clamp((p - .62) / .32);
+    if (!strength) return;
+    const startupGold = startupCloud.findIndex(node => node.gold);
+    const talentGold = talentCloud.findIndex(node => node.gold);
+    if (startupGold < 0 || talentGold < 0) return;
+    line(talent.points[talentGold], startup.points[startupGold], GOLD, 1.2, strength * .45);
+  }
 
   function draw() {
     const p = ease(reduce ? 1 : progress);
     ctx.clearRect(0, 0, W, H);
-    const midX = W / 2;
-    const colGap = Math.min(0.34 * W, 300);
-    // The columns close in as you scroll — the gap itself is the argument.
-    const leftX = lerp(W * 0.10, midX - colGap * 0.42, p);
-    const rightX = lerp(W * 0.90, midX + colGap * 0.42, p);
-    const rows = LEFT.length;
-    const top = 54, spacing = (H - top - 40) / Math.max(1, rows - 1);
-    const label = Math.max(10, Math.min(12.5, W / 90));
-
-    ctx.textBaseline = 'middle';
-    ctx.font = `600 ${label}px "Manrope", system-ui, sans-serif`;
-
-    for (let i = 0; i < rows; i++) {
-      const y = top + i * spacing;
-      // Rows complete in sequence, so the bridge visibly knits rather than fading in.
-      const rowP = Math.min(1, Math.max(0, (p - i * 0.055) / 0.5));
-      const proven = rowP > 0.92;
-
-      // span
-      if (rowP > 0) {
-        const x1 = leftX + 12, x2 = rightX - 12;
-        const reach = lerp(x1, x2, rowP);
-        ctx.strokeStyle = proven ? `rgba(${GOLD},.55)` : `rgba(${MUTED},${0.22 + 0.3 * rowP})`;
-        ctx.lineWidth = proven ? 1.6 : 1;
-        ctx.setLineDash(proven ? [] : [4, 6]);
-        ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(reach, y); ctx.stroke();
-        ctx.setLineDash([]);
-        if (!proven && rowP < 1) {
-          ctx.strokeStyle = `rgba(${MUTED},.22)`;
-          ctx.setLineDash([4, 6]);
-          ctx.beginPath(); ctx.moveTo(x2, y); ctx.lineTo(lerp(x2, x1, rowP), y); ctx.stroke();
-          ctx.setLineDash([]);
-        }
-      }
-
-      // talent crossing a completed span
-      if (proven) {
-        const travel = ((t * 0.004) + i * 0.17) % 1;
-        const tx = lerp(leftX + 12, rightX - 12, travel);
-        ctx.fillStyle = `rgba(${GOLD},${0.9 * Math.sin(travel * Math.PI)})`;
-        ctx.beginPath(); ctx.arc(tx, y, 4.2, 0, Math.PI * 2); ctx.fill();
-      }
-
-      // left: a company, drawn square
-      ctx.fillStyle = proven ? `rgba(${GOLD},.16)` : '#fff';
-      ctx.strokeStyle = proven ? `rgba(${GOLD},.9)` : `rgba(${INK},.85)`;
-      ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.rect(leftX - 9, y - 9, 18, 18); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = `rgba(${INK},.82)`;
-      ctx.textAlign = 'right';
-      ctx.fillText(LEFT[i], leftX - 18, y);
-
-      // right: a vouching source, drawn round
-      ctx.fillStyle = proven ? `rgba(${GOLD},.9)` : '#fff';
-      ctx.strokeStyle = proven ? `rgba(${GOLD},.9)` : `rgba(${MUTED},.9)`;
-      ctx.beginPath(); ctx.arc(rightX, y, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = `rgba(${INK},.82)`;
-      ctx.textAlign = 'left';
-      ctx.fillText(RIGHT[i], rightX + 18, y);
-    }
-
-    // column headers
-    ctx.font = `700 ${label - 1}px "Manrope", system-ui, sans-serif`;
-    ctx.fillStyle = `rgba(${MUTED},1)`;
-    ctx.textAlign = 'right';
-    ctx.fillText('STARTUPS', leftX - 18, 22);
-    ctx.textAlign = 'left';
-    ctx.fillText('VOUCHED TALENT', rightX + 18, 22);
+    const startup = drawCloud(startupCloud, 'startup', p);
+    const talent = drawCloud(talentCloud, 'talent', p);
+    drawCrossCloudLinks(p, startup, talent);
   }
 
-  function frame() { t += 1; draw(); raf = requestAnimationFrame(frame); }
-
   resize();
+  setProgress(reduce ? 1 : readProgress());
   draw();
   window.addEventListener('resize', () => { resize(); draw(); });
   if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); draw(); }).observe(canvas);
-  if (reduce) return; // finished state, painted once
+  if (reduce) return; // joined state, painted once
 
   let ticking = false;
   window.addEventListener('scroll', () => {
     if (ticking) return;
     ticking = true;
-    requestAnimationFrame(() => { progress = readProgress(); ticking = false; });
+    requestAnimationFrame(() => { setProgress(readProgress()); draw(); ticking = false; });
   }, { passive: true });
-  progress = readProgress();
-
-  // Only animate while the section is on screen.
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(entries => entries.forEach(e => {
-      if (e.isIntersecting && !raf) raf = requestAnimationFrame(frame);
-      else if (!e.isIntersecting && raf) { cancelAnimationFrame(raf); raf = 0; }
-    }), { threshold: 0.01 }).observe(section);
-  } else { raf = requestAnimationFrame(frame); }
 })();
 
 initMemberNav();
