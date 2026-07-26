@@ -495,30 +495,27 @@ test('the demo walks each vertical separately and stays labelled illustrative', 
   assert.match(styles, /\.vdemo-beats/);
 });
 
-// The pop-art panel made an argument where this spot needed an explanation. Replaced with a
-// five-step walkthrough of how a trial actually runs.
-test('the trial walkthrough explains the five steps and stays operable', () => {
-  assert.match(html, /id="tfTrack"/);
-  assert.equal((html.match(/class="tf-slide"/g) || []).length, 5);
+// The five-step explanation belongs inside the two-sided exchange, not in a second section
+// that repeats the same process with another row of cards.
+test('the work exchange contains one swipeable five-step trial', () => {
+  assert.match(html, /id="exchangeStepViewport"/);
+  assert.match(html, /id="exchangeStepTrack"/);
+  assert.equal((html.match(/data-exchange-card/g) || []).length, 5);
   assert.match(html, /A company brings real work/);
-  assert.match(html, /We scope it into a trial/);
-  assert.match(html, /It goes to a vetted batch/);
+  assert.match(html, /We shape a fair trial/);
+  assert.match(html, /It reaches a vetted batch/);
   assert.match(html, /The student does the work/);
   assert.match(html, /The company decides/);
-  // Native scroll-snap means swipe works with no JS; the rail must still read unscripted.
-  // Proximity, not mandatory: paging moves a full viewport, and card-level snapping
-  // fought that and landed the rail where the dots did not claim it was.
-  assert.match(styles, /\.tf-viewport \{[\s\S]*?scroll-snap-type: x proximity/);
-  // Dots follow the scroll rather than assuming they caused it.
-  assert.match(script, /if \(at !== page\) sync\(at\)/);
-  // One dot per PAGE, not per slide: with four of five cards already visible, five dots
-  // described a journey that does not exist. Controls hide entirely when nothing can move.
-  assert.match(script, /pages = Math\.max\(1, Math\.ceil\(track\.scrollWidth/);
-  assert.match(script, /var idle = pages < 2;/);
-  assert.match(script, /ArrowRight/);
-  // The pop-art panel must not linger.
-  assert.doesNotMatch(html, /popart/);
-  assert.doesNotMatch(styles, /\.popart-svg/);
+  assert.equal((html.match(/data-exchange-dot=/g) || []).length, 5);
+  assert.match(styles, /\.exchange-step-viewport \{[\s\S]*?scroll-snap-type: x mandatory/);
+  assert.match(styles, /\.exchange-step-card \{[\s\S]*?scroll-snap-align: start/);
+  assert.match(styles, /@keyframes exchange-card-pop/);
+  assert.match(script, /viewport\.addEventListener\('scroll'/);
+  assert.match(script, /visibleStep = Math\.round\(viewport\.scrollLeft/);
+  assert.match(script, /event\.key === 'ArrowRight'/);
+  assert.doesNotMatch(html, /class="trial-flow"|id="tfTrack"|Five steps, start to finish/);
+  assert.doesNotMatch(script, /function initTrialFlow\(\)/);
+  assert.doesNotMatch(styles, /\.tf-viewport|\.tf-slide/);
 });
 
 test('the founder quote stands alone, unattributed and without a portrait', () => {
@@ -607,6 +604,11 @@ test('the work exchange turns one project into clear value for both sides', () =
   assert.match(html, /class="exchange-section"/);
   assert.match(html, /id="bridgeStory"/);
   assert.match(html, /id="workExchange"/);
+  assert.match(
+    html,
+    /Swipe, use the arrow buttons, or press the arrow keys to move through five steps\./
+  );
+  assert.doesNotMatch(html, /Brief, Build, and Review/);
   assert.match(html, /One project\./);
   assert.match(html, /Two sides win\./);
   assert.match(html, /Covenda turns referred talent and real startup work into a trial both sides can trust/);
@@ -616,9 +618,11 @@ test('the work exchange turns one project into clear value for both sides', () =
     'Referred student',
     'Talent vouched for by people who know them',
     'Scoped work trial',
-    'Brief',
-    'Build',
-    'Review',
+    'A company brings real work',
+    'We shape a fair trial',
+    'It reaches a vetted batch',
+    'The student does the work',
+    'The company decides',
     'Useful deliverable',
     'Credible proof',
   ]) {
@@ -627,14 +631,14 @@ test('the work exchange turns one project into clear value for both sides', () =
   assert.match(html, /href="#bridgeStory"/);
   assert.match(html, /data-nav-target="bridgeStory"/);
   assert.match(script, /function initWorkExchange\(\)/);
-  assert.match(script, /function setExchangeStep\(next, userInitiated = false\)/);
-  assert.match(script, /workbench\.addEventListener\('pointermove'/);
+  assert.match(script, /function setExchangeStep\(nextStep, userInitiated = false, shouldScroll = true\)/);
+  assert.match(script, /viewport\.addEventListener\('pointerdown', takeControl/);
   assert.match(script, /event\.key === 'ArrowRight'/);
   assert.match(script, /event\.key === 'Home'/);
   assert.match(script, /window\.setInterval/);
-  assert.match(script, /if \(reduce\) return; \/\/ The complete reviewed state remains visible without autoplay\./);
+  assert.match(script, /if \(reduce\) return; \/\/ Swipe and controls remain; only autoplay and pop motion stop\./);
   assert.match(styles, /\.exchange-stage \{[\s\S]*grid-template-areas:/);
-  assert.match(styles, /\.exchange-phases \{[\s\S]*grid-template-columns: repeat\(3/);
+  assert.match(styles, /\.exchange-dots \{[\s\S]*grid-template-columns: repeat\(5/);
   assert.match(styles, /\.exchange-source \{[\s\S]*border-radius: 0/);
   assert.match(styles, /\.exchange-output \{[\s\S]*border-radius: 0/);
   assert.match(styles, /@media \(max-width: 760px\)[\s\S]*"task student"[\s\S]*"bench bench"[\s\S]*"outputs outputs"/);
@@ -644,6 +648,21 @@ test('the work exchange turns one project into clear value for both sides', () =
   assert.doesNotMatch(script, /Columbia Consulting Group/);
   assert.match(styles, /body\[data-audience="home"\] \.stat-band/);
   assert.doesNotMatch(html, /The problem isn’t talent/);
+});
+
+test('the qualification rail is shorter and visually distinct from the trial carousel', () => {
+  assert.match(html, /Before the project/);
+  assert.match(html, /Vetted before the/);
+  assert.match(html, /trial begins/);
+  assert.match(html, /A referral starts the signal\. Evidence has to confirm it\./);
+  for (const label of ['Referred', 'Evidence checked', 'Admitted to a batch', 'Ready for a trial']) {
+    assert.match(html, new RegExp(label));
+  }
+  assert.doesNotMatch(html, /Selective clubs and faculty screen first\. Covenda vets again/);
+  assert.match(styles, /\.batch-funnel \.bf-track \{[\s\S]*grid-template-columns: repeat\(4/);
+  assert.match(styles, /\.bf-card \{[\s\S]*border: 0;[\s\S]*background: transparent/);
+  assert.match(styles, /\.batch-funnel\.is-armed \.bf-stage \{[\s\S]*scale\(\.96\)/);
+  assert.match(styles, /\.batch-funnel\.is-playing \.bf-stage-4 \{ transition-delay: \.54s; \}/);
 });
 
 test('only the homepage student path uses the folded-sheet transition', () => {
