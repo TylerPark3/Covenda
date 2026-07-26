@@ -13,7 +13,13 @@ alter table public.batches
   add column if not exists admission_requirements jsonb,
   add column if not exists admission_version text;
 
-create unique index if not exists batches_slug_key on public.batches (slug) where slug is not null;
+-- A PARTIAL unique index cannot back the `on conflict (slug)` below: Postgres will only infer
+-- an arbiter index whose predicate is restated in the ON CONFLICT clause, so the partial form
+-- failed with 42P10. The predicate bought nothing anyway — a plain unique index already allows
+-- unlimited NULL slugs, since NULLs are never equal to each other. Dropped first so a database
+-- that already has the partial version gets corrected rather than silently keeping it.
+drop index if exists public.batches_slug_key;
+create unique index if not exists batches_slug_key on public.batches (slug);
 
 -- Seed the catalogue. One batch per vertical; disciplines match the canonical VERTICALS set in
 -- api/portal.js so batch ↔ profile ↔ opportunity all speak the same taxonomy.
