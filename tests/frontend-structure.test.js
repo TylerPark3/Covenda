@@ -434,3 +434,33 @@ test('the reading spine is decorative, scroll-passive and reduced-motion safe', 
   assert.match(script, /requestAnimationFrame\(\(\) => \{ update\(\); ticking = false; \}\)/);
   assert.match(styles, /prefers-reduced-motion: reduce\)\s*\{\s*\.page-spine/);
 });
+
+// The demo is walked per vertical: a company asking "what does this look like for us" needs
+// its own industry, because vetting differs per bench.
+test('the demo walks each vertical separately and stays labelled illustrative', () => {
+  assert.match(html, /id="verticalDemo"/);
+  assert.match(html, /What this looks like for you/);
+  assert.match(html, /Illustrative walkthrough — no real company/);
+  assert.match(script, /action: 'vertical-demo'/);
+  // A tablist has to be operable with arrow keys.
+  assert.match(script, /ArrowRight/);
+  assert.match(script, /setAttribute\('role', 'tab'\)/);
+  assert.match(styles, /\.vdemo-beats/);
+});
+
+test('the pop-art panel is original, decorative and captioned', () => {
+  assert.match(html, /class="popart"/);
+  assert.match(html, /benday/);           // dot shading, built as an SVG pattern
+  assert.match(html, /The student is/);   // the reversal is the point
+  assert.match(html, /popart-svg[^>]*role="img"/);
+  assert.match(html, /Both sides are choosing/); // meaning carried in visible text
+  assert.match(styles, /\.popart-svg/);
+});
+
+test('the founder note carries a portrait and an attribution', () => {
+  assert.match(html, /founder-portrait/);
+  assert.match(html, /assets\/tyler-park\.png/);
+  assert.match(html, /Tyler Park · founder/);
+  assert.match(html, /alt="Tyler Park, founder of Covenda"/);
+  assert.match(html, /loading="lazy"/);
+});

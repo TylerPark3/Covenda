@@ -366,3 +366,127 @@ function gapText(requirement, observed, min) {
   const short = Math.max(0, min - observed);
   return `${short} more to go (${observed}/${min}).`;
 }
+
+// ---------------------------------------------------------------------------
+// The demo walkthrough. A company asking "what does this look like for US" needs its own
+// vertical, not a generic tour: the evidence a robotics team can audit is nothing like what
+// a search fund can. Each entry names a concrete company type and walks the same six beats,
+// so the shape is comparable across benches while the substance is specific to one.
+// Illustrative by construction — no real company, no real student, no claimed outcome.
+// ---------------------------------------------------------------------------
+export const VERTICAL_DEMOS = {
+  'software-ai': {
+    company: 'A seed-stage AI startup, 6 engineers',
+    need: 'Their regression suite is flaky and nobody owns it, so every release slips a day.',
+    beats: [
+      ['You describe the person', 'Backend-leaning, comfortable in a codebase they did not write. 10 hrs/week, 4 weeks, 60 min of your review time.'],
+      ['We search the software bench', 'Only students who connected the GitHub account that owns their work — not a pasted link.'],
+      ['The evidence you actually see', 'Eight months of commit history on one project, the specific files behind each language claim, and whether the cadence looks accumulated or dumped in a weekend.'],
+      ['Three candidates, one gap each', 'Evidence-cited. If fewer than three clear your must-haves you get fewer — never a padded list.'],
+      ['The trial', 'Fix the three flakiest specs and document why they failed. Useful to you whether or not you hire.'],
+      ['What you learn', 'How they work in an unfamiliar codebase, how they explain a fix, whether they hit a checkpoint.'],
+    ],
+  },
+  'accounting-finance': {
+    company: 'A search fund screening its first analyst',
+    need: 'Diligence models keep arriving as hardcoded numbers nobody can audit.',
+    beats: [
+      ['You describe the person', 'Modelling-heavy, comfortable being challenged on assumptions. 10 hrs/week, 4 weeks.'],
+      ['We search the finance bench', 'Students whose model was parsed, not skimmed.'],
+      ['The evidence you actually see', 'Formula integrity and DCF structure scored by a parser that reads the formula layer — a workbook of pasted values scores low by construction — plus a recorded pitch defence scored by two raters.'],
+      ['Three candidates, one gap each', 'With the parsed model and the defence attached.'],
+      ['The trial', 'Rebuild one segment of a model from public filings, with assumptions stated.'],
+      ['What you learn', 'Whether they can defend a number under pressure, which is the job.'],
+    ],
+  },
+  'healthcare-operations': {
+    company: 'A clinical operations team at a 40-person health startup',
+    need: 'Intake is undocumented and every new hire learns it by shadowing.',
+    beats: [
+      ['You describe the person', 'Process-minded, careful with sensitive material. 5 hrs/week.'],
+      ['We search the operations bench', 'Vetted on the human rail — we say so plainly, because no API can verify this work.'],
+      ['The evidence you actually see', 'A de-identified process artifact, a recorded walkthrough scored by two raters against anchored exemplars, and a named supervisor who answered cross-checked questions.'],
+      ['Three candidates, one gap each', 'With the referrer named and the walkthrough attached.'],
+      ['The trial', 'Map the intake process end to end from de-identified material.'],
+      ['What you learn', 'Whether they ask the right questions before documenting the wrong thing. No PHI, no production access.'],
+    ],
+  },
+  'consumer-retail': {
+    company: 'A DTC brand doing its first paid tests',
+    need: 'Every applicant claims growth numbers nobody can check.',
+    beats: [
+      ['You describe the person', 'Analytical, willing to be measured. 5 hrs/week.'],
+      ['We search the consumer bench', 'Students whose numbers came from an instrumented run, not a slide.'],
+      ['The evidence you actually see', 'A bounded, budgeted challenge executed inside Covenda-provisioned tooling, where the platform recorded the outcome rather than the candidate reporting it.'],
+      ['Three candidates, one gap each', 'With the challenge, its budget, and what was measured.'],
+      ['The trial', 'Run one bounded test against a hypothesis you already have.'],
+      ['What you learn', 'How they reason about a result that disagrees with them.'],
+    ],
+  },
+  'professional-services': {
+    company: 'A boutique consultancy that keeps rewriting junior research',
+    need: 'Written work arrives polished and hollow, and AI made that harder to spot.',
+    beats: [
+      ['You describe the person', 'Research and writing, sourced. 5 hrs/week.'],
+      ['We search the research bench', 'Where authorship is the thing being checked, not the prose.'],
+      ['The evidence you actually see', 'A writing sample plus a recorded defence with unscripted follow-ups on sources and method — because a strong document proves very little about who wrote it.'],
+      ['Three candidates, one gap each', 'With the sample and the defence score.'],
+      ['The trial', 'A landscape memo from public sources, with the reasoning shown.'],
+      ['What you learn', 'Whether the thinking is theirs. The document gets them to the interview; the interview is the proof.'],
+    ],
+  },
+};
+
+export function demoForVertical(slug) {
+  const demo = VERTICAL_DEMOS[slug];
+  if (!demo) return null;
+  const batch = batchBySlug(slug);
+  return {
+    slug,
+    name: batch ? batch.name : slug,
+    company: demo.company,
+    need: demo.need,
+    beats: demo.beats.map(([title, detail], i) => ({ step: i + 1, title, detail })),
+    // Never a case study: no real company, no real student, no claimed outcome.
+    illustrative: true,
+    admissionVersion: BATCH_ADMISSION_VERSION,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// The wedge. Software is the only bench whose primary evidence is ownership-verified AND
+// timestamp-forensic end to end — every other vertical routes at least partly to a human
+// rail. That makes it the cheapest place to prove the thesis: the evidence is strongest, the
+// supply is densest, and a founder can audit a claim themselves in under a minute.
+//
+// Derived, not asserted: leadVertical() reads the registry, so if a connector ships or is
+// pulled the wedge moves with it instead of drifting out of date in a comment.
+// ---------------------------------------------------------------------------
+export function verticalStrength(batch) {
+  const connectors = (batch?.vetting?.connectors || []).map(id => CONNECTORS[id]).filter(Boolean);
+  const live = connectors.filter(c => c.status === 'live');
+  return {
+    slug: batch?.slug || null,
+    liveConnectors: live.length,
+    ownershipVerified: live.some(c => c.ownership === 'oauth'),
+    historyForensic: live.some(c => c.history && c.history !== 'none'),
+    humanRailOnly: connectors.length === 0,
+  };
+}
+
+export function leadVertical() {
+  const ranked = BATCH_CATALOG
+    .map(batch => ({ batch, strength: verticalStrength(batch) }))
+    .sort((a, b) =>
+      Number(b.strength.ownershipVerified) - Number(a.strength.ownershipVerified)
+      || Number(b.strength.historyForensic) - Number(a.strength.historyForensic)
+      || b.strength.liveConnectors - a.strength.liveConnectors);
+  const top = ranked[0];
+  if (!top || !top.strength.ownershipVerified) return null; // no bench earns the claim yet
+  return {
+    slug: top.batch.slug,
+    name: top.batch.name,
+    reason: 'The only bench where ownership and history are both machine-verified end to end — a founder can audit a claim themselves in under a minute.',
+    strength: top.strength,
+  };
+}

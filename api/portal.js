@@ -5,7 +5,7 @@ import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicatio
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
-import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission } from './batches.js';
+import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical } from './batches.js';
 import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION } from './clubs.js';
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
@@ -1479,6 +1479,12 @@ export default async function handler(req, res, dependencies = {}) {
         ok: true,
         requirement: buildTalentRequirement(input),
         taxonomy: { verticals: REQUIREMENT_VERTICALS, workTypes: REQUIREMENT_WORK_TYPES },
+      });
+      // The demo, per vertical. A company asking "what does this look like for us" needs
+      // its own industry walked, not a generic tour — verification differs per bench.
+      if (input.action === 'vertical-demo') return res.status(200).json({
+        ok: true,
+        demos: BATCH_CATALOG.map(b => demoForVertical(b.slug)).filter(Boolean),
       });
       if (input.action === 'club-tiers') return res.status(200).json({
         ok: true,

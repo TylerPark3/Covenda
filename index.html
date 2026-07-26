@@ -133,6 +133,87 @@
               <p class="broken-answer"><strong>What Covenda does:</strong> scores evidence, not background. School, name, and age are not inputs — and a test fails the build if any of them moves a score.</p>
             </article>
           </div>
+          <!-- Pop-art panel, original artwork in the Lichtenstein IDIOM (heavy contour, flat
+               fills, Ben-Day dot shading, caption box) recoloured to Covenda gold rather than
+               comic primaries — deliberately not a trace of any existing work. The reversal is
+               the point: the student is the one asking. Decorative, so aria-hidden with the
+               meaning carried in the visible caption beneath. -->
+          <figure class="popart">
+            <svg class="popart-svg" viewBox="0 0 880 470" role="img" aria-label="A comic-style panel: a student interviews a startup founder, asking what they would actually be shipping.">
+              <defs>
+                <pattern id="benday" width="14" height="14" patternUnits="userSpaceOnUse">
+                  <circle cx="4" cy="4" r="3.1" fill="#e0b055"/>
+                  <circle cx="11" cy="11" r="3.1" fill="#e0b055"/>
+                </pattern>
+                <pattern id="bendayDense" width="9" height="9" patternUnits="userSpaceOnUse">
+                  <circle cx="3" cy="3" r="2.4" fill="#c99433"/>
+                  <circle cx="7.5" cy="7.5" r="2.4" fill="#c99433"/>
+                </pattern>
+                <clipPath id="panelClip"><rect x="8" y="8" width="864" height="454"/></clipPath>
+              </defs>
+
+              <g clip-path="url(#panelClip)">
+                <rect x="8" y="8" width="864" height="454" fill="#fbf6ec"/>
+                <rect x="8" y="8" width="864" height="454" fill="url(#benday)" opacity=".55"/>
+                <!-- radiating ground, the pop-art "impact" burst, kept low-contrast -->
+                <g opacity=".22">
+                  <path d="M440 250 L-40 -60 L120 -60 Z" fill="#c99433"/>
+                  <path d="M440 250 L250 -60 L360 -60 Z" fill="#c99433"/>
+                  <path d="M440 250 L560 -60 L680 -60 Z" fill="#c99433"/>
+                  <path d="M440 250 L860 -20 L920 90 Z" fill="#c99433"/>
+                </g>
+
+                <!-- desk -->
+                <rect x="60" y="352" width="760" height="16" fill="#11110f"/>
+                <rect x="60" y="368" width="760" height="34" fill="#e0b055"/>
+                <rect x="60" y="368" width="760" height="34" fill="url(#bendayDense)" opacity=".5"/>
+
+                <!-- STUDENT, left — the one asking -->
+                <g>
+                  <path d="M188 352 v-74 a76 76 0 0 1 152 0 v74 Z" fill="#e8c274" stroke="#11110f" stroke-width="7" stroke-linejoin="round"/>
+                  <path d="M188 352 v-74 a76 76 0 0 1 76 -76 v150 Z" fill="url(#bendayDense)" opacity=".55"/>
+                  <circle cx="264" cy="178" r="60" fill="#fdf8ef" stroke="#11110f" stroke-width="7"/>
+                  <path d="M204 172 a60 60 0 0 1 120 0 a60 60 0 0 0 -120 0 Z" fill="#11110f"/>
+                  <path d="M206 160 a60 62 0 0 1 116 0 q-16 -46 -58 -46 t-58 46 Z" fill="#11110f"/>
+                  <circle cx="243" cy="186" r="6.5" fill="#11110f"/>
+                  <circle cx="288" cy="186" r="6.5" fill="#11110f"/>
+                  <path d="M244 214 q20 16 40 0" fill="none" stroke="#11110f" stroke-width="6" stroke-linecap="round"/>
+                  <!-- laptop, closed: the student is not the one being examined -->
+                  <rect x="196" y="330" width="120" height="22" rx="0" fill="#fdf8ef" stroke="#11110f" stroke-width="6"/>
+                </g>
+
+                <!-- FOUNDER, right — being asked -->
+                <g>
+                  <path d="M556 352 v-66 a68 68 0 0 1 136 0 v66 Z" fill="#fdf8ef" stroke="#11110f" stroke-width="7" stroke-linejoin="round"/>
+                  <path d="M624 220 v132 h68 v-66 a68 68 0 0 0 -68 -66 Z" fill="url(#benday)" opacity=".7"/>
+                  <circle cx="624" cy="192" r="54" fill="#e8c274" stroke="#11110f" stroke-width="7"/>
+                  <path d="M576 176 q48 -34 96 0 q-8 -46 -48 -46 t-48 46 Z" fill="#11110f"/>
+                  <circle cx="606" cy="198" r="6" fill="#11110f"/>
+                  <circle cx="644" cy="198" r="6" fill="#11110f"/>
+                  <path d="M604 226 q20 10 40 0" fill="none" stroke="#11110f" stroke-width="6" stroke-linecap="round"/>
+                  <!-- open laptop, screen toward the student -->
+                  <path d="M540 352 l24 -62 h132 l24 62 Z" fill="#e0b055" stroke="#11110f" stroke-width="6" stroke-linejoin="round"/>
+                  <rect x="566" y="238" width="128" height="54" fill="#fdf8ef" stroke="#11110f" stroke-width="6"/>
+                  <path d="M578 252 h72 M578 264 h96 M578 276 h56" stroke="#11110f" stroke-width="5" stroke-linecap="round"/>
+                </g>
+
+                <!-- speech balloon: the student speaking -->
+                <g>
+                  <path d="M56 44 h396 a20 20 0 0 1 20 20 v88 a20 20 0 0 1 -20 20 h-166 l-38 44 l-6 -44 h-186 a20 20 0 0 1 -20 -20 v-88 a20 20 0 0 1 20 -20 Z"
+                        fill="#fdf8ef" stroke="#11110f" stroke-width="7" stroke-linejoin="round"/>
+                  <text x="88" y="94" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-style="italic" fill="#11110f">So — what would I</text>
+                  <text x="88" y="132" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-style="italic" fill="#11110f">actually be shipping?</text>
+                </g>
+
+                <!-- caption box, the pop-art narration slab -->
+                <rect x="600" y="44" width="240" height="70" fill="#e8c274" stroke="#11110f" stroke-width="6"/>
+                <text x="620" y="76" font-family="Georgia, serif" font-size="19" fill="#11110f">The student is</text>
+                <text x="620" y="100" font-family="Georgia, serif" font-size="19" fill="#11110f">asking the questions.</text>
+              </g>
+              <rect x="8" y="8" width="864" height="454" fill="none" stroke="#11110f" stroke-width="9"/>
+            </svg>
+            <figcaption>Both sides are choosing. A trial shows a company what a student can do — and shows the student what the company is actually like.</figcaption>
+          </figure>
           <p class="broken-thesis">That top cohort has stopped defaulting to banking, and increasingly to big tech — they would rather build something that matters. Capable students are more abundant than ever, and capability tracks neither age nor school. The résumé was never built to parse that, and it still can't.</p>
         </div>
       </section>
@@ -422,8 +503,10 @@
             <li><b>50%</b><span>of students would rather build something than climb a ladder. Startup work fits them — if it reaches them.</span><cite>Morning Consult for Samsung, 2023</cite></li>
           </ul>
           <p class="stat-note"><svg><use href="#icon-lock"/></svg>These figures cite published research, not Covenda results. Covenda has no outcome data yet — the pilot is how we earn it.</p>
-          <blockquote class="founder-note">
+          <blockquote class="founder-note has-portrait">
+            <img class="founder-portrait" src="/assets/tyler-park.png" alt="Tyler Park, founder of Covenda" width="120" height="120" loading="lazy" decoding="async">
             <p>Every ambitious student hits the same wall: “I could contribute here — I just can’t get in front of the founder.” What still works is what always worked: someone credible stakes their name on you, you get one shot, and the work proves the rest.</p>
+            <cite>Tyler Park · founder</cite>
           </blockquote>
 
           <!-- The model in one figure: soil feeds roots, roots feed the trunk (Covenda),
@@ -831,6 +914,19 @@
            the authenticated portal (Talent view), where the viewer is a known company.
            app.js keeps buildCandidateFilters()/renderCandidates(); both no-op without the
            #candToolbar / #candGrid nodes. -->
+
+      <!-- The demo, walked per vertical. Fed from api/batches.js so the beats can never
+           describe a rail the batch does not use. Company audience only. -->
+      <section class="vdemo audience-content" data-for-audience="company" id="verticalDemo" hidden>
+        <div class="section-heading">
+          <p class="feature-kicker">See it for your industry</p>
+          <h2>What this looks like for you.</h2>
+          <p>Vetting differs by field, so the walkthrough does too. Pick yours.</p>
+        </div>
+        <div class="vdemo-tabs" id="vdemoTabs" role="tablist" aria-label="Choose your industry"></div>
+        <div class="vdemo-body" id="vdemoBody"></div>
+        <p class="vdemo-note"><svg><use href="#icon-lock"/></svg>Illustrative walkthrough — no real company, no real student, and no claimed outcome.</p>
+      </section>
 
       <section class="club-register audience-content" data-for-audience="university" id="clubRegister">
         <div class="section-heading">

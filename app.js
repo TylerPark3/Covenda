@@ -5441,5 +5441,79 @@ let batchWeb = null;
   place();
 })();
 
+
+// The per-vertical demo. Tabs across the five benches; each one walks the same six beats so
+// a company can compare shapes, while the substance stays specific to their field. Fed from
+// api/batches.js, so a beat can never describe a rail the batch does not actually use.
+(function initVerticalDemo() {
+  var section = document.getElementById('verticalDemo');
+  var tabs = document.getElementById('vdemoTabs');
+  var body = document.getElementById('vdemoBody');
+  if (!section || !tabs || !body || typeof fetch !== 'function') return;
+
+  fetch('/api/portal', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'vertical-demo' }),
+  }).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+    if (!data || !data.ok || !(data.demos || []).length) return; // nothing real to show
+    var demos = data.demos;
+
+    function show(index) {
+      Array.prototype.forEach.call(tabs.children, function (t, i) {
+        t.setAttribute('aria-selected', String(i === index));
+        t.tabIndex = i === index ? 0 : -1;
+      });
+      var demo = demos[index];
+      body.replaceChildren();
+
+      var head = document.createElement('div');
+      head.className = 'vdemo-head';
+      head.append(
+        Object.assign(document.createElement('p'), { className: 'vdemo-company', textContent: demo.company }),
+        Object.assign(document.createElement('p'), { className: 'vdemo-need', textContent: demo.need }),
+      );
+      body.append(head);
+
+      var ol = document.createElement('ol');
+      ol.className = 'vdemo-beats';
+      demo.beats.forEach(function (beat) {
+        var li = document.createElement('li');
+        li.append(Object.assign(document.createElement('span'), { className: 'vdemo-n', textContent: String(beat.step) }));
+        var div = document.createElement('div');
+        div.append(
+          Object.assign(document.createElement('strong'), { textContent: beat.title }),
+          Object.assign(document.createElement('p'), { textContent: beat.detail }),
+        );
+        li.append(div);
+        ol.append(li);
+      });
+      body.append(ol);
+    }
+
+    demos.forEach(function (demo, i) {
+      var tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'vdemo-tab';
+      tab.setAttribute('role', 'tab');
+      tab.setAttribute('aria-selected', String(i === 0));
+      tab.tabIndex = i === 0 ? 0 : -1;
+      tab.textContent = demo.name;
+      tab.addEventListener('click', function () { show(i); });
+      // Arrow keys move between tabs, as a tablist is expected to.
+      tab.addEventListener('keydown', function (event) {
+        var next = event.key === 'ArrowRight' ? i + 1 : event.key === 'ArrowLeft' ? i - 1 : null;
+        if (next === null) return;
+        event.preventDefault();
+        var target = (next + demos.length) % demos.length;
+        show(target);
+        tabs.children[target].focus();
+      });
+      tabs.append(tab);
+    });
+    show(0);
+    section.hidden = false;
+  }).catch(function () { /* endpoint unavailable — section stays hidden */ });
+})();
+
 initMemberNav();
 window.requestAnimationFrame(() => openIntro());
