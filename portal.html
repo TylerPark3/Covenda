@@ -77,7 +77,7 @@
         <button type="button" data-view="activity"><svg><use href="#p-inbox"/></svg><span>Submissions</span><b id="intakeCount">0</b></button>
         <button type="button" data-view="discover" data-student-only><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
         <button type="button" data-view="batches" id="batchesNav"><svg><use href="#p-spark"/></svg><span>Batches</span><b id="batchCount">0</b></button>
-        <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
+        <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Your proof of work</span></button>
         <button type="button" data-view="messages"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
         <button type="button" data-view="wallet"><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
       </nav>
@@ -97,12 +97,12 @@
           <div class="overview-main">
             <div class="welcome-row"><div><p class="eyebrow" id="welcomeDate">Your workspace</p><h1 id="welcomeTitle">Good afternoon.</h1><p id="welcomeCopy">Here is what is moving across your Covenda work.</p></div><button class="portal-primary" id="primaryAction" type="button"><svg><use href="#p-plus"/></svg><span>Complete profile</span></button></div>
             <div class="company-segments" id="companySegments" hidden></div>
-            <section class="focus-section"><div class="section-heading"><div><p class="eyebrow">Current work</p><h2 id="focusTitle">Your project tracker</h2></div><button type="button" data-view="projects">View all</button></div><div id="focusProject"></div></section>
-            <section class="plain-section"><div class="section-heading"><div><p class="eyebrow">At a glance</p><h2>Your activity</h2></div></div><div class="metrics-row" id="memberMetrics"></div></section>
+            <section class="focus-section"><div class="section-heading"><div><p class="eyebrow">Current work</p><h2 id="focusTitle">Where each project stands</h2></div><button type="button" data-view="projects">View all</button></div><div id="focusProject"></div></section>
+            <section class="plain-section"><div class="section-heading"><div><p class="eyebrow">At a glance</p><h2>What's moved recently</h2></div></div><div class="metrics-row" id="memberMetrics"></div></section>
           </div>
           <aside class="overview-rail">
             <section class="profile-progress"><div class="progress-ring" id="profileRing"><strong>0%</strong></div><div><p class="eyebrow">Profile strength</p><h2 id="profileProgressTitle">Make a strong first impression</h2><p id="profileProgressCopy">A complete profile helps Covenda route the right work.</p><button type="button" data-view="portfolio">Edit profile <svg><use href="#p-arrow"/></svg></button></div></section>
-            <section class="rail-list"><div class="section-heading"><div><p class="eyebrow">Next up</p><h2>Actions</h2></div></div><ul id="nextActions"></ul></section>
+            <section class="rail-list"><div class="section-heading"><div><p class="eyebrow">Next up</p><h2>What you can do next</h2></div></div><ul id="nextActions"></ul></section>
           </aside>
         </div>
       </section>
@@ -121,13 +121,13 @@
       <section class="portal-view" data-portal-view="activity">
         <div class="page-heading"><div><p class="eyebrow">Private activity</p><h1>Submissions &amp; applications</h1><p>Forms submitted with this account’s email appear here automatically. Covenda’s operator review remains private.</p></div></div>
         <div class="activity-grid">
-          <section class="activity-section"><div class="section-heading"><div><p class="eyebrow">Website forms</p><h2>Your intake receipts</h2></div><span id="intakeSummary">0 submissions</span></div><div id="intakeList"></div></section>
+          <section class="activity-section"><div class="section-heading"><div><p class="eyebrow">Website forms</p><h2>Proof of what you've submitted</h2></div><span id="intakeSummary">0 submissions</span></div><div id="intakeList"></div></section>
           <section class="activity-section" id="applicationSection"><div class="section-heading"><div><p class="eyebrow">Project matching</p><h2 id="applicationTitle">Applications</h2></div><span id="applicationSummary">0 applications</span></div><div id="applicationList"></div></section>
         </div>
       </section>
 
       <section class="portal-view" data-portal-view="discover">
-        <div class="page-heading"><div><p class="eyebrow">Reviewed opportunities</p><h1>Discover projects</h1><p id="discoverCount">Projects appear here only after a company or university makes them available to members.</p></div></div>
+        <div class="page-heading"><div><p class="eyebrow">Reviewed opportunities</p><h1>Open work that fits you</h1><p id="discoverCount">Projects appear here only after a company or university makes them available to members.</p></div></div>
         <div class="discover-tabs" id="discoverTabs" role="tablist">
           <button type="button" class="discover-tab is-active" data-tab="best" role="tab">Best match</button>
           <button type="button" class="discover-tab" data-tab="all" role="tab">All open</button>
@@ -151,7 +151,7 @@
       </section>
 
       <section class="portal-view" data-portal-view="batches">
-        <div class="page-heading"><div><p class="eyebrow">Curated cohorts</p><h1>Elite batches</h1><p id="batchIntro">Vetted, reviewed cohorts in a discipline. Apply once — an operator reviews every application, and admitted students are surfaced to partner companies.</p></div></div>
+        <div class="page-heading"><div><p class="eyebrow">Curated cohorts</p><h1>Vetted benches you can join</h1><p id="batchIntro">Vetted, reviewed cohorts in a discipline. Apply once — an operator reviews every application, and admitted students are surfaced to partner companies.</p></div></div>
         <div class="batch-list" id="batchList"></div>
       </section>
 
@@ -165,7 +165,7 @@
         <div class="message-workspace">
           <aside class="message-projects" id="messageProjects" aria-label="Project conversations"></aside>
           <section class="message-conversation">
-            <header><div><p class="eyebrow">Private thread</p><h2 id="messageProjectTitle">Choose a project</h2></div><span id="messageProjectStatus"></span></header>
+            <header><div><p class="eyebrow">Private thread</p><h2 id="messageProjectTitle">Pick the work to apply to</h2></div><span id="messageProjectStatus"></span></header>
             <div class="message-thread" id="messageThread" aria-live="polite"></div>
             <form class="message-compose" id="messageForm">
               <label for="messageBody">Message</label>
@@ -204,7 +204,7 @@
           </section>
         </div>
         <section class="wallet-ledger">
-          <div class="section-heading"><div><p class="eyebrow">Every movement</p><h2>Ledger</h2></div><span id="walletLedgerCount"></span></div>
+          <div class="section-heading"><div><p class="eyebrow">Every movement</p><h2>Every credit in and out</h2></div><span id="walletLedgerCount"></span></div>
           <div id="walletLedger"></div>
         </section>
       </section>
@@ -245,7 +245,7 @@
     <form method="dialog" id="projectForm"><header><div><p class="eyebrow">New project</p><h2>Start with a useful outcome.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>Project title<input name="title" maxlength="160" required placeholder="Customer research synthesis"></label><label>What needs to get done?<textarea name="summary" rows="5" minlength="10" maxlength="5000" required></textarea></label><label>Useful deliverable<input name="deliverable" maxlength="2000" placeholder="A cited summary with clear recommendations"></label><label>Desired skills <small>Separate with commas</small><input name="desiredSkills" placeholder="Research, spreadsheets, writing"></label><div class="form-grid"><label>Target date<input name="targetDate" type="date"></label><label>Visibility<select name="visibility"><option value="private">Private draft</option><option value="members">Covenda members</option><option value="open">Open opportunity</option></select></label></div><label>Engagement rung <small>Start small — a micro-bounty is the de-risked first bet</small><select name="engagementRung"><option value="">Standard project</option><option value="micro">Micro-bounty — bounded ~5-hour task (~$100–200)</option><option value="project_short">Short project (~2 weeks)</option><option value="project_long">Longer project (~6 weeks)</option></select></label><label>Access stage <small>Stage 2 (deeper access) only opens to a student who finished a Stage 1 with you</small><select name="accessStage"><option value="1">Stage 1 — work-trial, no systems access</option><option value="2">Stage 2 — deeper access (earned)</option></select></label>
     <fieldset class="form-fieldset"><legend>Who you're looking for <small>Optional — targeting, never filters on protected traits</small></legend>
       <div class="form-grid">
-        <label>Opportunity type<select name="opportunityType"><option value="project">Project</option><option value="internship">Internship</option><option value="part_time">Part-time</option></select></label>
+        <label>Opportunity type<select name="opportunityType"><option value="project">The work itself</option><option value="internship">Internship</option><option value="part_time">Part-time</option></select></label>
         <label>Experience needed<select name="experienceRequirement"><option value="none">No prior experience needed</option><option value="relevant_project">A relevant completed project</option><option value="prior_internship">Prior internship</option><option value="professional">Professional experience</option></select></label>
       </div>
       <div class="form-grid">
@@ -385,11 +385,11 @@
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="submitWorkDialog">
-    <form method="dialog" id="submitWorkForm"><header><div><p class="eyebrow">Submit work</p><h2 id="submitWorkTitle">Submit your work</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><label>What you did<textarea name="workSummary" rows="4" minlength="10" maxlength="4000" required placeholder="Summarize what you completed and how."></textarea></label><label>Deliverable link(s) <small>One per line — doc, sheet, or repo</small><textarea name="workLinks" rows="2" placeholder="https://…"></textarea></label><label>Anything the reviewer should know <small>Optional</small><textarea name="workNotes" rows="2" maxlength="1000" placeholder="Assumptions, open questions, or where to focus."></textarea></label><p class="dialog-message" id="submitWorkMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Submit for review<svg><use href="#p-arrow"/></svg></button></footer></form>
+    <form method="dialog" id="submitWorkForm"><header><div><p class="eyebrow">Submit work</p><h2 id="submitWorkTitle">Send your work for review</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><label>What you did<textarea name="workSummary" rows="4" minlength="10" maxlength="4000" required placeholder="Summarize what you completed and how."></textarea></label><label>Deliverable link(s) <small>One per line — doc, sheet, or repo</small><textarea name="workLinks" rows="2" placeholder="https://…"></textarea></label><label>Anything the reviewer should know <small>Optional</small><textarea name="workNotes" rows="2" maxlength="1000" placeholder="Assumptions, open questions, or where to focus."></textarea></label><p class="dialog-message" id="submitWorkMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Submit for review<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="reviewDialog">
-    <form method="dialog" id="reviewForm"><header><div><p class="eyebrow">Review deliverable</p><h2 id="reviewTitle">Review</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p class="review-submitted" id="reviewSubmittedAt"></p><div class="review-deliverable" id="reviewDeliverable"></div><label>Note to the student <small>Required to request changes</small><textarea name="note" rows="3" maxlength="2000" placeholder="What is strong, and what to change."></textarea></label><p class="dialog-message" id="reviewMessage" aria-live="polite"></p></div><footer class="review-actions"><button class="portal-secondary" type="button" data-decision="revise">Request changes</button><button class="portal-primary" type="button" data-decision="accept">Accept deliverable<svg><use href="#p-check"/></svg></button></footer></form>
+    <form method="dialog" id="reviewForm"><header><div><p class="eyebrow">Review deliverable</p><h2 id="reviewTitle">Check before you send</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p class="review-submitted" id="reviewSubmittedAt"></p><div class="review-deliverable" id="reviewDeliverable"></div><label>Note to the student <small>Required to request changes</small><textarea name="note" rows="3" maxlength="2000" placeholder="What is strong, and what to change."></textarea></label><p class="dialog-message" id="reviewMessage" aria-live="polite"></p></div><footer class="review-actions"><button class="portal-secondary" type="button" data-decision="revise">Request changes</button><button class="portal-primary" type="button" data-decision="accept">Accept deliverable<svg><use href="#p-check"/></svg></button></footer></form>
   </dialog>
 </body>
 </html>
