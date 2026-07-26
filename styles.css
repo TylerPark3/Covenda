@@ -2002,9 +2002,10 @@ body[data-audience="university"] #flowDemo { display: none; }
    keeping the visual spacing to the following character unchanged. */
 .word-gold {
   font-style: italic;
+  overflow: visible;
   color: var(--gold-deep); /* fallback if background-clip:text is unsupported */
-  padding-right: 0.26em;
-  margin-right: -0.2em;
+  padding-right: 0.44em;
+  margin-right: -0.36em;
   /* Clone the box per line fragment so the padding (and gold fill) covers the italic overhang
      at EVERY line end — otherwise a word that ends a wrapped line (e.g. "domain") has its last
      glyph's slant clipped by background-clip:text. */
@@ -2989,13 +2990,13 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
        section that has to actually get read. ---------------------------------------- */
 body:not([data-audience="home"]) .broken-section { display: none; }
 .broken-section { padding: clamp(52px, 7vw, 104px) var(--page-gutter); border-top: 1px solid var(--line); background: #fff; }
-.broken-inner { max-width: 1080px; margin: 0 auto; }
-.broken-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(26px, 4vw, 56px); margin-top: clamp(28px, 4vw, 44px); }
+.broken-inner { width: min(100%, var(--content)); margin: 0 auto; }
+.broken-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: clamp(26px, 4vw, 64px); margin-top: clamp(28px, 4vw, 44px); }
 .broken-col { padding: clamp(22px, 2.6vw, 32px); border: 1px solid var(--line-strong); border-radius: 0; background: rgba(255,255,255,.7); }
 .broken-eyebrow { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: var(--gold-deep); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; }
 .broken-eyebrow svg { width: 16px; height: 16px; }
 .broken-col h3 { margin: 0 0 14px; font-family: var(--font-display); font-size: clamp(21px, 2.3vw, 27px); font-weight: 500; line-height: 1.15; letter-spacing: -.02em; }
-.broken-col p { margin: 0 0 14px; max-width: 46ch; color: var(--muted); font-size: var(--step-body); line-height: 1.65; }
+.broken-col p { margin: 0 0 14px; max-width: 56ch; color: var(--muted); font-size: var(--step-body); line-height: 1.65; }
 .broken-answer { margin-bottom: 0 !important; padding-top: 14px; border-top: 1px solid var(--line); color: #31312e !important; }
 .broken-answer strong { color: var(--gold-deep); }
 

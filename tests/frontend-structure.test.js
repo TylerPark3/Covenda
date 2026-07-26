@@ -460,7 +460,10 @@ test('the pop-art panel is original, decorative and captioned', () => {
   // Comic lettering is bold uppercase sans — serif was off-idiom and harder to read fast.
   const panel = html.match(/<svg class="popart-svg"[\s\S]*?<\/svg>/)?.[0] || '';
   assert.doesNotMatch(panel, /<text[^>]*Georgia/);
-  assert.match(panel, /<text[^>]*font-weight="800"/);
+  assert.match(panel, /font-weight="800"/);
+  // textLength pins every line, so a font substitution cannot push text outside a balloon.
+  assert.match(panel, /textLength="/);
+  assert.match(panel, /lengthAdjust="spacingAndGlyphs"/);
   assert.match(html, /popart-svg[^>]*role="img"/);
   assert.match(html, /answers both questions at once/); // meaning carried in visible text
   // The caption slab was removed; the two balloons carry it.
@@ -543,4 +546,14 @@ test('the tree explains the vetting system specifically', () => {
   // Guardrails survive into the diagram.
   assert.match(html, /never a person score, never a ranking/);
   assert.match(html, /an operator decides and records why/);
+});
+
+// The gold word is painted with background-clip:text, so any glyph extending past the
+// padding box renders TRANSPARENT — which is why the italic "f" in "proof" looked cut off.
+// The padding must stay wide enough to cover Newsreader's italic overhang.
+test('the gold word covers its italic overhang', () => {
+  const rule = styles.match(/\.word-gold \{[\s\S]*?\}/)?.[0] || '';
+  const pad = Number(rule.match(/padding-right:\s*([\d.]+)em/)?.[1] || 0);
+  assert.ok(pad >= 0.4, `padding-right ${pad}em is too tight for an italic overhang`);
+  assert.match(rule, /box-decoration-break: clone/);
 });
