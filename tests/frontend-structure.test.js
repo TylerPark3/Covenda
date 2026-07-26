@@ -40,7 +40,7 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
   assert.match(styles, /\.intro-statement/);
 });
 
-test('the student entry leads with joining and follows with one clear vertical rail', () => {
+test('the student entry leads with a compact join action and working vertical specializations', () => {
   const studentHero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(studentHero, /Do work that proves/);
   assert.match(studentHero, /class="gold-button student-join-primary"[\s\S]*Join the talent network/);
@@ -51,9 +51,19 @@ test('the student entry leads with joining and follows with one clear vertical r
   assert.doesNotMatch(studentHero, /Explore[\s\S]*Profile[\s\S]*Track/);
   assert.doesNotMatch(studentHero, /selectorFxCanvas|student-journey|narrowFlow/);
   assert.match(styles, /\.student-vertical-rail[\s\S]*grid-template-columns: repeat\(4/);
-  assert.match(styles, /\.student-join-primary[\s\S]*min-height:/);
+  assert.match(styles, /\.student-join-primary \{[\s\S]*width: min\(100%, 430px\)[\s\S]*border-radius: 0/);
+  assert.match(styles, /@keyframes student-join-confirm/);
   assert.match(script, /\$\$\('\.work-option, \.student-vertical'\)/);
-  assert.match(script, /function initButtonFeedback\(\)/);
+  assert.match(studentHero, /id="studentSpecialtyPanel"/);
+  assert.match(studentHero, /id="studentSpecialtyOptions"/);
+  assert.match(script, /const studentSpecialties = \{/);
+  for (const specialty of ['Product discovery', 'Frontend engineering', 'Financial modeling', 'Growth strategy']) {
+    assert.match(script, new RegExp(specialty));
+  }
+  assert.match(script, /function renderStudentSpecialties\(workType\)/);
+  assert.match(script, /function selectStudentSpecialty\(label\)/);
+  assert.match(script, /studentSpecialtyStorageKey/);
+  assert.match(script, /function confirmStudentJoin\(button\)/);
 });
 
 test('audience switch supports student and company site states', () => {
@@ -574,17 +584,20 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
   assert.match(script, /if \(reduce\) return; \/\/ static frame only/);
 });
 
-// The bridge is intentionally only two clouds and one route: startups, referred talent,
-// and project work turning into durable proof.
-test('the bridge visual joins two readable clouds without partner claims or a funnel', () => {
+// The first explanation uses the research to say one thing clearly, with only sparse
+// atmospheric points around the three-step route.
+test('the bridge is a concise first card with two sparse clouds and one clear outcome', () => {
   assert.match(html, /class="bridge-section"/);
   assert.match(html, /id="bridgeStory"/);
   assert.match(html, /id="bridgeCanvas"/);
-  assert.match(html, /Talent, connected through/);
-  for (const label of ['Need capable help', 'Lean teams', 'Real projects', 'Clubs', 'Professors', 'Peers']) {
+  assert.match(html, /Startups need help/);
+  assert.match(html, /Talented students need/);
+  for (const label of ['Real work needs doing', 'Ability needs a signal', 'Post a scoped project', 'Complete the work', 'Review the proof']) {
     assert.match(html, new RegExp(label));
   }
-  for (const stage of ['Project', 'Deliverable', 'Proof']) assert.match(html, new RegExp(stage));
+  assert.match(html, /Small teams cannot spend months screening or training/);
+  assert.match(html, /clubs, professors, and people who know their work/);
+  assert.match(html, /evidence from work, not another résumé/);
   assert.match(html, /href="#bridgeStory"/);
   assert.match(html, /data-nav-target="bridgeStory"/);
   assert.match(script, /function initBridge\(\)/);
@@ -592,27 +605,30 @@ test('the bridge visual joins two readable clouds without partner claims or a fu
   assert.match(script, /function makeCloud\(count, salt, goldRate\)/);
   assert.match(script, /function cloudFrame\(side, p\)/);
   assert.match(script, /function drawCloud\(cloud, side, p\)/);
-  assert.match(script, /function drawCrossingTalent\(p\)/);
-  assert.match(script, /lerp\(W \* \.68, W \* \.32, local\)/);
+  assert.match(script, /makeCloud\(7, 3, \.2\)/);
+  assert.match(script, /makeCloud\(9, 11, \.24\)/);
+  assert.doesNotMatch(script, /function drawCrossingTalent|cloud\.links/);
   assert.doesNotMatch(script, /function bridgeGeometry|function drawDesktopBridge|function drawMobileBridge/);
   assert.match(script, /section\.style\.setProperty\('--bridge-progress'/);
-  // Categories only. A named club or company on a public page could read as a signed partner.
   assert.doesNotMatch(script, /Columbia Consulting Group/);
-  assert.match(html, /Illustrative network — categories, not affiliations or partnership claims\./);
   // The canvas must carry its meaning to a screen reader.
-  assert.match(html, /aria-label="Two scroll-controlled clouds come together/);
+  assert.match(html, /aria-label="Two quiet clouds come together/);
   // Reduced motion gets the FINISHED state, because the connection is the point.
   assert.match(script, /if \(reduce\) return; \/\/ joined state, painted once/);
   assert.match(styles, /\.bridge-sticky \{[\s\S]*position: sticky/);
-  assert.match(styles, /\.bridge-visual \{[\s\S]*position: relative/);
-  assert.match(styles, /\.bridge-process \{[\s\S]*grid-template-columns: repeat\(3/);
+  assert.match(styles, /\.bridge-card \{[\s\S]*border: 1px solid/);
+  assert.match(styles, /\.bridge-route ol \{[\s\S]*grid-template-columns: repeat\(3/);
   assert.match(styles, /body\[data-audience="home"\] \.stat-band/);
   assert.doesNotMatch(html, /The problem isn’t talent/);
 });
 
-test('audience choices use a folded-sheet transition with a reduced-motion bypass', () => {
+test('only the homepage student path uses the folded-sheet transition', () => {
   assert.match(html, /id="audienceTransition"/);
+  assert.match(html, /class="home-path" data-audience-option="student" data-student-hero-entry/);
   assert.match(script, /function transitionAudience\(audience\)/);
+  assert.match(script, /if \(audience !== 'student'\) return/);
+  assert.match(script, /button\.matches\('\[data-student-hero-entry\]'\)/);
+  assert.match(script, /else \{\s*showAudience\(audience\)/);
   assert.match(script, /document\.body\.classList\.add\('is-audience-transitioning'\)/);
   assert.match(script, /window\.setTimeout\(\(\) => \{\s*setAudience\(audience\)/);
   assert.match(styles, /@keyframes audience-sheet-a/);

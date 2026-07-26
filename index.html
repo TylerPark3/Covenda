@@ -108,7 +108,7 @@
           <p class="home-oneliner">Startups meet undergraduates through work you can audit — not résumés.</p>
         </div>
         <div class="home-paths" role="group" aria-label="Choose your path">
-          <button type="button" class="home-path" data-audience-option="student">
+          <button type="button" class="home-path" data-audience-option="student" data-student-hero-entry>
             <span class="home-path-index" aria-hidden="true">01</span>
             <span class="home-path-copy"><strong>I’m a student</strong><small>Prove your skills on real, paid work</small></span>
             <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
@@ -127,50 +127,44 @@
         <a class="scroll-cue" href="#bridgeStory"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
-      <!-- Home-only. Two referral clouds move together around one legible route:
-           project, deliverable, proof. The labels are categories, never claimed partners. -->
+      <!-- Home-only. A quiet first explanation: one startup need, one referred-talent
+           source, and one short route from real work to credible proof. -->
       <section class="bridge-section" id="bridgeStory" aria-labelledby="bridgeTitle">
         <div class="bridge-sticky">
           <div class="bridge-head">
-            <h2 id="bridgeTitle">Talent, connected through <span class="word-gold">the work.</span></h2>
-            <p>Trusted referrals. Real startup projects. Proof you can use.</p>
+            <h2 id="bridgeTitle">Startups need help.<br>Talented students need <span class="word-gold">proof.</span></h2>
+            <p>Covenda connects them through trusted referrals and real startup work.</p>
           </div>
 
-          <div class="bridge-visual">
-            <div class="bridge-side bridge-side--startups" aria-hidden="true">
-              <strong>Startups</strong>
-              <ul>
-                <li>Need capable help</li>
-                <li>Lean teams</li>
-                <li>Real projects</li>
-              </ul>
+          <div class="bridge-card">
+            <div class="bridge-visual">
+              <div class="bridge-side bridge-side--startups">
+                <span class="bridge-side-label">Lean startup</span>
+                <strong>Real work needs doing.</strong>
+                <p>Small teams cannot spend months screening or training.</p>
+              </div>
+
+              <div class="bridge-route" aria-label="How Covenda connects startups and students">
+                <span class="bridge-route-line" aria-hidden="true"></span>
+                <ol>
+                  <li><span>1</span><strong>Post a scoped project</strong></li>
+                  <li><span>2</span><strong>Complete the work</strong></li>
+                  <li><span>3</span><strong>Review the proof</strong></li>
+                </ol>
+              </div>
+
+              <div class="bridge-side bridge-side--talent">
+                <span class="bridge-side-label">Referred talent</span>
+                <strong>Ability needs a signal.</strong>
+                <p>Students arrive through clubs, professors, and people who know their work.</p>
+              </div>
+
+              <canvas id="bridgeCanvas" class="bridge-canvas" role="img"
+                      aria-label="Two quiet clouds come together: a lean startup with real work and talented students referred by trusted people. A scoped project becomes a reviewed deliverable and credible proof."></canvas>
             </div>
-            <div class="bridge-side bridge-side--talent" aria-hidden="true">
-              <strong>Referred talent</strong>
-              <ul>
-                <li>Clubs</li>
-                <li>Professors</li>
-                <li>Peers</li>
-              </ul>
-            </div>
 
-            <ol class="bridge-process" aria-label="How work becomes proof">
-              <li><strong>Project</strong></li>
-              <li><strong>Deliverable</strong></li>
-              <li><strong>Proof</strong></li>
-            </ol>
-
-            <canvas id="bridgeCanvas" class="bridge-canvas" role="img"
-                    aria-label="Two scroll-controlled clouds come together. Startups with real projects meet talented students referred by clubs, professors and peers. Gold talent moves through a project, produces a deliverable and earns credible proof."></canvas>
+            <p class="bridge-outcome"><span aria-hidden="true">→</span> The result is a better hiring signal: evidence from work, not another résumé.</p>
           </div>
-
-          <div class="bridge-progress" aria-hidden="true">
-            <span>Separate</span>
-            <i><b></b></i>
-            <output>0% together</output>
-            <span>Connected</span>
-          </div>
-          <p class="bridge-illus">Illustrative network — categories, not affiliations or partnership claims.</p>
         </div>
       </section>
 
@@ -299,12 +293,20 @@
           <fieldset class="student-vertical-picker">
             <legend>Choose your vertical</legend>
             <div class="student-vertical-rail">
-              <button class="student-vertical is-selected" type="button" data-work-type="Research" aria-pressed="true">Product &amp; strategy</button>
-              <button class="student-vertical" type="button" data-work-type="Data & spreadsheets" aria-pressed="false">Software &amp; data</button>
-              <button class="student-vertical" type="button" data-work-type="Operations" aria-pressed="false">Finance &amp; operations</button>
-              <button class="student-vertical" type="button" data-work-type="Writing & documentation" aria-pressed="false">Growth &amp; research</button>
+              <button class="student-vertical is-selected" type="button" data-work-type="Research" data-vertical-label="Product &amp; strategy" aria-pressed="true">Product &amp; strategy</button>
+              <button class="student-vertical" type="button" data-work-type="Data & spreadsheets" data-vertical-label="Software &amp; data" aria-pressed="false">Software &amp; data</button>
+              <button class="student-vertical" type="button" data-work-type="Operations" data-vertical-label="Finance &amp; operations" aria-pressed="false">Finance &amp; operations</button>
+              <button class="student-vertical" type="button" data-work-type="Writing & documentation" data-vertical-label="Growth &amp; research" aria-pressed="false">Growth &amp; research</button>
             </div>
           </fieldset>
+          <div class="student-specialty-panel" id="studentSpecialtyPanel" aria-live="polite">
+            <div class="student-specialty-heading">
+              <p>Now choose a specialty</p>
+              <strong id="studentSpecialtyTitle">Product &amp; strategy</strong>
+            </div>
+            <div class="student-specialty-options" id="studentSpecialtyOptions" role="group" aria-label="Choose a specialty"></div>
+            <p class="student-specialty-status" id="studentSpecialtyStatus">Choose one to tell us what kind of work you want to prove.</p>
+          </div>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
@@ -1212,6 +1214,7 @@
     <form id="quickJoinForm" novalidate>
       <header class="dialog-header"><div><small>Join the pilot list</small><h2 id="quickJoinTitle">Get on the list in seconds.</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
       <p class="dialog-copy">Name and email puts you in the talent pool — that is all this does. When a project fits, we reach out.</p>
+      <p class="quick-selected-direction" id="quickJoinSpecialty" hidden></p>
       <div class="field-grid">
         <label>Full name<input name="quickName" autocomplete="name" required></label>
         <label>Email<input name="quickEmail" type="email" autocomplete="email" required></label>
