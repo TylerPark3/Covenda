@@ -4685,35 +4685,30 @@ function initHeroField() {
   if (!ctx) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const GOLD = '184,126,32';
-  const PALE = '124,120,108';
-  const FOCAL = 780;           // perspective strength
-  const DEPTH = 620;           // how far back the field runs
-  // Proven nodes have no reach limit: each connects to every other one across the whole
-  // field. At MAX_GOLD = 5 that is at most 10 lines a frame.
-  const SPIN = 0.0016;         // radians per frame — the proven figure turns, the crowd does not
-  const LIGHT = 190;           // how far the cursor's light reaches along the gold network
-  const MAX_GOLD = 5;           // an absolute ceiling, not a ratio — a bigger crowd must not mean more gold
-  let W = 0, H = 0, nodes = [], running = false, raf = 0, t = 0;
+  const GOLD = '216,167,68';
+  const WHITE = '245,246,241';
+  const FOCAL = 760;
+  const DEPTH = 680;
+  const LINK_DISTANCE = 112;
+  let W = 0, H = 0, nodes = [], signals = [], running = false, raf = 0, t = 0;
   let pointer = null, camX = 0, camY = 0, targetX = 0, targetY = 0;
-  let proofs = [];             // in-flight "this became proof" rings
+  let nextSignalAt = 0;
 
   function build() {
-    const target = Math.max(150, Math.min(420, Math.round((W * H) / 3100)));
+    const target = Math.max(140, Math.min(240, Math.round((W * H) / 4200)));
     nodes = Array.from({ length: target }, () => ({
-      x: (Math.random() - 0.5) * W * 1.5,
-      y: (Math.random() - 0.5) * H * 1.5,
+      x: (Math.random() - 0.5) * W * 1.65,
+      y: (Math.random() - 0.5) * H * 1.55,
       z: Math.random() * DEPTH,
-      vx: (Math.random() - 0.5) * 0.16,
-      vy: (Math.random() - 0.5) * 0.16,
-      vz: (Math.random() - 0.5) * 0.12,
-      r: 2.1 + Math.random() * 1.9,
-      gold: Math.random() < 0.008,
+      vx: (Math.random() - 0.5) * 0.24,
+      vy: (Math.random() - 0.5) * 0.2,
+      vz: (Math.random() - 0.5) * 0.16,
+      r: 1.5 + Math.random() * 2.2,
+      gold: Math.random() < .1,
       phase: Math.random() * Math.PI * 2,
-      lit: 0, // 0..1 conversion progress, drives the gold fade-in
     }));
-    for (const n of nodes) if (n.gold) n.lit = 1;
-    proofs = [];
+    signals = [];
+    nextSignalAt = performance.now() + 620;
   }
 
   function resize() {
@@ -4726,141 +4721,133 @@ function initHeroField() {
     build();
   }
 
-  // Perspective projection with the camera offset by the pointer, so the field has parallax:
-  // near nodes swing further than far ones, which is what actually reads as depth.
   function project(n) {
     const z = n.z + FOCAL;
     const scale = FOCAL / z;
     return {
-      x: W / 2 + (n.x + camX * (1 - n.z / DEPTH) * 60) * scale,
-      y: H / 2 + (n.y + camY * (1 - n.z / DEPTH) * 60) * scale,
+      x: W / 2 + (n.x + camX * (1 - n.z / DEPTH) * 72) * scale,
+      y: H / 2 + (n.y + camY * (1 - n.z / DEPTH) * 72) * scale,
       scale,
     };
   }
 
-  // Promote one pale node. Held near a tenth gold: enough to say "some of these are
-  // exceptional", never enough to say "everyone is".
-  function proveOne() {
-    const goldCount = nodes.filter(n => n.lit > 0.5).length;
-    if (!nodes.length || goldCount >= MAX_GOLD) return;
-    const candidates = nodes.filter(n => n.lit < 0.05);
-    if (!candidates.length) return;
-    const n = candidates[Math.floor(Math.random() * candidates.length)];
-    n.gold = true;
-    proofs.push({ node: n, age: 0 });
+  function spawnSignal(now) {
+    const whiteNodes = nodes.filter(node => !node.gold);
+    if (!whiteNodes.length) return;
+    const node = whiteNodes[Math.floor(Math.random() * whiteNodes.length)];
+    signals.push({ node, born: now, duration: 1300 + Math.random() * 650 });
+    if (signals.length > 5) signals.shift();
+    nextSignalAt = now + 560 + Math.random() * 760;
   }
 
-  function step() {
+  function step(now) {
     t += 1;
     camX += (targetX - camX) * 0.045;
     camY += (targetY - camY) * 0.045;
     for (const n of nodes) {
       n.x += n.vx; n.y += n.vy; n.z += n.vz;
-      if (n.lit > 0.12) {
-        const cos = Math.cos(SPIN), sin = Math.sin(SPIN);
-        const rx = n.x * cos - n.y * sin;
-        n.y = n.x * sin + n.y * cos;
-        n.x = rx;
-      }
       const bx = W * 0.9, by = H * 0.9;
       if (n.x < -bx) n.x = bx; else if (n.x > bx) n.x = -bx;
       if (n.y < -by) n.y = by; else if (n.y > by) n.y = -by;
       if (n.z < 0) n.z = DEPTH; else if (n.z > DEPTH) n.z = 0;
-      if (n.gold && n.lit < 1) n.lit = Math.min(1, n.lit + 0.012);
     }
-    proofs = proofs.filter(p => (p.age += 1) < 90);
-    if (t % 240 === 0) proveOne();
+    signals = signals.filter(signal => now - signal.born < signal.duration);
+    if (now >= nextSignalAt) spawnSignal(now);
   }
 
-  function draw() {
+  function draw(now = performance.now()) {
     ctx.clearRect(0, 0, W, H);
     const pts = nodes.map(project);
 
-    // Links run ONLY between proven nodes. The crowd is deliberately unconnected: a grey dot
-    // is someone nobody can vouch for yet, and the network is exactly what proof buys. Few
-    // gold nodes means this loop is tiny, so the reach can be generous.
-    const litIdx = [];
-    for (let i = 0; i < nodes.length; i++) if (nodes[i].lit > 0.12) litIdx.push(i);
-    // Sorted by bearing from the centre, so consecutive nodes are actual neighbours around
-    // the ring — connecting them in array order would cross the figure over itself.
-    litIdx.sort((a, b) => Math.atan2(nodes[a].y, nodes[a].x) - Math.atan2(nodes[b].y, nodes[b].x));
-
+    // The ambient mesh makes the crowd legible as a connected field without becoming a web.
+    let linkCount = 0;
     ctx.lineWidth = 1;
-    for (let a = 0; a < litIdx.length; a++) {
-      if (litIdx.length < 2) break;
-      const i = litIdx[a], j = litIdx[(a + 1) % litIdx.length];
-      if (litIdx.length === 2 && a === 1) break; // two nodes make one edge, not two
-      const p1 = pts[i], p2 = pts[j];
-      const strength = Math.min(nodes[i].lit, nodes[j].lit);
-      const fade = ((p1.scale + p2.scale) / 2) * strength;
-
-      let glow = 0;
-      if (pointer) {
-        const vx = p2.x - p1.x, vy = p2.y - p1.y;
-        const len2 = vx * vx + vy * vy || 1;
-        let u = ((pointer.x - p1.x) * vx + (pointer.y - p1.y) * vy) / len2;
-        u = Math.max(0, Math.min(1, u));
-        const near = Math.hypot(pointer.x - (p1.x + vx * u), pointer.y - (p1.y + vy * u));
-        if (near < LIGHT) glow = 1 - near / LIGHT;
+    for (let i = 0; i < nodes.length && linkCount < 520; i += 1) {
+      for (let j = i + 1; j < nodes.length && linkCount < 520; j += 1) {
+        const a = pts[i], b = pts[j];
+        const distance = Math.hypot(a.x - b.x, a.y - b.y);
+        if (distance > LINK_DISTANCE) continue;
+        const depth = (a.scale + b.scale) / 2;
+        const goldLink = nodes[i].gold || nodes[j].gold;
+        const alpha = (1 - distance / LINK_DISTANCE) * depth * (goldLink ? .23 : .105);
+        ctx.strokeStyle = goldLink
+          ? `rgba(${GOLD},${alpha})`
+          : `rgba(${WHITE},${alpha})`;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+        linkCount += 1;
       }
+    }
 
-      ctx.lineWidth = 1 + glow * 1.4;
-      ctx.strokeStyle = `rgba(${GOLD},${(0.34 + 0.45 * glow) * fade})`;
-      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+    // The cursor discovers the seven closest people and visibly connects to them.
+    if (pointer) {
+      const nearest = pts
+        .map((point, index) => ({ point, index, distance: Math.hypot(point.x - pointer.x, point.y - pointer.y) }))
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 7);
+      for (const item of nearest) {
+        const alpha = Math.max(.12, .52 - item.distance / 700);
+        ctx.strokeStyle = nodes[item.index].gold
+          ? `rgba(${GOLD},${alpha + .18})`
+          : `rgba(${WHITE},${alpha})`;
+        ctx.lineWidth = nodes[item.index].gold ? 1.35 : .9;
+        ctx.beginPath();
+        ctx.moveTo(pointer.x, pointer.y);
+        ctx.lineTo(item.point.x, item.point.y);
+        ctx.stroke();
+      }
     }
     ctx.lineWidth = 1;
 
-    // The proof event: a ring expanding out of the node as it turns gold.
-    for (const p of proofs) {
-      const q = pts[nodes.indexOf(p.node)];
-      if (!q) continue;
-      const e = p.age / 90;
-      const ease = 1 - Math.pow(1 - e, 3);
-      ctx.strokeStyle = `rgba(${GOLD},${0.5 * (1 - e)})`;
-      ctx.lineWidth = 1.6 * (1 - e) + 0.4;
-      ctx.beginPath(); ctx.arc(q.x, q.y, 4 + ease * 46 * q.scale, 0, Math.PI * 2); ctx.stroke();
-    }
-    ctx.lineWidth = 1;
-
-    // Nodes, far to near, so near ones sit on top.
+    // Nodes render far-to-near. Most are crisp white; rare gold nodes shine as talent.
     const order = nodes.map((n, i) => i).sort((a, b) => nodes[b].z - nodes[a].z);
     for (const i of order) {
       const n = nodes[i], q = pts[i];
       const r = n.r * q.scale;
-      if (n.lit > 0.02) {
+      if (n.gold) {
         const pulse = 0.5 + 0.5 * Math.sin(t * 0.03 + n.phase);
-        const shine = n.lit * q.scale;
-        // Soft halo, then the core, then a four-point glint — the three parts that read as
-        // "shining" rather than merely "brighter".
-        ctx.fillStyle = `rgba(${GOLD},${0.07 * (0.5 + pulse) * shine})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 2.4) * 3.4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = `rgba(250,238,205,${(0.55 + 0.45 * pulse) * shine})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, r + 1 + pulse * 0.8, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = `rgba(${GOLD},${(0.7 + 0.3 * pulse) * shine})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, r + 0.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(${GOLD},${.08 + pulse * .05})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 3) * 3.1, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,224,151,${.78 * q.scale + .18})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, r + 1 + pulse * .7, 0, Math.PI * 2); ctx.fill();
         const glint = (5 + pulse * 7) * q.scale;
-        ctx.strokeStyle = `rgba(255,246,222,${0.5 * pulse * shine})`;
+        ctx.strokeStyle = `rgba(255,238,199,${.32 + pulse * .36})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(q.x - glint, q.y); ctx.lineTo(q.x + glint, q.y);
         ctx.moveTo(q.x, q.y - glint); ctx.lineTo(q.x, q.y + glint);
         ctx.stroke();
       } else {
-        // The crowd: small, grey, unlinked.
-        ctx.fillStyle = `rgba(${PALE},${0.58 * q.scale})`;
+        ctx.fillStyle = `rgba(${WHITE},${.52 + q.scale * .4})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
       }
     }
 
-    // A quiet mark where the cursor is. No lines out of it — the light on the network above
-    // is the interaction, and spraying extra lines competed with the thing it was lighting.
+    // A white point becomes a gold proof signal, then resolves back into the wider field.
+    for (const signal of signals) {
+      const index = nodes.indexOf(signal.node);
+      const q = pts[index];
+      if (!q) continue;
+      const progress = Math.min(1, (now - signal.born) / signal.duration);
+      const bloom = Math.sin(progress * Math.PI);
+      const color = progress < .22 ? WHITE : GOLD;
+      const radius = 5 + bloom * 25;
+      ctx.fillStyle = `rgba(${color},${.16 + bloom * .34})`;
+      ctx.beginPath(); ctx.arc(q.x, q.y, 2.5 + bloom * 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = `rgba(${GOLD},${bloom * .52})`;
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(q.x, q.y, radius, 0, Math.PI * 2); ctx.stroke();
+    }
+
     if (pointer) {
-      ctx.fillStyle = `rgba(${GOLD},.20)`;
-      ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = `rgba(${GOLD},.8)`;
+      ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 2.2, 0, Math.PI * 2); ctx.fill();
     }
   }
 
-  function frame() { step(); draw(); raf = requestAnimationFrame(frame); }
+  function frame(now) { step(now); draw(now); raf = requestAnimationFrame(frame); }
   function start() { if (running || reduce) return; running = true; raf = requestAnimationFrame(frame); }
   function stop() { running = false; cancelAnimationFrame(raf); }
 
@@ -4879,7 +4866,6 @@ function initHeroField() {
     hero.addEventListener('pointermove', event => {
       const r = canvas.getBoundingClientRect();
       pointer = { x: event.clientX - r.left, y: event.clientY - r.top };
-      // Camera leans the OPPOSITE way to the cursor, which is what parallax does.
       targetX = -((pointer.x / Math.max(1, W)) - 0.5) * 2;
       targetY = -((pointer.y / Math.max(1, H)) - 0.5) * 2;
     });
