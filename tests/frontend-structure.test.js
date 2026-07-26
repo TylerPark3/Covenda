@@ -584,23 +584,48 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
   assert.match(script, /if \(reduce\) return; \/\/ static frame only/);
 });
 
-// The bridge replaced three blocks of prose under the hero: two columns converging as the
-// page scrolls, with proven talent crossing once a span completes.
-test('the bridge tells the story and never names a partner it does not have', () => {
-  assert.match(html, /class="bridge-section"/);
-  assert.match(html, /id="bridgeCanvas"/);
-  assert.match(html, /Two sides\. One bridge\./);
-  assert.match(script, /function initBridge\(\)/);
-  assert.match(script, /function readProgress\(\)/);
-  // Categories only. A named club or company on a public page reads as a signed partner.
-  assert.match(script, /const RIGHT = \['Robotics club'/);
+// The first explanation is one two-way exchange, not another field of abstract nodes.
+// A visitor can understand the static frame, then inspect each phase with any input method.
+test('the work exchange turns one project into clear value for both sides', () => {
+  assert.match(html, /class="exchange-section"/);
+  assert.match(html, /id="bridgeStory"/);
+  assert.match(html, /id="workExchange"/);
+  assert.match(html, /One project\./);
+  assert.match(html, /Two sides win\./);
+  assert.match(html, /Covenda turns referred talent and real startup work into a trial both sides can trust/);
+  for (const label of [
+    'Real startup task',
+    'Work the team needs done',
+    'Referred student',
+    'Talent vouched for by people who know them',
+    'Scoped work trial',
+    'Brief',
+    'Build',
+    'Review',
+    'Useful deliverable',
+    'Credible proof',
+  ]) {
+    assert.match(html, new RegExp(label));
+  }
+  assert.match(html, /href="#bridgeStory"/);
+  assert.match(script, /function initWorkExchange\(\)/);
+  assert.match(script, /function setExchangeStep\(next, userInitiated = false\)/);
+  assert.match(script, /workbench\.addEventListener\('pointermove'/);
+  assert.match(script, /event\.key === 'ArrowRight'/);
+  assert.match(script, /event\.key === 'Home'/);
+  assert.match(script, /window\.setInterval/);
+  assert.match(script, /if \(reduce\) return; \/\/ The complete reviewed state remains visible without autoplay\./);
+  assert.match(styles, /\.exchange-stage \{[\s\S]*grid-template-areas:/);
+  assert.match(styles, /\.exchange-phases \{[\s\S]*grid-template-columns: repeat\(3/);
+  assert.match(styles, /\.exchange-source \{[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.exchange-output \{[\s\S]*border-radius: 0/);
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*"task student"[\s\S]*"bench bench"[\s\S]*"outputs outputs"/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.exchange-source/);
+  assert.doesNotMatch(html, /id="bridgeCanvas"/);
+  assert.doesNotMatch(script, /function initBridge\(\)|function makeCloud\(|function drawCloud\(/);
   assert.doesNotMatch(script, /Columbia Consulting Group/);
-  assert.match(html, /Illustrative — categories, not named partners\./);
-  // The canvas must carry its meaning to a screen reader.
-  assert.match(html, /aria-label="Two columns converge/);
-  // Reduced motion gets the FINISHED state, because the connection is the point.
-  assert.match(script, /if \(reduce\) return; \/\/ finished state, painted once/);
-  assert.match(styles, /\.bridge-sticky \{ position: sticky/);
+  assert.match(styles, /body\[data-audience="home"\] \.stat-band/);
+  assert.doesNotMatch(html, /The problem isn’t talent/);
 });
 
 // Machine checks and expert judgement are complementary instruments, not a primary and a

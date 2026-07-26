@@ -5719,147 +5719,84 @@ function initBatchWeb() {
 })();
 
 
-// The bridge. Two columns converge as you scroll: startups on the left, vouched student
-// talent on the right, and a span that closes between them. Once a connection completes,
-// proven talent crosses it — which is the product in one picture.
-//
-// Scroll progress drives everything, so the reader controls the animation rather than
-// watching a loop. Under reduced motion it paints the FINISHED state immediately: the point
-// is the connection, and someone who cannot take the movement should still get the point.
-(function initBridge() {
-  const canvas = document.getElementById('bridgeCanvas');
-  const section = document.querySelector('.bridge-section');
-  if (!canvas || !section) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+// One work trial is the product story. The scene progresses on its own, but pointer,
+// buttons, and arrow keys all let a visitor inspect the three phases at their own pace.
+(function initWorkExchange() {
+  const stage = document.getElementById('workExchange');
+  if (!stage) return;
+  const workbench = stage.querySelector('.exchange-workbench');
+  const buttons = Array.from(stage.querySelectorAll('[data-exchange-phase]'));
+  const status = document.getElementById('exchangeStatus');
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const labels = ['Brief aligned', 'Work in progress', 'Proof reviewed'];
+  let exchangeStep = reduce ? 2 : 0;
+  let userPauseUntil = 0;
+  let isVisible = true;
+  let pointerQueued = false;
 
-  const GOLD = '184,126,32';
-  const INK = '17,17,15';
-  const MUTED = '134,130,118';
-
-  // Categories, never real names — a named club or company on a public page reads as a
-  // partner, and none have signed.
-  const LEFT = ['Seed-stage AI', 'Robotics startup', 'Fintech, Series A', 'Health ops', 'Consumer brand', 'Dev tools'];
-  const RIGHT = ['Robotics club', 'Consulting group', 'Quant society', 'Research lab', 'CS faculty', 'Design collective'];
-
-  let W = 0, H = 0, progress = 0, raf = 0, t = 0;
-
-  function resize() {
-    const r = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = r.width; H = r.height;
-    canvas.width = Math.max(1, Math.round(W * dpr));
-    canvas.height = Math.max(1, Math.round(H * dpr));
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  function setExchangeStep(next, userInitiated = false) {
+    exchangeStep = Math.max(0, Math.min(2, Number(next) || 0));
+    stage.dataset.exchangeStep = String(exchangeStep);
+    stage.style.setProperty('--exchange-position', String(exchangeStep / 2));
+    buttons.forEach((button, index) => {
+      const active = index === exchangeStep;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-selected', String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    if (status) status.textContent = labels[exchangeStep];
+    // Once a visitor takes control, keep their chosen phase in place.
+    if (userInitiated) userPauseUntil = Number.POSITIVE_INFINITY;
   }
 
-  // 0 while the section is still below the fold, 1 once it has been scrolled through.
-  function readProgress() {
-    const r = section.getBoundingClientRect();
-    const total = Math.max(1, r.height - window.innerHeight);
-    return Math.min(1, Math.max(0, -r.top / total));
-  }
+  buttons.forEach((button, index) => {
+    button.addEventListener('click', () => setExchangeStep(index, true));
+  });
 
-  const ease = p => 1 - Math.pow(1 - p, 3);
-  const lerp = (a, b, p) => a + (b - a) * p;
-
-  function draw() {
-    const p = ease(reduce ? 1 : progress);
-    ctx.clearRect(0, 0, W, H);
-    const midX = W / 2;
-    const colGap = Math.min(0.34 * W, 300);
-    // The columns close in as you scroll — the gap itself is the argument.
-    const leftX = lerp(W * 0.10, midX - colGap * 0.42, p);
-    const rightX = lerp(W * 0.90, midX + colGap * 0.42, p);
-    const rows = LEFT.length;
-    const top = 54, spacing = (H - top - 40) / Math.max(1, rows - 1);
-    const label = Math.max(10, Math.min(12.5, W / 90));
-
-    ctx.textBaseline = 'middle';
-    ctx.font = `600 ${label}px "Manrope", system-ui, sans-serif`;
-
-    for (let i = 0; i < rows; i++) {
-      const y = top + i * spacing;
-      // Rows complete in sequence, so the bridge visibly knits rather than fading in.
-      const rowP = Math.min(1, Math.max(0, (p - i * 0.055) / 0.5));
-      const proven = rowP > 0.92;
-
-      // span
-      if (rowP > 0) {
-        const x1 = leftX + 12, x2 = rightX - 12;
-        const reach = lerp(x1, x2, rowP);
-        ctx.strokeStyle = proven ? `rgba(${GOLD},.55)` : `rgba(${MUTED},${0.22 + 0.3 * rowP})`;
-        ctx.lineWidth = proven ? 1.6 : 1;
-        ctx.setLineDash(proven ? [] : [4, 6]);
-        ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(reach, y); ctx.stroke();
-        ctx.setLineDash([]);
-        if (!proven && rowP < 1) {
-          ctx.strokeStyle = `rgba(${MUTED},.22)`;
-          ctx.setLineDash([4, 6]);
-          ctx.beginPath(); ctx.moveTo(x2, y); ctx.lineTo(lerp(x2, x1, rowP), y); ctx.stroke();
-          ctx.setLineDash([]);
-        }
-      }
-
-      // talent crossing a completed span
-      if (proven) {
-        const travel = ((t * 0.004) + i * 0.17) % 1;
-        const tx = lerp(leftX + 12, rightX - 12, travel);
-        ctx.fillStyle = `rgba(${GOLD},${0.9 * Math.sin(travel * Math.PI)})`;
-        ctx.beginPath(); ctx.arc(tx, y, 4.2, 0, Math.PI * 2); ctx.fill();
-      }
-
-      // left: a company, drawn square
-      ctx.fillStyle = proven ? `rgba(${GOLD},.16)` : '#fff';
-      ctx.strokeStyle = proven ? `rgba(${GOLD},.9)` : `rgba(${INK},.85)`;
-      ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.rect(leftX - 9, y - 9, 18, 18); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = `rgba(${INK},.82)`;
-      ctx.textAlign = 'right';
-      ctx.fillText(LEFT[i], leftX - 18, y);
-
-      // right: a vouching source, drawn round
-      ctx.fillStyle = proven ? `rgba(${GOLD},.9)` : '#fff';
-      ctx.strokeStyle = proven ? `rgba(${GOLD},.9)` : `rgba(${MUTED},.9)`;
-      ctx.beginPath(); ctx.arc(rightX, y, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = `rgba(${INK},.82)`;
-      ctx.textAlign = 'left';
-      ctx.fillText(RIGHT[i], rightX + 18, y);
+  stage.addEventListener('keydown', event => {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      setExchangeStep(exchangeStep + 1, true);
+      buttons[exchangeStep]?.focus();
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      setExchangeStep(exchangeStep - 1, true);
+      buttons[exchangeStep]?.focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      setExchangeStep(0, true);
+      buttons[exchangeStep]?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      setExchangeStep(2, true);
+      buttons[exchangeStep]?.focus();
     }
+  });
 
-    // column headers
-    ctx.font = `700 ${label - 1}px "Manrope", system-ui, sans-serif`;
-    ctx.fillStyle = `rgba(${MUTED},1)`;
-    ctx.textAlign = 'right';
-    ctx.fillText('STARTUPS', leftX - 18, 22);
-    ctx.textAlign = 'left';
-    ctx.fillText('VOUCHED TALENT', rightX + 18, 22);
+  if (workbench && !reduce) {
+    workbench.addEventListener('pointermove', event => {
+      if (event.pointerType === 'touch' || pointerQueued) return;
+      pointerQueued = true;
+      requestAnimationFrame(() => {
+        const bounds = workbench.getBoundingClientRect();
+        const position = Math.max(0, Math.min(.999, (event.clientX - bounds.left) / bounds.width));
+        setExchangeStep(Math.floor(position * 3), true);
+        pointerQueued = false;
+      });
+    }, { passive: true });
   }
 
-  function frame() { t += 1; draw(); raf = requestAnimationFrame(frame); }
-
-  resize();
-  draw();
-  window.addEventListener('resize', () => { resize(); draw(); });
-  if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); draw(); }).observe(canvas);
-  if (reduce) return; // finished state, painted once
-
-  let ticking = false;
-  window.addEventListener('scroll', () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => { progress = readProgress(); ticking = false; });
-  }, { passive: true });
-  progress = readProgress();
-
-  // Only animate while the section is on screen.
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(entries => entries.forEach(e => {
-      if (e.isIntersecting && !raf) raf = requestAnimationFrame(frame);
-      else if (!e.isIntersecting && raf) { cancelAnimationFrame(raf); raf = 0; }
-    }), { threshold: 0.01 }).observe(section);
-  } else { raf = requestAnimationFrame(frame); }
+    new IntersectionObserver(entries => {
+      isVisible = Boolean(entries[0] && entries[0].isIntersecting);
+    }, { threshold: .2 }).observe(stage);
+  }
+
+  setExchangeStep(exchangeStep);
+  if (reduce) return; // The complete reviewed state remains visible without autoplay.
+  window.setInterval(() => {
+    if (isVisible && Date.now() >= userPauseUntil) setExchangeStep((exchangeStep + 1) % 3);
+  }, 4200);
 })();
 
 initMemberNav();

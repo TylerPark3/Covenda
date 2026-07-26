@@ -118,32 +118,79 @@
             <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
           </button>
         </div>
-        <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
+        <a class="scroll-cue" href="#bridgeStory"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
-      <!-- Home-only. The thesis as one scroll-driven picture, replacing three blocks of
-           prose: startups on the left needing senior-level output they cannot yet afford,
-           vouched student talent on the right, and a bridge that closes as you scroll.
-           Gold crosses it once it completes.
+      <!-- Home-only. One two-way exchange: the company contributes real work, referred
+           talent contributes execution, and the trial returns value to both sides. -->
+      <section class="exchange-section" id="bridgeStory" aria-labelledby="exchangeTitle">
+        <div class="exchange-head">
+          <h2 id="exchangeTitle">One project. <span class="word-gold">Two sides win.</span></h2>
+          <p>Covenda turns referred talent and real startup work into a trial both sides can trust.</p>
+        </div>
 
-           Labels are CATEGORIES, never real names. "Columbia Consulting Group" on a public
-           page reads as a partner, and no club has signed yet — the texture is kept, the
-           false claim is not. -->
-      <section class="bridge-section" aria-labelledby="bridgeTitle">
-        <div class="bridge-sticky">
-          <div class="bridge-head">
-            <p class="feature-kicker">What we are building</p>
-            <h2 id="bridgeTitle">Two sides. One bridge.</h2>
-            <p>Startups need senior-level output before they can afford a senior hire. The talent is already there — vouched, specific, and unreachable. Covenda closes the gap.</p>
+        <div class="exchange-stage" id="workExchange" data-exchange-step="0" tabindex="0"
+             role="group" aria-label="Interactive work-trial exchange. Use the phase buttons or arrow keys to move through Brief, Build, and Review.">
+          <article class="exchange-source exchange-source--task">
+            <span class="exchange-source-index" aria-hidden="true">01</span>
+            <svg aria-hidden="true"><use href="#icon-file"/></svg>
+            <div>
+              <p>Real startup task</p>
+              <h3>Work the team needs done</h3>
+            </div>
+          </article>
+
+          <div class="exchange-flow exchange-flow--in exchange-flow--task" aria-hidden="true">
+            <i></i><svg><use href="#icon-arrow-right"/></svg>
           </div>
-          <canvas id="bridgeCanvas" class="bridge-canvas" role="img"
-                  aria-label="Two columns converge. On the left, startups needing work done; on the right, students vouched by clubs, labs and faculty. A bridge closes between them as the page scrolls, and proven talent crosses it."></canvas>
-          <div class="bridge-legend">
-            <span><i class="bl-dot bl-grey"></i>Vouched talent</span>
-            <span><i class="bl-dot bl-gold"></i>Proven on a trial</span>
-            <span class="bridge-illus">Illustrative — categories, not named partners.</span>
+
+          <div class="exchange-workbench">
+            <div class="exchange-workbench-top">
+              <span>Scoped work trial</span>
+              <output id="exchangeStatus" aria-live="polite">Brief aligned</output>
+            </div>
+            <div class="exchange-phases" role="tablist" aria-label="Work-trial phase">
+              <button class="exchange-phase is-active" type="button" role="tab" aria-selected="true" data-exchange-phase="0">
+                <span>01</span><svg aria-hidden="true"><use href="#icon-file"/></svg><strong>Brief</strong><small>One finish line</small>
+              </button>
+              <button class="exchange-phase" type="button" role="tab" aria-selected="false" data-exchange-phase="1">
+                <span>02</span><svg aria-hidden="true"><use href="#icon-operations"/></svg><strong>Build</strong><small>Real execution</small>
+              </button>
+              <button class="exchange-phase" type="button" role="tab" aria-selected="false" data-exchange-phase="2">
+                <span>03</span><svg aria-hidden="true"><use href="#icon-search"/></svg><strong>Review</strong><small>Named reviewer</small>
+              </button>
+            </div>
+            <div class="exchange-scrubber" aria-hidden="true"><i></i><b></b></div>
+          </div>
+
+          <div class="exchange-flow exchange-flow--in exchange-flow--student" aria-hidden="true">
+            <svg><use href="#icon-arrow-right"/></svg><i></i>
+          </div>
+
+          <article class="exchange-source exchange-source--student">
+            <span class="exchange-source-index" aria-hidden="true">02</span>
+            <svg aria-hidden="true"><use href="#icon-student"/></svg>
+            <div>
+              <p>Referred student</p>
+              <h3>Talent vouched for by people who know them</h3>
+            </div>
+          </article>
+
+          <div class="exchange-outputs" aria-label="What the work trial creates">
+            <article class="exchange-output exchange-output--deliverable">
+              <svg aria-hidden="true"><use href="#icon-file"/></svg>
+              <div><p>For the startup</p><strong>Useful deliverable</strong></div>
+              <span aria-hidden="true">←</span>
+            </article>
+            <article class="exchange-output exchange-output--proof">
+              <svg aria-hidden="true"><use href="#icon-shield"/></svg>
+              <div><p>For the student</p><strong>Credible proof</strong></div>
+              <span aria-hidden="true">→</span>
+            </article>
           </div>
         </div>
+
+        <p class="exchange-hint"><svg aria-hidden="true"><use href="#icon-route"/></svg> Move through the trial</p>
       </section>
 
         <!-- How a trial actually runs, five steps you can page through. Replaces the
