@@ -3860,6 +3860,38 @@ body:not([data-audience="home"]) .trial-flow { display: none; }
 .ref-side li b { color: var(--ink); font-weight: 650; }
 .ref-side-note { max-width: 52ch; margin: 18px 0 0; padding-top: 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13.5px; line-height: 1.6; }
 
-/* The credibility figure replaces three cards and a numbered list that said the same thing. */
-.cred-fig { margin: clamp(26px, 3.4vw, 44px) 0 0; }
-.cred-fig svg { display: block; width: 100%; height: auto; max-width: 1000px; margin: 0 auto; }
+
+
+/* ---- Credibility map: ways in, then the shared ladder ------------------------------
+   HTML rather than SVG so it inherits the type scale, the tokens and the spacing — the SVG
+   version could not, which is why its labels overflowed and it looked like someone else's
+   diagram dropped onto the page. */
+.cred-map { display: grid; gap: clamp(20px, 2.6vw, 30px); margin-top: clamp(26px, 3.4vw, 42px); text-align: left; }
+.cred-map-tag { margin: 0 0 14px; font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--gold-deep); }
+
+.cred-ways ul { display: grid; grid-template-columns: repeat(auto-fit, minmax(212px, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.cred-ways li { display: grid; gap: 5px; padding: 18px 20px; border: 1px solid var(--line-strong); background: #fff; }
+.cred-ways li.is-strong { border-color: var(--gold-deep); background: var(--gold-pale); }
+.cred-ways li.is-light { border-style: dashed; background: transparent; }
+.cred-ways b { font-family: var(--font-display); font-size: 18px; font-weight: 500; letter-spacing: -.015em; }
+.cred-ways span { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.cred-ways li.is-light b, .cred-ways li.is-light span { color: var(--soft); }
+
+/* A single hairline with a notch, standing in for the four arrows the SVG drew. */
+.cred-join { position: relative; height: 26px; }
+.cred-join::before { content: ""; position: absolute; top: 0; left: 50%; width: 1px; height: 100%; background: var(--line-strong); }
+.cred-join::after { content: ""; position: absolute; bottom: 0; left: 50%; width: 7px; height: 7px; border-right: 1px solid var(--line-strong); border-bottom: 1px solid var(--line-strong); transform: translate(-50%, -3px) rotate(45deg); }
+
+.cred-ladder ol { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0; margin: 0; padding: 0; list-style: none; }
+.cred-ladder li { display: grid; align-content: start; gap: 6px; padding: 20px; border: 1px solid var(--line-strong); border-right-width: 0; background: #fff; }
+.cred-ladder li:last-child { border-right-width: 1px; }
+.cred-ladder li.is-verified { background: var(--gold-pale); border-color: var(--gold-deep); }
+.cred-ladder li.is-proven { background: #f4faf5; border-color: var(--success); }
+.cred-step { font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; color: var(--gold-deep); }
+.cred-ladder li.is-proven .cred-step { color: var(--success); }
+.cred-ladder b { font-family: var(--font-display); font-size: 18px; font-weight: 500; letter-spacing: -.015em; line-height: 1.2; }
+.cred-sub { color: var(--muted); font-size: 13px; line-height: 1.5; }
+@media (max-width: 640px) {
+  .cred-ladder li { border-right-width: 1px; border-bottom-width: 0; }
+  .cred-ladder li:last-child { border-bottom-width: 1px; }
+}
