@@ -4690,9 +4690,9 @@ function initHeroField() {
   const FOCAL = 780;           // perspective strength
   const DEPTH = 620;           // how far back the field runs
   // Proven nodes have no reach limit: each connects to every other one across the whole
-  // field. At MAX_GOLD = 11 that is at most 55 lines a frame.
+  // field. At MAX_GOLD = 5 that is at most 10 lines a frame.
   const LIGHT = 190;           // how far the cursor's light reaches along the gold network
-  const MAX_GOLD = 11;          // an absolute ceiling, not a ratio — a bigger crowd must not mean more gold
+  const MAX_GOLD = 5;           // an absolute ceiling, not a ratio — a bigger crowd must not mean more gold
   let W = 0, H = 0, nodes = [], running = false, raf = 0, t = 0;
   let pointer = null, camX = 0, camY = 0, targetX = 0, targetY = 0;
   let proofs = [];             // in-flight "this became proof" rings
@@ -4707,7 +4707,7 @@ function initHeroField() {
       vy: (Math.random() - 0.5) * 0.16,
       vz: (Math.random() - 0.5) * 0.12,
       r: 2.1 + Math.random() * 1.9,
-      gold: Math.random() < 0.014,
+      gold: Math.random() < 0.008,
       phase: Math.random() * Math.PI * 2,
       lit: 0, // 0..1 conversion progress, drives the gold fade-in
     }));
@@ -4762,7 +4762,7 @@ function initHeroField() {
       if (n.gold && n.lit < 1) n.lit = Math.min(1, n.lit + 0.012);
     }
     proofs = proofs.filter(p => (p.age += 1) < 90);
-    if (t % 110 === 0) proveOne();
+    if (t % 240 === 0) proveOne();
   }
 
   function draw() {
