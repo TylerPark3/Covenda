@@ -3471,6 +3471,30 @@ function renderBatchDeepDive() {
       panel.append(read);
     }
 
+    // The actual screening questions. Generic copy about "demonstrating passion" tells a
+    // student nothing; these are what the field asks, so they can judge the bar themselves.
+    if ((brief.questions || []).length) {
+      const qs = document.createElement('section');
+      qs.className = 'bd-block';
+      qs.append(Object.assign(document.createElement('h4'), { textContent: 'What you will be asked' }));
+      const ul = document.createElement('ul');
+      ul.className = 'bd-questions';
+      brief.questions.forEach(q => {
+        const li = document.createElement('li');
+        li.append(
+          Object.assign(document.createElement('span'), { className: 'bd-qkind is-' + q.kind, textContent: q.kind }),
+          Object.assign(document.createElement('p'), { textContent: q.question }),
+        );
+        ul.append(li);
+      });
+      qs.append(ul);
+      qs.append(Object.assign(document.createElement('p'), {
+        className: 'bd-qnote',
+        textContent: 'Asked in the recorded walkthrough. Technical questions have a right answer and the reasoning is the signal; judgement questions do not, and how you bound the problem is.',
+      }));
+      panel.append(qs);
+    }
+
     const reqs = document.createElement('section');
     reqs.className = 'bd-block';
     reqs.append(Object.assign(document.createElement('h4'), { textContent: 'What this batch asks of you' }));

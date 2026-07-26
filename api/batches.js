@@ -277,6 +277,84 @@ export function whatWeRead(verticalSlug) {
   return (WHAT_WE_READ[verticalSlug] || []).map(([signal, detail]) => ({ signal, detail }));
 }
 
+
+// Real screening questions, per specialisation. These are the questions the field actually
+// asks — standard finance interview material, standard engineering material — not generic
+// prompts about passion. A student should recognise them, and a company should recognise that
+// we know what the job screens for.
+//
+// Two kinds on purpose: TECHNICAL (a right answer exists, and the reasoning is the signal)
+// and JUDGEMENT (no right answer; how they bound the problem is the signal).
+export const BATCH_QUESTIONS = {
+  'financial-modelling': [
+    ['technical', 'Depreciation increases by $10. Walk me through all three statements, and tell me where cash lands.'],
+    ['technical', 'EBITDA is $100M, the multiple is 8x, net debt is $200M and there are 40M shares. Get me to a share price.'],
+    ['technical', 'Why can a company be profitable on the income statement and still run out of cash?'],
+    ['judgement', 'You are valuing a private company with no clean public comps. What do you actually do?'],
+    ['judgement', 'Your DCF says the company is worth twice the market price. What do you check before you believe it?'],
+  ],
+  'equity-research': [
+    ['technical', 'Two companies in the same sector trade at 12x and 20x earnings. Give me four reasons that gap can be justified.'],
+    ['technical', 'What does a rising days-sales-outstanding tell you, and when is it not a warning?'],
+    ['judgement', 'You publish a buy. The stock falls 30% on nothing you can identify. Walk me through your next week.'],
+    ['judgement', 'What would have to be true for your thesis to be wrong? Be specific enough that we could check it.'],
+  ],
+  'accounting-operations': [
+    ['technical', 'A reconciliation is off by an amount divisible by nine. What does that usually mean, and why?'],
+    ['technical', 'Accrued expenses rise while cash is flat. What has happened, and where does it show?'],
+    ['judgement', 'You find an error in a close that has already been reported. Walk me through what you do first.'],
+  ],
+  'ml-engineering': [
+    ['technical', 'Your model beats baseline on validation and fails in production. Name the four most likely causes in order.'],
+    ['technical', 'When is accuracy the wrong metric? Give a concrete case and say what you would use instead.'],
+    ['judgement', 'You have two weeks and a noisy dataset. What do you do first, and what do you deliberately not do?'],
+  ],
+  'full-stack': [
+    ['technical', 'A page is slow. You have no profiler. How do you find the cause?'],
+    ['technical', 'Explain a race condition you have actually hit, and how you fixed it.'],
+    ['judgement', 'You inherit a codebase with no tests and a deadline. Where do you put the first test, and why there?'],
+  ],
+  'data-engineering': [
+    ['technical', 'A nightly pipeline silently produced wrong numbers for a week. How do you find out when it started?'],
+    ['technical', 'When would you denormalise, and what does it cost you?'],
+    ['judgement', 'Upstream changes a schema without telling you. How should the pipeline have behaved?'],
+  ],
+  'qa-reliability': [
+    ['technical', 'Write the steps of a bug report a developer can act on without asking you a single question.'],
+    ['technical', 'A test passes locally and fails in CI. What are your first three hypotheses?'],
+    ['judgement', 'You can only automate ten tests. How do you choose which ten?'],
+  ],
+  'clinical-operations': [
+    ['judgement', 'Intake takes 40 minutes and should take 15. How do you find where the time actually goes?'],
+    ['judgement', 'A process works only because one person knows a workaround. What do you do?'],
+    ['technical', 'What has to be true before a process can be documented for someone on their first day?'],
+  ],
+  'health-data': [
+    ['technical', 'A report shows a 30% jump week on week. Before you tell anyone, what do you check?'],
+    ['judgement', 'How do you present an analysis when the data is good enough to act on but not good enough to be certain?'],
+  ],
+  'growth-performance': [
+    ['technical', 'A test shows a 20% lift with 200 visitors. Do you ship it? Show your reasoning.'],
+    ['judgement', 'Your best channel stops working. What is the first thing you look at?'],
+  ],
+  'merchandising-analytics': [
+    ['technical', 'Units are up and revenue is down. Give me three explanations and how you would tell them apart.'],
+    ['judgement', 'How would you decide which products to stop carrying?'],
+  ],
+  'research-strategy': [
+    ['judgement', 'You have two days to get credible on an industry you know nothing about. What do you read, in what order?'],
+    ['technical', 'A source supports your conclusion but you cannot verify it. What do you do with it?'],
+  ],
+  'technical-writing': [
+    ['technical', 'Document a process you do not understand yet. What is your first move?'],
+    ['judgement', 'Engineers say the docs are wrong; users say they are unclear. Which do you fix first?'],
+  ],
+};
+
+export function questionsFor(slug) {
+  return (BATCH_QUESTIONS[slug] || []).map(([kind, question]) => ({ kind, question }));
+}
+
 export function batchBySlug(slug) {
   return BATCH_CATALOG.find(b => b.slug === slug) || null;
 }
@@ -310,6 +388,7 @@ export function batchBrief(batch) {
     },
     requirements: (batch.requirements || []).map(r => ({ key: r.key, label: r.label, detail: r.detail || null })),
     whatWeRead: whatWeRead(batch.verticalSlug),
+    questions: questionsFor(batch.slug),
     companyWorkflow: batch.companyWorkflow || [],
     admissionVersion: BATCH_ADMISSION_VERSION,
   };

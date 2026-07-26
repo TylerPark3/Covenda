@@ -289,7 +289,7 @@
             <p id="batchVideoPrompt"></p>
           </div>
           <p class="batch-step-hint">Record a short, unscripted video (Loom, YouTube unlisted, or Drive) answering the prompt above — about five minutes. Paste the shareable link here.</p>
-          <label>Video link <b class="req">Required</b><input name="videoUrl" type="url" placeholder="https://…" required></label>
+          <div class="batch-video"><div class="batch-video-head"><span>Your walkthrough <b class="req">Required</b></span><small>Answer the prompt above. Up to 90 seconds, unscripted.</small></div><div class="batch-video-actions"><button type="button" class="portal-primary" id="batchRecordBtn">Record it here</button><span class="batch-video-or">or paste a link</span></div><input name="videoUrl" type="url" placeholder="https://… (Loom, Drive, YouTube)" required id="batchVideoUrl"><p class="batch-video-state" id="batchVideoState" aria-live="polite"></p></div>
         </div>
 
         <div class="batch-apply-step">

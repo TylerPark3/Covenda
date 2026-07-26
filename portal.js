@@ -1672,3 +1672,126 @@ $('#reverseAuditBtn')?.addEventListener('click',async()=>{
   }catch(error){status.textContent=error.message;status.classList.add('is-error');}
   finally{btn.disabled=false;}
 });
+
+// In-page walkthrough recorder for the batch application. The form previously accepted only
+// a pasted URL, which asks a student to go away, record somewhere else, host it, and come
+// back — the single biggest drop-off in the flow. Records here and uploads to the same
+// /api/video-upload the marketing site uses, then fills the URL field so the rest of the
+// form is unchanged. Paste-a-link stays for anyone whose browser or camera says no.
+(function initBatchRecorder(){
+  const btn=document.getElementById('batchRecordBtn');
+  const urlField=document.getElementById('batchVideoUrl');
+  const state=document.getElementById('batchVideoState');
+  if(!btn||!urlField||!state)return;
+  const canRecord=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)&&typeof MediaRecorder!=='undefined';
+  if(!canRecord){btn.hidden=true;state.textContent='This browser cannot record here — paste a link instead.';return;}
+
+  const MAX=90;
+  let overlay=null,stream=null,recorder=null,chunks=[],timer=null,secs=0,blob=null;
+  const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+
+  function stopStream(){ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
+  function close(){ clearInterval(timer); stopStream(); overlay?.close(); overlay?.remove(); overlay=null; }
+
+  async function open(){
+    overlay=document.createElement('dialog');
+    overlay.className='rec-overlay';
+    overlay.innerHTML=
+      '<div class="rec-shell">'
+      +'<div class="rec-stage"><video id="recPreview" playsinline muted></video><span class="rec-count" id="recCount" hidden></span>'
+      +'<span class="rec-timer" id="recTimer" hidden>0:00</span></div>'
+      +'<p class="rec-hint" id="recHint">Camera starting…</p>'
+      +'<div class="rec-actions">'
+      +'<button type="button" class="portal-primary" id="recStart" disabled>Start recording</button>'
+      +'<button type="button" class="portal-ghost" id="recRetake" hidden>Retake</button>'
+      +'<button type="button" class="portal-primary" id="recUse" hidden>Use this take</button>'
+      +'<button type="button" class="portal-ghost" id="recCancel">Cancel</button>'
+      +'</div></div>';
+    document.body.append(overlay);
+    overlay.showModal();
+    overlay.addEventListener('cancel',close);
+    document.getElementById('recCancel').addEventListener('click',close);
+
+    const video=document.getElementById('recPreview');
+    const hint=document.getElementById('recHint');
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
+    }catch{
+      hint.textContent='Camera or microphone was blocked. Paste a link instead.';
+      return;
+    }
+    video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
+    hint.textContent='Up to '+MAX+' seconds. Speak to the prompt — unscripted is the point.';
+    const start=document.getElementById('recStart');
+    start.disabled=false;
+    start.addEventListener('click',()=>begin(video));
+  }
+
+  function begin(video){
+    const count=document.getElementById('recCount');
+    const start=document.getElementById('recStart');
+    start.hidden=true;
+    let n=3; count.hidden=false; count.textContent=n;
+    const pre=setInterval(()=>{
+      n-=1;
+      if(n>0){count.textContent=n;return;}
+      clearInterval(pre); count.hidden=true; record(video);
+    },900);
+  }
+
+  function record(video){
+    const timerEl=document.getElementById('recTimer');
+    const hint=document.getElementById('recHint');
+    const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9'
+      :MediaRecorder.isTypeSupported('video/webm')?'video/webm':'';
+    chunks=[]; secs=0;
+    recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+    recorder.ondataavailable=e=>{ if(e.data&&e.data.size)chunks.push(e.data); };
+    recorder.onstop=()=>{
+      clearInterval(timer);
+      blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
+      stopStream();
+      video.srcObject=null; video.src=URL.createObjectURL(blob); video.muted=false; video.controls=true;
+      timerEl.hidden=true;
+      hint.textContent='Watch it back. Retake as many times as you like — only the take you keep is uploaded.';
+      document.getElementById('recRetake').hidden=false;
+      document.getElementById('recUse').hidden=false;
+    };
+    recorder.start();
+    timerEl.hidden=false; timerEl.textContent='0:00';
+    hint.textContent='Recording…';
+    const stopBtn=document.getElementById('recStart');
+    stopBtn.hidden=false; stopBtn.textContent='Stop'; stopBtn.disabled=false;
+    stopBtn.onclick=()=>{ if(recorder&&recorder.state==='recording')recorder.stop(); stopBtn.hidden=true; };
+    timer=setInterval(()=>{
+      secs+=1; timerEl.textContent=fmt(secs);
+      if(secs>=MAX&&recorder.state==='recording'){recorder.stop();stopBtn.hidden=true;}
+    },1000);
+
+    document.getElementById('recRetake').onclick=async()=>{
+      document.getElementById('recRetake').hidden=true;
+      document.getElementById('recUse').hidden=true;
+      video.controls=false; video.src=''; blob=null;
+      stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
+      video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
+      begin(video);
+    };
+    document.getElementById('recUse').onclick=async()=>{
+      const use=document.getElementById('recUse');
+      use.disabled=true; use.textContent='Uploading…';
+      try{
+        const res=await fetch('/api/video-upload',{method:'POST',headers:{'Content-Type':blob.type||'video/webm'},body:blob});
+        const body=await res.json();
+        if(!res.ok||!body.url)throw new Error(body.error||'Upload failed.');
+        urlField.value=body.url;
+        state.textContent='Recorded and attached. You can still replace it with a link.';
+        close();
+      }catch(err){
+        use.disabled=false; use.textContent='Use this take';
+        document.getElementById('recHint').textContent=err.message||'That upload did not go through. Try again, or paste a link.';
+      }
+    };
+  }
+
+  btn.addEventListener('click',open);
+})();
