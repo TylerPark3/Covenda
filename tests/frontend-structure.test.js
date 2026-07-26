@@ -580,3 +580,19 @@ test('the bridge tells the story and never names a partner it does not have', ()
   assert.match(script, /if \(reduce\) return; \/\/ finished state, painted once/);
   assert.match(styles, /\.bridge-sticky \{ position: sticky/);
 });
+
+// Machine checks and expert judgement are complementary instruments, not a primary and a
+// fallback. The section used to head "We verify what can be verified" with the human column
+// titled "Where that isn't possible", which framed judgement as a deficiency.
+test('verification reads as two instruments, not a fallback', () => {
+  assert.match(html, /Machines check facts/);
+  assert.match(html, /Experts judge/);
+  assert.match(html, /Machine-checked · objective/);
+  assert.match(html, /Expert-vetted · judgement/);
+  assert.match(html, /the strongest evidence is where they overlap/);
+  assert.doesNotMatch(html, /Where that isn’t possible/);
+  assert.doesNotMatch(html, /We verify what can be/);
+  // Judgement is measured, not vibes — and the honesty line survives the reframe.
+  assert.match(html, /adjudicate where they disagree/);
+  assert.match(html, /simulation or a self-reported number/);
+});

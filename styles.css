@@ -3055,9 +3055,7 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 .verify-section .section-heading p:last-child { max-width: 58ch; margin: 16px auto 0; font-size: 15.5px; line-height: 1.62; }
 .verify-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: clamp(16px, 2.4vw, 26px); }
 .verify-col { padding: clamp(20px, 2.6vw, 28px); border: 1px solid var(--line-strong); border-radius: 0; background: #fff; }
-.verify-col-limit { border-style: dashed; background: var(--paper, #faf9f6); }
 .verify-col-tag { margin: 0 0 16px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-deep); }
-.verify-col-limit .verify-col-tag { color: var(--muted); }
 .verify-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
 .verify-col li { display: grid; gap: 4px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .verify-col li:last-child { padding-bottom: 0; border-bottom: 0; }
@@ -3453,3 +3451,9 @@ body:not([data-audience="home"]) .trial-flow { display: none; }
 .ct-d { font-size: clamp(12px, 1.05cqw, 14.5px); line-height: 1.58; }
 .ct-chip { font-size: clamp(9.5px, .82cqw, 11.5px); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .ct-card, .ct-card:hover { transition: none; transform: none; } }
+
+/* Both columns carry equal weight — the human rail is a different instrument, not a gap,
+   so it no longer gets the muted "limitation" treatment. */
+.verify-col-sub { max-width: 46ch; margin: 8px 0 16px; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
+.verify-col-human { border-color: var(--gold-light); }
+.verify-col-human .verify-col-tag { color: var(--gold-deep); }
