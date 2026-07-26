@@ -2,20 +2,12 @@ const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const TOKEN_KEY = 'covendaAdminAccessToken';
 const statusLabels = { received:'Received', reviewing:'In human review', needs_information:'Needs information', packet_proposed:'Packet proposed', approval_pending:'Approval pending', approved:'Approved', declined:'Closed', archived:'Archived' };
-const typeLabels = { student_interest:'Student', employer_intake:'Company', university_partner:'University', call_request:'Call request' };
+const typeLabels = { student_interest:'Student', employer_intake:'Company', university_partner:'University', referrer_endorsement:'Referral endorsement', network_access_request:'Trusted Talent access', call_request:'Call request' };
 let submissions = [];
-let requests = [];
-let batches = [];
-let companies = [];
-let members = [];
-let projects = [];
-let appeals=[];
-const batchTierLabels = { open:'Open', elite:'Elite' };
-const batchStatusLabels = { draft:'Draft', open:'Open', reviewing:'Reviewing', closed:'Closed', archived:'Archived' };
-const batchAppStatusLabels = { submitted:'Applied', reviewing:'In review', accepted:'Accepted', waitlisted:'Waitlisted', declined:'Declined' };
-const requestTypeLabels = { new_project:'New project', more_students:'More students', scope_change:'Scope change', revision:'Revision', consult:'Consult', question:'Question', specific_student:'Specific student' };
-const requestStatusLabels = { submitted:'Submitted', in_packaging:'Being packaged', packaged:'Packaged', declined:'Declined', closed:'Closed' };
+let projectRequests = [];
 let selectedReference = '';
+let selectedProjectRequest = '';
+let packagingFilter = 'submitted';
 let activeType = 'all';
 const attentionOrder = { needs_information:0, received:1, reviewing:2, approval_pending:3, packet_proposed:4, approved:5, declined:6, archived:7 };
 
@@ -45,7 +37,7 @@ function captureMagicLink() {
   return error;
 }
 
-function showLogin(message = '', error = false) { $('#adminLogin').hidden = false; $('#adminShell').hidden = true; const cf = $('#adminCodeForm'); if (cf) cf.hidden = true; const lf = $('#adminLoginForm'); if (lf) lf.hidden = false; if (message) setMessage(message, error); }
+function showLogin(message = '', error = false) { $('#adminLogin').hidden = false; $('#adminShell').hidden = true; if (message) setMessage(message, error); }
 function showInbox() { $('#adminLogin').hidden = true; $('#adminShell').hidden = false; }
 
 function updateQueueSummary() {
@@ -120,6 +112,8 @@ function detailSections(item) {
   if (item.submission_type==='student_interest') return [...common,section('Student profile',[['School',details.school],['Education level',details.educationLevel],['Graduation year',details.graduationYear],['Major',details.major],['Timezone',details.timezone]]),section('Interests',[['Work types',details.interests?.workTypes],['Industries',details.interests?.industries],['Work style',details.interests?.workStyle],['Skills',details.skills]]),section('Availability',[['Start',details.availability],['Hours per week',details.preferences?.hoursPerWeek],['Duration',details.preferences?.duration],['Minimum compensation',details.preferences?.minimumCompensation]])];
   if (item.submission_type==='employer_intake') return [...common,section('Organization',[['Website',details.organization?.website],['Size',details.organization?.size],['Industry',details.organization?.industry],['Reason now',details.organization?.reason],['Frequency',details.organization?.workFrequency]]),section('Project',[['Useful by',details.project?.usefulBy],['Last instance',details.project?.lastInstance],['Decision supported',details.project?.decisionSupported],['Deliverable',details.project?.deliverable],['Reviewer',details.project?.reviewer],['Acceptance',details.project?.acceptance],['Approved context',details.project?.approvedContext]]),section('Working terms',[['Student hours',details.project?.studentHours],['Budget',details.project?.budget],['Internal hours avoided',details.project?.internalHoursAvoided],['System access',details.project?.systemAccess]])];
   if (item.submission_type==='university_partner') return [...common,section('Partner',[['Organization type',details.organizationType],['Students shared',details.roster?.length]]),section('Roster',(details.roster||[]).map((student,index)=>[`Student ${index+1}`,`${student.name} · ${student.email} · ${student.interest}`]))];
+  if (item.submission_type==='referrer_endorsement') return [...common,section('Referral source',[['Referrer type',details.referrerType],['Attribution code',details.attributionCode],['Students endorsed',details.endorsements?.length]]),section('Endorsements',(details.endorsements||[]).map((student,index)=>[`Student ${index+1}`,`${student.name} · ${student.email}${student.function ? ` · ${student.function}` : ''}${student.note ? ` · ${student.note}` : ''}`]))];
+  if (item.submission_type==='network_access_request') return [...common,section('Trusted Talent access',[['Reason',details.reason],['Roles or skills',details.rolesNeeded],['Hiring timeline',details.hiringTimeline],['Access stage',details.stage]])];
   return [...common,section('Request',[['Topic',details.topic],['Date',details.requestedDate],['Time',details.requestedTime],['Timezone',details.timezone]])];
 }
 
@@ -149,6 +143,24 @@ function workflowSection(item) {
   return wrapper;
 }
 
+function partnerVerificationSection(item) {
+  if (!['university_partner','referrer_endorsement'].includes(item.submission_type)) return null;
+  const wrapper=document.createElement('section');wrapper.className='detail-section partner-verification';
+  const heading=document.createElement('h3');heading.textContent='Partner verification';
+  const intro=document.createElement('p');intro.className='partner-verification-intro';intro.textContent='Submission approval accepts this intake. Partner verification separately confirms Covenda has checked the source.';
+  const form=document.createElement('form');
+  const verifiedLabel=document.createElement('label');const verified=document.createElement('input');verified.type='checkbox';verified.name='partner_verified';verified.checked=item.partner_verified===true;const verifiedText=document.createElement('span');verifiedText.append(document.createElement('strong'),document.createElement('small'));verifiedText.firstChild.textContent='Founder-confirmed partner';verifiedText.lastChild.textContent='Allows verified referral language and certification.';verifiedLabel.append(verified,verifiedText);
+  const foundingLabel=document.createElement('label');const founding=document.createElement('input');founding.type='checkbox';founding.name='founding_partner';founding.checked=item.founding_partner===true;const foundingText=document.createElement('span');foundingText.append(document.createElement('strong'),document.createElement('small'));foundingText.firstChild.textContent='Founding faculty designation';foundingText.lastChild.textContent='Reserved for the consented founding partner program.';foundingLabel.append(founding,foundingText);
+  const canVerify=item.status==='approved'||item.partner_verified===true;verified.disabled=!canVerify;founding.disabled=!verified.checked||!canVerify;verified.addEventListener('change',()=>{founding.disabled=!verified.checked;if(!verified.checked)founding.checked=false;});
+  const feedback=document.createElement('p');feedback.className='partner-verification-message';feedback.setAttribute('aria-live','polite');if(!canVerify)feedback.textContent='Approve this submission before confirming the partner.';
+  const save=document.createElement('button');save.type='submit';save.textContent='Save partner verification';save.disabled=!canVerify;
+  form.append(verifiedLabel,foundingLabel,feedback,save);
+  form.addEventListener('submit',async event=>{event.preventDefault();save.disabled=true;save.textContent='Saving…';feedback.textContent='';try{const result=await adminRequest({method:'POST',body:JSON.stringify({action:'verify-partner',reference:item.reference,partnerVerified:verified.checked,foundingPartner:founding.checked})});const index=submissions.findIndex(entry=>entry.reference===item.reference);submissions[index]=result.submission;renderRows();}catch(error){feedback.textContent=error.message;feedback.classList.add('is-error');save.disabled=false;save.textContent='Save partner verification';}});
+  wrapper.append(heading,intro,form);
+  if(item.partner_verified_at){const audit=document.createElement('p');audit.className='partner-verification-audit';audit.textContent=`Confirmed ${dateLabel(item.partner_verified_at,true)}${item.partner_verified_by?` by ${item.partner_verified_by}`:''}.`;wrapper.append(audit);}
+  return wrapper;
+}
+
 function renderDetail(item) {
   const detail=$('#adminDetail'); detail.replaceChildren();
   const head=document.createElement('header'); head.className='detail-head';
@@ -158,569 +170,57 @@ function renderDetail(item) {
   const label=document.createElement('label'); label.className='detail-status-label'; label.append(document.createTextNode('Status'));
   const select=document.createElement('select'); Object.entries(statusLabels).forEach(([value,text])=>{ const option=document.createElement('option'); option.value=value; option.textContent=text; option.selected=value===item.status; select.append(option); });
   select.addEventListener('change',async()=>{ select.disabled=true; try { const result=await adminRequest({method:'PATCH',body:JSON.stringify({reference:item.reference,status:select.value})}); const index=submissions.findIndex(entry=>entry.reference===item.reference); submissions[index]=result.submission; updateQueueSummary(); renderRows(); } catch(error) { alert(error.message); select.value=item.status; } finally { select.disabled=false; } });
-  label.append(select); head.append(row,label); detail.append(head,...detailSections(item),workflowSection(item));
+  label.append(select); head.append(row,label);const partnerVerification=partnerVerificationSection(item);detail.append(head,...detailSections(item),...(partnerVerification?[partnerVerification]:[]),workflowSection(item));
   const timeline=document.createElement('section'); timeline.className='detail-section'; const timelineTitle=document.createElement('h3'); timelineTitle.textContent='Timeline'; const list=document.createElement('ol'); list.className='detail-timeline';
   const events=[['Submitted',item.created_at],['Last updated',item.updated_at],['Follow-up',item.follow_up_at]].filter(([,date])=>date);
   events.forEach(([name,date])=>{ const li=document.createElement('li'); const strong=document.createElement('strong'); const span=document.createElement('span'); strong.textContent=name; span.textContent=dateLabel(date,true); li.append(strong,span); list.append(li); }); timeline.append(timelineTitle,list); detail.append(timeline);
 }
 
-// §6 slice B: operator triage of company brokered requests — set status + reply the company sees.
-function renderRequests() {
-  const root = $('#adminRequests'); if (!root) return; root.replaceChildren();
-  const count = $('#adminRequestsCount'); if (count) count.textContent = requests.length;
-  if (!requests.length) { const p = document.createElement('p'); p.className = 'admin-requests-empty'; p.textContent = 'No brokered work requests yet.'; root.append(p); return; }
-  for (const r of requests) {
-    const card = document.createElement('article'); card.className = 'admin-request-card';
-    const head = document.createElement('div'); head.className = 'admin-request-head';
-    const who = document.createElement('strong'); who.textContent = (r.company && (r.company.organization_name || r.company.display_name)) || 'Company';
-    const type = document.createElement('span'); type.className = 'admin-request-type'; type.textContent = requestTypeLabels[r.request_type] || r.request_type;
-    head.append(who, type); card.append(head);
-    if (r.subject) { const s = document.createElement('h3'); s.textContent = r.subject; card.append(s); }
-    const details = document.createElement('p'); details.className = 'admin-request-details'; details.textContent = r.details; card.append(details);
-    const time = document.createElement('small'); time.className = 'admin-request-time'; time.textContent = `Requested ${dateLabel(r.created_at, true)}`; card.append(time);
-    const controls = document.createElement('div'); controls.className = 'admin-request-controls';
-    const select = document.createElement('select');
-    Object.entries(requestStatusLabels).forEach(([val, label]) => { const o = document.createElement('option'); o.value = val; o.textContent = label; if (val === r.status) o.selected = true; select.append(o); });
-    const note = document.createElement('textarea'); note.rows = 2; note.placeholder = 'Reply the company will see…'; note.value = r.resolution_note || '';
-    const save = document.createElement('button'); save.type = 'button'; save.className = 'admin-request-save'; save.textContent = 'Save';
-    save.addEventListener('click', async () => {
-      const original = save.textContent; save.disabled = true; save.textContent = 'Saving…';
-      try {
-        const result = await adminRequest({ method: 'PATCH', body: JSON.stringify({ action: 'update-request', id: r.id, status: select.value, resolution_note: note.value }) });
-        const i = requests.findIndex(x => x.id === r.id); if (i >= 0) requests[i] = { ...requests[i], ...result.request };
-        save.textContent = 'Saved'; setTimeout(() => renderRequests(), 800);
-      } catch (error) { save.textContent = error.message; setTimeout(() => { save.textContent = original; save.disabled = false; }, 3000); }
-    });
-    controls.append(select, note, save); card.append(controls);
-    root.append(card);
-  }
-}
+const requestTypeLabels={new_project:'New project',more_students:'More students',scope_change:'Scope change',revision:'Revision',consult:'Consult',question:'Question',specific_student:'Specific student'};
+const requestStatusLabels={submitted:'Submitted',in_packaging:'In packaging',packaged:'Packaged',declined:'Declined',closed:'Closed'};
+const packetVerticals=['Accounting & finance','Software & AI','Healthcare operations','Consumer & retail','Professional services','Not sure yet — show me everything'];
+const packetWorkTypes=['Research','Data & spreadsheets','Operations','QA & testing','Writing & documentation'];
 
-// §13 slice 2: operator batch management — create cohorts and review each application.
-function renderBatches() {
-  const root = $('#adminBatches'); if (!root) return; root.replaceChildren();
-  const count = $('#adminBatchesCount'); if (count) count.textContent = batches.length;
-  if (!batches.length) { const p = document.createElement('p'); p.className = 'admin-requests-empty'; p.textContent = 'No batches yet. Create one above to open a cohort.'; root.append(p); return; }
-  for (const batch of batches) root.append(batchCard(batch));
-}
-
-function batchCard(batch) {
-  const card = document.createElement('article'); card.className = 'admin-batch-card' + (batch.tier === 'elite' ? ' is-elite' : '');
-  const head = document.createElement('div'); head.className = 'admin-batch-head';
-  const title = document.createElement('div');
-  const name = document.createElement('strong'); name.textContent = batch.name;
-  const meta = document.createElement('small'); meta.textContent = [batchTierLabels[batch.tier] || batch.tier, batch.discipline, batch.partner_org, batch.season].filter(Boolean).join(' · ');
-  title.append(name, meta);
-  const statusLabel = document.createElement('label'); statusLabel.className = 'admin-batch-status';
-  statusLabel.append(document.createTextNode('Status'));
-  const statusSelect = document.createElement('select');
-  Object.entries(batchStatusLabels).forEach(([val, label]) => { const o = document.createElement('option'); o.value = val; o.textContent = label; if (val === batch.status) o.selected = true; statusSelect.append(o); });
-  statusSelect.addEventListener('change', async () => {
-    statusSelect.disabled = true;
-    try {
-      const result = await adminRequest({ method: 'PATCH', body: JSON.stringify({ action: 'update-batch', id: batch.id, status: statusSelect.value }) });
-      const i = batches.findIndex(b => b.id === batch.id); if (i >= 0) batches[i] = { ...batches[i], ...result.batch };
-    } catch (error) { alert(error.message); statusSelect.value = batch.status; } finally { statusSelect.disabled = false; }
-  });
-  statusLabel.append(statusSelect);
-  head.append(title, statusLabel); card.append(head);
-  if (batch.description) { const desc = document.createElement('p'); desc.className = 'admin-batch-description'; desc.textContent = batch.description; card.append(desc); }
-
-  const apps = batch.applications || [];
-  const tally = document.createElement('div'); tally.className = 'admin-batch-tally';
-  const accepted = apps.filter(a => a.status === 'accepted').length;
-  const price = Number.isFinite(Number(batch.access_credits)) ? `${Number(batch.access_credits)} cr company access` : '';
-  const appsText = apps.length
-    ? `${apps.length} ${apps.length === 1 ? 'application' : 'applications'} · ${accepted} accepted${batch.capacity ? ` of ${batch.capacity} seats` : ''}`
-    : 'No applications yet.';
-  tally.textContent = [appsText, price].filter(Boolean).join('  ·  ');
-  card.append(tally);
-
-  if (apps.length) {
-    const list = document.createElement('div'); list.className = 'admin-batch-apps';
-    for (const app of apps) list.append(batchApplicationRow(batch, app));
-    card.append(list);
-  }
-  return card;
-}
-
-function batchApplicationRow(batch, app) {
-  const row = document.createElement('div'); row.className = 'admin-batch-app';
-  const who = document.createElement('div'); who.className = 'admin-batch-app-who';
-  const student = app.student || {};
-  const nm = document.createElement('strong'); nm.textContent = student.display_name || 'Student'; who.append(nm);
-  const sub = document.createElement('small'); sub.textContent = [student.headline, student.school_name].filter(Boolean).join(' · '); if (sub.textContent) who.append(sub);
-  const signals = [ ...(student.verticals || []), ...(student.work_types || []) ];
-  if (signals.length) { const tags = document.createElement('div'); tags.className = 'admin-batch-app-tags'; signals.slice(0, 6).forEach(s => { const t = document.createElement('span'); t.textContent = s; tags.append(t); }); who.append(tags); }
-  const materials = app.materials || {};
-  const field = (label, value) => { const wrap = document.createElement('div'); wrap.className = 'admin-batch-app-field'; const l = document.createElement('span'); l.className = 'admin-batch-app-flabel'; l.textContent = label; const p = document.createElement('p'); p.className = 'admin-batch-app-ftext'; p.textContent = value; wrap.append(l, p); who.append(wrap); };
-  if (materials.note) field('Why this cohort', materials.note);
-  if (materials.videoPrompt) field('Video prompt (assigned)', materials.videoPrompt);
-  (materials.interest || []).forEach(a => { if (a && a.answer) field(a.question || 'Interest', a.answer); });
-  if (materials.experience) field('Relevant experience', materials.experience);
-  if ((materials.skills || []).length) { const wrap = document.createElement('div'); wrap.className = 'admin-batch-app-tags'; materials.skills.slice(0, 12).forEach(s => { const t = document.createElement('span'); t.className = 'is-skill'; t.textContent = s; wrap.append(t); }); who.append(wrap); }
-  const av = materials.availability || {};
-  const avText = [av.hoursPerWeek ? `${av.hoursPerWeek} hrs/week` : '', av.startDate ? `starts ${av.startDate}` : ''].filter(Boolean).join(' · ');
-  if (avText) field('Availability', avText);
-  if (materials.referral && materials.referral.name) field('Referred by', `${materials.referral.name}${materials.referral.code ? ` · ${materials.referral.code}` : ''}${materials.referral.verified ? ' ✓ verified' : ''}`);
-  // Links: work samples + video + résumé.
-  const linkDefs = [];
-  (materials.workSamples || []).forEach((u, i) => linkDefs.push([`Work sample ${i + 1}`, u]));
-  if (materials.videoUrl) linkDefs.push(['Video', materials.videoUrl]);
-  if (materials.resumeUrl) linkDefs.push(['Résumé', materials.resumeUrl]);
-  const links = linkDefs.filter(([, u]) => typeof u === 'string' && /^https?:\/\//i.test(u));
-  if (links.length) { const lw = document.createElement('div'); lw.className = 'admin-batch-app-links'; links.forEach(([label, url]) => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = label; lw.append(a); }); who.append(lw); }
-  row.append(who);
-
-  const controls = document.createElement('div'); controls.className = 'admin-batch-app-controls';
-  const select = document.createElement('select');
-  Object.entries(batchAppStatusLabels).forEach(([val, label]) => { const o = document.createElement('option'); o.value = val; o.textContent = label; if (val === app.status) o.selected = true; select.append(o); });
-  select.dataset.status = app.status;
-  select.addEventListener('change', async () => {
-    select.disabled = true;
-    try {
-      const result = await adminRequest({ method: 'PATCH', body: JSON.stringify({ action: 'review-batch-application', id: app.id, status: select.value }) });
-      const bi = batches.findIndex(b => b.id === batch.id);
-      if (bi >= 0) { const ai = (batches[bi].applications || []).findIndex(a => a.id === app.id); if (ai >= 0) batches[bi].applications[ai] = { ...batches[bi].applications[ai], ...result.application }; }
-      renderBatches();
-    } catch (error) { alert(error.message); select.value = app.status; select.disabled = false; }
-  });
-  controls.append(select);
-  row.append(controls);
-  return row;
-}
+function setAdminView(view){const packaging=view==='packaging';$('#adminInboxMain').hidden=packaging;$('#adminPackagingMain').hidden=!packaging;$('#adminPackagingNav').classList.toggle('is-active',packaging);$$('[data-admin-type]').forEach(button=>button.classList.toggle('is-active',!packaging&&button.dataset.adminType===activeType));$('#adminRefresh').lastChild.textContent=packaging?'Refresh queue':'Refresh inbox';if(packaging)renderPackaging();}
+function packagingItems(){return projectRequests.filter(item=>item.status===packagingFilter);}
+function packetField(label,name,value,{rows=0,type='text',placeholder=''}={}){const wrapper=document.createElement('label');wrapper.className='packet-field';wrapper.append(document.createTextNode(label));const control=rows?document.createElement('textarea'):document.createElement('input');control.name=name;control.value=value||'';control.placeholder=placeholder;if(rows)control.rows=rows;else control.type=type;wrapper.append(control);return wrapper;}
+function packetMulti(label,name,options,selected=[]){const wrapper=document.createElement('label');wrapper.className='packet-field';wrapper.append(document.createTextNode(label));const select=document.createElement('select');select.name=name;select.multiple=true;options.forEach(value=>{const option=document.createElement('option');option.value=value;option.textContent=value;option.selected=selected.includes(value);select.append(option);});wrapper.append(select);const help=document.createElement('small');help.textContent='Hold Command or Ctrl to select more than one.';wrapper.append(help);return wrapper;}
+function packetFromForm(form){const values=name=>[...form.elements[name].selectedOptions].map(option=>option.value);return {title:form.elements.title.value,summary:form.elements.summary.value,deliverable:form.elements.deliverable.value,acceptanceCriteria:form.elements.acceptanceCriteria.value,safeInputs:form.elements.safeInputs.value,credits:form.elements.credits.value,verticals:values('verticals'),workTypes:values('workTypes'),desiredSkills:form.elements.desiredSkills.value,targetDate:form.elements.targetDate.value};}
+function replaceProjectRequest(next){const index=projectRequests.findIndex(item=>item.id===next.id);if(index>=0)projectRequests[index]=next;else projectRequests.unshift(next);$('#adminPackagingCount').textContent=projectRequests.filter(item=>['submitted','in_packaging'].includes(item.status)).length;renderPackaging();}
+function renderPacketEditor(item){const root=$('#packetEditor');root.replaceChildren();if(!item){const empty=document.createElement('div');empty.className='packet-editor-empty';empty.append(icon('a-packet'));const h=document.createElement('h2');h.textContent='Select a request';const p=document.createElement('p');p.textContent='Choose a row to inspect the original need and build its Project Packet.';empty.append(h,p);root.append(empty);return;}const head=document.createElement('header');const top=document.createElement('div');const eye=document.createElement('p');eye.textContent=requestTypeLabels[item.request_type]||labelize(item.request_type);const h=document.createElement('h2');h.textContent='Build the Project Packet';const status=document.createElement('span');status.className='admin-status';status.dataset.status=item.status;status.textContent=requestStatusLabels[item.status]||labelize(item.status);top.append(eye,h);head.append(top,status);const original=document.createElement('section');original.className='packet-original';const originalTitle=document.createElement('strong');originalTitle.textContent='Original request';const body=document.createElement('p');body.textContent=item.body;original.append(originalTitle,body);if((item.attachments||[]).length){const files=document.createElement('div');item.attachments.forEach(file=>{const a=document.createElement('a');a.href=file.blobUrl;a.target='_blank';a.rel='noopener';a.textContent=file.name||'Attachment';files.append(a);});original.append(files);}const draft=item.packet_draft||{};const ai=item.ai_brief||{};const form=document.createElement('form');form.className='packet-form';form.append(packetField('Packet title','title',draft.title||''),packetField('Summary','summary',draft.summary||ai.summary||item.body,{rows:4}),packetField('Useful deliverable','deliverable',draft.deliverable||(ai.candidateDeliverables||[])[0]||'',{rows:3}),packetField('Acceptance criteria','acceptanceCriteria',draft.acceptanceCriteria||'',{rows:3,placeholder:'What must be true for the company to accept the work?'}),packetField('Safe inputs','safeInputs',draft.safeInputs||'',{rows:3,placeholder:'Public sources, provided template, synthetic data…'}));const grid=document.createElement('div');grid.className='packet-grid';grid.append(packetField('Student payout · credits','credits',draft.credits||'',{type:'number'}),packetField('Useful by','targetDate',draft.targetDate||'',{type:'date'}));form.append(grid,packetMulti('Industry','verticals',packetVerticals,draft.verticals||ai.suggestedVerticals||[]),packetMulti('Work type','workTypes',packetWorkTypes,draft.workTypes||ai.suggestedWorkTypes||[]),packetField('Desired skills · comma separated','desiredSkills',Array.isArray(draft.desiredSkills)?draft.desiredSkills.join(', '):(draft.desiredSkills||'')));
+  const safety=document.createElement('fieldset');safety.className='packet-safety';const legend=document.createElement('legend');legend.append(icon('a-shield'),document.createTextNode(' Safety boundary'));const intro=document.createElement('p');intro.textContent='Explicitly clear all four boundaries before publishing.';safety.append(legend,intro);[['clientRecords','No client or patient records'],['pii','No personal or identifying information'],['productionAccess','No production or live-system access'],['regulatedDecisions','No regulated decisions or judgment']].forEach(([name,label])=>{const l=document.createElement('label');const input=document.createElement('input');input.type='checkbox';input.name=name;const span=document.createElement('span');span.textContent=label;l.append(input,span);safety.append(l);});form.append(safety);const message=document.createElement('p');message.className='packet-message';message.setAttribute('aria-live','polite');const actions=document.createElement('div');actions.className='packet-actions';const decline=document.createElement('button');decline.type='button';decline.className='packet-decline';decline.textContent='Decline with reason';const save=document.createElement('button');save.type='button';save.className='packet-save';save.textContent='Save packaging draft';const publish=document.createElement('button');publish.type='button';publish.className='packet-publish';publish.append(document.createTextNode('Publish to students'),icon('a-check'));actions.append(decline,save,publish);form.append(message,actions);const declineBox=document.createElement('div');declineBox.className='packet-decline-box';declineBox.hidden=true;const reason=document.createElement('textarea');reason.rows=3;reason.placeholder='Explain what cannot move forward and what would make it workable.';const sendDecline=document.createElement('button');sendDecline.type='button';sendDecline.textContent='Send decline reason';declineBox.append(reason,sendDecline);form.append(declineBox);
+  save.addEventListener('click',async()=>{save.disabled=true;message.textContent='Saving draft…';try{const result=await adminRequest({method:'POST',body:JSON.stringify({action:'save-packaging',requestId:item.id,packet:packetFromForm(form)})});message.textContent='Draft saved.';replaceProjectRequest(result.request);}catch(error){message.textContent=error.message;message.classList.add('is-error');}finally{save.disabled=false;}});
+  decline.addEventListener('click',()=>{declineBox.hidden=!declineBox.hidden;if(!declineBox.hidden)reason.focus();});
+  sendDecline.addEventListener('click',async()=>{sendDecline.disabled=true;message.textContent='Closing request…';try{const result=await adminRequest({method:'POST',body:JSON.stringify({action:'decline-request',requestId:item.id,reason:reason.value})});packagingFilter='declined';replaceProjectRequest(result.request);}catch(error){message.textContent=error.message;message.classList.add('is-error');sendDecline.disabled=false;}});
+  publish.addEventListener('click',async()=>{publish.disabled=true;message.textContent='Publishing packet and holding escrow…';const safetyInput={clientRecords:!form.elements.clientRecords.checked,pii:!form.elements.pii.checked,productionAccess:!form.elements.productionAccess.checked,regulatedDecisions:!form.elements.regulatedDecisions.checked};try{await adminRequest({method:'POST',body:JSON.stringify({action:'publish-request',requestId:item.id,packet:packetFromForm(form),safety:safetyInput})});packagingFilter='packaged';await loadInbox();setAdminView('packaging');}catch(error){message.textContent=error.message;message.classList.add('is-error');publish.disabled=false;}});
+  root.append(head,original,form);}
+function renderPackaging(){const items=packagingItems();$('#packagingTotal').textContent=`${projectRequests.length} ${projectRequests.length===1?'request':'requests'}`;$('#adminPackagingCount').textContent=projectRequests.filter(item=>['submitted','in_packaging'].includes(item.status)).length;$$('[data-packaging-filter]').forEach(button=>button.classList.toggle('is-active',button.dataset.packagingFilter===packagingFilter));if(!items.some(item=>item.id===selectedProjectRequest))selectedProjectRequest=items[0]?.id||'';const root=$('#packagingList');root.replaceChildren();if(!items.length){const empty=document.createElement('div');empty.className='packaging-empty';empty.append(icon('a-check'));const h=document.createElement('h2');h.textContent='Queue is clear';const p=document.createElement('p');p.textContent='No requests are in this stage.';empty.append(h,p);root.append(empty);renderPacketEditor(null);return;}items.forEach(item=>{const row=document.createElement('button');row.type='button';row.className='packaging-row'+(item.id===selectedProjectRequest?' is-selected':'');const summary=document.createElement('span');const strong=document.createElement('strong');strong.textContent=(item.packet_draft?.title||item.body).slice(0,100);const small=document.createElement('small');small.textContent=item.body;summary.append(strong,small);const type=document.createElement('span');type.textContent=requestTypeLabels[item.request_type]||labelize(item.request_type);const status=document.createElement('span');status.className='admin-status';status.dataset.status=item.status;status.textContent=requestStatusLabels[item.status];const date=document.createElement('span');date.textContent=dateLabel(item.created_at);row.append(summary,type,status,date);row.addEventListener('click',()=>{selectedProjectRequest=item.id;renderPackaging();});root.append(row);});renderPacketEditor(items.find(item=>item.id===selectedProjectRequest));}
 
 async function loadInbox({ announce = false } = {}) {
   showInbox();
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {
-    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; companies=result.companies||[]; members=result.users||[]; projects=result.projects||[]; appeals=result.appeals||[]; $('#operatorEmail').textContent=result.operator.email;
+    const result=await adminRequest(); submissions=result.submissions; projectRequests=result.projectRequests||[]; $('#operatorEmail').textContent=result.operator.email;
     if (!selectedReference && submissions[0]) selectedReference=submissions[0].reference;
     if (selectedReference && !submissions.some(item=>item.reference===selectedReference)) selectedReference=submissions[0]?.reference || '';
-    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies(); renderMembers(); renderProjects(); renderMatcherOptions(); renderAppeals();
+    updateQueueSummary(); renderRows(); renderPackaging();
     $('#adminSyncStatus').textContent=`Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }
 
-let pendingOperatorEmail='';
-function setCodeMessage(text,error=false){const m=$('#adminCodeMessage');if(!m)return;m.textContent=text;m.classList.toggle('is-error',error);}
-$('#adminLoginForm').addEventListener('submit',async event=>{ event.preventDefault(); const button=$('button[type="submit"]',event.currentTarget); button.disabled=true; setMessage('Requesting a secure sign-in code…'); const emailVal=$('[name="email"]',event.currentTarget).value; try { const response=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request-link',email:emailVal})}); const result=await response.json(); if (!response.ok||!result.ok) throw new Error(result.error||'Could not request a code.'); pendingOperatorEmail=emailVal; setMessage(''); $('#adminLoginForm').hidden=true; $('#adminCodeForm').hidden=false; setCodeMessage('Code sent. Check your email — it may take a minute.'+(result.requestId?` (ref ${result.requestId})`:'')); $('#adminCodeForm [name="code"]').focus(); } catch(error) { setMessage(error.message,true); } finally { button.disabled=false; } });
-$('#adminCodeForm')?.addEventListener('submit',async event=>{ event.preventDefault(); const button=$('button[type="submit"]',event.currentTarget); const code=$('[name="code"]',event.currentTarget).value.replace(/\D/g,''); if(code.length<6){setCodeMessage('Enter the 6-digit code.',true);return;} button.disabled=true; setCodeMessage('Signing you in…'); try { const response=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'verify-code',email:pendingOperatorEmail,code})}); const result=await response.json(); if(!response.ok||!result.ok||!result.accessToken) throw new Error(result.error||'That code did not work.'); sessionStorage.setItem(TOKEN_KEY,result.accessToken); await loadInbox().catch(err=>{throw err;}); } catch(error){ setCodeMessage(error.message,true); button.disabled=false; } });
-$('#adminCodeBack')?.addEventListener('click',()=>{ $('#adminCodeForm').hidden=true; $('#adminLoginForm').hidden=false; setCodeMessage(''); pendingOperatorEmail=''; });
-$$('[data-admin-type]').forEach(button=>button.addEventListener('click',()=>{ activeType=button.dataset.adminType; $('#adminTypeFilter').value=activeType; $$('[data-admin-type]').forEach(item=>item.classList.toggle('is-active',item===button)); renderRows(); }));
+$('#adminLoginForm').addEventListener('submit',async event=>{ event.preventDefault(); const button=$('button',event.currentTarget); button.disabled=true; setMessage('Requesting a secure sign-in link…'); try { const response=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request-link',email:$('[name="email"]',event.currentTarget).value})}); const result=await response.json(); if (!response.ok||!result.ok) throw new Error(result.error||'Could not request a link.'); const reference=result.requestId ? ` Reference: ${result.requestId}.` : ''; setMessage(result.message+reference); } catch(error) { setMessage(error.message,true); } finally { button.disabled=false; } });
+$$('[data-admin-type]').forEach(button=>button.addEventListener('click',()=>{ activeType=button.dataset.adminType; $('#adminTypeFilter').value=activeType; setAdminView('inbox'); $$('[data-admin-type]').forEach(item=>item.classList.toggle('is-active',item===button)); renderRows(); }));
+$('#adminPackagingNav').addEventListener('click',()=>setAdminView('packaging'));
+$$('[data-packaging-filter]').forEach(button=>button.addEventListener('click',()=>{packagingFilter=button.dataset.packagingFilter;selectedProjectRequest='';renderPackaging();}));
 $('#adminTypeFilter').addEventListener('change',event=>{ activeType=event.target.value; $$('[data-admin-type]').forEach(button=>button.classList.toggle('is-active',button.dataset.adminType===activeType)); renderRows(); });
 $('#adminStatusFilter').addEventListener('change',renderRows); $('#adminSearch').addEventListener('input',renderRows);
 $('#adminSort').addEventListener('change',renderRows);
 $('#adminRefresh').addEventListener('click',()=>loadInbox({ announce:true }).catch(error=>{ $('#adminSyncStatus').textContent='Refresh failed'; alert(error.message); }));
 $('#adminClearFilters').addEventListener('click',()=>{ activeType='all'; $('#adminTypeFilter').value='all'; $('#adminStatusFilter').value='all'; $('#adminSort').value='newest'; $('#adminSearch').value=''; $$('[data-admin-type]').forEach(button=>button.classList.toggle('is-active',button.dataset.adminType==='all')); renderRows(); });
+$('#adminEmptyReset').addEventListener('click',()=>$('#adminClearFilters').click());
 $$('[data-summary-status]').forEach(button=>button.addEventListener('click',()=>{ $('#adminStatusFilter').value=button.dataset.summaryStatus; renderRows(); $('#adminRows').closest('.admin-table-wrap').scrollIntoView({ behavior:'smooth', block:'start' }); }));
-$('#adminSignout').addEventListener('click',()=>{ sessionStorage.removeItem(TOKEN_KEY); selectedReference=''; submissions=[]; batches=[]; showLogin('Signed out of this browser.'); });
-// §B operator analytics: a live metrics band across the top of the console.
-function metricTile(label, value, sub, group){
-  const tile=document.createElement('div');tile.className='admin-metric'+(group?` is-${group}`:'');
-  const v=document.createElement('strong');v.textContent=value;
-  const l=document.createElement('span');l.textContent=label;
-  tile.append(v,l);
-  if(sub){const s=document.createElement('small');s.textContent=sub;tile.append(s);}
-  return tile;
-}
-function renderMetrics(m){
-  const section=$('#adminMetricsSection');const band=$('#adminMetricsBand');
-  if(!band)return;
-  if(!m){if(section)section.hidden=true;return;}
-  const f=m.funnel||{},w=m.thisWeek||{},c=m.credits||{},b=m.batches||{},p=m.payouts||{},cs=m.caseStudy||{};
-  const n=x=>String(x==null?0:x);
-  band.replaceChildren();
-  // Grouped into three labelled clusters so the band reads as sections, not a wall of numbers.
-  const groups=[
-    ['Pipeline',[
-      ['Submissions',n(f.submissions),w.submissions?`+${w.submissions} wk`:'',''],
-      ['Member profiles',n(f.profiles),'',''],
-      ['Applications',n(f.applications),w.applications?`+${w.applications} wk`:'',''],
-      ['Accepted',n(f.accepted),'',''],
-      ['Completed',n(f.completed),w.completed?`+${w.completed} wk`:'','good'],
-    ]],
-    ['Money',[
-      ['Credits purchased',n(c.purchased),'in','money'],
-      ['Platform revenue',n(c.platformRevenue),'earned','money'],
-      ['Paid to students',n(c.toStudents),'out','money'],
-      ['Payouts pending',n(p.pending),p.pending?'review':'','warn'],
-    ]],
-    ['Quality & demand',[
-      // A6 wedge metrics: north star + primary early metric, straight from matchQuality.
-      ['Match success',`${Math.round(((m.matchQuality||{}).successRate||0)*100)}%`,'accepted ÷ matched','good'],
-      ['Repeat companies',`${Math.round((((m.matchQuality||{}).repeat||{}).rate||0)*100)}%`,`${((m.matchQuality||{}).repeat||{}).companiesWithRepeat||0} of ${((m.matchQuality||{}).repeat||{}).companiesWithOne||0}`,'good'],
-      ['Acceptance rate',`${n(cs.acceptanceRate)}%`,'of applications','good'],
-      ['Avg project value',n(cs.avgDeliveredCredits),'credits','money'],
-      ['Active batches',n(b.active),'',''],
-    ]],
-    ['Score credibility',[
-      ['Rater agreement κ',(m.hardening&&m.hardening.irr&&m.hardening.irr.kappa!=null)?String(m.hardening.irr.kappa):'—',(m.hardening&&m.hardening.irr&&m.hardening.irr.n)?`${m.hardening.irr.n} pairs`:'no pairs yet',''],
-      ['Labeled rows',n(m.hardening&&m.hardening.labeledRows),'adjudicated',''],
-      ['Scorer review',m.hardening&&m.hardening.scorerReview&&m.hardening.scorerReview.ready?'READY':'gated',`${(m.hardening&&m.hardening.scorerReview&&m.hardening.scorerReview.have)||0}/${(m.hardening&&m.hardening.scorerReview&&m.hardening.scorerReview.needed)||50} outcomes`,''],
-    ]],
-  ];
-  for(const [label,tiles] of groups){
-    const group=document.createElement('section');group.className='admin-metric-group';
-    const gl=document.createElement('p');gl.className='admin-metric-group-label';gl.textContent=label;
-    const grid=document.createElement('div');grid.className='admin-metric-group-tiles';
-    tiles.forEach(([l,v,s,g])=>grid.append(metricTile(l,v,s,g)));
-    group.append(gl,grid);band.append(group);
-  }
-  if(section)section.hidden=false;
-}
-
-// §9 partner digests: operator-triggered preview + send.
-function renderDigests(result){
-  const root=$('#adminDigests');if(!root)return;root.replaceChildren();
-  const rows=result?.results||[];
-  const send=$('#digestSendBtn');if(send)send.disabled=!result?.configured;
-  const status=$('#digestStatus');
-  if(status){
-    if(!rows.length)status.textContent='No partner cohorts to summarize yet.';
-    else if(result.sent)status.textContent=`Sent ${result.sent} of ${rows.length}.`;
-    else status.textContent=result.configured?`${rows.length} ready to send.`:`${rows.length} previewed · sending is off until Resend + COVENDA_DIGEST_ENABLED are set.`;
-  }
-  if(!rows.length){const p=document.createElement('p');p.className='admin-requests-empty';p.textContent='No referral partners with a cohort yet. Partners appear here after they endorse students.';root.append(p);return;}
-  for(const r of rows){
-    const card=document.createElement('article');card.className='admin-digest-card';
-    const head=document.createElement('div');head.className='admin-digest-head';
-    const who=document.createElement('strong');who.textContent=r.orgName||r.code;
-    const to=document.createElement('span');to.className='admin-digest-to';to.textContent=r.to||'no partner email';if(!r.to)to.classList.add('is-missing');
-    head.append(who,to);card.append(head);
-    const subject=document.createElement('p');subject.className='admin-digest-subject';subject.textContent=r.subject;card.append(subject);
-    const stats=document.createElement('div');stats.className='admin-digest-stats';
-    const c=r.cohort||{};const n=r.newThisPeriod||{};
-    stats.textContent=`${c.endorsedCount||0} endorsed · ${c.appliedCount||0} applied · ${c.verifiedCount||0} verified   —   this month: +${n.endorsed||0} / +${n.applied||0} / +${n.verified||0}`;
-    card.append(stats);
-    if(r.reason&&r.reason!=='dry-run'&&r.reason!=='sent'&&r.reason!=='ready'){const tag=document.createElement('span');tag.className='admin-digest-reason'+(r.sent?' is-sent':'');tag.textContent=r.reason;card.append(tag);}
-    if(r.sent){const tag=document.createElement('span');tag.className='admin-digest-reason is-sent';tag.textContent='sent';card.append(tag);}
-    root.append(card);
-  }
-}
-async function runDigests(send){
-  const status=$('#digestStatus');const pv=$('#digestPreviewBtn');const sd=$('#digestSendBtn');
-  pv.disabled=true;sd.disabled=true;if(status)status.textContent=send?'Sending…':'Building preview…';
-  try{const result=await adminRequest({method:'POST',body:JSON.stringify({action:'partner-digests',send})});renderDigests(result.digest);}
-  catch(error){if(status)status.textContent=error.message;}
-  finally{pv.disabled=false;}
-}
-$('#digestPreviewBtn')?.addEventListener('click',()=>runDigests(false));
-$('#digestSendBtn')?.addEventListener('click',()=>{if(confirm('Send the monthly digest to every partner with an email on file?'))runDigests(true);});
-// Member management: filterable list of every account, with delete.
-const memberRoleLabels={student:'Student',company:'Company',university:'University'};
-function filteredMembers(){
-  const q=($('#adminUsersSearch')?.value||'').trim().toLowerCase();
-  const role=$('#adminUsersRole')?.value||'';
-  return members.filter(m=>{
-    if(role==='none'){if(m.role)return false;}else if(role&&m.role!==role)return false;
-    if(q){const hay=[m.name,m.email].join(' ').toLowerCase();if(!hay.includes(q))return false;}
-    return true;
-  });
-}
-function renderMembers(){
-  const root=$('#adminUsers');if(!root)return;root.replaceChildren();
-  const count=$('#adminUsersCount');if(count)count.textContent=members.length;
-  const rows=filteredMembers();
-  const shown=$('#adminUsersShown');if(shown)shown.textContent=`${rows.length} of ${members.length}`;
-  if(!members.length){const p=document.createElement('p');p.className='admin-requests-empty';p.textContent='No member accounts yet.';root.append(p);return;}
-  if(!rows.length){const p=document.createElement('p');p.className='admin-requests-empty';p.textContent='No members match this filter.';root.append(p);return;}
-  for(const m of rows){
-    const row=document.createElement('div');row.className='admin-user-row';
-    const info=document.createElement('div');info.className='admin-user-info';
-    const nm=document.createElement('strong');nm.textContent=m.name||'(no name)';const em=document.createElement('span');em.className='admin-user-email';em.textContent=m.email||'(no email)';info.append(nm,em);
-    const meta=document.createElement('div');meta.className='admin-user-meta';
-    const rolePill=document.createElement('span');rolePill.className='admin-user-role';rolePill.textContent=m.role?(memberRoleLabels[m.role]||m.role):'No profile';if(!m.role)rolePill.classList.add('is-none');meta.append(rolePill);
-    if(m.created_at){const d=document.createElement('small');d.textContent=`Joined ${dateLabel(m.created_at)}`;meta.append(d);}
-    const del=document.createElement('button');del.type='button';del.className='admin-user-delete';del.textContent='Delete';
-    del.addEventListener('click',()=>deleteMember(m,del));
-    // Student of the Week: only consented students are featureable (consent is the gate).
-    if(m.role==='student'&&m.spotlight_consent){
-      const feat=document.createElement('button');feat.type='button';feat.className='admin-user-feature'+(m.featured?' is-featured':'');
-      feat.textContent=m.featured?'★ Featured — clear':'☆ Feature';
-      feat.addEventListener('click',async()=>{
-        feat.disabled=true;
-        try{
-          await adminRequest({method:'PATCH',body:JSON.stringify(m.featured?{action:'set-featured',clear:true}:{action:'set-featured',userId:m.id})});
-          await loadInbox();
-        }catch(error){alert(error.message);feat.disabled=false;}
-      });
-      row.append(info,meta,feat,del);root.append(row);continue;
-    }
-    row.append(info,meta,del);root.append(row);
-  }
-}
-async function deleteMember(m,button){
-  const label=m.name||m.email||'this member';
-  if(!confirm(`Delete ${label}? This permanently removes their account, profile, projects, and applications. This cannot be undone.`))return;
-  button.disabled=true;const original=button.textContent;button.textContent='Deleting…';
-  try{
-    await adminRequest({method:'PATCH',body:JSON.stringify({action:'delete-user',userId:m.id})});
-    members=members.filter(x=>x.id!==m.id);renderMembers();
-  }catch(error){alert(error.message);button.disabled=false;button.textContent=original;}
-}
-$('#adminUsersSearch')?.addEventListener('input',renderMembers);
-$('#adminUsersRole')?.addEventListener('change',renderMembers);
-
-const projectStatusLabels={draft:'Draft',scoping:'In scoping',open:'Open',matched:'Matched',in_progress:'In progress',review:'In review',complete:'Complete',archived:'Archived',proposed:'Proposed',proposal_declined:'Proposal declined'};
-function filteredProjects(){
-  const q=($('#adminProjectsSearch')?.value||'').trim().toLowerCase();
-  const status=$('#adminProjectsStatus')?.value||'';
-  return projects.filter(p=>{
-    if(status==='active'){if(['complete','archived'].includes(p.status))return false;}
-    else if(status&&p.status!==status)return false;
-    if(q&&!String(p.title||'').toLowerCase().includes(q))return false;
-    return true;
-  });
-}
-function renderProjects(){
-  const root=$('#adminProjects');if(!root)return;root.replaceChildren();
-  const count=$('#adminProjectsCount');if(count)count.textContent=projects.length;
-  const rows=filteredProjects();
-  const shown=$('#adminProjectsShown');if(shown)shown.textContent=`${rows.length} of ${projects.length}`;
-  if(!projects.length){const p=document.createElement('p');p.className='admin-requests-empty';p.textContent='No projects yet.';root.append(p);return;}
-  if(!rows.length){const p=document.createElement('p');p.className='admin-requests-empty';p.textContent='No projects match this filter.';root.append(p);return;}
-  for(const pr of rows){
-    const row=document.createElement('div');row.className='admin-user-row';
-    const info=document.createElement('div');info.className='admin-user-info';
-    const nm=document.createElement('strong');nm.textContent=pr.title||'(untitled project)';const em=document.createElement('span');em.className='admin-user-email';em.textContent=`${(Number(pr.credits_listed)||0).toLocaleString()} credits listed${Number(pr.credits_held)?` · ${Number(pr.credits_held).toLocaleString()} held in escrow`:''}`;info.append(nm,em);
-    const meta=document.createElement('div');meta.className='admin-user-meta';
-    const statusPill=document.createElement('span');statusPill.className='admin-user-role';statusPill.textContent=projectStatusLabels[pr.status]||pr.status||'—';meta.append(statusPill);
-    if(pr.created_at){const d=document.createElement('small');d.textContent=`Created ${dateLabel(pr.created_at)}`;meta.append(d);}
-    const del=document.createElement('button');del.type='button';del.className='admin-user-delete';del.textContent='Delete';
-    del.addEventListener('click',()=>deleteProject(pr,del));
-    const harden=document.createElement('button');harden.type='button';harden.className='admin-user-feature';
-    const adjNeeded=Object.values(pr.rubric_scores||{}).some(e=>{const s=Object.values(e?.raters||{}).map(r=>r.score);return s.length===2&&Math.abs(s[0]-s[1])>1&&!e.adjudicated;});
-    harden.textContent=adjNeeded?'Rubric ⚠ adjudicate':'Rubric & defense';
-    harden.addEventListener('click',()=>toggleHardenPanel(row,pr));
-    row.append(info,meta,harden,del);root.append(row);
-  }
-}
-
-// P2/P3 operator console: dual-rater rubric scoring (independent, anchored), adjudication
-// when raters disagree by >1, and the ownership-defense record. Lives inline on the project
-// row so scoring happens where the operator already works.
-function toggleHardenPanel(row,pr){
-  const existing=row.nextElementSibling;
-  if(existing&&existing.classList.contains('admin-harden-panel')){existing.remove();return;}
-  document.querySelectorAll('.admin-harden-panel').forEach(x=>x.remove());
-  const panel=document.createElement('div');panel.className='admin-harden-panel';
-  panel.append(hardenRubricBlock(pr,panel),hardenDefenseBlock(pr));
-  row.after(panel);
-}
-function hardenRubricBlock(pr,panel){
-  const box=document.createElement('div');box.className='harden-block';
-  const h=document.createElement('h4');h.textContent='Anchored rubric — two independent raters';box.append(h);
-  const state=document.createElement('div');state.className='harden-state';box.append(state);
-  const paint=()=>{
-    state.replaceChildren();
-    const book=pr.rubric_scores||{};
-    if(!Object.keys(book).length){const p=document.createElement('p');p.className='harden-empty';p.textContent='No rubric scores yet. Each rater scores 0–10 against the anchors without seeing the other\u2019s number.';state.append(p);return;}
-    for(const [skill,entry] of Object.entries(book)){
-      const line=document.createElement('p');line.className='harden-line';
-      const raters=Object.entries(entry.raters||{});
-      const adj=entry.adjudicated;
-      const delta=raters.length===2?Math.abs(raters[0][1].score-raters[1][1].score):null;
-      line.textContent=`${skill}: ${raters.map(([n,r])=>`${n} ${r.score}`).join(' · ')}`+(adj?` → label ${adj.score} (${adj.method})`:delta!=null&&delta>1?' → DISAGREE — adjudicate below':raters.length<2?' — awaiting second rater':'');
-      if(adj)line.classList.add('is-labeled');else if(delta!=null&&delta>1)line.classList.add('is-conflict');
-      state.append(line);
-    }
-  };
-  paint();
-  const form=document.createElement('div');form.className='harden-form';
-  const skill=inputEl('text','Skill (e.g. Financial modeling)');const rater=inputEl('text','Rater name');
-  const score=inputEl('number','0–10');score.min=0;score.max=10;const notes=inputEl('text','Notes (optional)');
-  const send=miniBtn('Submit rating');
-  send.addEventListener('click',async()=>{
-    send.disabled=true;
-    try{
-      const out=await adminRequest({method:'PATCH',body:JSON.stringify({action:'rubric-score',projectId:pr.id,skill:skill.value.trim(),rater:rater.value.trim(),score:Number(score.value),notes:notes.value.trim()})});
-      pr.rubric_scores=out.result.rubric_scores;paint();score.value='';notes.value='';
-      if(out.result.anchors){anchors.textContent=`Anchors — 4: ${out.result.anchors[4]} | 6: ${out.result.anchors[6]} | 9: ${out.result.anchors[9]}`;anchors.hidden=false;}
-    }catch(error){alert(error.message);}
-    send.disabled=false;
-  });
-  form.append(skill,rater,score,notes,send);box.append(form);
-  const anchors=document.createElement('p');anchors.className='harden-anchors';anchors.hidden=true;box.append(anchors);
-  const adjForm=document.createElement('div');adjForm.className='harden-form';
-  const aSkill=inputEl('text','Skill to adjudicate');const aScore=inputEl('number','Adjudicated 0–10');aScore.min=0;aScore.max=10;aScore.step='0.5';
-  const aWho=inputEl('text','Adjudicator');const aNote=inputEl('text','Why (short)');
-  const aBtn=miniBtn('Adjudicate');
-  aBtn.addEventListener('click',async()=>{
-    aBtn.disabled=true;
-    try{
-      const out=await adminRequest({method:'PATCH',body:JSON.stringify({action:'rubric-adjudicate',projectId:pr.id,skill:aSkill.value.trim(),score:Number(aScore.value),adjudicator:aWho.value.trim(),note:aNote.value.trim()})});
-      pr.rubric_scores=out.result.rubric_scores;paint();
-    }catch(error){alert(error.message);}
-    aBtn.disabled=false;
-  });
-  adjForm.append(aSkill,aScore,aWho,aNote,aBtn);box.append(adjForm);
-  return box;
-}
-function hardenDefenseBlock(pr){
-  const box=document.createElement('div');box.className='harden-block';
-  const h=document.createElement('h4');h.textContent='Ownership defense — recorded walkthrough';box.append(h);
-  const d=pr.ownership_defense;
-  const cur=document.createElement('p');cur.className='harden-line';
-  cur.textContent=d?`Recorded: verdict ${d.verdict} · communication ${d.communication}/10 · depth ${d.depth}/10${d.forensics&&d.forensics.anomaly?' · forensics anomaly (human-reviewed)':''}`:'Not recorded yet. Anomalous commit timelines are NEVER auto-scored — they land here.';
-  if(d)cur.classList.add('is-labeled');box.append(cur);
-  const form=document.createElement('div');form.className='harden-form';
-  const url=inputEl('url','Recording link (https…)');const comm=inputEl('number','Communication 0–10');comm.min=0;comm.max=10;
-  const depth=inputEl('number','Depth 0–10');depth.min=0;depth.max=10;
-  const verdict=document.createElement('select');[['verified','Verified — genuine author'],['inconclusive','Inconclusive'],['flagged','Flagged — needs follow-up']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;verdict.append(o);});
-  const btn=miniBtn('Record defense');
-  btn.addEventListener('click',async()=>{
-    btn.disabled=true;
-    try{
-      const out=await adminRequest({method:'PATCH',body:JSON.stringify({action:'record-defense',projectId:pr.id,url:url.value.trim(),communication:Number(comm.value),depth:Number(depth.value),verdict:verdict.value})});
-      pr.ownership_defense=out.result.ownership_defense;
-      cur.textContent=`Recorded: verdict ${pr.ownership_defense.verdict} · communication ${pr.ownership_defense.communication}/10 · depth ${pr.ownership_defense.depth}/10`;cur.classList.add('is-labeled');
-    }catch(error){alert(error.message);}
-    btn.disabled=false;
-  });
-  form.append(url,comm,depth,verdict,btn);box.append(form);
-  return box;
-}
-function inputEl(type,ph){const i=document.createElement('input');i.type=type;i.placeholder=ph;i.className='harden-input';return i;}
-function miniBtn(label){const b=document.createElement('button');b.type='button';b.className='admin-primary compactish';b.textContent=label;return b;}
-
-// M8: score appeals — students contesting with new evidence. Never closed silently.
-function renderAppeals(){
-  const section=$('#adminAppealsSection');const root=$('#adminAppeals');if(!root)return;
-  root.replaceChildren();
-  const count=$('#adminAppealsCount');if(count)count.textContent=appeals.length;
-  if(section)section.hidden=!appeals.length;
-  for(const ap of appeals){
-    const row=document.createElement('div');row.className='admin-user-row';
-    const info=document.createElement('div');info.className='admin-user-info';
-    const nm=document.createElement('strong');nm.textContent=ap.subject;
-    const em=document.createElement('span');em.className='admin-user-email';em.textContent=ap.evidence.length>140?ap.evidence.slice(0,140)+'…':ap.evidence;
-    info.append(nm,em);
-    const meta=document.createElement('div');meta.className='admin-user-meta';
-    const pill=document.createElement('span');pill.className='admin-user-role';pill.textContent=ap.status;meta.append(pill);
-    if(ap.created_at){const dd=document.createElement('small');dd.textContent=dateLabel(ap.created_at);meta.append(dd);}
-    row.append(info,meta);
-    if(ap.status==='open'){
-      const sel=document.createElement('select');[['revised','Revise score'],['upheld','Uphold score'],['dismissed','Dismiss']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;sel.append(o);});
-      const rez=inputEl('text','Written resolution (required)');
-      const btn=miniBtn('Resolve');
-      btn.addEventListener('click',async()=>{
-        if(!rez.value.trim()){rez.focus();return;}
-        btn.disabled=true;
-        try{
-          const out=await adminRequest({method:'PATCH',body:JSON.stringify({action:'resolve-appeal',appealId:ap.id,status:sel.value,resolution:rez.value.trim()})});
-          Object.assign(ap,out.result);renderAppeals();
-        }catch(error){alert(error.message);btn.disabled=false;}
-      });
-      row.append(sel,rez,btn);
-    }
-    root.append(row);
-  }
-}
-
-async function deleteProject(pr,button){
-  const label=pr.title||'this project';
-  const heldWarn=Number(pr.credits_held)?` It still holds ${Number(pr.credits_held).toLocaleString()} credits in escrow.`:'';
-  if(!confirm(`Delete "${label}"? This permanently removes the project and all its applications and messages.${heldWarn} This cannot be undone.`))return;
-  button.disabled=true;const original=button.textContent;button.textContent='Deleting…';
-  try{
-    await adminRequest({method:'PATCH',body:JSON.stringify({action:'delete-project',projectId:pr.id})});
-    projects=projects.filter(x=>x.id!==pr.id);renderProjects();
-  }catch(error){alert(error.message);button.disabled=false;button.textContent=original;}
-}
-$('#adminProjectsSearch')?.addEventListener('input',renderProjects);
-$('#adminProjectsStatus')?.addEventListener('change',renderProjects);
-
-// ---- Compatibility Engine Stage 2: operator-as-matcher panel. The system drafts, the
-// operator decides — and every decision requires a rationale (the training labels).
-function renderMatcherOptions(){
-  const sel=$('#matchOpportunity');if(!sel)return;
-  const current=sel.value;sel.replaceChildren();
-  const ph=document.createElement('option');ph.value='';ph.textContent='Choose an opportunity…';sel.append(ph);
-  projects.filter(p=>!['archived'].includes(p.status)).forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=`${p.title||'(untitled)'} · ${p.status}`;if(p.id===current)o.selected=true;sel.append(o);});
-}
-function matchCandidateCard(entry){
-  const card=document.createElement('article');card.className='match-card';
-  const top=document.createElement('div');top.className='match-card-top';
-  const nm=document.createElement('strong');nm.textContent=entry.name||entry.candidate_id;
-  const sc=document.createElement('span');sc.className='match-score';
-  const pres=entry.presentation;
-  sc.textContent=pres?`${pres.value} · band ${pres.band.low}–${pres.band.high}`:`${entry.score}`;
-  if(pres){const tier=document.createElement('span');tier.className='match-tier is-'+pres.evidenceTier;tier.textContent=pres.evidenceTier.replace('_',' ')+' evidence';sc.append(tier);}
-  top.append(nm,sc);card.append(top);
-  const why=document.createElement('pre');why.className='match-why';why.textContent=entry.explanation;card.append(why);
-  const row=document.createElement('div');row.className='match-decide';
-  if(!entry.match_id){
-    const note=document.createElement('p');note.className='match-note';note.textContent='Run the Stage-0 migration to record decisions (this draft was not persisted).';row.append(note);
-  }else{
-    const sel=document.createElement('select');[['selected','Select'],['rejected','Reject'],['proposed','Keep proposed']].forEach(([v,l])=>{const o=document.createElement('option');o.value=v;o.textContent=l;sel.append(o);});
-    const why2=document.createElement('input');why2.type='text';why2.placeholder='Rationale (required — this is a training label)';why2.className='match-rationale';
-    const save=document.createElement('button');save.type='button';save.className='admin-primary compactish';save.textContent='Record decision';
-    save.addEventListener('click',async()=>{
-      if(!why2.value.trim()){why2.focus();why2.classList.add('is-missing');return;}
-      save.disabled=true;save.textContent='Recording…';
-      try{
-        await adminRequest({method:'PATCH',body:JSON.stringify({action:'decide-match',matchId:entry.match_id,decision:sel.value,rationale:why2.value.trim()})});
-        save.textContent='Recorded ✓';card.classList.add('is-decided');
-      }catch(error){alert(error.message);save.disabled=false;save.textContent='Record decision';}
-    });
-    row.append(sel,why2,save);
-  }
-  card.append(row);return card;
-}
-async function runMatch(){
-  const oppId=$('#matchOpportunity')?.value;const status=$('#matchStatus');const results=$('#matchResults');const btn=$('#runMatchBtn');
-  if(!oppId){status.textContent='Pick an opportunity first.';return;}
-  btn.disabled=true;status.textContent='Drafting shortlist…';results.replaceChildren();
-  try{
-    const out=await adminRequest({method:'PATCH',body:JSON.stringify({action:'run-match',opportunityId:oppId})});
-    const m=out.match;
-    $('#adminMatchVersion').textContent=m.scorer_version||'';
-    if(m.refused){
-      const card=document.createElement('article');card.className='match-card match-refusal';
-      const h=document.createElement('strong');h.textContent=m.message;
-      const ul=document.createElement('ul');(m.reasons||[]).forEach(r=>{const li=document.createElement('li');li.textContent=r;ul.append(li);});
-      card.append(h,ul);results.append(card);
-      status.textContent='Refused — honestly.';
-    }else{
-      m.shortlist.forEach(entry=>results.append(matchCandidateCard(entry)));
-      status.textContent=`${m.shortlist.length} candidate${m.shortlist.length===1?'':'s'} — evidence-cited, capped at 3.`;
-    }
-  }catch(error){status.textContent=error.message;}
-  finally{btn.disabled=false;}
-}
-$('#runMatchBtn')?.addEventListener('click',runMatch);
-// Packet-first intake (GTM Move 1): operator scopes a packet for a company.
-function renderPacketCompanies(){
-  const sel=$('#packetCompany');if(!sel)return;
-  const current=sel.value;
-  sel.replaceChildren();
-  const first=document.createElement('option');first.value='';first.textContent=companies.length?'Select a company…':'No company accounts yet';sel.append(first);
-  for(const c of companies){const o=document.createElement('option');o.value=c.user_id;o.textContent=(c.organization_name||c.display_name||'Company')+(c.display_name&&c.organization_name?` · ${c.display_name}`:'');sel.append(o);}
-  if(current)sel.value=current;
-}
-$('#adminPacketForm')?.addEventListener('submit',async event=>{
-  event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const message=$('#adminPacketMessage');
-  button.disabled=true;const original=button.textContent;button.textContent='Sending…';if(message){message.textContent='';message.classList.remove('is-error');}
-  try{
-    const payload={action:'create-packet',companyUserId:form.elements.companyUserId.value,title:form.elements.title.value,deliverable:form.elements.deliverable.value,acceptance:form.elements.acceptance.value,credits:form.elements.credits.value,targetDate:form.elements.targetDate.value};
-    await adminRequest({method:'POST',body:JSON.stringify(payload)});
-    form.reset();if(message)message.textContent='Packet sent — it now shows in their portal to accept or decline.';
-  }catch(error){if(message){message.textContent=error.message;message.classList.add('is-error');}}
-  finally{button.disabled=false;button.textContent=original;}
-});
-$('#adminBatchForm')?.addEventListener('submit',async event=>{
-  event.preventDefault(); const form=event.currentTarget; const button=$('button[type="submit"]',form); const message=$('#adminBatchFormMessage');
-  button.disabled=true; const original=button.textContent; button.textContent='Creating…'; if (message) { message.textContent=''; message.classList.remove('is-error'); }
-  try {
-    const payload={ action:'create-batch', name:form.elements.name.value, discipline:form.elements.discipline.value, partner_org:form.elements.partner_org.value, season:form.elements.season.value, tier:form.elements.tier.value, capacity:form.elements.capacity.value, access_credits:form.elements.access_credits.value, status:form.elements.status.value, description:form.elements.description.value };
-    const result=await adminRequest({ method:'POST', body:JSON.stringify(payload) });
-    batches=[result.batch, ...batches]; renderBatches(); form.reset();
-    if (message) message.textContent='Batch created.';
-  } catch(error) { if (message) { message.textContent=error.message; message.classList.add('is-error'); } }
-  finally { button.disabled=false; button.textContent=original; }
-});
+$('#adminSignout').addEventListener('click',()=>{ sessionStorage.removeItem(TOKEN_KEY); selectedReference=''; selectedProjectRequest=''; submissions=[]; projectRequests=[]; showLogin('Signed out of this browser.'); });
 
 const authError=captureMagicLink();
 if (authError) showLogin(authError,true); else if (token()) loadInbox().catch(error=>showLogin(error.message,true)); else showLogin();

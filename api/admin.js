@@ -97,11 +97,28 @@ function sameOrigin(req) {
   }
 }
 
-function redirectUrl(req) {
+export function adminRedirectUrl(req, env = process.env, requestedPath = '/admin.html') {
+  const allowedPath = requestedPath === '/operator/intakes'
+    || /^\/operator\/(?:intakes|projects)\/[0-9a-f-]{36}$/i.test(requestedPath)
+    ? requestedPath
+    : '/admin.html';
+  const configured = text(env.COVENDA_ADMIN_URL || env.COVENDA_APP_URL || env.COVENDA_SITE_URL, 500);
+  if (configured) {
+    let url;
+    try { url = new URL(configured); } catch { throw new AdminOperationalError('ADMIN_REDIRECT_URL_INVALID', 'COVENDA_APP_URL and COVENDA_ADMIN_URL must be complete https:// URLs.'); }
+    const local = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+    if ((url.protocol !== 'https:' && !local) || url.username || url.password) {
+      throw new AdminOperationalError('ADMIN_REDIRECT_URL_INVALID', 'COVENDA_APP_URL and COVENDA_ADMIN_URL must be complete https:// URLs.');
+    }
+    url.pathname = allowedPath;
+    url.search = '';
+    url.hash = '';
+    return url.toString();
+  }
   const host = text(req.headers['x-forwarded-host'] || req.headers.host, 300);
   const protocol = text(req.headers['x-forwarded-proto'], 10) || (host.startsWith('localhost') ? 'http' : 'https');
   if (!host || !/^[a-z0-9.:[\]-]+$/i.test(host)) throw new Error('Invalid redirect host.');
-  return `${protocol}://${host}/admin.html`;
+  return `${protocol}://${host}${allowedPath}`;
 }
 
 function linkRateLimited(req, address) {
@@ -174,6 +191,7 @@ export async function authorizeAdmin(req, {
 export async function requestAdminLink(address, req, {
   env = process.env,
   createSupabaseClient = createClient,
+  redirectPath = '/admin.html',
 } = {}) {
   const cleanEmail = email(address);
   if (!cleanEmail) throw new Error('Enter a valid operator email.');
@@ -189,7 +207,7 @@ export async function requestAdminLink(address, req, {
   const supabase = passwordlessClient(env, createSupabaseClient);
   const { error } = await supabase.auth.signInWithOtp({
     email: cleanEmail,
-    options: { shouldCreateUser: false, emailRedirectTo: redirectUrl(req) },
+    options: { shouldCreateUser: false, emailRedirectTo: adminRedirectUrl(req, env, redirectPath) },
   });
   if (error) {
     throw magicLinkOperationalError(error);
@@ -850,7 +868,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST') {
       const input = body(req);
       if (input.action === 'request-link') {
-        const result = await requestAdminLink(input.email, req, dependencies);
+        const result = await requestAdminLink(input.email, req, { ...dependencies, redirectPath: input.redirectPath });
         const requestId = adminRequestId(req);
         logAdminLinkRequest(req, result, requestId, startedAt);
         return res.status(200).json({

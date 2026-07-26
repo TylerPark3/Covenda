@@ -7,11 +7,10 @@
   <meta name="robots" content="noindex,nofollow">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'">
   <title>Covenda · Submission inbox</title>
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/assets/covenda-mark.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,400;6..72,500&amp;display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="type.css">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
   <script src="admin.js" defer></script>
 </head>
@@ -26,25 +25,21 @@
     <symbol id="a-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5"/><path d="M4 17v-5h5"/><path d="M6.1 8.5A7 7 0 0 1 18.7 7L20 12M4 12l1.3 5A7 7 0 0 0 17.9 15.5"/></symbol>
     <symbol id="a-exit" viewBox="0 0 24 24"><path d="M10 4H4v16h6m5-4 4-4-4-4m4 4H8"/></symbol>
     <symbol id="a-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+    <symbol id="a-packet" viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="M8 9h8m-8 4h5m4-8v14"/></symbol>
+    <symbol id="a-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="a-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.4 3 8.2 7 9 4-.8 7-4.6 7-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
   </defs></svg>
 
   <main class="admin-login" id="adminLogin">
     <section>
-      <a class="admin-brand" href="/"><img class="brand-mark-img" src="/assets/covenda-mark.svg" alt="" width="28" height="28">Covenda</a>
+      <a class="admin-brand" href="/"><img class="covenda-mark" src="/assets/covenda-mark.svg" alt="">Covenda</a>
       <h1>Private operator inbox.</h1>
-      <p>Use your authorized Covenda email. We’ll send a one-time 6-digit code (and a link) — type the code to avoid “link expired” issues.</p>
+      <p>Use your authorized Covenda email. Supabase will send a one-time sign-in link.</p>
       <form id="adminLoginForm">
         <label>Operator email<input name="email" type="email" autocomplete="email" placeholder="operator@covenda.com" required></label>
-        <button type="submit">Email me a sign-in code</button>
+        <button type="submit">Email me a sign-in link</button>
         <p id="adminLoginMessage" aria-live="polite"></p>
         <p class="admin-login-help" id="adminLoginHelp">No email after two minutes? Confirm this exact address is in <code>COVENDA_ADMIN_EMAILS</code>, exists in Supabase Authentication → Users, and that custom SMTP is connected.</p>
-      </form>
-      <form id="adminCodeForm" hidden>
-        <p class="admin-code-intro">Enter the 6-digit code from your email. <small>(You can also click the link in the email — the code avoids "link expired" issues from email scanners.)</small></p>
-        <label>6-digit code<input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" placeholder="123456"></label>
-        <button type="submit">Sign in</button>
-        <button type="button" class="admin-code-back" id="adminCodeBack">Use a different email</button>
-        <p id="adminCodeMessage" aria-live="polite"></p>
       </form>
       <a class="back-site" href="/">Back to the website</a>
     </section>
@@ -52,12 +47,13 @@
 
   <div class="admin-shell" id="adminShell" hidden>
     <aside class="admin-nav">
-      <a class="admin-brand" href="/"><img class="brand-mark-img" src="/assets/covenda-mark.svg" alt="" width="28" height="28">Covenda</a>
+      <a class="admin-brand" href="/"><img class="covenda-mark" src="/assets/covenda-mark.svg" alt="">Covenda</a>
       <nav aria-label="Submission audiences">
         <button class="is-active" type="button" data-admin-type="all"><svg><use href="#a-inbox"/></svg><span>Inbox</span><b data-admin-count="all">0</b></button>
         <button type="button" data-admin-type="student_interest"><svg><use href="#a-user"/></svg><span>Students</span><b data-admin-count="student_interest">0</b></button>
         <button type="button" data-admin-type="employer_intake"><svg><use href="#a-company"/></svg><span>Companies</span><b data-admin-count="employer_intake">0</b></button>
         <button type="button" data-admin-type="university_partner"><svg><use href="#a-university"/></svg><span>Universities</span><b data-admin-count="university_partner">0</b></button>
+        <button type="button" id="adminPackagingNav"><svg><use href="#a-packet"/></svg><span>Packaging</span><b id="adminPackagingCount">0</b></button>
       </nav>
       <button class="admin-signout" id="adminSignout" type="button"><svg><use href="#a-exit"/></svg>Sign out</button>
     </aside>
@@ -67,11 +63,8 @@
       <span class="admin-sync-status" id="adminSyncStatus" aria-live="polite">Not synced</span>
       <button class="admin-refresh" id="adminRefresh" type="button"><svg><use href="#a-refresh"/></svg>Refresh inbox</button>
     </header>
-    <main class="admin-main">
+    <main class="admin-main" id="adminInboxMain">
       <section class="admin-queue">
-        <section class="admin-metrics-section" id="adminMetricsSection" hidden>
-          <div class="admin-metrics-band" id="adminMetricsBand"></div>
-        </section>
         <div class="admin-queue-heading">
           <div><h1>Submission inbox</h1><p>Review new intake, find blocked records, and keep every lead moving.</p></div>
           <strong id="adminQueueTotal">0 records</strong>
@@ -83,7 +76,7 @@
           <button type="button" data-summary-status="approved"><span>Approved</span><strong id="adminMetricApproved">0</strong><small>Ready for next step</small></button>
         </div>
         <div class="admin-controls">
-          <select id="adminTypeFilter" aria-label="Submission type"><option value="all">All submissions</option><option value="student_interest">Students</option><option value="employer_intake">Companies</option><option value="university_partner">Universities</option><option value="call_request">Call requests</option></select>
+          <select id="adminTypeFilter" aria-label="Submission type"><option value="all">All submissions</option><option value="student_interest">Students</option><option value="employer_intake">Companies</option><option value="university_partner">Universities</option><option value="referrer_endorsement">Referral endorsements</option><option value="network_access_request">Trusted Talent access</option><option value="call_request">Call requests</option></select>
           <select id="adminStatusFilter" aria-label="Submission status"><option value="all">All statuses</option><option value="received">Received</option><option value="reviewing">In human review</option><option value="needs_information">Needs information</option><option value="packet_proposed">Packet proposed</option><option value="approval_pending">Approval pending</option><option value="approved">Approved</option><option value="declined">Closed</option><option value="archived">Archived</option></select>
           <select id="adminSort" aria-label="Sort submissions"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="attention">Needs attention first</option></select>
           <label class="admin-search"><svg><use href="#a-search"/></svg><input id="adminSearch" type="search" placeholder="Search reference or name" aria-label="Search submissions"></label>
@@ -91,95 +84,22 @@
         <div class="admin-results-bar"><p id="adminResultsCount" aria-live="polite">0 submissions</p><button id="adminClearFilters" type="button" hidden>Clear filters</button></div>
         <div class="admin-table-wrap">
           <table><thead><tr><th>Reference</th><th>Submitter</th><th>Type</th><th>Status</th><th>Received</th></tr></thead><tbody id="adminRows"></tbody></table>
-          <div class="admin-empty" id="adminEmpty" hidden><strong>No submissions found</strong><span>Try a different audience, status, or search.</span></div>
+          <div class="admin-empty" id="adminEmpty" hidden><strong>No submissions match these filters</strong><span>Reset the filters to return to the full operator queue.</span><button id="adminEmptyReset" type="button">Reset filters</button></div>
         </div>
       </section>
       <aside class="admin-detail" id="adminDetail" aria-live="polite">
         <div class="admin-detail-empty"><svg><use href="#a-inbox"/></svg><h2>Select a submission</h2><p>Choose a row to inspect its private intake details.</p></div>
       </aside>
     </main>
-    <section class="admin-requests-section">
-      <div class="admin-queue-heading"><div><h2>Brokered work requests <b id="adminRequestsCount">0</b></h2><p>Companies asking Covenda to package work. Set a status and reply — the company sees it in their portal.</p></div></div>
-      <div class="admin-requests" id="adminRequests"></div>
-    </section>
-    <section class="admin-users-section">
-      <div class="admin-queue-heading"><div><h2>Members <b id="adminUsersCount">0</b></h2><p>Every account on Covenda. Filter to find one, and remove accounts that shouldn’t be here. Deleting a member also removes their profile, projects, and applications — it can’t be undone.</p></div></div>
-      <div class="admin-users-controls">
-        <label class="admin-search"><svg><use href="#a-search"/></svg><input id="adminUsersSearch" type="search" placeholder="Search name or email" aria-label="Search members"></label>
-        <select id="adminUsersRole" aria-label="Filter by role"><option value="">All roles</option><option value="student">Students</option><option value="company">Companies</option><option value="university">Universities</option><option value="none">No profile yet</option></select>
-        <span id="adminUsersShown" class="admin-users-shown"></span>
-      </div>
-      <div class="admin-users" id="adminUsers"></div>
-    </section>
-    <section class="admin-users-section admin-projects-section">
-      <div class="admin-queue-heading"><div><h2>Projects <b id="adminProjectsCount">0</b></h2><p>Every project in the workspace. Remove test or unwanted projects — deleting one also removes its applications and messages. This can’t be undone.</p></div></div>
-      <div class="admin-users-controls">
-        <label class="admin-search"><svg><use href="#a-search"/></svg><input id="adminProjectsSearch" type="search" placeholder="Search project title" aria-label="Search projects"></label>
-        <select id="adminProjectsStatus" aria-label="Filter by status"><option value="">All statuses</option><option value="active">Active (not complete)</option><option value="open">Open</option><option value="in_progress">In progress</option><option value="review">In review</option><option value="complete">Complete</option><option value="proposed">Proposed</option></select>
-        <span id="adminProjectsShown" class="admin-users-shown"></span>
-      </div>
-      <div class="admin-users" id="adminProjects"></div>
-    </section>
-    <section class="admin-users-section admin-appeals-section" id="adminAppealsSection" hidden>
-      <div class="admin-queue-heading"><div><h2>Score appeals <b id="adminAppealsCount">0</b></h2><p>Students contesting a score with new evidence. Every appeal gets a written resolution — the full trail is kept for adverse-impact audits.</p></div></div>
-      <div class="admin-users" id="adminAppeals"></div>
-    </section>
-    <section class="admin-users-section admin-matcher-section">
-      <div class="admin-queue-heading"><div><h2>Matcher <b id="adminMatchVersion"></b></h2><p>The system drafts, you decide. Pick an opportunity and draft a shortlist — at most 3 candidates, each with evidence-cited reasons and one honest gap, or an honest refusal. Every decision you record requires a rationale; those rationales are the training labels.</p></div></div>
-      <div class="admin-users-controls">
-        <select id="matchOpportunity" aria-label="Choose an opportunity"><option value="">Choose an opportunity…</option></select>
-        <button class="admin-primary" id="runMatchBtn" type="button">Draft shortlist</button>
-        <span id="matchStatus" class="admin-users-shown" aria-live="polite"></span>
-      </div>
-      <div class="admin-match-results" id="matchResults"></div>
-    </section>
-    <section class="admin-batches-section">
-      <div class="admin-queue-heading"><div><h2>Elite batches <b id="adminBatchesCount">0</b></h2><p>Curated cohorts. Create a batch, then review every application — accept, waitlist, or decline. Admitted students are surfaced to partner companies.</p></div></div>
-      <form class="admin-batch-form" id="adminBatchForm">
-        <div class="admin-batch-form-grid">
-          <label>Batch name<input name="name" maxlength="160" required placeholder="Quant Research Cohort · Fall"></label>
-          <label>Discipline<input name="discipline" maxlength="160" placeholder="Asset management" list="adminBatchDisciplines"></label>
-          <label>Partner org <small>Optional</small><input name="partner_org" maxlength="160" placeholder="Princeton Quant Club"></label>
-          <label>Season <small>Optional</small><input name="season" maxlength="60" placeholder="Fall 2026"></label>
-          <label>Tier<select name="tier"><option value="open">Open</option><option value="elite">Elite</option></select></label>
-          <label>Capacity <small>Optional</small><input name="capacity" type="number" min="0" step="1" placeholder="12"></label>
-          <label>Access price <small>Credits a company pays</small><input name="access_credits" type="number" min="0" step="1" placeholder="25"></label>
-          <label>Status<select name="status"><option value="open">Open</option><option value="draft">Draft</option><option value="reviewing">Reviewing</option><option value="closed">Closed</option></select></label>
-        </div>
-        <label class="admin-batch-desc">Description <small>Optional</small><textarea name="description" rows="2" maxlength="2000" placeholder="What this cohort is for and who it surfaces to."></textarea></label>
-        <div class="admin-batch-form-actions"><span id="adminBatchFormMessage" aria-live="polite"></span><button type="submit">Create batch</button></div>
-      </form>
-      <datalist id="adminBatchDisciplines">
-        <option>Accounting &amp; finance</option><option>Investment banking</option><option>Asset management</option><option>Equity research</option><option>Private equity / VC</option>
-        <option>Software &amp; AI</option><option>Machine learning / LLMs</option><option>Physical AI / robotics</option><option>Autonomy / self-driving</option>
-        <option>Healthcare operations</option><option>Neuroscience / biotech</option><option>Clinical operations</option>
-        <option>Consumer &amp; retail</option><option>Professional services</option>
-      </datalist>
-      <div class="admin-batches" id="adminBatches"></div>
-    </section>
-    <section class="admin-packet-section">
-      <div class="admin-queue-heading"><div><h2>Propose a packet</h2><p>Scope a project for a company and send it as a packet. They see it in their portal and Accept (which funds it into a live project) or Decline. Members only.</p></div></div>
-      <form class="admin-batch-form" id="adminPacketForm">
-        <div class="admin-batch-form-grid">
-          <label>Company<select name="companyUserId" id="packetCompany" required><option value="">Select a company…</option></select></label>
-          <label>Packet title<input name="title" maxlength="160" required placeholder="Competitor fee benchmarking"></label>
-          <label>Price <small>Credits (1 = $1)</small><input name="credits" type="number" min="0" max="100000" step="25" placeholder="400"></label>
-          <label>Target date <small>Optional</small><input name="targetDate" type="date"></label>
-        </div>
-        <label class="admin-batch-desc">Deliverable<textarea name="deliverable" rows="2" maxlength="2000" required placeholder="A cited spreadsheet: 8 competitors' published fee tiers + a summary tab flagging the 3 biggest gaps."></textarea></label>
-        <label class="admin-batch-desc">Acceptance criteria <small>What 'done and correct' means</small><textarea name="acceptance" rows="2" maxlength="2000" placeholder="8 firms covered · every number linked to its source · summary tab flags the 3 biggest gaps."></textarea></label>
-        <div class="admin-batch-form-actions"><span id="adminPacketMessage" aria-live="polite"></span><button type="submit">Send packet</button></div>
-      </form>
-    </section>
-    <section class="admin-digest-section">
-      <div class="admin-queue-heading"><div><h2>Partner monthly digests</h2><p>A once-a-month email to each referral partner summarizing their own cohort (endorsed → applied → verified). Preview first — sending only works once Resend + <code>COVENDA_DIGEST_ENABLED</code> are set.</p></div></div>
-      <div class="admin-digest-actions">
-        <button type="button" class="portal-ghost" id="digestPreviewBtn">Preview digests</button>
-        <button type="button" id="digestSendBtn" disabled>Send all</button>
-        <span id="digestStatus" aria-live="polite"></span>
-      </div>
-      <div class="admin-digests" id="adminDigests"></div>
-    </section>
+    <main class="packaging-main" id="adminPackagingMain" hidden>
+      <section class="packaging-queue">
+        <div class="packaging-heading"><div><p>Brokered work</p><h1>Packaging queue</h1><span>Turn company needs into safe, student-ready Project Packets.</span></div><strong id="packagingTotal">0 requests</strong></div>
+        <div class="packaging-tabs" role="tablist" aria-label="Packaging status"><button class="is-active" type="button" data-packaging-filter="submitted">Submitted</button><button type="button" data-packaging-filter="in_packaging">In packaging</button><button type="button" data-packaging-filter="packaged">Packaged</button><button type="button" data-packaging-filter="declined">Declined</button></div>
+        <div class="packaging-list-head"><span>Request</span><span>Type</span><span>Status</span><span>Received</span></div>
+        <div class="packaging-list" id="packagingList"></div>
+      </section>
+      <aside class="packet-editor" id="packetEditor"><div class="packet-editor-empty"><svg><use href="#a-packet"/></svg><h2>Select a request</h2><p>Choose a row to inspect the original need and build its Project Packet.</p></div></aside>
+    </main>
   </div>
 </body>
 </html>

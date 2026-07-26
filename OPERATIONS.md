@@ -38,8 +38,24 @@ Before using real submissions, add these server-only environment variables to th
 | `SUPABASE_PUBLISHABLE_KEY` | Preferred key for requesting Supabase Magic Links. The Vercel integration may provide this automatically. `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_ANON_KEY`, and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are accepted fallbacks. |
 | `POSTGRES_URL` | Server-only pooled database connection supplied by the Vercel Supabase integration. This is the independent ingestion fallback when the Data API is unavailable. |
 | `BLOB_READ_WRITE_TOKEN` | Existing private Blob fallback. Keep it while Supabase is being introduced and during the MVP. |
+| `COVENDA_APP_URL` | Canonical deployed website origin, for example `https://covenda.com`. Member email and Google callbacks return to this origin’s `/portal.html`. Use a branch URL in Preview and the production domain in Production. |
 
 After adding variables, redeploy the Vercel project. Submit one clearly synthetic company form, one synthetic student form, and one synthetic university roster. Confirm all three appear in Supabase Table Editor under `public.submissions` with `EMP-`, `STU-`, and `UNI-` references. Also confirm the website receipt shows the same reference.
+
+### Turn on member file uploads
+
+In Vercel, open the Covenda project → Storage → Create Database → Blob. Connect the Blob store to the project and accept the generated `BLOB_READ_WRITE_TOKEN`. Confirm the variable is enabled for both Preview and Production, then redeploy each environment. Do not copy this token into browser code or give it a `NEXT_PUBLIC_` prefix.
+
+Avatar photos are resized in the browser to at most 512 × 512 pixels and encoded as WebP before upload. HEIC/HEIF photos must first be exported as JPEG, PNG, or WebP. Project attachments are intentionally limited to 4 MB each while uploads pass through a Vercel Function; larger-file direct uploads can be introduced when the pilot requires them.
+
+### Configure member auth callbacks
+
+1. Add `COVENDA_APP_URL` in Vercel with the site origin only (for example `https://covenda.com`, without a page path). Give Preview deployments their Preview origin and Production the production origin. This controls both member and operator callbacks; an explicit `COVENDA_ADMIN_URL` remains supported as the admin override.
+2. In Supabase → Authentication → URL Configuration, add both exact callback URLs, such as `https://covenda.com/portal.html` and `https://covenda.com/admin.html`, to Redirect URLs. Keep each active Vercel Preview callback there while testing that branch.
+3. In Supabase → Authentication → Sign In / Providers, keep Email enabled and configure Google with the same Supabase project used by the Vercel deployment.
+4. Redeploy after changing Vercel variables. Existing deployments do not receive environment changes retroactively.
+
+The application falls back to the current request origin only when `COVENDA_APP_URL` is absent, which keeps local and one-off Preview testing possible. Production should always set it.
 
 ### If receipts appear on the website but not in Supabase
 
@@ -93,7 +109,7 @@ The operator inbox also stores a private internal note and optional follow-up da
 The first authenticated member workspace is available at `/portal.html`. It supports one Supabase account system for students, companies, and universities:
 
 - students can complete a private profile, view assigned projects, browse open member projects, and send an application;
-- companies can create projects, track their project list and applications, and view student profiles that opted into member discovery;
+- companies can create projects, track their project list and applications, and request human-approved access to the Trusted Talent network;
 - universities can maintain their partner profile and create or track projects.
 
 Before deploying it:
@@ -103,6 +119,8 @@ Before deploying it:
 3. In Authentication → Providers → Google, enable Google and enter the Google OAuth client ID and client secret. Add the Supabase callback URL shown on that page to the Google Cloud OAuth client.
 4. For email sign-in, configure custom SMTP in Supabase. Google sign-in is the recommended first production path while SMTP is being configured.
 5. Confirm Vercel has the same Supabase URL, publishable key, and server-only secret used by the project where the migration was applied. Redeploy after every variable change.
+6. Apply the later portal migrations in timestamp order, including `20260726000000_trusted_talent_network.sql`. This adds the access-request type, a server-only normalized referral table, and the member-email bridge used to attach approved endorsements to opted-in profiles.
+7. Apply `20260728000000_partner_verification.sql`. Partner submissions now require two separate operator decisions: set the submission status to **Approved**, then use **Partner verification** in the admin detail panel to record founder confirmation. Existing approvals intentionally remain unverified until this second action is completed.
 
 Google and email callbacks return to `/portal.html`; the browser stores the session in `localStorage` so it persists across browser restarts (a standard "remember me" — persisting the refresh token in `localStorage` is the accepted tradeoff; an httpOnly-cookie migration is a someday item). The marketing site (same origin) reads a non-sensitive cached summary (`covendaMemberSummary`: name/avatar/role) to paint a "Signed in" state instantly, then verifies/refreshes in the background and reverts to "Member sign in" if the session is dead. The API revalidates the access token with Supabase on every protected request and refreshes expired sessions with the Supabase refresh token. Member tables have no anonymous or direct authenticated-browser grants.
 
@@ -132,6 +150,15 @@ Additional server-only Vercel environment variables introduced after the submiss
 
 Money-in is verified working in Stripe **test** mode on `covenda.app`. To go live: verify the business in Stripe, swap test keys for live keys, create a live-mode webhook, and redeploy. Student payouts (money-out) remain stubbed pending legal (1099s, worker classification, F-1). Run migrations `20260726200000_stripe_purchase_ledger.sql` and `20260726210000_identity_verification.sql` in Supabase.
 
+### Trusted Talent approval flow
+
+1. A company member opens **Student network** and sends an access request. It appears in `public.submissions` with a `NET-` reference and in `/admin.html` under **Trusted Talent access**.
+2. An operator reviews the company, intended roles, and hiring timeline, then changes the request to **Approved** in the private inbox.
+3. The company reloads the member portal. Only then does the API return students whose profile visibility is set to members, their operator-verified referral paths, and accepted Covenda project records.
+4. Professor, lab, club, and career-center referrals arrive as referral endorsements. After approving the intake, an operator must separately enable **Founder-confirmed partner**. Only then does `public.student_endorsements` mark the evidence verified; removing confirmation, declining, or archiving the source withdraws that verified state.
+
+Student and referrer email addresses never appear in the company response. The browser cannot query `student_endorsements` directly, and referral records are evidence for human review—not an automated ranking or hiring guarantee.
+
 An alert contains only the submission type, receipt reference, company Project Packet readiness count when applicable, revision reference when applicable, and the protected admin link when configured. It excludes names, email addresses, company problems, student profiles, and other private answers.
 
 ## Where submissions can be viewed now
@@ -146,7 +173,7 @@ People can also recover a missing receipt from **Workspace → Submissions → F
 
 ## Next operations milestone
 
-Connect a verified Covenda SMTP sender, enable the Google provider, and apply the member portal migration to the same Supabase project used by Vercel. After real accounts can sign in, the next product milestone is operator-controlled project matching, milestone updates, and private project messages.
+Connect a verified Covenda SMTP sender, keep the Google provider enabled, and apply every portal migration to the same Supabase project used by Vercel. After real accounts can sign in, the next product milestone is company-to-student introductions, student-controlled availability, and paid network access without weakening the human approval boundary.
 
 ## Safety checks before production use
 

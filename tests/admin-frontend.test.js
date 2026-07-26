@@ -16,6 +16,8 @@ test('operator inbox has passwordless sign-in and a complete review surface', ()
   assert.match(html, /Students/);
   assert.match(html, /Companies/);
   assert.match(html, /Universities/);
+  assert.match(html, /Referral endorsements/);
+  assert.match(html, /Trusted Talent access/);
   assert.match(html, /id="adminMetricReceived"/);
   assert.match(html, /id="adminRefresh"/);
   assert.match(html, /id="adminSort"/);
@@ -34,10 +36,22 @@ test('operator inbox has passwordless sign-in and a complete review surface', ()
   assert.match(script, /internal_note/);
   assert.match(script, /follow_up_at/);
   assert.match(script, /Save operator update/);
+  assert.match(script, /Referral source/);
+  assert.match(script, /Roles or skills/);
   assert.match(styles, /\.admin-main/);
   assert.match(styles, /\.admin-detail/);
   assert.match(styles, /\.admin-summary/);
   assert.match(styles, /\.detail-workflow/);
+  assert.match(html, /id="adminPackagingMain"/);
+  assert.match(html, /Packaging queue/);
+  assert.match(script, /action:'save-packaging'/);
+  assert.match(script, /action:'publish-request'/);
+  assert.match(script, /No client or patient records/);
+  assert.match(styles, /\.packet-editor/);
+  assert.match(script, /Partner verification/);
+  assert.match(script, /Founder-confirmed partner/);
+  assert.match(script, /action:'verify-partner'/);
+  assert.match(styles, /\.partner-verification/);
 });
 
 test('operator UI stays code-native and contains no server credentials', () => {
@@ -52,4 +66,21 @@ test('admin HTML ids are unique and mobile layout is explicit', () => {
   assert.equal(new Set(ids).size, ids.length);
   assert.match(styles, /@media \(max-width: 720px\)/);
   assert.match(styles, /tbody tr/);
+  assert.match(styles, /\.admin-main \{ grid-template-columns:minmax\(0,1fr\)/);
+  assert.match(styles, /\.admin-main,\.packaging-main \{ width:100%; max-width:100vw/);
+});
+
+test('admin shares the canonical Covenda mark', () => {
+  assert.match(html, /href="\/assets\/covenda-mark\.svg"/);
+  assert.ok((html.match(/src="\/assets\/covenda-mark\.svg"/g) || []).length >= 2);
+  assert.doesNotMatch(styles, /\.admin-brand i/);
+});
+
+test('operator queue has flat controls and a recoverable filtered empty state', () => {
+  assert.match(html, /id="adminEmptyReset"/);
+  assert.match(html, /Reset the filters to return to the full operator queue/);
+  assert.match(script, /adminEmptyReset/);
+  assert.match(styles, /\.admin-status::before \{ display:none; \}/);
+  assert.match(styles, /\.admin-empty button/);
+  assert.match(styles, /\.workflow-actions button \{[^}]*background:var\(--gold\)/);
 });

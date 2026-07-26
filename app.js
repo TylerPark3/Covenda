@@ -6,13 +6,57 @@ const state = {
   surface: 'site',
   workType: 'Research',
   toastTimer: null,
+  affiliationTimer: null,
+  affiliationRequest: 0,
 };
 let selectorFxController = null;
 let deliveryHealthRequest = null;
-// Set by initIcosahedron(): re-measures + redraws the hero icosahedron. The canvas
-// lives in the home-only section, so when we switch TO home we call this to size the
-// canvas against its now-visible box (otherwise it stays blank until a window resize).
-let icoRemeasure = null;
+
+// One editable taxonomy powers both the student questionnaire and the public
+// pathfinder. Students choose concrete industry sub-areas; the second tuple value is
+// the internal work type retained for matching and never presented as another picker.
+const INDUSTRY_TREE = {
+  'Accounting & finance': [
+    ['Reconciliations & close prep', 'Data & spreadsheets'],
+    ['Audit support', 'QA & testing'],
+    ['FP&A / forecasting research', 'Research'],
+    ['Tax prep support', 'Research'],
+    ['Bookkeeping cleanup', 'Data & spreadsheets'],
+  ],
+  'Software & AI': [
+    ['QA & bug reproduction', 'QA & testing'],
+    ['Data cleaning & labeling', 'Data & spreadsheets'],
+    ['Technical documentation', 'Writing & documentation'],
+    ['Model output evaluation', 'QA & testing'],
+    ['Integration testing', 'QA & testing'],
+  ],
+  'Healthcare operations': [
+    ['Process mapping', 'Operations'],
+    ['Policy & SOP documentation', 'Writing & documentation'],
+    ['Public-source research', 'Research'],
+    ['Scheduling & ops analysis (never patient records)', 'Data & spreadsheets'],
+  ],
+  'Consumer & retail': [
+    ['Customer research synthesis', 'Research'],
+    ['Competitor & pricing scans', 'Research'],
+    ['Catalog/data cleanup', 'Data & spreadsheets'],
+    ['Review & sentiment analysis', 'Research'],
+  ],
+  'Professional services': [
+    ['Research briefs', 'Research'],
+    ['Playbooks & SOPs', 'Writing & documentation'],
+    ['Market maps', 'Research'],
+    ['Proposal & deck support', 'Writing & documentation'],
+  ],
+};
+
+const INDUSTRY_DEFAULT_WORK_TYPE = {
+  'Accounting & finance': 'Data & spreadsheets',
+  'Software & AI': 'QA & testing',
+  'Healthcare operations': 'Operations',
+  'Consumer & retail': 'Research',
+  'Professional services': 'Research',
+};
 
 // Single config spot for the "Schedule a demo" flow. Set the event URL in the
 // <meta name="covenda-calendly-url"> tag in index.html. Must be an https
@@ -89,6 +133,7 @@ const storageKey = 'covendaPilotSubmissions';
 const introStorageKey = 'covendaIntroSeen';
 const audienceStorageKey = 'covendaAudience';
 const workTypeStorageKey = 'covendaSelectedWorkType';
+const referralStorageKey = 'covendaReferral';
 const draftKeys = {
   studentForm: 'covendaStudentInterestDraft',
   companyForm: 'covendaCompanyProblemDraft',
@@ -118,83 +163,6 @@ function removeStorage(key) {
   } catch {
     // Local draft storage is an enhancement; submission remains available.
   }
-}
-
-// Marketing top-right nav reflects sign-in state. The portal (same origin) stores its
-// session + a non-sensitive summary in localStorage, so we paint "Signed in" + avatar
-// instantly from cache, then verify/refresh in the background and revert if the session
-// is dead. Token keys mirror portal.js. expiresAt is a Unix timestamp in SECONDS.
-const MEMBER_ACCESS_KEY = 'covendaMemberAccessToken';
-const MEMBER_REFRESH_KEY = 'covendaMemberRefreshToken';
-const MEMBER_EXPIRY_KEY = 'covendaMemberExpiry';
-const MEMBER_SUMMARY_KEY = 'covendaMemberSummary';
-
-function memberNavAvatar(summary) {
-  const node = document.createElement('span');
-  node.className = 'member-nav-avatar';
-  const url = summary && summary.avatarUrl;
-  if (url && /^https:\/\//i.test(url)) {
-    node.style.backgroundImage = `url("${encodeURI(url)}")`;
-    node.classList.add('has-avatar');
-  } else {
-    node.textContent = ((summary && summary.displayName) || 'C').trim().charAt(0).toUpperCase() || 'C';
-  }
-  return node;
-}
-
-function paintMemberSignedIn(link, summary) {
-  link.classList.add('is-signed-in');
-  link.setAttribute('aria-label', 'Open your Covenda workspace');
-  const label = document.createElement('span');
-  label.textContent = 'Signed in';
-  link.replaceChildren(memberNavAvatar(summary), label);
-}
-
-function paintMemberSignedOut(link) {
-  link.classList.remove('is-signed-in');
-  link.setAttribute('aria-label', 'Member sign in');
-  link.innerHTML = '<svg><use href="#icon-lock"/></svg><span>Member sign in</span>';
-}
-
-// Returns true if we hold (or can refresh to) a live session. Silent — never blocks paint.
-async function verifyMemberSession() {
-  const expiry = Number(localStorage.getItem(MEMBER_EXPIRY_KEY) || 0);
-  if (expiry * 1000 > Date.now() + 30000) return true; // still valid, no network needed
-  const refreshToken = localStorage.getItem(MEMBER_REFRESH_KEY) || '';
-  if (!refreshToken) return false;
-  try {
-    const response = await fetch('/api/portal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'refresh-session', refreshToken }) });
-    const result = await response.json().catch(() => ({}));
-    if (response.ok && result.ok && result.accessToken) {
-      localStorage.setItem(MEMBER_ACCESS_KEY, result.accessToken);
-      if (result.refreshToken) localStorage.setItem(MEMBER_REFRESH_KEY, result.refreshToken);
-      if (result.expiresAt) localStorage.setItem(MEMBER_EXPIRY_KEY, String(result.expiresAt));
-      return true;
-    }
-  } catch {
-    // Network hiccup — keep the cached signed-in paint rather than falsely signing out.
-    return true;
-  }
-  return false;
-}
-
-function initMemberNav() {
-  const link = document.querySelector('.member-login-link');
-  if (!link) return;
-  let token = '';
-  let summary = null;
-  try {
-    token = localStorage.getItem(MEMBER_ACCESS_KEY) || '';
-    summary = JSON.parse(localStorage.getItem(MEMBER_SUMMARY_KEY) || 'null');
-  } catch { /* fall back to signed-out */ }
-  if (!token) return; // leave the default "Member sign in"
-  paintMemberSignedIn(link, summary);
-  verifyMemberSession().then(alive => {
-    if (alive) return;
-    // Session is truly dead — clear the stale keys and revert the nav.
-    [MEMBER_ACCESS_KEY, MEMBER_REFRESH_KEY, MEMBER_EXPIRY_KEY, MEMBER_SUMMARY_KEY].forEach(removeStorage);
-    paintMemberSignedOut(link);
-  });
 }
 
 let introRun = 0;
@@ -326,11 +294,18 @@ function restoreDraft(form) {
   const draft = readStorage(draftKeys[form.id], null);
   if (!hasMeaningfulDraft(draft)) return 0;
   applyFormValues(form, draft.values);
+  if (form.id === 'studentForm') {
+    renderStudentSpecializations(draft.values.studentSubIndustry || []);
+    applyFormValues(form, draft.values);
+    hydrateStudentAffiliation();
+  }
   if (form.id === 'companyForm') {
     if (draft.revisionOf) form.dataset.revisionOf = draft.revisionOf;
     else delete form.dataset.revisionOf;
     renderRevisionContext();
   }
+  const status = $('[data-draft-status]', form);
+  if (status) status.textContent = 'Draft restored from this device';
   return Math.max(0, Math.min(Number(draft.step || 0), $$('.form-step', form).length - 1));
 }
 
@@ -352,7 +327,10 @@ function discardDraft(form, { reset = true } = {}) {
   if (reset) {
     form.reset();
     setFormStep(form, 0);
-    if (form.id === 'studentForm') selectWorkType(state.workType);
+    if (form.id === 'studentForm') {
+      renderStudentSpecializations();
+      hydrateStudentAffiliation();
+    }
     if (form.id === 'companyForm') renderCompanyBoundaryGuidance(form);
   }
   const status = $('[data-draft-status]', form);
@@ -410,8 +388,8 @@ function showToast(message) {
 const audienceTitles = {
   home: 'Covenda · Real work becomes credible proof',
   student: 'Covenda · Real work becomes credible evidence',
-  company: 'Covenda for startups · Run a work-trial with vouched talent',
-  university: 'Covenda · Vouch for the students you believe in',
+  company: 'Covenda for companies · Turn delayed work into a project',
+  university: 'Covenda for referrers · Vouch for trusted student talent',
 };
 
 function setAudience(audience) {
@@ -426,9 +404,6 @@ function setAudience(audience) {
     label.textContent = audience === 'student' ? label.dataset.studentLabel : label.dataset.companyLabel;
   });
   document.title = audienceTitles[audience] || audienceTitles.student;
-  // The icosahedron's section is only shown on "home"; re-measure now that its box
-  // exists so the shape renders on the first visit, not only after a reload/resize.
-  if (audience === 'home' && icoRemeasure) icoRemeasure();
   renderSubmissionHistory();
 }
 
@@ -448,22 +423,7 @@ function selectWorkType(workType) {
   if (!workType) return;
   state.workType = workType;
   writeStorage(workTypeStorageKey, workType);
-  $$('.work-option').forEach(button => {
-    const selected = button.dataset.workType === workType;
-    const newlySelected = selected && !button.classList.contains('is-selected');
-    button.classList.toggle('is-selected', selected);
-    button.setAttribute('aria-pressed', String(selected));
-    if (newlySelected) {
-      button.classList.remove('just-selected');
-      window.requestAnimationFrame(() => button.classList.add('just-selected'));
-      window.setTimeout(() => button.classList.remove('just-selected'), 460);
-      selectorFxController?.pulse(button);
-    }
-  });
   $('#workspacePrimaryPath').textContent = workType;
-  $$('input[name="workType"]', $('#studentForm')).forEach(input => {
-    if (input.value === workType) input.checked = true;
-  });
 }
 
 function setWorkspaceTab(tabName) {
@@ -474,6 +434,10 @@ function setWorkspaceTab(tabName) {
 function openDialog(dialog, form) {
   form.dataset.startedAt = String(Date.now());
   const savedStep = restoreDraft(form);
+  if (form.id === 'studentForm') {
+    hydrateStudentAffiliation();
+    if (affiliationValues().organization || affiliationValues().referralCode) verifyStudentAffiliation();
+  }
   // Re-render the optional video-intro preview when a draft is restored
   // (applyFormValues sets values without firing input events). No-op elsewhere.
   form.querySelector('[data-video-intro-input]')?.dispatchEvent(new Event('input', { bubbles: true }));
@@ -508,8 +472,9 @@ function validateStep(form) {
     }
   }
   if (form.id === 'studentForm' && step.dataset.studentStep === '2') {
-    if (!$$('input[name="studentIndustry"]:checked', form).length) {
+    if (!checkedValues(form, 'studentIndustry').length) {
       message.textContent = 'Choose at least one industry.';
+      $('#studentIndustryChoices')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return false;
     }
   }
@@ -534,6 +499,182 @@ function formValue(form, name) {
 
 function checkedValues(form, name) {
   return new FormData(form).getAll(name).map(value => value.toString());
+}
+
+function workTypeForSpecialization(name) {
+  for (const choices of Object.values(INDUSTRY_TREE)) {
+    const match = choices.find(choice => choice[0] === name);
+    if (match) return match[1];
+  }
+  return '';
+}
+
+function derivedStudentWorkTypes(form = $('#studentForm')) {
+  const specializations = checkedValues(form, 'studentSubIndustry');
+  const derived = specializations.map(workTypeForSpecialization).filter(Boolean);
+  if (!derived.length) {
+    checkedValues(form, 'studentIndustry').forEach(industry => {
+      if (INDUSTRY_DEFAULT_WORK_TYPE[industry]) derived.push(INDUSTRY_DEFAULT_WORK_TYPE[industry]);
+    });
+  }
+  return [...new Set(derived)];
+}
+
+function syncDerivedStudentPath() {
+  const workTypes = derivedStudentWorkTypes();
+  if (workTypes[0]) selectWorkType(workTypes[0]);
+  return workTypes;
+}
+
+function renderStudentSpecializations(preserved = null) {
+  const root = $('#studentSpecializations');
+  const form = $('#studentForm');
+  if (!root || !form) return;
+  const selectedBefore = Array.isArray(preserved)
+    ? preserved
+    : checkedValues(form, 'studentSubIndustry');
+  const selectedIndustries = checkedValues(form, 'studentIndustry');
+  root.replaceChildren();
+
+  if (!selectedIndustries.length) {
+    const prompt = document.createElement('p');
+    prompt.className = 'student-specializations-empty';
+    prompt.textContent = 'Choose an industry to see its project areas.';
+    root.append(prompt);
+    return;
+  }
+
+  const heading = document.createElement('div');
+  heading.className = 'student-specializations-heading';
+  const title = document.createElement('h4');
+  title.textContent = 'Choose your focus';
+  const note = document.createElement('p');
+  note.textContent = 'Optional for now — select every sub-area that genuinely interests you.';
+  heading.append(title, note);
+  root.append(heading);
+
+  selectedIndustries.forEach(industry => {
+    const group = document.createElement('fieldset');
+    group.className = 'specialization-group';
+    const legend = document.createElement('legend');
+    legend.textContent = industry;
+    const choices = document.createElement('div');
+    choices.className = 'specialization-chips';
+    INDUSTRY_TREE[industry].forEach(([name]) => {
+      const label = document.createElement('label');
+      const input = document.createElement('input');
+      const copy = document.createElement('span');
+      input.type = 'checkbox';
+      input.name = 'studentSubIndustry';
+      input.value = name;
+      input.checked = selectedBefore.includes(name);
+      copy.textContent = name;
+      label.append(input, copy);
+      choices.append(label);
+    });
+    group.append(legend, choices);
+    root.append(group);
+  });
+
+  $$('input[name="studentSubIndustry"]', root).forEach(input => {
+    input.addEventListener('change', () => {
+      syncDerivedStudentPath();
+      saveDraft(form);
+    });
+  });
+  syncDerivedStudentPath();
+}
+
+function affiliationValues() {
+  const form = $('#studentForm');
+  return {
+    referrerName: formValue(form, 'studentReferrer'),
+    organization: formValue(form, 'studentOrganization'),
+    referralCode: formValue(form, 'studentReferralCode').toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 40),
+  };
+}
+
+function setAffiliationStatus(status) {
+  const form = $('#studentForm');
+  const badge = $('#affiliationStatus');
+  const help = $('#affiliationHelp');
+  if (!form || !badge || !help) return;
+  const states = {
+    empty: ['icon-clock', 'Optional', 'A connection is helpful context, not a guarantee. Unverified claims never receive an endorsement or matching boost.'],
+    checking: ['icon-clock', 'Checking…', 'Covenda is checking approved partner records without exposing private partner details.'],
+    verified: ['icon-shield', 'Covenda-certified partner', 'Confirmed against an approved Covenda partner record. A referral is a signal, not a placement guarantee.'],
+    pending: ['icon-clock', 'Unverified · pending verification', 'We’ll confirm with your program. This does not grant an endorsement or matching boost yet.'],
+  };
+  const [icon, label, description] = states[status] || states.pending;
+  badge.dataset.status = status;
+  badge.replaceChildren(createIcon(icon), document.createTextNode(label));
+  help.textContent = description;
+  form.dataset.affiliationVerified = String(status === 'verified');
+  form.dataset.affiliationVerificationStatus = status === 'verified' ? 'verified' : (status === 'empty' ? 'not provided' : 'pending verification');
+}
+
+function hydrateStudentAffiliation() {
+  const form = $('#studentForm');
+  if (!form) return;
+  const ref = activeReferral();
+  const code = $('[name="studentReferralCode"]', form);
+  const organization = $('[name="studentOrganization"]', form);
+  if (ref?.code && !code.value) code.value = ref.code;
+  if (ref?.via && !organization.value) organization.value = ref.via;
+  if (ref?.verified) setAffiliationStatus('verified');
+  else if (affiliationValues().referrerName || affiliationValues().organization || affiliationValues().referralCode) setAffiliationStatus('pending');
+  else setAffiliationStatus('empty');
+}
+
+async function verifyStudentAffiliation() {
+  const input = affiliationValues();
+  if (!input.referrerName && !input.organization && !input.referralCode) {
+    setAffiliationStatus('empty');
+    return;
+  }
+  const requestId = ++state.affiliationRequest;
+  setAffiliationStatus('checking');
+  try {
+    const params = new URLSearchParams({ action: 'verify-affiliation' });
+    if (input.organization) params.set('organization', input.organization);
+    if (input.referralCode) params.set('code', input.referralCode);
+    const response = await fetch('/api/submissions?' + params.toString(), { headers: { Accept: 'application/json' } });
+    const result = await response.json().catch(() => ({}));
+    if (requestId !== state.affiliationRequest) return;
+    if (!response.ok) throw new Error(result.error || 'Verification is unavailable.');
+    const verified = result.affiliation?.verified === true;
+    setAffiliationStatus(verified ? 'verified' : 'pending');
+    const ref = activeReferral();
+    if (ref && input.referralCode && ref.code === input.referralCode) {
+      writeStorage(referralStorageKey, {
+        ...ref,
+        verified,
+        verificationStatus: verified ? 'verified' : 'pending verification',
+      });
+      renderReferralBanner();
+      renderProfileCredibility();
+      renderProfileAffiliations();
+      renderProofRecord();
+    }
+  } catch {
+    if (requestId === state.affiliationRequest) setAffiliationStatus('pending');
+  }
+}
+
+function scheduleStudentAffiliationCheck() {
+  window.clearTimeout(state.affiliationTimer);
+  hydrateStudentAffiliation();
+  state.affiliationTimer = window.setTimeout(verifyStudentAffiliation, 500);
+}
+
+function studentAffiliationPayload() {
+  const input = affiliationValues();
+  const form = $('#studentForm');
+  return {
+    ...input,
+    verified: form.dataset.affiliationVerified === 'true',
+    verificationStatus: form.dataset.affiliationVerificationStatus || 'not provided',
+  };
 }
 
 function companyTimeCase(form) {
@@ -704,11 +845,14 @@ function renderCompanyReadiness(readiness) {
 
 function renderReview(form) {
   if (form.id === 'studentForm') {
+    const affiliation = studentAffiliationPayload();
     renderDefinitionList($('#studentReviewSummary'), [
       ['Student', [formValue(form, 'studentName'), formValue(form, 'studentSchool')].filter(Boolean).join(' · ')],
-      ['Industries', studentIndustries(form).join(', ')],
-      ['Work paths', derivedWorkTypes(form).join(', ')],
+      ['Industries', checkedValues(form, 'studentIndustry').join(', ')],
+      ['Focus areas', checkedValues(form, 'studentSubIndustry').join(', ') || 'Open within selected industries'],
       ['Strongest skill', [formValue(form, 'studentSkill'), formValue(form, 'studentSkillLevel')].filter(Boolean).join(' · ')],
+      ['Trusted connection', [affiliation.referrerName, affiliation.organization, affiliation.referralCode].filter(Boolean).join(' · ') || 'Not provided'],
+      ['Connection status', affiliation.verified ? 'Covenda-certified partner' : (affiliation.verificationStatus === 'not provided' ? 'Not provided' : 'Unverified · pending verification')],
       ['Availability', [formValue(form, 'studentAvailability'), formValue(form, 'studentHours'), formValue(form, 'studentDuration')].filter(Boolean).join(' · ')],
       ['Project terms', [formValue(form, 'studentCompensation'), formValue(form, 'studentPriority')].filter(Boolean).join(' · ')],
       ['Video intro', videoIntroReviewLabel(formValue(form, 'studentVideoIntro'))],
@@ -754,7 +898,7 @@ function renderProfileCredibility() {
   const host = $('#profileCredibility');
   if (!host) return;
   host.innerHTML = '';
-  const ref = activeReferral();
+  const ref = activeVerifiedReferral();
   const kicker = document.createElement('p');
   kicker.className = 'profile-cred-kicker';
   kicker.textContent = 'Credibility';
@@ -797,7 +941,7 @@ function renderProfileAffiliations() {
   kicker.className = 'profile-cred-kicker';
   kicker.textContent = 'Clubs & affiliations';
   host.append(kicker);
-  const ref = activeReferral();
+  const ref = activeVerifiedReferral();
   const card = document.createElement('div');
   card.className = 'profile-cred-card' + (ref && ref.via ? ' is-endorsed' : '');
   if (ref && ref.via) {
@@ -985,7 +1129,7 @@ function applyDeliveryHealth(primary, { checkedAt = '' } = {}) {
   if (details) details.dataset.status = status;
   if (detailsTitle) {
     detailsTitle.textContent = status === 'ready'
-      ? 'Submission saved securely'
+      ? 'Supabase inbox connected'
       : status === 'checking'
         ? 'Checking the primary inbox…'
         : 'Primary inbox needs attention';
@@ -1459,60 +1603,10 @@ function renderLocalSubmissionState() {
   renderProofRecord();
 }
 
-// §8 industry-first cascading. Canonical verticals (matching the portal/matching taxonomy) →
-// specializations, each mapped to a work type so work_types stay DERIVABLE for matching even
-// though students no longer pick them directly. One editable source of truth.
-const INDUSTRY_TREE = {
-  'Accounting & finance': [
-    { label: 'Month-end close & reconciliation', workType: 'Data & spreadsheets' },
-    { label: 'Financial modeling & analysis', workType: 'Data & spreadsheets' },
-    { label: 'Bookkeeping & AP/AR cleanup', workType: 'Operations' },
-    { label: 'Market & pricing research', workType: 'Research' },
-  ],
-  'Software & AI': [
-    { label: 'Product & market research', workType: 'Research' },
-    { label: 'QA & test cases', workType: 'QA & testing' },
-    { label: 'Data cleanup & analysis', workType: 'Data & spreadsheets' },
-    { label: 'Docs & knowledge base', workType: 'Writing & documentation' },
-  ],
-  'Healthcare operations': [
-    { label: 'Process & workflow mapping', workType: 'Operations' },
-    { label: 'Research & literature synthesis', workType: 'Research' },
-    { label: 'SOPs & documentation', workType: 'Writing & documentation' },
-  ],
-  'Consumer & retail': [
-    { label: 'Customer & market research', workType: 'Research' },
-    { label: 'Operations & CRM hygiene', workType: 'Operations' },
-    { label: 'Reporting & data cleanup', workType: 'Data & spreadsheets' },
-  ],
-  'Professional services': [
-    { label: 'Research & briefs', workType: 'Research' },
-    { label: 'Process documentation', workType: 'Writing & documentation' },
-    { label: 'Operations support', workType: 'Operations' },
-  ],
-  'Not sure yet — show me everything': [
-    { label: 'Open to any safe project', workType: 'Research' },
-  ],
-};
-function studentIndustries(form) { return checkedValues(form, 'studentIndustry'); }
-function derivedWorkTypes(form) {
-  const set = new Set();
-  for (const industry of studentIndustries(form)) for (const spec of (INDUSTRY_TREE[industry] || [])) set.add(spec.workType);
-  return [...set];
-}
-// Show, derived from the picked industries, the concrete work a student would end up on — the
-// "cascade" without a second required input, so drafts stay simple to restore.
-function renderStudentSpecializations(form) {
-  const el = $('#studentSpecializations', form) || $('#studentSpecializations');
-  if (!el) return;
-  const specs = [];
-  for (const industry of studentIndustries(form)) for (const spec of (INDUSTRY_TREE[industry] || [])) if (!specs.includes(spec.label)) specs.push(spec.label);
-  el.textContent = specs.length ? `We’ll surface projects like: ${specs.slice(0, 6).join(' · ')}` : '';
-}
-
 function studentPayload(form) {
-  const industries = studentIndustries(form);
-  const workTypes = derivedWorkTypes(form);
+  const workTypes = derivedStudentWorkTypes(form);
+  const industries = checkedValues(form, 'studentIndustry');
+  const subIndustries = checkedValues(form, 'studentSubIndustry');
   return {
     type: 'student_interest',
     startedAt: Number(form.dataset.startedAt),
@@ -1527,10 +1621,11 @@ function studentPayload(form) {
     graduationYear: Number(formValue(form, 'studentGraduation')),
     major: formValue(form, 'studentMajor'),
     timezone: formValue(form, 'studentTimezone'),
-    interest: (industries.length ? industries : workTypes).join(', '),
+    interest: workTypes.join(', '),
     interests: {
       workTypes,
       industries,
+      subIndustries,
       workStyle: formValue(form, 'studentWorkStyle'),
       ambiguityComfort: formValue(form, 'studentAmbiguity'),
       avoid: '',
@@ -1547,6 +1642,7 @@ function studentPayload(form) {
     videoTranscript: formValue(form, 'studentVideoTranscript'),
     batch: formValue(form, 'studentBatch'),
     referral: activeReferralPayload(),
+    affiliation: studentAffiliationPayload(),
     stage: 'profile_completed',
     linkedQuickRef: (readStorage(QUICK_KEY, null) || {}).reference || '',
     availability: formValue(form, 'studentAvailability'),
@@ -1568,9 +1664,6 @@ function companyPayload(form) {
     type: 'employer_intake',
     ...(form.dataset.revisionOf ? { revisionOf: form.dataset.revisionOf } : {}),
     startedAt: Number(form.dataset.startedAt),
-    // Employer-side referral attribution (GTM Move 3): if the firm arrived through a partner's
-    // ?ref= link, the code rides along so the partner's track record credits the intro.
-    referral: activeReferralPayload(),
     website: formValue(form, 'website'),
     consent: $('[name="companyConsent"]', form).checked,
     contact: {
@@ -1618,13 +1711,8 @@ const companyDialog = $('#companyDialog');
 initSteppedForm(studentForm);
 initSteppedForm(companyForm);
 
-// §8: reflect the picked industries as a derived specialization line, and keep it in sync.
-studentForm.addEventListener('change', event => { if (event.target && event.target.name === 'studentIndustry') renderStudentSpecializations(studentForm); });
-renderStudentSpecializations(studentForm);
-
 for (const form of [studentForm, companyForm]) {
   restoreDraft(form);
-  if (form === studentForm) renderStudentSpecializations(form);
   form.addEventListener('input', () => saveDraft(form));
   form.addEventListener('change', () => saveDraft(form));
   $('[data-clear-draft]', form).addEventListener('click', () => {
@@ -1632,6 +1720,17 @@ for (const form of [studentForm, companyForm]) {
     showToast('Local draft cleared.');
   });
 }
+
+$$('input[name="studentIndustry"]', studentForm).forEach(input => {
+  input.addEventListener('change', () => {
+    renderStudentSpecializations();
+    saveDraft(studentForm);
+  });
+});
+$$('[name="studentReferrer"], [name="studentOrganization"], [name="studentReferralCode"]', studentForm).forEach(input => {
+  input.addEventListener('input', scheduleStudentAffiliationCheck);
+  input.addEventListener('blur', verifyStudentAffiliation);
+});
 
 renderCompanyBoundaryGuidance(companyForm);
 companyForm.addEventListener('input', () => renderCompanyBoundaryGuidance(companyForm));
@@ -1655,14 +1754,6 @@ function openFullProfilePrefilled() {
   if (saved) {
     const set = (name, val) => { const el = $('[name="' + name + '"]', studentForm); if (el && !el.value && val) el.value = val; };
     set('studentName', saved.name); set('studentEmail', saved.email); set('studentSchool', saved.school);
-    // Carry the interest domains tapped at quick-join into the long form, so the student
-    // doesn't re-pick them. Dispatch change so the vertical-first cascade re-derives.
-    if (Array.isArray(saved.industries) && saved.industries.length) {
-      saved.industries.forEach(val => {
-        const cb = $$('[name="studentIndustry"]', studentForm).find(el => el.value === val);
-        if (cb && !cb.checked) { cb.checked = true; cb.dispatchEvent(new Event('change', { bubbles: true })); }
-      });
-    }
     saveDraft(studentForm);
   }
 }
@@ -1684,33 +1775,11 @@ function renderProfileBanner() {
   btn.addEventListener('click', openFullProfilePrefilled);
   banner.append(txt, btn);
 }
-// The quick-join interest chips are the same industry domains the full profile uses, so a
-// tap here pre-selects the long form later. Rendered from INDUSTRY_TREE so they never drift.
-function renderQuickInterests() {
-  const host = $('#quickJoinInterests');
-  if (!host) return;
-  host.innerHTML = '';
-  Object.keys(INDUSTRY_TREE).forEach(name => {
-    const chip = document.createElement('button');
-    chip.type = 'button'; chip.className = 'quick-chip'; chip.textContent = name;
-    chip.setAttribute('aria-pressed', 'false');
-    chip.addEventListener('click', () => {
-      const on = chip.getAttribute('aria-pressed') === 'true';
-      chip.setAttribute('aria-pressed', String(!on));
-      chip.classList.toggle('is-on', !on);
-    });
-    host.append(chip);
-  });
-}
-function selectedQuickInterests() {
-  return $$('#quickJoinInterests .quick-chip[aria-pressed="true"]').map(chip => chip.textContent);
-}
 function openQuickJoin() {
   const done = $('#quickJoinDone');
   done.hidden = true; done.textContent = '';
   quickJoinForm.hidden = false;
   $('#quickJoinMessage').textContent = '';
-  renderQuickInterests();
   quickJoinForm.dataset.startedAt = String(Date.now());
   quickJoinDialog.showModal();
   window.setTimeout(() => $('[name="quickName"]', quickJoinForm)?.focus(), 60);
@@ -1742,7 +1811,6 @@ if (quickJoinForm) {
     if (!name || !emailVal || !consent) { message.textContent = 'Please add your name, email, and agree to be contacted.'; return; }
     const submit = $('button[type="submit"]', quickJoinForm);
     submit.disabled = true; submit.textContent = 'Joining…';
-    const industries = selectedQuickInterests();
     try {
       const result = await sendSubmission({
         type: 'student_quick',
@@ -1751,14 +1819,13 @@ if (quickJoinForm) {
         consent: true,
         contact: { name, email: emailVal },
         school: formValue(quickJoinForm, 'quickSchool'),
-        industries,
-        interest: industries.join(', ') || state.workType || '',
+        interest: state.workType || '',
       });
-      writeStorage(QUICK_KEY, { name, email: emailVal, school: formValue(quickJoinForm, 'quickSchool'), industries, reference: result.reference, stage: 'quick_added', at: new Date().toISOString() });
+      writeStorage(QUICK_KEY, { name, email: emailVal, school: formValue(quickJoinForm, 'quickSchool'), reference: result.reference, stage: 'quick_added', at: new Date().toISOString() });
       saveSubmission({
         type: 'student_quick', reference: result.reference, status: result.status || 'received',
         storage: result.storage || 'confirmed', createdAt: result.createdAt || new Date().toISOString(),
-        title: name + ' · quick join', summary: industries.length ? 'Interested in ' + industries.join(', ') : (state.workType ? 'Interested in ' + state.workType : 'Full profile pending'),
+        title: name + ' · quick join', summary: state.workType ? 'Interested in ' + state.workType : 'Full profile pending',
       });
       renderQuickJoinDone(result.reference);
       renderProfileBanner();
@@ -1796,7 +1863,7 @@ studentForm.addEventListener('submit', async event => {
       destination: result.destination || null,
       createdAt: result.createdAt || new Date().toISOString(),
       title: formValue(studentForm, 'studentName') + ' · interest profile',
-      summary: [checkedValues(studentForm, 'workType').join(', '), formValue(studentForm, 'studentAvailability')].filter(Boolean).join(' · '),
+      summary: [checkedValues(studentForm, 'studentIndustry').join(', '), formValue(studentForm, 'studentAvailability')].filter(Boolean).join(' · '),
     });
     showToast('Your interest profile was received.');
     window.setTimeout(() => {
@@ -2285,13 +2352,13 @@ function renderFlowStep() {
   }
 }
 
-function openWorkDetail(niche) {
+function openWorkDetail(niche, visibleLabel = niche) {
   const data = workNiches[niche];
   if (!data) return;
   selectWorkType(niche);
   const tag = $('#workDetailTag');
   const strong = document.createElement('b');
-  strong.textContent = niche;
+  strong.textContent = visibleLabel;
   tag.replaceChildren(createIcon(data.icon), strong);
   $('#workDetailDesc').textContent = data.desc;
   const roles = $('#workDetailRoles');
@@ -2312,16 +2379,6 @@ function closeWorkDetail() {
   $('.selector-orbit')?.classList.remove('is-exploring');
 }
 
-$$('[data-work-type]').forEach(button => button.addEventListener('click', () => {
-  const niche = button.dataset.workType;
-  if (button.classList.contains('work-option')) {
-    openWorkDetail(niche);
-    saveDraft(studentForm);
-  } else {
-    selectWorkType(niche);
-  }
-  if (button.closest('.work-types')) openDialog(studentDialog, studentForm);
-}));
 $$('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
 $$('.form-dialog').forEach(dialog => dialog.addEventListener('click', event => {
   const bounds = dialog.getBoundingClientRect();
@@ -2509,7 +2566,9 @@ function studentSignalString() {
   return [
     draftValue(draft, 'studentSkill', ''),
     draftValue(draft, 'studentSkillLevel', ''),
-    draftValue(draft, 'workType', '') || (typeof state === 'object' ? state.workType : ''),
+    draftValue(draft, 'studentIndustry', ''),
+    draftValue(draft, 'studentSubIndustry', ''),
+    typeof state === 'object' ? state.workType : '',
   ].filter(Boolean).join(' ').toLowerCase();
 }
 function skillMatches(skill, sig) {
@@ -2517,7 +2576,7 @@ function skillMatches(skill, sig) {
 }
 function roleCompatibility(role) {
   const sig = studentSignalString();
-  const ref = activeReferral();
+  const ref = activeVerifiedReferral();
   const endorsed = !!(ref && ref.code);
   const worked = false; // no completed reviewed work yet — kept explicit and honest
   const skillsTotal = role.skills.length;
@@ -2651,43 +2710,7 @@ function candidateCard(c) {
   const trace = document.createElement('button'); trace.type = 'button'; trace.className = 'outline-button compact cand-trace';
   trace.append(document.createTextNode('Trace referral'), createIcon('icon-route'));
   trace.addEventListener('click', () => openTrace(c));
-
-  // Expandable detail — opens the card into an illustrative mini-profile built ONLY from the
-  // candidate's own sample fields (the section is already labeled illustrative). Explainable,
-  // decision-support framing: why the fit, the evidence shape, and one honest concern.
-  const detail = document.createElement('div'); detail.className = 'cand-detail'; detail.hidden = true;
-  const why = document.createElement('div'); why.className = 'cand-detail-block';
-  const whyH = document.createElement('h4'); whyH.textContent = 'Why this fit';
-  const whyList = document.createElement('ul');
-  [
-    c.function + ' matches the requested function',
-    'Vouched by ' + ref.name + ' (' + ref.role + ') — a staked referral',
-    c.clubRecord ? c.club + ' has a positive track record on Covenda' : 'No club track record yet — individual signal only',
-  ].forEach(t => { const li = document.createElement('li'); li.textContent = t; whyList.append(li); });
-  why.append(whyH, whyList);
-  const ev = document.createElement('div'); ev.className = 'cand-detail-block';
-  const evH = document.createElement('h4'); evH.textContent = 'Evidence shape';
-  const evList = document.createElement('ul');
-  c.skills.forEach(s => { const li = document.createElement('li'); li.textContent = s + ' — demonstrated in reviewed sample work'; evList.append(li); });
-  ev.append(evH, evList);
-  const concern = document.createElement('p'); concern.className = 'cand-detail-concern';
-  concern.textContent = 'One concern to check: confirm ' + (c.skills[0] || 'the core skill') + ' depth on a bounded Stage 1 work-trial before deeper access. A score is a signal, not a guarantee.';
-  detail.append(why, ev, concern);
-
-  const expand = document.createElement('button'); expand.type = 'button'; expand.className = 'outline-button compact cand-expand';
-  expand.setAttribute('aria-expanded', 'false');
-  expand.append(document.createTextNode('View profile'), createIcon('icon-chevron'));
-  expand.addEventListener('click', () => {
-    const open = detail.hidden;
-    detail.hidden = !open;
-    expand.setAttribute('aria-expanded', String(open));
-    expand.replaceChildren(document.createTextNode(open ? 'Close profile' : 'View profile'), createIcon('icon-chevron'));
-    card.classList.toggle('is-open', open);
-  });
-
-  const actions = document.createElement('div'); actions.className = 'cand-actions';
-  actions.append(expand, trace);
-  card.append(head, endorser, club, skills, actions, detail);
+  card.append(head, endorser, club, skills, trace);
   return card;
 }
 function renderCandidates() {
@@ -2765,7 +2788,7 @@ function renderReferrerDashboard() {
   const host = $('#referrerDashboardBody');
   if (!host) return;
   const data = REFERRER_DASHBOARD;
-  const ref = activeReferral();
+  const ref = activeVerifiedReferral();
   const name = (ref && ref.via) || data.name; // personalize the identity if referred by a named partner
   const students = data.students;
   const counts = { endorsed: 0, working: 0, verified: 0 };
@@ -2868,15 +2891,6 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   }
   if (action === 'student-form') {
     selectWorkType(state.workType);
-    // §8: mirror the hero narrowing picks into the account form EVERY time it opens —
-    // additively (checks are only ever added, never removed), so the first page always shows
-    // all the buttons the student tapped without clobbering anything they checked by hand.
-    let seeded = false;
-    narrowPicks().industries.forEach(ind => {
-      const cb = studentForm.querySelector('input[name="studentIndustry"][value="' + ind.replace(/"/g, '') + '"]');
-      if (cb && !cb.checked) { cb.checked = true; seeded = true; }
-    });
-    if (seeded) renderStudentSpecializations(studentForm);
     openDialog(studentDialog, studentForm);
   }
   if (action === 'company-form') {
@@ -2886,14 +2900,6 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
       $('[name="companyProblem"]', companyForm).value = seed;
       saveDraft(companyForm);
     }
-  }
-  // "Create Project" routes into the member portal, where a company account is created/signed
-  // in and the project is actually posted. The typed brief rides along so the portal can
-  // prefill it once you're a company.
-  if (action === 'portal-create-project') {
-    const seed = $('#companyProblemSeed')?.value.trim() || '';
-    try { if (seed) localStorage.setItem('covendaProjectSeed', seed); } catch (_) {}
-    window.location.href = 'portal.html?intent=create-project';
   }
   if (action === 'schedule-demo') scheduleDemo();
   if (action === 'university-roster') openUniversityRoster();
@@ -2919,7 +2925,7 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   if (action === 'roster-endorse') submitEndorsement();
   if (action === 'focus-pathfinder') {
     $('#studentPathfinder').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    window.setTimeout(() => $('.work-option.is-selected')?.focus(), 420);
+    window.setTimeout(() => $('.narrow-option.is-selected, .narrow-option')?.focus(), 420);
   }
   if (action === 'explore-back') closeWorkDetail();
   if (action === 'flow-prev') { flowStep -= 1; renderFlowStep(); }
@@ -3420,7 +3426,7 @@ $('#introScreen').addEventListener('cancel', event => {
 
 const restoredAudience = readStorage(audienceStorageKey, 'home');
 if (['home', 'student', 'company', 'university'].includes(restoredAudience)) state.audience = restoredAudience;
-const restoredWorkTypes = checkedValues(studentForm, 'workType');
+const restoredWorkTypes = derivedStudentWorkTypes(studentForm);
 const rememberedWorkType = readStorage(workTypeStorageKey, 'Research');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];
 else if (rememberedWorkType) state.workType = rememberedWorkType;
@@ -3577,6 +3583,7 @@ function initSelectorFx() {
 
   return {
     pulse(button) {
+      if (!button) return;
       const fieldBounds = field.getBoundingClientRect();
       const buttonBounds = button.getBoundingClientRect();
       pulse.x = buttonBounds.left + buttonBounds.width / 2 - fieldBounds.left;
@@ -3602,8 +3609,6 @@ function initButtonFeedback() {
 // ============================================================================
 // F3 — Partner referral attribution (?ref= landing + partner's shareable link)
 // ============================================================================
-const referralStorageKey = 'covendaReferral';
-
 // Deterministic 6-char code from a partner's org + email, so one partner keeps one
 // stable link. Shape matches the REF- reference format used across the API/migration.
 function makeReferralCode(org, email) {
@@ -3647,9 +3652,19 @@ function activeReferral() {
   return stored && stored.code ? stored : null;
 }
 
+function activeVerifiedReferral() {
+  const stored = activeReferral();
+  return stored?.verified === true ? stored : null;
+}
+
 function activeReferralPayload() {
   const ref = activeReferral();
-  return { code: ref ? ref.code : '', via: ref ? ref.via : '' };
+  return {
+    code: ref ? ref.code : '',
+    via: ref ? ref.via : '',
+    verified: ref?.verified === true,
+    verificationStatus: ref?.verified === true ? 'verified' : (ref ? 'pending verification' : 'not provided'),
+  };
 }
 
 function renderReferralBanner() {
@@ -3658,8 +3673,9 @@ function renderReferralBanner() {
   const ref = activeReferral();
   if (!ref || ref.dismissed) { banner.hidden = true; return; }
   const text = $('#referralBannerText');
-  if (text) text.textContent = 'Referred by ' + (ref.via || 'a Covenda partner')
-    + '. Your partner endorsement is noted — build your proof profile to carry it into the pilot.';
+  if (text) text.textContent = ref.verified === true
+    ? 'Referred by ' + (ref.via || 'a Covenda-certified partner') + '. This partner connection is confirmed; reviewed work still determines later proof.'
+    : 'Referral noted from ' + (ref.via || 'a program') + '. We’ll confirm it before any endorsement or matching boost appears.';
   banner.hidden = false;
 }
 
@@ -3672,13 +3688,6 @@ function dismissReferralBanner() {
   if (banner) banner.hidden = true;
 }
 
-function partnerCohortLink() {
-  const partner = partnerFieldValues();
-  const org = (partner.orgName || '').trim();
-  if (!org) return '';
-  return referralBaseUrl() + 'cohort.html?ref=' + makeReferralCode(org, partner.contactEmail) + '&via=' + encodeURIComponent(org);
-}
-
 function renderReferralLink() {
   const section = $('#referralLinkSection');
   const input = $('#referralLinkInput');
@@ -3686,11 +3695,6 @@ function renderReferralLink() {
   const link = partnerReferralLink();
   if (!link) { section.hidden = true; return; }
   input.value = link;
-  const cohortInput = $('#cohortLinkInput');
-  const cohortOpen = $('#cohortLinkOpen');
-  const cohortLink = partnerCohortLink();
-  if (cohortInput) cohortInput.value = cohortLink;
-  if (cohortOpen) cohortOpen.href = cohortLink || '#';
   section.hidden = false;
 }
 
@@ -3723,7 +3727,7 @@ function credentialMilestone(item) {
   const status = item.status || 'received';
   if (status === 'approved') return { label: 'Employer-Verified', index: 2 };
   if (status === 'packet_proposed' || status === 'approval_pending') return { label: 'Role-Qualified', index: 1 };
-  if (activeReferral()) return { label: 'Endorsed', index: 0 };
+  if (activeVerifiedReferral()) return { label: 'Endorsed', index: 0 };
   return { label: 'Building proof', index: 0 };
 }
 
@@ -3862,7 +3866,7 @@ function studentStanding() {
     return { label: milestone.label, index: milestone.index, started: true, receipt };
   }
   // Referred but not yet submitted — a partner head-start still puts them at Endorsed.
-  if (activeReferral()) return { label: 'Endorsed', index: 0, started: false, receipt: null };
+  if (activeVerifiedReferral()) return { label: 'Endorsed', index: 0, started: false, receipt: null };
   return { label: 'Not started', index: -1, started: false, receipt: null };
 }
 
@@ -3874,7 +3878,7 @@ function renderProofRecord() {
   const endorsementEl = $('#proofRecordEndorsement');
   const shareBtn = $('#proofRecordShare');
   const standing = studentStanding();
-  const ref = activeReferral();
+  const ref = activeVerifiedReferral();
 
   if (standingEl) {
     standingEl.textContent = standing.label;
@@ -3985,139 +3989,98 @@ function renderCohortDashboard() {
 // F3: a partner referral link (?ref=) lands the visitor as a prospective student.
 const incomingReferral = readReferralFromUrl();
 if (incomingReferral) {
+  const existingReferral = activeReferral();
+  const keepsVerifiedState = existingReferral?.code === incomingReferral.code && existingReferral.verified === true;
+  incomingReferral.verified = keepsVerifiedState;
+  incomingReferral.verificationStatus = keepsVerifiedState ? 'verified' : 'pending verification';
   writeStorage(referralStorageKey, incomingReferral);
   state.audience = 'student';
 }
+const requestedAudience = (() => { try { return new URLSearchParams(location.search).get('audience'); } catch { return ''; } })();
+if (!incomingReferral && ['student','company','university'].includes(requestedAudience)) state.audience = requestedAudience;
 
-// QR / shareable deep-link: covenda.app/?join=student lands on the student surface and pops
-// the 30-second quick join immediately — the frictionless path for handing out a QR code.
-// setTimeout lets the rest of boot (audience + dialog wiring) finish before we open it.
-let joinIntent = null;
-try { joinIntent = new URLSearchParams(location.search).get('join'); } catch { joinIntent = null; }
-if (joinIntent === 'student') {
-  state.audience = 'student';
-  setTimeout(() => { try { openQuickJoin(); } catch (_) { /* dialog not ready — ignore */ } }, 150);
+// ---- Industry-first narrowing -----------------------------------------------
+// The public explorer and full profile use the same taxonomy. Work types remain an
+// internal compatibility signal derived from the concrete sub-area a student chooses.
+const narrowStorageKey = 'covendaNarrowPath';
+
+function narrowRound(label, options, selected, onPick) {
+  const round = document.createElement('div');
+  round.className = 'narrow-round';
+  const heading = document.createElement('p');
+  heading.className = 'narrow-label';
+  heading.textContent = label;
+  const grid = document.createElement('div');
+  grid.className = 'narrow-options';
+  options.forEach(option => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'narrow-option' + (option === selected ? ' is-selected' : '');
+    button.setAttribute('aria-pressed', option === selected ? 'true' : 'false');
+    button.textContent = option;
+    button.addEventListener('click', () => {
+      selectorFxController?.pulse(button);
+      onPick(option);
+    });
+    grid.append(button);
+  });
+  round.append(heading, grid);
+  return round;
 }
 
-// ---- Vertical-first narrowing -----------------------------------------------
-// Industry → focus area → the specific work. Each round is derived from the previous
-// pick, so a student lands on "Month-end close · reconciliation cleanup" instead of
-// declaring "I can do research". Every leaf maps to one of the five work types, which
-// is what the rest of the app already understands, so nothing downstream changes.
-// §8/§12-B: industry → real SUB-INDUSTRY (a student's domain expertise) → a concrete work
-// item. Level 2 is genuine specialization (Asset management, Equity research, Neuroscience…),
-// not a project chore; the leaf still carries a work_type so matching data stays derivable.
-const NARROW_TREE = {
-  'Accounting & finance': {
-    'Investment banking': [['M&A analysis', 'Research'], ['Comps & valuation', 'Data & spreadsheets'], ['Pitch materials', 'Writing & documentation']],
-    'Asset management': [['Portfolio analysis', 'Data & spreadsheets'], ['Fund & manager research', 'Research'], ['Performance reporting', 'Data & spreadsheets']],
-    'Equity research': [['Company deep-dives', 'Research'], ['Financial modeling', 'Data & spreadsheets'], ['Research notes', 'Writing & documentation']],
-    'Private equity / VC': [['Market mapping', 'Research'], ['Diligence support', 'Research'], ['Portfolio operations', 'Operations']],
-    'Corporate finance / FP&A': [['Budget modeling', 'Data & spreadsheets'], ['Variance analysis', 'Data & spreadsheets'], ['Month-end close support', 'Operations']],
-    'Accounting & audit': [['Reconciliation', 'Data & spreadsheets'], ['AP/AR cleanup', 'Operations'], ['Audit prep', 'Writing & documentation']],
-  },
-  'Software & AI': {
-    'Machine learning / LLMs': [['Data labeling & eval', 'QA & testing'], ['Eval / prompt sets', 'Research'], ['Model & API docs', 'Writing & documentation']],
-    'Physical AI / robotics': [['Sensor data review', 'Data & spreadsheets'], ['Test-case authoring', 'QA & testing'], ['Field research', 'Research']],
-    'Autonomy / self-driving': [['Scenario labeling', 'QA & testing'], ['Edge-case research', 'Research'], ['Data QA', 'QA & testing']],
-    'Web & full-stack': [['Manual QA passes', 'QA & testing'], ['Bug reproduction', 'QA & testing'], ['Docs & guides', 'Writing & documentation']],
-    'Data & analytics': [['Data cleanup', 'Data & spreadsheets'], ['Dashboards & reporting', 'Data & spreadsheets'], ['Analysis memos', 'Research']],
-    'Security': [['Test-case authoring', 'QA & testing'], ['Threat / policy research', 'Research'], ['Runbook docs', 'Writing & documentation']],
-  },
-  'Healthcare operations': {
-    'Neuroscience / biotech': [['Literature synthesis', 'Research'], ['Data cleanup', 'Data & spreadsheets'], ['Findings memo', 'Writing & documentation']],
-    'Clinical operations': [['Workflow mapping', 'Operations'], ['Scheduling analysis', 'Data & spreadsheets'], ['SOP authoring', 'Writing & documentation']],
-    'Digital health': [['Product research', 'Research'], ['QA passes', 'QA & testing'], ['Onboarding docs', 'Writing & documentation']],
-    'Medical devices': [['Test documentation', 'QA & testing'], ['Vendor comparison', 'Research'], ['Process mapping', 'Operations']],
-    'Pharma / life sciences': [['Public-source research', 'Research'], ['Data extraction', 'Data & spreadsheets'], ['Briefing memo', 'Writing & documentation']],
-  },
-  'Consumer & retail': {
-    'E-commerce': [['Catalog cleanup', 'Data & spreadsheets'], ['Conversion research', 'Research'], ['Ops process map', 'Operations']],
-    'Brand & marketing': [['Competitor teardown', 'Research'], ['Content QA', 'QA & testing'], ['Campaign briefs', 'Writing & documentation']],
-    'Consumer packaged goods': [['Category research', 'Research'], ['Sales data cleanup', 'Data & spreadsheets'], ['Retail process map', 'Operations']],
-    'Supply chain & ops': [['Inventory analysis', 'Data & spreadsheets'], ['Returns analysis', 'Data & spreadsheets'], ['Workflow map', 'Operations']],
-  },
-  'Professional services': {
-    'Management consulting': [['Market research', 'Research'], ['Model / slide build', 'Data & spreadsheets'], ['Findings deck', 'Writing & documentation']],
-    'Legal': [['Legal research', 'Research'], ['Document review', 'QA & testing'], ['Summaries & memos', 'Writing & documentation']],
-    'Marketing & advertising': [['Audience research', 'Research'], ['Creative QA', 'QA & testing'], ['Brief writing', 'Writing & documentation']],
-    'Real estate': [['Market comps', 'Research'], ['Financial modeling', 'Data & spreadsheets'], ['Listing documentation', 'Writing & documentation']],
-  },
-};
-const NARROW_ANY = 'Not sure yet — show me everything';
-// §8 Pinterest-style progressive narrowing: a MULTI-SELECT additive tile grid. Picking an
-// industry reveals its focus tiles inline (flex-wrap → same row until full, then wrap);
-// picking a focus reveals its specific tiles. Selections persist and pre-fill the account.
-const narrowStorageKey = 'covendaNarrowPicks';
-const narrowSel = new Set((readStorage(narrowStorageKey, []) || []).filter(k => typeof k === 'string'));
-function persistNarrow() { writeStorage(narrowStorageKey, [...narrowSel]); }
-function toggleNarrow(key) {
-  if (narrowSel.has(key)) {
-    narrowSel.delete(key);
-    for (const k of [...narrowSel]) if (k.startsWith(key + '>')) narrowSel.delete(k); // drop hidden descendants
-  } else {
-    narrowSel.add(key);
-  }
+function narrowResult(path) {
+  const box = document.createElement('div');
+  box.className = 'narrow-result';
+  const trail = document.createElement('p');
+  trail.className = 'narrow-trail';
+  trail.textContent = [path.vertical, path.focus, path.specific].filter(Boolean).join('  ·  ');
+  const note = document.createElement('p');
+  note.className = 'narrow-note';
+  note.textContent = 'Covenda will show you paid projects that look like this. You can change it any time.';
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.className = 'narrow-reset';
+  reset.textContent = 'Start over';
+  reset.addEventListener('click', () => { state.narrowPath = {}; writeStorage(narrowStorageKey, {}); renderNarrowFlow(); });
+  box.append(trail, note, reset);
+  return box;
 }
-// Map the selection back to the taxonomy for the account payload. Keys are '>'-joined paths
-// (industry / industry>focus / industry>focus>specific); no label contains '>'.
-function narrowPicks() {
-  const industries = []; const subIndustries = []; const workTypes = new Set();
-  for (const key of narrowSel) {
-    const parts = key.split('>');
-    // Any pick — top-level chip OR a deeper focus/specific — counts its parent industry, so
-    // the account form mirrors every button the student tapped in the hero.
-    if (!industries.includes(parts[0])) industries.push(parts[0]);
-    if (parts.length === 1) continue;
-    const label = parts[parts.length - 1];
-    if (!subIndustries.includes(label)) subIndustries.push(label);
-    if (parts.length === 3) {
-      const leaf = (NARROW_TREE[parts[0]]?.[parts[1]] || []).find(l => l[0] === parts[2]);
-      if (leaf) workTypes.add(leaf[1]);
-    }
-  }
-  return { industries, subIndustries, workTypes: [...workTypes] };
-}
-function narrowTile(label, key, level) {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = 'narrow-tile narrow-l' + level + (narrowSel.has(key) ? ' is-selected' : '');
-  button.setAttribute('aria-pressed', narrowSel.has(key) ? 'true' : 'false');
-  button.textContent = label;
-  button.addEventListener('click', () => { toggleNarrow(key); persistNarrow(); renderNarrowFlow(); });
-  return button;
-}
+
 function renderNarrowFlow() {
   const root = document.querySelector('[data-narrow-flow]');
   if (!root) return;
+  const path = state.narrowPath || {};
   root.textContent = '';
-  const grid = document.createElement('div');
-  grid.className = 'narrow-grid';
-  for (const industry of Object.keys(NARROW_TREE)) {
-    grid.append(narrowTile(industry, industry, 1));
-    if (!narrowSel.has(industry)) continue;
-    for (const focus of Object.keys(NARROW_TREE[industry])) {
-      const fKey = industry + '>' + focus;
-      grid.append(narrowTile(focus, fKey, 2));
-      if (!narrowSel.has(fKey)) continue;
-      for (const [leaf] of NARROW_TREE[industry][focus]) grid.append(narrowTile(leaf, fKey + '>' + leaf, 3));
-    }
-  }
-  root.append(grid);
-  const picks = narrowPicks();
-  if (picks.industries.length || picks.subIndustries.length) {
-    const note = document.createElement('p');
-    note.className = 'narrow-note';
-    note.textContent = 'Covenda will show you paid projects that look like this. Make a student account to save it.';
-    root.append(note);
-  }
+  const verticals = Object.keys(INDUSTRY_TREE);
+  root.append(narrowRound('Start with your industry', verticals, path.vertical, value => {
+    state.narrowPath = { vertical: value };
+    writeStorage(narrowStorageKey, state.narrowPath);
+    renderNarrowFlow();
+  }));
+  if (!path.vertical || !INDUSTRY_TREE[path.vertical]) return;
+
+  const leaves = INDUSTRY_TREE[path.vertical];
+  root.append(narrowRound('Choose a project area', leaves.map(leaf => leaf[0]), path.specific, value => {
+    const leaf = leaves.find(item => item[0] === value);
+    state.narrowPath = { vertical: path.vertical, specific: value, workType: leaf ? leaf[1] : '' };
+    writeStorage(narrowStorageKey, state.narrowPath);
+    renderNarrowFlow();
+    if (leaf) openWorkDetail(leaf[1], value);
+  }));
+  if (path.specific) root.append(narrowResult(path));
 }
 
 restoreRosterDraft();
 renderLocalSubmissionState();
+state.narrowPath = readStorage(narrowStorageKey, {}) || {};
 renderNarrowFlow();
-selectWorkType(state.workType);
+renderStudentSpecializations();
+hydrateStudentAffiliation();
+if (incomingReferral) verifyStudentAffiliation();
+selectWorkType(state.narrowPath.workType || state.workType);
 setAudience(state.audience);
+const requestedAction = (() => { try { return new URLSearchParams(location.search).get('action'); } catch { return ''; } })();
+if (state.audience === 'university' && requestedAction === 'roster') window.requestAnimationFrame(openUniversityRoster);
 renderReferralBanner();
 renderReferralLink();
 // Steps 5/6/3 + gold-tile motif — run here (not at definition time) so the referral
@@ -4127,7 +4090,7 @@ buildCandidateFilters();
 renderCandidates();
 renderReferrerDashboard();
 selectorFxController = initSelectorFx();
-selectorFxController?.pulse($('.work-option.is-selected'));
+selectorFxController?.pulse($('.narrow-option.is-selected, .narrow-option'));
 initButtonFeedback();
 // ---- Interactive gold icosahedron (decorative accent; drag to spin) ----
 function initIcosahedron() {
@@ -4270,10 +4233,7 @@ function initIcosahedron() {
     draw(performance.now());
     raf = requestAnimationFrame(frame);
   }
-  // Re-measure on start: the panel may have been hidden / not laid out at init (0×0), so the
-  // first correct size is only known once it scrolls into view. Without this the shape stays
-  // blank until a window resize — which is why it "only appeared after reload" before.
-  function start() { if (running) return; resize(); draw(); running = true; raf = requestAnimationFrame(frame); }
+  function start() { if (running) return; running = true; raf = requestAnimationFrame(frame); }
   function stop() { running = false; cancelAnimationFrame(raf); }
   function panelVisible() {
     const r = panel.getBoundingClientRect();
@@ -4283,17 +4243,6 @@ function initIcosahedron() {
   resize();
   draw(); // render one static frame immediately so the shape is never blank
   window.addEventListener('resize', () => { resize(); if (!running) draw(); });
-
-  // The canvas lives in an audience-gated section that is display:none until the
-  // "home" surface is shown, so its first real size only exists once it's revealed.
-  // Expose a re-measure hook (called by setAudience on the switch to "home") and add a
-  // ResizeObserver backstop — together they make the shape appear (even the static
-  // reduced-motion frame) on first view instead of only after a reload/window-resize.
-  // These are set BEFORE the reduced-motion early return on purpose.
-  icoRemeasure = () => { resize(); if (!running) draw(); };
-  if ('ResizeObserver' in window) {
-    new ResizeObserver(() => { resize(); if (!running) draw(); }).observe(canvas);
-  }
 
   if (reduceMotion) {
     hint?.classList.add('is-hidden');
@@ -4342,7 +4291,7 @@ function initScrollReveal() {
     '.work-record', '.packet', '.risk-note',
     '.feature-copy', '.feature-panel',
     '.value-col',
-    '.why-section .why-copy', '.why-section .fit-table',
+    '.why-section .why-copy', '.why-section .fit-table', '.why-section .work-types',
     '.batches-section .section-heading', '.batch-card',
     '.final-cta .audience-content',
   ].join(',');
@@ -4370,214 +4319,8 @@ function initScrollReveal() {
   window.setTimeout(() => targets.forEach(el => { if (!revealed.has(el)) reveal(el); }), 4000);
 }
 
-// ---- Home-hero background: a subtle gold "signal from noise" field. -----------------------
-// Many faint gold motes drift in from the left (the mass, the noise). At a soft filter line
-// most dim and fade out; a few brighten to solid gold and converge toward a focal cluster on
-// the right (the curated few), lightly linked like a bench. Deliberately low-contrast and
-// non-intrusive — it lives BEHIND the hero copy and never competes with it. It quietly
-// dramatizes Covenda's whole thesis: curation pulls signal out of the pile.
-function initHeroField() {
-  const canvas = document.getElementById('heroFieldCanvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const GOLD = '180,123,32';
-  let W = 0, H = 0, motes = [], running = false, raf = 0;
-
-  function resize() {
-    const r = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = r.width; H = r.height;
-    canvas.width = Math.max(1, Math.round(W * dpr));
-    canvas.height = Math.max(1, Math.round(H * dpr));
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    build();
-  }
-  const focal = () => ({ x: W * 0.76, y: H * 0.46 });
-  function spawn(seed = false) {
-    return {
-      x: seed ? Math.random() * W : -12 - Math.random() * 40,
-      y: Math.random() * H,
-      vx: 0.18 + Math.random() * 0.34,
-      r: 0.8 + Math.random() * 1.6,
-      phase: Math.random() * Math.PI * 2,
-      state: 'drift', alpha: 0.05 + Math.random() * 0.06, judged: false,
-      // each selected mote settles near, but not exactly on, the focal point
-      tx: 0, ty: 0,
-    };
-  }
-  function build() {
-    const count = Math.round(Math.min(90, Math.max(26, W / 20)));
-    motes = Array.from({ length: count }, () => spawn(true));
-  }
-  function step(mote) {
-    const gate = W * 0.44;
-    if (mote.state === 'drift') {
-      mote.x += mote.vx;
-      mote.y += Math.sin(mote.phase + mote.x * 0.01) * 0.15;
-      mote.alpha = Math.min(0.14, mote.alpha + 0.002);
-      if (!mote.judged && mote.x > gate) {
-        mote.judged = true;
-        if (Math.random() < 0.16) {
-          const f = focal();
-          mote.state = 'selected';
-          mote.tx = f.x + (Math.random() - 0.5) * W * 0.16;
-          mote.ty = f.y + (Math.random() - 0.5) * H * 0.42;
-        } else { mote.state = 'fade'; }
-      }
-    } else if (mote.state === 'fade') {
-      mote.x += mote.vx * 0.6;
-      mote.alpha -= 0.004;
-      if (mote.alpha <= 0 || mote.x > W + 10) Object.assign(mote, spawn(false));
-    } else if (mote.state === 'selected') {
-      mote.x += (mote.tx - mote.x) * 0.03;
-      mote.y += (mote.ty - mote.y) * 0.03;
-      mote.phase += 0.01;
-      mote.tx += Math.cos(mote.phase) * 0.15; // gentle drift so the cluster breathes
-      mote.ty += Math.sin(mote.phase * 0.8) * 0.15;
-      mote.alpha = Math.min(0.42, mote.alpha + 0.006);
-      mote.r = Math.min(2.9, mote.r + 0.012);
-    }
-  }
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    const selected = [];
-    for (const m of motes) {
-      if (m.state === 'selected') selected.push(m);
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${GOLD},${m.alpha})`;
-      ctx.fill();
-    }
-    // faint links between the curated few — a light "bench" constellation
-    ctx.lineWidth = 1;
-    for (let i = 0; i < selected.length; i++) {
-      for (let j = i + 1; j < selected.length; j++) {
-        const a = selected[i], b = selected[j];
-        const dx = a.x - b.x, dy = a.y - b.y;
-        const d = Math.hypot(dx, dy);
-        if (d < 118) {
-          ctx.strokeStyle = `rgba(${GOLD},${0.07 * (1 - d / 118)})`;
-          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-        }
-      }
-    }
-  }
-  function frame() { for (const m of motes) step(m); draw(); raf = requestAnimationFrame(frame); }
-  function start() { if (running || reduce) return; running = true; raf = requestAnimationFrame(frame); }
-  function stop() { running = false; cancelAnimationFrame(raf); }
-
-  resize();
-  draw(); // one static frame immediately (and the only frame under reduced-motion)
-  window.addEventListener('resize', () => { resize(); if (!running) draw(); });
-  if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); if (!running) draw(); }).observe(canvas);
-  if (reduce) return;
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(es => es.forEach(e => (e.isIntersecting ? start() : stop())), { threshold: 0.02 }).observe(canvas);
-  } else { start(); }
-  document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
-}
-
-// Covenda tree: arm the grow-from-the-roots animation, fired when the tree enters view.
-// No-JS / no-IO / reduced-motion paths never hide the tree (classes are simply not added).
-(function initTreeGrow() {
-  const tree = document.getElementById('covendaModel');
-  if (!tree) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  if (!('IntersectionObserver' in window)) return;
-  tree.classList.add('ct-pre');
-  const io = new IntersectionObserver(entries => {
-    entries.forEach(en => {
-      if (!en.isIntersecting) return;
-      tree.classList.add('ct-grow');
-      io.disconnect();
-    });
-  }, { threshold: 0.3 });
-  io.observe(tree);
-})();
-
-// Student of the Week — real, consented data only. Empty response hides the section.
-(function initSpotlight() {
-  var section = document.getElementById('studentOfWeek');
-  var body = document.getElementById('spotlightBody');
-  if (!section || !body || typeof fetch !== 'function') return;
-  fetch('/api/featured-student').then(function (res) { return res.ok ? res.json() : null; }).then(function (data) {
-    var s = data && data.featured;
-    if (!s || !s.name) return; // stays hidden — never a placeholder person
-    var card = document.createElement('article'); card.className = 'spotlight-card';
-    var head = document.createElement('div'); head.className = 'spotlight-head';
-    var avatar = document.createElement('div'); avatar.className = 'spotlight-avatar';
-    if (s.avatarUrl && /^https:\/\//.test(s.avatarUrl)) { var img = document.createElement('img'); img.src = s.avatarUrl; img.alt = s.name; avatar.append(img); }
-    else avatar.textContent = (s.name || 'C').slice(0, 1);
-    var id = document.createElement('div'); id.className = 'spotlight-id';
-    var h3 = document.createElement('h3'); h3.textContent = s.name;
-    if (s.identityVerified) { var v = document.createElement('span'); v.className = 'spotlight-verified'; v.textContent = 'Identity verified'; h3.append(v); }
-    var sub = document.createElement('p'); sub.textContent = [s.headline, s.school, s.graduationYear ? 'Class of ' + s.graduationYear : ''].filter(Boolean).join(' · ');
-    id.append(h3, sub);
-    if (s.evidenceTier) { var tier = document.createElement('span'); tier.className = 'spotlight-tier is-' + s.evidenceTier; tier.textContent = s.evidenceTier + ' evidence'; id.append(tier); }
-    head.append(avatar, id); card.append(head);
-    if (s.skills && s.skills.length) { var sk = document.createElement('div'); sk.className = 'spotlight-skills'; s.skills.forEach(function (x) { var c = document.createElement('span'); c.textContent = x; sk.append(c); }); card.append(sk); }
-    var stats = document.createElement('p'); stats.className = 'spotlight-stats';
-    stats.textContent = (s.verifiedRecords || 0) + ' verified work record' + (s.verifiedRecords === 1 ? '' : 's') + ' on Covenda';
-    card.append(stats);
-    (s.projects || []).forEach(function (p) {
-      var pr = document.createElement('div'); pr.className = 'spotlight-project';
-      var t = document.createElement('strong'); t.textContent = p.title; pr.append(t);
-      var m = document.createElement('span'); m.textContent = [p.vertical, p.shipped ? 'shipped ✓' : '', p.outcome ? 'led to: ' + p.outcome.replace(/_/g, ' ') : ''].filter(Boolean).join(' · '); pr.append(m);
-      card.append(pr);
-    });
-    var cta = document.createElement('a'); cta.className = 'gold-button compact'; cta.href = 'portal.html?intent=request-intro';
-    cta.textContent = 'Request an intro through Covenda';
-    card.append(cta);
-    body.replaceChildren(card);
-    section.hidden = false;
-  }).catch(function () { /* stays hidden */ });
-})();
-
 initCovendaMotion();
 initFlowDemo();
 initIcosahedron();
-initHeroField();
 initScrollReveal();
-
-// ---- Stat count-up: "Why now" band numbers rise 0 -> value when they scroll into view. ----
-// Parses the existing text (e.g. "52%") so the markup stays the single source of truth.
-// Reduced-motion or no IntersectionObserver: numbers just stay as authored.
-(function initStatCountUp() {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  if (!('IntersectionObserver' in window)) return;
-  const stats = $$('.stat-list b');
-  if (!stats.length) return;
-  const animate = el => {
-    const raw = el.textContent.trim();
-    const match = raw.match(/^(\d+(?:\.\d+)?)(.*)$/);
-    if (!match) return;
-    const target = parseFloat(match[1]);
-    const suffix = match[2] || '';
-    const decimals = (match[1].split('.')[1] || '').length;
-    const t0 = performance.now();
-    const dur = 1200;
-    const tick = now => {
-      const p = Math.min(1, (now - t0) / dur);
-      const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic — fast rise, gentle landing
-      el.textContent = (target * eased).toFixed(decimals) + suffix;
-      if (p < 1) requestAnimationFrame(tick);
-      else el.textContent = raw; // land exactly on the authored value
-    };
-    el.textContent = (0).toFixed(decimals) + suffix;
-    requestAnimationFrame(tick);
-  };
-  const seen = new WeakSet();
-  const io = new IntersectionObserver(entries => {
-    entries.forEach(en => {
-      if (!en.isIntersecting || seen.has(en.target)) return;
-      seen.add(en.target);
-      animate(en.target);
-      io.unobserve(en.target);
-    });
-  }, { threshold: 0.6 });
-  stats.forEach(el => io.observe(el));
-})();
-initMemberNav();
 window.requestAnimationFrame(() => openIntro());

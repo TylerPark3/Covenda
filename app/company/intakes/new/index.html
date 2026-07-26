@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Start a company project · Covenda</title>
+  <link rel="stylesheet" href="/workflow.css">
+</head>
+<body>
+  <header class="workflow-header">
+    <a class="workflow-brand" href="/"><img src="/assets/covenda-mark.svg" alt="">Covenda</a>
+    <nav aria-label="Company navigation">
+      <a href="/portal.html">Member workspace</a>
+      <a class="button secondary" href="/">Public website</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="login-shell" id="companyLogin">
+      <h1>Sign in to start a project.</h1>
+      <p>This intake is private. Use the email attached to your Covenda company account.</p>
+      <form id="companyLoginForm">
+        <label class="field"><span>Work email</span><input name="email" type="email" autocomplete="email" required></label>
+        <button class="button primary" type="submit">Email me a sign-in link</button>
+        <p id="companyLoginMessage" class="alert" aria-live="polite" hidden></p>
+      </form>
+    </section>
+
+    <div id="companyWorkflow" hidden>
+      <form class="workflow-page narrow" id="companyIntakeForm">
+        <div class="page-heading">
+          <div>
+            <h1>Tell us about the work that keeps getting delayed.</h1>
+            <p>Share one real example. Covenda will review the work, ask questions where needed, and decide whether it can become a bounded student project.</p>
+          </div>
+          <div class="page-heading-meta"><span class="status">Private intake</span></div>
+        </div>
+
+        <section class="section" aria-labelledby="companySection">
+          <div class="section-heading"><h2 id="companySection">Company information</h2><p>Basic context helps the operator understand where this work sits.</p></div>
+          <div class="form-grid">
+            <label class="field"><span>Company name</span><input name="companyName" autocomplete="organization" maxlength="160" required></label>
+            <label class="field"><span>Company website</span><input name="companyWebsite" type="url" autocomplete="url" maxlength="500" placeholder="https://"></label>
+            <label class="field"><span>Industry</span><input name="companyIndustry" maxlength="160" required></label>
+            <label class="field"><span>Company size</span><select name="companySize" required><option value="">Choose one</option><option>1–10 employees</option><option>11–30 employees</option><option>31–100 employees</option><option>101–500 employees</option><option>More than 500 employees</option></select></label>
+            <label class="field"><span>Contact name</span><input name="contactName" autocomplete="name" maxlength="160" required></label>
+            <label class="field"><span>Contact email</span><input name="contactEmail" type="email" autocomplete="email" required></label>
+            <label class="field wide"><span>Contact role</span><input name="contactRole" maxlength="160" required></label>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="exampleSection">
+          <div class="section-heading"><h2 id="exampleSection">The last real example</h2><p>Describe what actually happened, not an idealized project description.</p></div>
+          <div class="form-grid">
+            <label class="field wide"><span>What work was delayed?</span><textarea name="delayedWorkExample" minlength="10" maxlength="8000" required></textarea></label>
+            <label class="field wide"><span>Why was it delayed?</span><textarea name="delayReason" maxlength="4000" required></textarea></label>
+            <label class="field"><span>Who normally completes it?</span><input name="normalOwner" maxlength="500" required></label>
+            <label class="field"><span>How frequently does it occur?</span><input name="occurrenceFrequency" maxlength="500" placeholder="Monthly, quarterly, after each launch…" required></label>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="outcomeSection">
+          <div class="section-heading"><h2 id="outcomeSection">Result and review</h2><p>Define what useful looks like and who can make the final decision.</p></div>
+          <div class="form-grid">
+            <label class="field wide"><span>Desired business result</span><textarea name="desiredBusinessResult" maxlength="4000" required></textarea></label>
+            <label class="field wide"><span>Final deliverable</span><textarea name="finalDeliverable" maxlength="4000" required></textarea></label>
+            <label class="field"><span>Named reviewer</span><input name="namedReviewer" maxlength="500" required></label>
+            <label class="field"><span>Company review-time budget</span><input name="companyReviewMinutes" type="number" min="0" max="10080" step="1" placeholder="Minutes" required><small>Include kickoff, questions, and final review.</small></label>
+            <label class="field wide"><span>Acceptance criteria</span><textarea name="acceptanceCriteria" maxlength="4000" required></textarea></label>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="scopeSection">
+          <div class="section-heading"><h2 id="scopeSection">Scope, timing, and budget</h2><p>These estimates help Covenda test whether the project saves more employee time than it consumes.</p></div>
+          <div class="form-grid">
+            <label class="field"><span>Estimated employee hours avoided</span><input name="employeeHoursAvoided" type="number" min="0" max="100000" step=".25" required></label>
+            <label class="field"><span>Estimated student hours</span><input name="studentHours" type="number" min=".25" max="100000" step=".25" required></label>
+            <label class="field"><span>Budget</span><input name="budgetDollars" type="number" min="0" max="1000000" step=".01" placeholder="USD" required></label>
+            <label class="field"><span>Deadline</span><input name="deadline" type="date" required></label>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="boundarySection">
+          <div class="section-heading"><h2 id="boundarySection">Context and restrictions</h2><p>Be explicit. Covenda will not infer that private or production access is safe.</p></div>
+          <div class="form-grid">
+            <label class="field wide"><span>Available context</span><textarea name="availableContext" maxlength="8000" required></textarea></label>
+            <label class="field wide"><span>Tools required</span><textarea name="toolsRequired" maxlength="2000" required></textarea></label>
+            <label class="field wide"><span>System access</span><textarea name="systemAccess" maxlength="2000" placeholder="State “None” if no system access is needed." required></textarea></label>
+            <label class="field"><span>Data classification</span><select name="dataClassification" required><option value="">Choose one</option><option value="public">Public</option><option value="internal">Internal</option><option value="confidential">Confidential</option><option value="restricted">Restricted</option></select></label>
+            <label class="field wide"><span>Confidentiality concerns</span><textarea name="confidentialityConcerns" maxlength="4000" placeholder="State “None” if there are no confidentiality concerns." required></textarea></label>
+            <label class="field wide"><span>AI-use policy</span><textarea name="aiUsePolicy" maxlength="4000" placeholder="What AI tools may or may not be used, and what disclosure is required?" required></textarea></label>
+            <fieldset class="radio-row wide">
+              <legend>Does the proposed work include restricted information?</legend>
+              <label><input type="radio" name="restrictedInformation" value="false" required><span><strong>No</strong><br><small>No personal records, credentials, production access, regulated decisions, or restricted data.</small></span></label>
+              <label><input type="radio" name="restrictedInformation" value="true"><span><strong>Yes</strong><br><small>Covenda must review and remove or replace restricted context before any project can proceed.</small></span></label>
+            </fieldset>
+          </div>
+        </section>
+
+        <section class="section" aria-labelledby="attachmentSection">
+          <div class="section-heading"><h2 id="attachmentSection">Supporting files</h2><p>Optional. Files are stored privately and opened with short-lived links after authorization.</p></div>
+          <label class="field"><span>Attachments</span><input id="companyAttachments" type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png,.webp"><small>Up to 10 MB each. Do not upload client records, credentials, or restricted personal data.</small></label>
+        </section>
+
+        <div class="form-actions">
+          <p>Submitting sends this intake to a human operator. It does not publish a project, match a student, or create a payment.</p>
+          <button class="button primary" type="submit">Submit for review</button>
+        </div>
+        <p id="companyFormMessage" class="alert" aria-live="polite" hidden></p>
+      </form>
+
+      <section class="workflow-page narrow" id="companyConfirmation" hidden>
+        <div class="page-heading">
+          <div><h1>Your intake was submitted.</h1><p>Covenda will review the original example and follow up if anything is missing.</p></div>
+          <span class="status" data-state="submitted">Submitted</span>
+        </div>
+        <section class="section">
+          <div class="alert success"><strong>Nothing has been published.</strong>No student has been matched, and no payment has been created. A human operator will review the work first.</div>
+        </section>
+        <section class="section" id="companyClarifications" hidden></section>
+        <section class="section" id="companyApprovalPanel" hidden></section>
+        <section class="section">
+          <button class="button secondary" id="startAnotherIntake" type="button">Start another intake</button>
+        </section>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/app/company/intakes/new/company-intake.js"></script>
+</body>
+</html>

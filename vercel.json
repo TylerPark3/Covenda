@@ -1,0 +1,24 @@
+{
+  "rewrites": [
+    {
+      "source": "/app/company/intakes/new",
+      "destination": "/app/company/intakes/new/index.html"
+    },
+    {
+      "source": "/operator/intakes/:intakeId",
+      "destination": "/operator/intakes/detail.html?intakeId=:intakeId"
+    },
+    {
+      "source": "/operator/intakes",
+      "destination": "/operator/intakes/index.html"
+    },
+    {
+      "source": "/operator/projects/:projectId",
+      "destination": "/operator/projects/detail.html?projectId=:projectId"
+    },
+    {
+      "source": "/app/reviewer/projects/:projectId",
+      "destination": "/app/reviewer/projects/detail.html?projectId=:projectId"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Company intakes · Covenda operator</title>
+  <link rel="stylesheet" href="/workflow.css">
+</head>
+<body>
+  <header class="workflow-header">
+    <a class="workflow-brand" href="/admin.html"><img src="/assets/covenda-mark.svg" alt="">Covenda operator</a>
+    <nav aria-label="Operator navigation"><a href="/admin.html">Submission inbox</a></nav>
+  </header>
+  <main>
+    <section class="login-shell" id="queueLogin">
+      <h1>Operator sign in.</h1>
+      <p>Company intakes contain private operational information.</p>
+      <form id="queueLoginForm">
+        <label class="field"><span>Operator email</span><input name="email" type="email" autocomplete="email" required></label>
+        <button class="button primary" type="submit">Email me a sign-in link</button>
+        <p id="queueLoginMessage" class="alert" aria-live="polite" hidden></p>
+      </form>
+    </section>
+    <div class="workflow-page" id="queueContent" hidden>
+      <div class="page-heading"><div><h1>Company intakes</h1><p>Review submitted work before a project brief is created.</p></div><span class="status" id="queueCount">0 intakes</span></div>
+      <section class="section">
+        <div class="object-panel">
+          <div class="panel-body" id="intakeQueue"><div class="loading">Loading company intakes…</div></div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="/operator/intakes/intake-queue.js"></script>
+</body>
+</html>

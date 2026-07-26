@@ -5,7 +5,6 @@ import { readFile } from 'node:fs/promises';
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const script = await readFile(new URL('../app.js', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../styles.css', import.meta.url), 'utf8');
-const typeCss = await readFile(new URL('../type.css', import.meta.url), 'utf8');
 
 test('frontend JavaScript parses', () => {
   assert.doesNotThrow(() => new Function(script));
@@ -17,34 +16,37 @@ test('HTML ids remain unique', () => {
   assert.deepEqual([...new Set(duplicates)], []);
 });
 
-test('student-first hero offers five work paths and a scroll continuation', () => {
+test('student-first hero offers an industry-first pathfinder and a scroll continuation', () => {
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
-  assert.match(hero, /What is your <span class="word-gold">domain expertise<\/span>\?/); // §8 rename
-  assert.equal((hero.match(/class="work-option/g) || []).length, 5);
-  assert.match(hero, /Join the talent/); // §8: one student-account flow (CTA renamed per founder)
+  assert.match(hero, /Where do you want to make an <span class="word-gold">impact<\/span>\?/);
+  assert.match(hero, /id="narrowFlow"/);
+  assert.doesNotMatch(hero, /Or pick a work type directly/);
+  assert.doesNotMatch(hero, /class="work-selector/);
+  assert.match(hero, /Join the pilot list/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
 });
 
 test('Covenda restores the skippable editorial intro and keeps it replayable', () => {
   assert.match(html, /id="introScreen"/);
-  assert.match(html, /Students get to prove\./);
-  assert.match(html, /Startups get proven talent\./);
+  assert.match(html, /Students get paid\./);
+  assert.match(html, /Employers get work done\./);
   assert.match(html, /id="introEnter"[^>]*>[\s\S]*Enter Covenda/);
   assert.match(html, /id="introSkip"[^>]*>Skip intro/);
   assert.match(html, /data-action="replay-intro"/);
   assert.match(script, /covendaIntroSeen/);
   assert.match(script, /function openIntro\(/);
   assert.match(script, /function dismissIntro\(/);
-  assert.match(typeCss, /--font-display:/); // §14: fonts now live in the shared type.css
+  assert.match(styles, /--font-display:/);
   assert.match(styles, /\.intro-statement/);
 });
 
-test('the initial path chooser uses a continuous responsive glass control', () => {
-  assert.match(styles, /\.work-selector[\s\S]*border-radius: 999px/);
-  assert.match(styles, /\.work-option\.is-selected[\s\S]*radial-gradient/);
-  assert.match(styles, /scroll-snap-type: x proximity/);
-  assert.match(html, /<\/div>\s*<button class="gold-button selector-submit"/);
+test('the initial path chooser uses interactive industry narrowing and ambient FX', () => {
+  assert.match(script, /const INDUSTRY_TREE =/);
+  for (const industry of ['Accounting & finance', 'Software & AI', 'Healthcare operations', 'Consumer & retail', 'Professional services']) {
+    assert.match(script, new RegExp(industry.replace('&', '\\&')));
+  }
+  assert.match(styles, /\.narrow-option/);
   assert.match(html, /id="selectorFxCanvas"/);
   assert.match(html, /class="student-journey"/);
   assert.match(script, /function initSelectorFx\(\)/);
@@ -52,16 +54,38 @@ test('the initial path chooser uses a continuous responsive glass control', () =
   assert.match(styles, /\.selector-fx/);
 });
 
+test('student questionnaire cascades from industries to focus areas and keeps verification server-owned', () => {
+  assert.match(html, /Where do you want to make an impact\?/);
+  assert.equal((html.match(/name="studentIndustry"/g) || []).length, 5);
+  assert.match(html, /id="studentSpecializations"/);
+  assert.match(html, /name="studentReferrer"/);
+  assert.match(html, /name="studentOrganization"/);
+  assert.match(html, /name="studentReferralCode"/);
+  assert.match(html, /Unverified claims never receive an endorsement or matching boost/);
+  assert.match(script, /function derivedStudentWorkTypes\(/);
+  assert.match(script, /subIndustries/);
+  assert.match(script, /verify-affiliation/);
+  assert.doesNotMatch(html, /name="workType"/);
+  assert.doesNotMatch(html, /id="workTypes"/);
+});
+
 test('audience switch supports student and company site states', () => {
   assert.match(html, /data-audience-option="student"/);
   assert.match(html, /data-audience-option="company"/);
-  // Company hero leads with two segments: delegate work + find talent.
-  assert.match(html, /Work that keeps getting pushed back/);
-  assert.match(html, /Find elite talent/);
+  assert.match(html, /<span>Referrals<\/span>/);
+  assert.match(html, /I vouch for talent/);
+  assert.match(html, /What work keeps getting pushed\?/);
   assert.match(script, /document\.body\.dataset\.audience = audience/);
   assert.match(styles, /body\[data-audience="company"\] \.hero-student/);
   assert.match(script, /covendaAudience/);
   assert.match(script, /covendaSelectedWorkType/);
+});
+
+test('primary audience navigation uses the sharp editorial treatment', () => {
+  assert.match(styles, /\.site-header \{[\s\S]*background: #11110f/);
+  assert.match(styles, /\.audience-switch \{[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.home-path \{[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.home-path::after/);
 });
 
 test('company story preserves the managed Project Packet workflow and risk boundary', () => {
@@ -207,11 +231,8 @@ test('design system stays true white and supports responsive and reduced-motion 
   assert.match(styles, /backdrop-filter: blur/);
   assert.match(styles, /@media \(max-width: 560px\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
-  // §14: the three families now live in one shared type.css, linked by all surfaces.
-  assert.match(typeCss, /--font-body: "Manrope"/);
-  assert.match(typeCss, /--font-display: "Newsreader"/);
-  assert.match(typeCss, /--font-mono:/);
-  assert.match(html, /href="type\.css"/);
+  assert.match(styles, /--font-ui: "Manrope"/);
+  assert.match(styles, /--font-display: "Newsreader"/);
   assert.match(html, /fonts\.googleapis\.com/);
 });
 
@@ -222,4 +243,11 @@ test('page avoids unsupported marketplace claims and legacy branding', () => {
   assert.doesNotMatch(html, /customer logos/i);
   assert.doesNotMatch(html, /success rate/i);
   assert.doesNotMatch(html, /Student score:/i);
+});
+
+test('marketing uses the shared canonical Covenda mark without a CSS-drawn duplicate', () => {
+  assert.match(html, /href="\/assets\/covenda-mark\.svg"/);
+  assert.ok((html.match(/src="\/assets\/covenda-mark\.svg"/g) || []).length >= 3);
+  assert.doesNotMatch(html, /class="brand-mark"/);
+  assert.doesNotMatch(styles, /\.brand-mark::/);
 });
