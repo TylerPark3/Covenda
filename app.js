@@ -4546,6 +4546,52 @@ function initHeroField() {
   io.observe(tree);
 })();
 
+// How proof is verified per vertical, straight from the connector registry. Deliberately shows
+// ONLY mechanisms that are actually built (status 'live') plus the honest-limits verticals —
+// a planned-but-gated connector (e.g. Alpaca, pending terms) is never advertised as available.
+(function initVerifyMethods() {
+  var section = document.getElementById('verifyMethods');
+  var machineList = document.getElementById('verifyMachineList');
+  var humanList = document.getElementById('verifyHumanList');
+  if (!section || !machineList || !humanList || typeof fetch !== 'function') return;
+
+  function row(label, note) {
+    var li = document.createElement('li');
+    var strong = document.createElement('strong');
+    strong.textContent = label;
+    var span = document.createElement('span');
+    span.textContent = note;
+    li.append(strong, span);
+    return li;
+  }
+
+  fetch('/api/proof-methods').then(function (res) { return res.ok ? res.json() : null; }).then(function (data) {
+    var methods = (data && data.methods) || [];
+    var live = methods.filter(function (m) { return m.status === 'live'; });
+    var rails = methods.filter(function (m) { return m.status === 'human_rail'; });
+    if (!live.length && !rails.length) return; // nothing real to show — stay hidden
+
+    live.forEach(function (m) {
+      // Say what the mechanism actually proves, in plain terms.
+      var note = m.ownership === 'oauth'
+        ? 'You connect the account, so the work is provably yours — and the timeline shows how it accumulated.'
+        : m.ownership === 'artifact'
+          ? 'The file itself is parsed, not eyeballed — structure and formulas, not a screenshot.'
+          : 'Scored on the record by two independent raters against published anchors.';
+      machineList.append(row(m.label, note));
+    });
+
+    rails.forEach(function (m) {
+      var note = m.rail === 'instrumented_trial'
+        ? 'No API can confirm outreach really landed, so proof comes from an instrumented trial run through Covenda.'
+        : 'Bench skills cannot be checked remotely, so a supervisor’s structured referral is the primary mechanism — by design.';
+      humanList.append(row(m.label, note));
+    });
+
+    section.hidden = false;
+  }).catch(function () { /* endpoint unavailable — section stays hidden */ });
+})();
+
 // Student of the Week — real, consented data only. Empty response hides the section.
 (function initSpotlight() {
   var section = document.getElementById('studentOfWeek');

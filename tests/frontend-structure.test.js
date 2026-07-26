@@ -252,3 +252,20 @@ test('readiness read-out builds nodes with createIcon, not raw icon strings', ()
   assert.match(block, /createIcon\('icon-check'\)/);
   assert.doesNotMatch(block, /iconUse\(/); // iconUse returns a string; append() would print it
 });
+
+test('the how-we-verify section exists and advertises only what is actually built', () => {
+  // The section must be present but start hidden — it only appears once /api/proof-methods
+  // returns real registry data, so a failed fetch shows nothing rather than empty scaffolding.
+  assert.match(html, /<section class="verify-section" id="verifyMethods" hidden>/);
+  assert.match(html, /id="verifyMachineList"/);
+  assert.match(html, /id="verifyHumanList"/);
+
+  // The renderer must filter on status: only 'live' mechanisms are presented as verification,
+  // and only 'human_rail' verticals in the honest-limits column. A gated connector (Alpaca,
+  // pending terms) or an unbuilt stub must never be advertised as available.
+  const block = script.match(/function initVerifyMethods\(\)[\s\S]*?\}\)\(\);/)?.[0] || '';
+  assert.ok(block, 'initVerifyMethods should exist in app.js');
+  assert.match(block, /m\.status === 'live'/);
+  assert.match(block, /m\.status === 'human_rail'/);
+  assert.ok(!/status === 'planned'|status === 'stub'/.test(block), 'must not surface planned/stub connectors');
+});

@@ -3054,3 +3054,23 @@ body:not([data-audience="home"]) .broken-section { display: none; }
 .referral-qr-code svg { width: 116px; height: 116px; display: block; border-radius: 6px; }
 .referral-qr-copy { flex: 1 1 200px; min-width: 0; }
 .referral-qr-copy .referral-link-help { margin: 0 0 10px; }
+
+/* ---- How proof is verified (connector registry, incl. honest limits). Home audience only,
+       matching the dedup rule applied to the other top-of-funnel sections. ---- */
+body:not([data-audience="home"]) #verifyMethods { display: none; }
+.verify-section { padding: clamp(48px, 7vw, 96px) var(--page-gutter); border-top: 1px solid var(--line); background: #fff; }
+.verify-inner { max-width: 1000px; margin: 0 auto; }
+.verify-section .section-heading { display: block; grid-template-columns: none; text-align: center; max-width: 660px; margin: 0 auto clamp(30px, 4vw, 46px); }
+.verify-section .section-heading h2 { font-size: clamp(32px, 3.2vw, 46px); line-height: 1.04; }
+.verify-section .section-heading p:last-child { max-width: 58ch; margin: 16px auto 0; font-size: 15.5px; line-height: 1.62; }
+.verify-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: clamp(16px, 2.4vw, 26px); }
+.verify-col { padding: clamp(20px, 2.6vw, 28px); border: 1px solid var(--line-strong); border-radius: 4px; background: #fff; }
+.verify-col-limit { border-style: dashed; background: var(--paper, #faf9f6); }
+.verify-col-tag { margin: 0 0 16px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-deep); }
+.verify-col-limit .verify-col-tag { color: var(--muted); }
+.verify-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.verify-col li { display: grid; gap: 4px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.verify-col li:last-child { padding-bottom: 0; border-bottom: 0; }
+.verify-col li strong { font-size: 14.5px; letter-spacing: -.01em; }
+.verify-col li span { color: var(--muted); font-size: 13px; line-height: 1.55; }
+.verify-note { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--soft); font-size: 12.5px; line-height: 1.6; }

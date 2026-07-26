@@ -527,6 +527,31 @@
         </div>
       </section>
 
+      <!-- How proof is verified, per vertical — including where it CANNOT be. Filled by app.js
+           from /api/proof-methods (the connector registry). Only mechanisms that are actually
+           built are listed; the honest-limits verticals are shown as human rails, never dressed
+           up as machine verification. Hidden entirely if the endpoint is unavailable. -->
+      <section class="verify-section" id="verifyMethods" hidden>
+        <div class="verify-inner">
+          <div class="section-heading">
+            <p class="feature-kicker">How proof works</p>
+            <h2>We verify what can be <span class="word-gold">verified</span>.</h2>
+            <p>Two things are hard to fake: an account you had to log into, and months of history you'd have had to live through. Where those exist, we read them. Where they don't, we say so instead of inventing a score.</p>
+          </div>
+          <div class="verify-cols">
+            <div class="verify-col" id="verifyMachine">
+              <p class="verify-col-tag">Machine-verified</p>
+              <ul id="verifyMachineList"></ul>
+            </div>
+            <div class="verify-col verify-col-limit" id="verifyHuman">
+              <p class="verify-col-tag">Where that isn’t possible</p>
+              <ul id="verifyHumanList"></ul>
+              <p class="verify-note">Simulations and self-reported numbers don’t become proof here. These fields route to a human rail on purpose — a scored walkthrough, or someone credible staking their name.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Student of the Week: consent-first spotlight. Hidden until /api/featured-student
            returns a consented, operator-featured student — never a placeholder person. -->
       <section class="spotlight-section" id="studentOfWeek" hidden>
