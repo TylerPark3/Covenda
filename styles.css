@@ -3110,3 +3110,53 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 .pb-detail .audience-content[data-for-audience="student"] { display: block; }
 body[data-audience="company"] .pb-detail .audience-content[data-for-audience="student"] { display: none; }
 body[data-audience="company"] .pb-detail .audience-content[data-for-audience="company"] { display: block; }
+
+/* ---- Batch board: pick benches, then walk through them full-width -------------------
+   Squared to match the rest; the deep dive uses the whole page because the point is
+   detail, not a teaser card. --------------------------------------------------------- */
+.batch-pick-hint { max-width: 62ch; margin: 0 0 22px; color: var(--muted); font-size: var(--step-body-sm); }
+.batch-card.is-pickable { position: relative; cursor: default; transition: border-color .14s ease, box-shadow .14s ease; }
+.batch-card.is-picked { border-color: var(--gold-deep); box-shadow: inset 0 0 0 1px var(--gold-deep); }
+.batch-pick { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 9px 15px; border: 1px solid var(--line-strong); background: transparent; color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.batch-pick svg { width: 15px; height: 15px; opacity: .25; }
+.batch-pick:hover { border-color: var(--gold); color: var(--gold-deep); }
+.batch-pick[aria-pressed="true"] { border-color: var(--gold-deep); background: var(--gold-pale); color: var(--gold-deep); }
+.batch-pick[aria-pressed="true"] svg { opacity: 1; }
+
+.batch-pickbar { position: sticky; bottom: 0; z-index: 12; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; margin-top: 26px; padding: 16px 20px; border: 1px solid var(--line-strong); background: rgba(255,255,255,.94); backdrop-filter: blur(18px); }
+.batch-pickbar #batchPickCount { font-size: 14.5px; font-weight: 650; }
+.batch-pickbar .quiet-link { margin-top: 0; font-size: 14px; }
+
+.batch-deep { display: grid; gap: clamp(30px, 4vw, 54px); margin-top: clamp(32px, 4.5vw, 60px); }
+.bd-panel { padding: clamp(24px, 3.4vw, 44px); border: 1px solid var(--line-strong); background: #fff; }
+.bd-head h3 { margin: 6px 0 0; font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 40px); font-weight: 500; line-height: 1.06; letter-spacing: -.025em; }
+.bd-lede { max-width: 68ch; margin: 14px 0 0; color: var(--muted); font-size: var(--step-body); line-height: 1.65; }
+
+/* Flow diagram: rails -> bar -> review -> bench. Sized generously; it is the explanation,
+   not decoration, so it gets real space. */
+.bd-figure { display: grid; gap: 0; margin: clamp(26px, 3.4vw, 40px) 0 0; }
+.bd-rails { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.bd-node { padding: 18px 20px; border: 1px solid var(--line-strong); background: rgba(255,255,255,.65); }
+.bd-node b { display: block; font-size: 15.5px; }
+.bd-node span { display: block; margin-top: 6px; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
+.bd-rail { border-left: 3px solid var(--gold-light); }
+.bd-bar { border-color: var(--gold-deep); background: var(--gold-pale); }
+.bd-review { border-style: dashed; }
+.bd-bench { border-color: var(--success); background: #f4faf5; }
+.bd-arrow { justify-self: center; width: 1px; height: 30px; background: var(--line-strong); position: relative; }
+.bd-arrow::after { content: ""; position: absolute; bottom: 0; left: -3.5px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 7px solid var(--line-strong); }
+
+.bd-panel .pb-badge { margin-top: 22px; }
+.bd-block { margin-top: clamp(26px, 3.2vw, 40px); }
+.bd-block h4 { margin: 0 0 16px; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-deep); }
+.bd-reqs, .bd-steps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.bd-reqs li, .bd-steps li { display: grid; grid-template-columns: 30px 1fr; gap: 14px; align-items: start; }
+.bd-n { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--gold-deep); color: var(--gold-deep); font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
+.bd-reqs strong, .bd-steps strong { display: block; font-size: 16px; }
+.bd-reqs p, .bd-steps p { max-width: 66ch; margin: 5px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.65; }
+.bd-cta { margin-top: clamp(26px, 3.2vw, 38px); }
+
+@media (max-width: 720px) {
+  .batch-pickbar { flex-direction: column; align-items: stretch; }
+  .batch-pickbar .gold-button { width: 100%; justify-content: center; }
+}

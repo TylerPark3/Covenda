@@ -3393,39 +3393,189 @@ function batchDetailPanel(brief) {
   return detail;
 }
 
+// Selection state for the board. A student is usually weighing two or three benches, so the
+// card is a CHOICE, not a commit — the old per-card "Join this batch" button asked for a
+// decision before showing what the bench actually requires.
+const batchPicks = new Set();
+const batchBriefIndex = new Map();
+
 function renderBatchCard(grid, entry, brief) {
   const card = document.createElement('article');
-  card.className = 'batch-card glass-panel' + (brief ? ' has-detail' : '');
+  card.className = 'batch-card glass-panel is-pickable';
   card.append(
     Object.assign(document.createElement('p'), { className: 'batch-function', textContent: entry.industry }),
     Object.assign(document.createElement('h3'), { className: 'batch-title', textContent: entry.title }),
     Object.assign(document.createElement('p'), { className: 'batch-desc', textContent: brief ? brief.summary : entry.description }),
     Object.assign(document.createElement('span'), { className: 'batch-status', textContent: entry.status }),
   );
-  const actions = document.createElement('div');
-  actions.className = 'batch-actions-row';
-  const join = document.createElement('button');
-  join.type = 'button'; join.className = 'gold-button batch-join'; join.textContent = 'Join this batch';
-  join.addEventListener('click', () => joinBatch(entry));
-  actions.append(join);
-  if (brief) {
-    const detail = batchDetailPanel(brief);
-    const toggle = document.createElement('button');
-    toggle.type = 'button'; toggle.className = 'quiet-link pb-toggle';
-    toggle.setAttribute('aria-expanded', 'false');
-    toggle.append(document.createTextNode('See the bar'), createIcon('icon-chevron'));
-    toggle.addEventListener('click', () => {
-      const open = detail.hidden;
-      detail.hidden = !open;
-      toggle.setAttribute('aria-expanded', String(open));
-      toggle.firstChild.textContent = open ? 'Hide the bar' : 'See the bar';
-    });
-    actions.append(toggle);
-    card.append(actions, detail);
-  } else {
-    card.append(actions);
-  }
+  if (brief) batchBriefIndex.set(entry.id, { entry, brief });
+
+  const pick = document.createElement('button');
+  pick.type = 'button';
+  pick.className = 'batch-pick';
+  pick.setAttribute('aria-pressed', 'false');
+  pick.dataset.batchPick = entry.id;
+  pick.append(createIcon('icon-check'), Object.assign(document.createElement('span'), { textContent: 'Select' }));
+  pick.addEventListener('click', () => {
+    const on = !batchPicks.has(entry.id);
+    if (on) batchPicks.add(entry.id); else batchPicks.delete(entry.id);
+    pick.setAttribute('aria-pressed', String(on));
+    card.classList.toggle('is-picked', on);
+    $('span', pick).textContent = on ? 'Selected' : 'Select';
+    syncBatchPickBar();
+  });
+  card.append(pick);
   grid.append(card);
+}
+
+function syncBatchPickBar() {
+  const bar = $('#batchPickBar');
+  if (!bar) return;
+  const n = batchPicks.size;
+  bar.hidden = n === 0;
+  $('#batchPickCount').textContent = n === 1 ? '1 bench selected' : n + ' benches selected';
+}
+
+// A labelled flow diagram per bench: the vetting rails feeding the bar, the bar feeding
+// review, review feeding the bench. Built from the brief so it can never describe a rail
+// the batch does not actually use.
+function batchDiagram(brief) {
+  const fig = document.createElement('figure');
+  fig.className = 'bd-figure';
+  fig.setAttribute('role', 'group');
+  fig.setAttribute('aria-label',
+    brief.name + ' vetting flow: ' + brief.vetting.rails.map(r => r.label).join(', ')
+    + ' produce evidence, which is checked against ' + brief.requirements.length
+    + ' published requirements, then reviewed by an operator before admission to the bench.');
+
+  const rails = document.createElement('div');
+  rails.className = 'bd-rails';
+  brief.vetting.rails.forEach(rail => {
+    const node = document.createElement('div');
+    node.className = 'bd-node bd-rail';
+    node.append(
+      Object.assign(document.createElement('b'), { textContent: rail.label }),
+      Object.assign(document.createElement('span'), { textContent: rail.how }),
+    );
+    rails.append(node);
+  });
+  fig.append(rails);
+  fig.append(Object.assign(document.createElement('div'), { className: 'bd-arrow', ariaHidden: 'true' }));
+
+  const bar = document.createElement('div');
+  bar.className = 'bd-node bd-bar';
+  bar.append(
+    Object.assign(document.createElement('b'), { textContent: 'The published bar' }),
+    Object.assign(document.createElement('span'), { textContent: brief.requirements.length + ' requirements, each one stated up front' }),
+  );
+  fig.append(bar);
+  fig.append(Object.assign(document.createElement('div'), { className: 'bd-arrow', ariaHidden: 'true' }));
+
+  const review = document.createElement('div');
+  review.className = 'bd-node bd-review';
+  review.append(
+    Object.assign(document.createElement('b'), { textContent: 'Operator review' }),
+    Object.assign(document.createElement('span'), { textContent: 'Clearing the bar is a recommendation. A human decides and records why.' }),
+  );
+  fig.append(review);
+  fig.append(Object.assign(document.createElement('div'), { className: 'bd-arrow', ariaHidden: 'true' }));
+
+  const bench = document.createElement('div');
+  bench.className = 'bd-node bd-bench';
+  bench.append(
+    Object.assign(document.createElement('b'), { textContent: 'The bench' }),
+    Object.assign(document.createElement('span'), { textContent: 'Companies unlock it and see your evidence, not your résumé.' }),
+  );
+  fig.append(bench);
+  return fig;
+}
+
+const HOW_TO_APPLY = [
+  ['Check where you stand', 'Every requirement below is public. Work out which ones you already clear before you write anything.'],
+  ['Close the nearest gap', 'One artifact or one connected account usually moves two requirements at once.'],
+  ['Record a short walkthrough', 'Five minutes on work you did, unscripted. This is the authorship check, and it is the part that cannot be faked.'],
+  ['Apply', 'A few written answers about why this field. You can apply before you clear everything — the bar is guidance, not a gate.'],
+  ['Operator review', 'A person reads it and records a reason either way. A miss comes back with the specific gap, not a rejection.'],
+];
+
+// The deep dive: one full-width walkthrough per selected bench.
+function renderBatchDeepDive() {
+  const host = $('#batchDeep');
+  if (!host) return;
+  host.replaceChildren();
+  const picked = [...batchPicks].map(id => batchBriefIndex.get(id)).filter(Boolean);
+  if (!picked.length) { host.hidden = true; return; }
+
+  picked.forEach(({ brief }) => {
+    const panel = document.createElement('article');
+    panel.className = 'bd-panel';
+
+    const head = document.createElement('header');
+    head.className = 'bd-head';
+    head.append(
+      Object.assign(document.createElement('p'), { className: 'feature-kicker', textContent: brief.tier === 'elite' ? 'Elite bench' : 'Open bench' }),
+      Object.assign(document.createElement('h3'), { textContent: brief.name }),
+      Object.assign(document.createElement('p'), { className: 'bd-lede', textContent: brief.description }),
+    );
+    panel.append(head);
+    panel.append(batchDiagram(brief));
+
+    const railBadge = document.createElement('span');
+    railBadge.className = 'pb-badge' + (brief.vetting.apiVerified ? ' is-api' : '');
+    railBadge.textContent = brief.vetting.apiVerified
+      ? 'Platform-verified evidence' : 'Human rail — no API can prove this work';
+    panel.append(railBadge);
+
+    const reqs = document.createElement('section');
+    reqs.className = 'bd-block';
+    reqs.append(Object.assign(document.createElement('h4'), { textContent: 'What this bench asks of you' }));
+    const list = document.createElement('ol');
+    list.className = 'bd-reqs';
+    brief.requirements.forEach((req, i) => {
+      const li = document.createElement('li');
+      li.append(Object.assign(document.createElement('span'), { className: 'bd-n', textContent: String(i + 1) }));
+      const body = document.createElement('div');
+      body.append(Object.assign(document.createElement('strong'), { textContent: req.label }));
+      if (req.detail) body.append(Object.assign(document.createElement('p'), { textContent: req.detail }));
+      li.append(body);
+      list.append(li);
+    });
+    reqs.append(list);
+    panel.append(reqs);
+
+    const how = document.createElement('section');
+    how.className = 'bd-block';
+    how.append(Object.assign(document.createElement('h4'), { textContent: 'How to apply' }));
+    const steps = document.createElement('ol');
+    steps.className = 'bd-steps';
+    HOW_TO_APPLY.forEach(([title, detail], i) => {
+      const li = document.createElement('li');
+      li.append(Object.assign(document.createElement('span'), { className: 'bd-n', textContent: String(i + 1) }));
+      const body = document.createElement('div');
+      body.append(
+        Object.assign(document.createElement('strong'), { textContent: title }),
+        Object.assign(document.createElement('p'), { textContent: detail }),
+      );
+      li.append(body);
+      steps.append(li);
+    });
+    how.append(steps);
+    panel.append(how);
+
+    const cta = document.createElement('div');
+    cta.className = 'bd-cta';
+    const apply = document.createElement('button');
+    apply.type = 'button';
+    apply.className = 'gold-button';
+    apply.append(document.createTextNode('Apply to ' + brief.name), createIcon('icon-arrow-right'));
+    apply.addEventListener('click', () => joinBatch({ id: brief.slug, industry: brief.discipline }));
+    cta.append(apply);
+    panel.append(cta);
+    host.append(panel);
+  });
+
+  host.hidden = false;
+  host.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 (() => {
@@ -3433,6 +3583,7 @@ function renderBatchCard(grid, entry, brief) {
   if (!grid) return;
   const paint = briefs => {
     grid.textContent = '';
+    batchBriefIndex.clear();
     for (const entry of BATCHES) {
       // Match on slug; the old hardcoded ids drifted from the catalogue (healthcare-ops vs
       // healthcare-operations), so fall back to the discipline name.
@@ -3441,8 +3592,29 @@ function renderBatchCard(grid, entry, brief) {
         || null;
       renderBatchCard(grid, entry, brief);
     }
+    // The fetch repaints over the fallback cards; re-apply any selection made in between so
+    // a fast clicker does not have their choice silently dropped.
+    $$('[data-batch-pick]').forEach(b => {
+      if (!batchPicks.has(b.dataset.batchPick)) return;
+      b.setAttribute('aria-pressed', 'true');
+      b.closest('.batch-card')?.classList.add('is-picked');
+      $('span', b).textContent = 'Selected';
+    });
+    syncBatchPickBar();
   };
   paint(null); // Static-preview safe: cards render before (and without) the serverless call.
+  $('#batchLearnMore')?.addEventListener('click', renderBatchDeepDive);
+  $('#batchPickClear')?.addEventListener('click', () => {
+    batchPicks.clear();
+    $$('[data-batch-pick]').forEach(b => {
+      b.setAttribute('aria-pressed', 'false');
+      b.closest('.batch-card')?.classList.remove('is-picked');
+      $('span', b).textContent = 'Select';
+    });
+    syncBatchPickBar();
+    const host = $('#batchDeep');
+    if (host) { host.replaceChildren(); host.hidden = true; }
+  });
   fetch('/api/portal', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

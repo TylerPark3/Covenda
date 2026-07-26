@@ -321,3 +321,26 @@ test('hero field reacts to the pointer without breaking motion or touch guardrai
   // Listens on the hero, not the canvas — the canvas sits behind the copy.
   assert.match(script, /canvas\.closest\('\.hero'\)/);
 });
+
+// The board is a CHOICE, not a commit: per-card "Join this batch" asked a student to decide
+// before the bench had shown what it requires. Select benches, then walk through them.
+test('batch board selects benches and walks through them full-width', () => {
+  assert.match(html, /id="batchPickBar"/);
+  assert.match(html, /id="batchLearnMore"/);
+  assert.match(html, /id="batchDeep"/);
+  assert.match(script, /const batchPicks = new Set\(\)/);
+  assert.match(script, /function renderBatchDeepDive\(\)/);
+  assert.match(script, /function batchDiagram\(/);
+  assert.match(script, /HOW_TO_APPLY/);
+  // The diagram is built from the brief, so it can never name a rail the batch does not use.
+  assert.match(script, /brief\.vetting\.rails\.forEach/);
+  // Applying stays possible before the bar is cleared — guidance, not a gate.
+  assert.match(script, /bar is guidance, not a gate/);
+  assert.match(styles, /\.bd-panel/);
+  assert.match(styles, /\.bd-figure/);
+});
+
+test('a selection made before the briefs load is not silently dropped', () => {
+  // paint() repaints over the fallback cards; the selection must be re-applied.
+  assert.match(script, /if \(!batchPicks\.has\(b\.dataset\.batchPick\)\) return;/);
+});

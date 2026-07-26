@@ -772,7 +772,14 @@
           <p>A batch is a bench in one field — a small cohort building a reviewed track record. A domain signal, not a placement guarantee.</p>
         </div>
         <div class="gold-tile gold-tile--banner batches-tile" data-gold-tile data-kicker="Meaningful Connection" aria-hidden="true"></div>
+        <p class="batch-pick-hint">Select the benches you’re considering — then walk through what each one actually asks of you.</p>
         <div class="batch-grid" id="batchGrid" data-batch-grid></div>
+        <div class="batch-pickbar" id="batchPickBar" hidden>
+          <span id="batchPickCount" role="status" aria-live="polite">0 selected</span>
+          <button class="gold-button" type="button" id="batchLearnMore">Learn more<svg><use href="#icon-arrow-right"/></svg></button>
+          <button class="quiet-link" type="button" id="batchPickClear">Clear</button>
+        </div>
+        <div class="batch-deep" id="batchDeep" hidden></div>
       </section>
 
 
