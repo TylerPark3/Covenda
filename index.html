@@ -81,7 +81,7 @@
         <span>Covenda</span>
       </button>
       <nav class="site-nav" aria-label="Primary navigation">
-        <a href="#covendaModel" data-nav-target="covendaModel" data-nav-audience="home">How it works</a>
+        <a href="#bridgeStory" data-nav-target="bridgeStory" data-nav-audience="home">How it works</a>
         <button type="button" data-audience-option="student" aria-pressed="false">Students</button>
         <button type="button" data-audience-option="company" aria-pressed="false">Companies</button>
         <button type="button" data-audience-option="university" aria-pressed="false">Referrals</button>
@@ -118,31 +118,51 @@
             <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
           </button>
         </div>
-        <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
+        <a class="scroll-cue" href="#bridgeStory"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
-      <!-- Home-only. The thesis as one scroll-driven picture, replacing three blocks of
-           prose: startups on the left needing senior-level output they cannot yet afford,
-           vouched student talent on the right, and a bridge that closes as you scroll.
-           Gold crosses it once it completes.
-
-           Labels are CATEGORIES, never real names. "Columbia Consulting Group" on a public
-           page reads as a partner, and no club has signed yet — the texture is kept, the
-           false claim is not. -->
-      <section class="bridge-section" aria-labelledby="bridgeTitle">
+      <!-- Home-only. The company in one scroll-controlled visual: constrained startups on
+           the left, referral-led talent on the right, and real project work closing the gap.
+           Every named node is an illustrative category, never a claimed partner. -->
+      <section class="bridge-section" id="bridgeStory" aria-labelledby="bridgeTitle">
         <div class="bridge-sticky">
           <div class="bridge-head">
-            <p class="feature-kicker">What we are building</p>
-            <h2 id="bridgeTitle">Two sides. One bridge.</h2>
-            <p>Startups need senior-level output before they can afford a senior hire. The talent is already there — vouched, specific, and unreachable. Covenda closes the gap.</p>
+            <h2 id="bridgeTitle">Talent is moving. <span class="word-gold">The bridge is missing.</span></h2>
+            <p>Covenda connects startups that need exceptional early talent with students vouched for by people who have seen their work.</p>
           </div>
-          <canvas id="bridgeCanvas" class="bridge-canvas" role="img"
-                  aria-label="Two columns converge. On the left, startups needing work done; on the right, students vouched by clubs, labs and faculty. A bridge closes between them as the page scrolls, and proven talent crosses it."></canvas>
-          <div class="bridge-legend">
-            <span><i class="bl-dot bl-grey"></i>Vouched talent</span>
-            <span><i class="bl-dot bl-gold"></i>Proven on a trial</span>
-            <span class="bridge-illus">Illustrative — categories, not named partners.</span>
+
+          <div class="bridge-visual">
+            <div class="bridge-side bridge-side--startups" aria-hidden="true">
+              <strong>Startups</strong>
+              <span>Great projects. Real constraints.</span>
+              <ul>
+                <li>Limited capital</li>
+                <li>No training program</li>
+                <li>Lean oversight</li>
+              </ul>
+            </div>
+            <div class="bridge-side bridge-side--talent" aria-hidden="true">
+              <strong>Vouched talent</strong>
+              <span>Referred by people who have seen the work.</span>
+            </div>
+
+            <ol class="bridge-process" aria-label="How work becomes proof">
+              <li><span>01</span><strong>Projects<br>posted</strong></li>
+              <li><span>02</span><strong>Work<br>submitted</strong></li>
+              <li><span>03</span><strong>Proof<br>earned</strong></li>
+            </ol>
+
+            <canvas id="bridgeCanvas" class="bridge-canvas" role="img"
+                    aria-label="A scroll-controlled network. Startup project nodes face a larger network of students referred by selective clubs, faculty and industry professionals. As the bridge closes, gold talent crosses through projects posted, work submitted and proof earned."></canvas>
           </div>
+
+          <div class="bridge-progress" aria-hidden="true">
+            <span>The gap</span>
+            <i><b></b></i>
+            <output>0% connected</output>
+            <span>Talent moves</span>
+          </div>
+          <p class="bridge-illus">Illustrative network — categories, not affiliations or partnership claims.</p>
         </div>
       </section>
 

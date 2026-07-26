@@ -5685,13 +5685,13 @@ function initBatchWeb() {
 })();
 
 
-// The bridge. Two columns converge as you scroll: startups on the left, vouched student
-// talent on the right, and a span that closes between them. Once a connection completes,
-// proven talent crosses it — which is the product in one picture.
+// The bridge. Startup project nodes and a much denser referral network face each other.
+// Scrolling closes the missing span; gold talent then crosses from right to left through
+// posted work, a submission, and finally a durable proof trail at the company.
 //
-// Scroll progress drives everything, so the reader controls the animation rather than
-// watching a loop. Under reduced motion it paints the FINISHED state immediately: the point
-// is the connection, and someone who cannot take the movement should still get the point.
+// Node labels remain illustrative categories rather than partner claims. Scroll progress
+// drives the actual product story, while a very small idle drift keeps each network alive.
+// Reduced motion paints the connected state once without attaching scroll or animation.
 (function initBridge() {
   const canvas = document.getElementById('bridgeCanvas');
   const section = document.querySelector('.bridge-section');
@@ -5699,15 +5699,52 @@ function initBatchWeb() {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const progressOutput = section.querySelector('.bridge-progress output');
 
-  const GOLD = '184,126,32';
+  const GOLD = '180,123,32';
   const INK = '17,17,15';
-  const MUTED = '134,130,118';
+  const MUTED = '149,146,137';
+  const PALE = '218,217,210';
+  const PAPER = '255,255,255';
 
-  // Categories, never real names — a named club or company on a public page reads as a
-  // partner, and none have signed.
-  const LEFT = ['Seed-stage AI', 'Robotics startup', 'Fintech, Series A', 'Health ops', 'Consumer brand', 'Dev tools'];
-  const RIGHT = ['Robotics club', 'Consulting group', 'Quant society', 'Research lab', 'CS faculty', 'Design collective'];
+  // Illustrative categories only. These describe the network shape without presenting any
+  // company, club, faculty member, or industry professional as a signed Covenda partner.
+  const COMPANIES = [
+    { label: 'Seed-stage AI', x: .16, y: .33 },
+    { label: 'Robotics startup', x: .24, y: .26 },
+    { label: 'Fintech, Series A', x: .30, y: .43 },
+    { label: 'Health operations', x: .18, y: .58 },
+    { label: 'Consumer brand', x: .27, y: .67 },
+    { label: 'Developer tools', x: .21, y: .82 },
+    { label: 'Climate software', x: .32, y: .78 },
+  ];
+  const REFERRALS = [
+    { label: 'Selective consulting club', x: .82, y: .25 },
+    { label: 'University club', x: .91, y: .43 },
+    { label: 'Professor referral', x: .86, y: .67 },
+    { label: 'Industry referral', x: .94, y: .79 },
+  ];
+  const COMPANY_LINKS = [[0,1],[0,3],[1,2],[1,3],[2,4],[2,6],[3,4],[3,5],[4,5],[4,6],[5,6]];
+
+  // Golden-angle placement gives us a stable, organic crowd without random layout shifts.
+  const TALENT = Array.from({ length: 30 }, (_, index) => {
+    const angle = index * 2.399963;
+    const ring = .055 + (index % 9) * .012;
+    return {
+      x: .83 + Math.cos(angle) * ring,
+      y: .53 + Math.sin(angle) * ring * 2.2,
+      gold: index % 7 === 2 || index % 11 === 5,
+      phase: index * .67,
+    };
+  });
+  const TALENT_LINKS = [];
+  for (let i = 0; i < TALENT.length; i += 1) {
+    for (let j = i + 1; j < TALENT.length; j += 1) {
+      const dx = TALENT[i].x - TALENT[j].x;
+      const dy = TALENT[i].y - TALENT[j].y;
+      if (Math.hypot(dx, dy) < .075) TALENT_LINKS.push([i, j]);
+    }
+  }
 
   let W = 0, H = 0, progress = 0, raf = 0, t = 0;
 
@@ -5727,85 +5764,296 @@ function initBatchWeb() {
     return Math.min(1, Math.max(0, -r.top / total));
   }
 
+  function setProgress(value) {
+    progress = Math.min(1, Math.max(0, value));
+    section.style.setProperty('--bridge-progress', progress.toFixed(4));
+    if (progressOutput) progressOutput.textContent = `${Math.round(progress * 100)}% connected`;
+  }
+
   const ease = p => 1 - Math.pow(1 - p, 3);
   const lerp = (a, b, p) => a + (b - a) * p;
+  const clamp = value => Math.min(1, Math.max(0, value));
+
+  function point(node, drift = true) {
+    const depth = drift && !reduce ? Math.sin(t * .008 + (node.phase || 0)) * 2.3 : 0;
+    return { x: node.x * W + depth, y: node.y * H + depth * .45 };
+  }
+
+  function line(a, b, color, width = 1, alpha = 1) {
+    ctx.strokeStyle = `rgba(${color},${alpha})`;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  function drawCompanyNetwork(p) {
+    const reveal = clamp((p + .16) / .58);
+    for (const [from, to] of COMPANY_LINKS) {
+      const alpha = .11 + reveal * .18;
+      line(point(COMPANIES[from], false), point(COMPANIES[to], false), MUTED, 1, alpha);
+    }
+
+    const fontSize = Math.max(9, Math.min(11.5, W / 118));
+    ctx.font = `600 ${fontSize}px "Manrope", system-ui, sans-serif`;
+    ctx.textBaseline = 'middle';
+    COMPANIES.forEach((company, index) => {
+      const q = point(company, false);
+      const born = clamp((reveal * 1.35) - index * .075);
+      const active = p > .74 && (index === 1 || index === 4);
+      const radius = 8 + born * 5;
+      ctx.fillStyle = active ? `rgba(${GOLD},.16)` : `rgba(${PAPER},${.86 * born})`;
+      ctx.strokeStyle = active ? `rgba(${GOLD},.9)` : `rgba(${INK},${.35 + born * .52})`;
+      ctx.lineWidth = active ? 1.7 : 1.2;
+      ctx.beginPath();
+      ctx.rect(q.x - radius, q.y - radius, radius * 2, radius * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      if (W > 760 && born > .32) {
+        const rightSide = company.x > .2;
+        ctx.fillStyle = `rgba(${INK},${.25 + born * .62})`;
+        ctx.textAlign = rightSide ? 'right' : 'left';
+        ctx.fillText(company.label, q.x + (rightSide ? -radius - 6 : radius + 6), q.y);
+      }
+    });
+  }
+
+  function drawTalentNetwork() {
+    for (const [from, to] of TALENT_LINKS) {
+      const a = point(TALENT[from]);
+      const b = point(TALENT[to]);
+      const goldLink = TALENT[from].gold || TALENT[to].gold;
+      line(a, b, goldLink ? GOLD : MUTED, 1, goldLink ? .17 : .13);
+    }
+
+    TALENT.forEach((talent, index) => {
+      const q = point(talent);
+      const pulse = .5 + Math.sin(t * .025 + talent.phase) * .5;
+      if (talent.gold) {
+        ctx.fillStyle = `rgba(${GOLD},${.07 + pulse * .05})`;
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, 10 + pulse * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = talent.gold ? `rgba(${GOLD},.94)` : '#fff';
+      ctx.strokeStyle = talent.gold ? `rgba(${GOLD},1)` : `rgba(${MUTED},.72)`;
+      ctx.lineWidth = talent.gold ? 1.3 : 1;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, talent.gold ? 5.2 : 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      if (!talent.gold && index % 3 === 0) {
+        ctx.fillStyle = `rgba(${INK},.42)`;
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+
+    const labelSize = Math.max(8.5, Math.min(10.5, W / 128));
+    ctx.font = `650 ${labelSize}px "Manrope", system-ui, sans-serif`;
+    ctx.textBaseline = 'middle';
+    REFERRALS.forEach((referral, index) => {
+      const q = point(referral, false);
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = `rgba(${INK},.72)`;
+      ctx.lineWidth = 1.25;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, W > 760 ? 11 : 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = `rgba(${GOLD},.88)`;
+      ctx.beginPath();
+      ctx.arc(q.x, q.y, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (W > 760) {
+        ctx.fillStyle = `rgba(${INK},.82)`;
+        ctx.textAlign = index % 2 ? 'right' : 'left';
+        const offset = index % 2 ? -17 : 17;
+        ctx.fillText(referral.label, q.x + offset, q.y);
+      }
+    });
+  }
+
+  function bridgeGeometry(p) {
+    const midX = W / 2;
+    const centerY = H / 2;
+    const mobile = W <= 720;
+    if (mobile) {
+      const mouth = Math.min(W * .32, 116);
+      const gap = lerp(H * .17, 0, p);
+      return {
+        mobile,
+        centerX: midX,
+        centerY,
+        top: H * .31,
+        bottom: H * .69,
+        left: midX - mouth,
+        right: midX + mouth,
+        gap,
+      };
+    }
+    return {
+      mobile,
+      centerX: midX,
+      centerY,
+      left: W * .31,
+      right: W * .69,
+      top: centerY - H * .28,
+      bottom: centerY + H * .28,
+      gap: lerp(W * .13, 0, p),
+    };
+  }
+
+  function drawDesktopBridge(p, geometry) {
+    const { left, right, top, bottom, centerX, centerY, gap } = geometry;
+    const leftEnd = centerX - gap / 2;
+    const rightStart = centerX + gap / 2;
+    const neck = H * .085;
+    const bridgeAlpha = .18 + p * .46;
+
+    ctx.lineWidth = 1.25;
+    ctx.strokeStyle = `rgba(${GOLD},${.34 + p * .42})`;
+    ctx.beginPath();
+    ctx.moveTo(left, top);
+    ctx.bezierCurveTo(left + W * .08, top + H * .02, leftEnd - W * .07, centerY - neck, leftEnd, centerY - neck);
+    ctx.moveTo(left, bottom);
+    ctx.bezierCurveTo(left + W * .08, bottom - H * .02, leftEnd - W * .07, centerY + neck, leftEnd, centerY + neck);
+    ctx.moveTo(rightStart, centerY - neck);
+    ctx.bezierCurveTo(rightStart + W * .07, centerY - neck, right - W * .08, top + H * .02, right, top);
+    ctx.moveTo(rightStart, centerY + neck);
+    ctx.bezierCurveTo(rightStart + W * .07, centerY + neck, right - W * .08, bottom - H * .02, right, bottom);
+    ctx.stroke();
+
+    ctx.strokeStyle = `rgba(${MUTED},${bridgeAlpha})`;
+    ctx.lineWidth = 1;
+    for (let i = 1; i <= 4; i += 1) {
+      const q = i / 5;
+      const lx = lerp(left, leftEnd, q);
+      const rx = lerp(rightStart, right, q);
+      const leftHalf = lerp((bottom - top) / 2, neck, q);
+      const rightHalf = lerp(neck, (bottom - top) / 2, q);
+      ctx.beginPath();
+      ctx.moveTo(lx, centerY - leftHalf);
+      ctx.lineTo(lx, centerY + leftHalf);
+      ctx.moveTo(rx, centerY - rightHalf);
+      ctx.lineTo(rx, centerY + rightHalf);
+      ctx.stroke();
+    }
+
+    const joinP = clamp((p - .08) / .72);
+    ctx.setLineDash(joinP >= .98 ? [] : [5, 7]);
+    line({ x: left, y: centerY }, { x: lerp(left, right, joinP), y: centerY }, joinP > .88 ? GOLD : MUTED, joinP > .88 ? 1.8 : 1, .32 + joinP * .5);
+    ctx.setLineDash([]);
+  }
+
+  function drawMobileBridge(p, geometry) {
+    const { centerX, centerY, left, right, top, bottom, gap } = geometry;
+    const topEnd = centerY - gap / 2;
+    const bottomStart = centerY + gap / 2;
+    const neck = W * .13;
+
+    ctx.strokeStyle = `rgba(${GOLD},${.34 + p * .42})`;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(left, top);
+    ctx.bezierCurveTo(left, top + H * .08, centerX - neck, topEnd - H * .04, centerX - neck, topEnd);
+    ctx.moveTo(right, top);
+    ctx.bezierCurveTo(right, top + H * .08, centerX + neck, topEnd - H * .04, centerX + neck, topEnd);
+    ctx.moveTo(centerX - neck, bottomStart);
+    ctx.bezierCurveTo(centerX - neck, bottomStart + H * .04, left, bottom - H * .08, left, bottom);
+    ctx.moveTo(centerX + neck, bottomStart);
+    ctx.bezierCurveTo(centerX + neck, bottomStart + H * .04, right, bottom - H * .08, right, bottom);
+    ctx.stroke();
+
+    const joinP = clamp((p - .08) / .72);
+    ctx.setLineDash(joinP >= .98 ? [] : [5, 7]);
+    line({ x: centerX, y: bottom }, { x: centerX, y: lerp(bottom, top, joinP) }, joinP > .88 ? GOLD : MUTED, joinP > .88 ? 1.8 : 1, .32 + joinP * .5);
+    ctx.setLineDash([]);
+  }
+
+  function drawCrossingTalent(p, geometry) {
+    const move = clamp((p - .4) / .58);
+    if (move <= 0) return;
+    const count = W <= 720 ? 4 : 6;
+    for (let index = 0; index < count; index += 1) {
+      const local = clamp(move * 1.38 - index * .11);
+      if (local <= 0) continue;
+      let x;
+      let y;
+      if (geometry.mobile) {
+        x = geometry.centerX + Math.sin(local * Math.PI * 2 + index) * 2;
+        y = lerp(geometry.bottom, geometry.top, local);
+      } else {
+        x = lerp(geometry.right, geometry.left, local);
+        y = geometry.centerY + Math.sin(local * Math.PI + index) * 3;
+      }
+      const fade = Math.sin(Math.min(.99, local) * Math.PI) * .55 + .4;
+      ctx.fillStyle = `rgba(${GOLD},${fade})`;
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5 + (index % 2), 0, Math.PI * 2);
+      ctx.fill();
+      if (local > .92) {
+        ctx.strokeStyle = `rgba(${GOLD},${(local - .92) * 5})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, 8 + (local - .92) * 60, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+  }
 
   function draw() {
     const p = ease(reduce ? 1 : progress);
     ctx.clearRect(0, 0, W, H);
-    const midX = W / 2;
-    const colGap = Math.min(0.34 * W, 300);
-    // The columns close in as you scroll — the gap itself is the argument.
-    const leftX = lerp(W * 0.10, midX - colGap * 0.42, p);
-    const rightX = lerp(W * 0.90, midX + colGap * 0.42, p);
-    const rows = LEFT.length;
-    const top = 54, spacing = (H - top - 40) / Math.max(1, rows - 1);
-    const label = Math.max(10, Math.min(12.5, W / 90));
 
-    ctx.textBaseline = 'middle';
-    ctx.font = `600 ${label}px "Manrope", system-ui, sans-serif`;
+    if (W <= 720) {
+      // On mobile the same relationship stacks vertically: constrained companies above,
+      // the referral network below, and talent moves upward through the proof bridge.
+      const originalCompanies = COMPANIES.map(company => ({ ...company }));
+      COMPANIES.forEach((company, index) => {
+        company.x = .42 + (index % 4) * .16;
+        company.y = .19 + Math.floor(index / 4) * .07;
+      });
+      const originalTalent = TALENT.map(talent => ({ ...talent }));
+      TALENT.forEach((talent, index) => {
+        const angle = index * 2.399963;
+        const radius = .07 + (index % 8) * .012;
+        talent.x = .5 + Math.cos(angle) * radius * 2.4;
+        talent.y = .8 + Math.sin(angle) * radius;
+      });
+      const originalReferrals = REFERRALS.map(referral => ({ ...referral }));
+      REFERRALS.forEach((referral, index) => {
+        referral.x = .18 + index * .21;
+        referral.y = .88 - (index % 2) * .045;
+      });
 
-    for (let i = 0; i < rows; i++) {
-      const y = top + i * spacing;
-      // Rows complete in sequence, so the bridge visibly knits rather than fading in.
-      const rowP = Math.min(1, Math.max(0, (p - i * 0.055) / 0.5));
-      const proven = rowP > 0.92;
+      drawCompanyNetwork(p);
+      drawTalentNetwork();
+      const geometry = bridgeGeometry(p);
+      drawMobileBridge(p, geometry);
+      drawCrossingTalent(p, geometry);
 
-      // span
-      if (rowP > 0) {
-        const x1 = leftX + 12, x2 = rightX - 12;
-        const reach = lerp(x1, x2, rowP);
-        ctx.strokeStyle = proven ? `rgba(${GOLD},.55)` : `rgba(${MUTED},${0.22 + 0.3 * rowP})`;
-        ctx.lineWidth = proven ? 1.6 : 1;
-        ctx.setLineDash(proven ? [] : [4, 6]);
-        ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(reach, y); ctx.stroke();
-        ctx.setLineDash([]);
-        if (!proven && rowP < 1) {
-          ctx.strokeStyle = `rgba(${MUTED},.22)`;
-          ctx.setLineDash([4, 6]);
-          ctx.beginPath(); ctx.moveTo(x2, y); ctx.lineTo(lerp(x2, x1, rowP), y); ctx.stroke();
-          ctx.setLineDash([]);
-        }
-      }
-
-      // talent crossing a completed span
-      if (proven) {
-        const travel = ((t * 0.004) + i * 0.17) % 1;
-        const tx = lerp(leftX + 12, rightX - 12, travel);
-        ctx.fillStyle = `rgba(${GOLD},${0.9 * Math.sin(travel * Math.PI)})`;
-        ctx.beginPath(); ctx.arc(tx, y, 4.2, 0, Math.PI * 2); ctx.fill();
-      }
-
-      // left: a company, drawn square
-      ctx.fillStyle = proven ? `rgba(${GOLD},.16)` : '#fff';
-      ctx.strokeStyle = proven ? `rgba(${GOLD},.9)` : `rgba(${INK},.85)`;
-      ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.rect(leftX - 9, y - 9, 18, 18); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = `rgba(${INK},.82)`;
-      ctx.textAlign = 'right';
-      ctx.fillText(LEFT[i], leftX - 18, y);
-
-      // right: a vouching source, drawn round
-      ctx.fillStyle = proven ? `rgba(${GOLD},.9)` : '#fff';
-      ctx.strokeStyle = proven ? `rgba(${GOLD},.9)` : `rgba(${MUTED},.9)`;
-      ctx.beginPath(); ctx.arc(rightX, y, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = `rgba(${INK},.82)`;
-      ctx.textAlign = 'left';
-      ctx.fillText(RIGHT[i], rightX + 18, y);
+      COMPANIES.forEach((company, index) => Object.assign(company, originalCompanies[index]));
+      TALENT.forEach((talent, index) => Object.assign(talent, originalTalent[index]));
+      REFERRALS.forEach((referral, index) => Object.assign(referral, originalReferrals[index]));
+      return;
     }
 
-    // column headers
-    ctx.font = `700 ${label - 1}px "Manrope", system-ui, sans-serif`;
-    ctx.fillStyle = `rgba(${MUTED},1)`;
-    ctx.textAlign = 'right';
-    ctx.fillText('STARTUPS', leftX - 18, 22);
-    ctx.textAlign = 'left';
-    ctx.fillText('VOUCHED TALENT', rightX + 18, 22);
+    drawCompanyNetwork(p);
+    drawTalentNetwork();
+    const geometry = bridgeGeometry(p);
+    drawDesktopBridge(p, geometry);
+    drawCrossingTalent(p, geometry);
   }
 
   function frame() { t += 1; draw(); raf = requestAnimationFrame(frame); }
 
   resize();
+  setProgress(reduce ? 1 : readProgress());
   draw();
   window.addEventListener('resize', () => { resize(); draw(); });
   if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); draw(); }).observe(canvas);
@@ -5815,9 +6063,8 @@ function initBatchWeb() {
   window.addEventListener('scroll', () => {
     if (ticking) return;
     ticking = true;
-    requestAnimationFrame(() => { progress = readProgress(); ticking = false; });
+    requestAnimationFrame(() => { setProgress(readProgress()); ticking = false; });
   }, { passive: true });
-  progress = readProgress();
 
   // Only animate while the section is on screen.
   if ('IntersectionObserver' in window) {
