@@ -458,7 +458,9 @@ test('the trial walkthrough explains the five steps and stays operable', () => {
   assert.match(html, /The student does the work/);
   assert.match(html, /The company decides/);
   // Native scroll-snap means swipe works with no JS; the rail must still read unscripted.
-  assert.match(styles, /\.tf-viewport \{[\s\S]*?scroll-snap-type: x mandatory/);
+  // Proximity, not mandatory: paging moves a full viewport, and card-level snapping
+  // fought that and landed the rail where the dots did not claim it was.
+  assert.match(styles, /\.tf-viewport \{[\s\S]*?scroll-snap-type: x proximity/);
   // Dots follow the scroll rather than assuming they caused it.
   assert.match(script, /if \(at !== page\) sync\(at\)/);
   // One dot per PAGE, not per slide: with four of five cards already visible, five dots
