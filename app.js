@@ -4560,6 +4560,8 @@ function initHeroField() {
     build();
   }
   const focal = () => ({ x: W * 0.76, y: H * 0.46 });
+  // Pointer in canvas space; null when the cursor is elsewhere so the field relaxes back.
+  let pointer = null;
   function spawn(seed = false) {
     return {
       x: seed ? Math.random() * W : -12 - Math.random() * 40,
@@ -4629,7 +4631,27 @@ function initHeroField() {
       }
     }
   }
-  function frame() { for (const m of motes) step(m); draw(); raf = requestAnimationFrame(frame); }
+  // The reader's cursor becomes another node: nearby motes link to it and lift, so the
+  // "vouched, connected" motif responds to the person reading it. Purely additive — the
+  // ambient field is unchanged when the pointer is away.
+  function drawPointerLinks() {
+    if (!pointer) return;
+    const REACH = 132;
+    ctx.lineWidth = 1;
+    for (const m of motes) {
+      const dx = m.x - pointer.x, dy = m.y - pointer.y;
+      const d = Math.hypot(dx, dy);
+      if (d > REACH) continue;
+      const t = 1 - d / REACH;
+      ctx.strokeStyle = `rgba(${GOLD},${0.20 * t})`;
+      ctx.beginPath(); ctx.moveTo(pointer.x, pointer.y); ctx.lineTo(m.x, m.y); ctx.stroke();
+      ctx.fillStyle = `rgba(${GOLD},${0.28 * t})`;
+      ctx.beginPath(); ctx.arc(m.x, m.y, m.r + 1.1 * t, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = `rgba(${GOLD},.20)`;
+    ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 2.4, 0, Math.PI * 2); ctx.fill();
+  }
+  function frame() { for (const m of motes) step(m); draw(); drawPointerLinks(); raf = requestAnimationFrame(frame); }
   function start() { if (running || reduce) return; running = true; raf = requestAnimationFrame(frame); }
   function stop() { running = false; cancelAnimationFrame(raf); }
 
@@ -4642,6 +4664,14 @@ function initHeroField() {
     new IntersectionObserver(es => es.forEach(e => (e.isIntersecting ? start() : stop())), { threshold: 0.02 }).observe(canvas);
   } else { start(); }
   document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
+  const hero = canvas.closest('.hero') || canvas.parentElement;
+  if (hero && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+    hero.addEventListener('pointermove', event => {
+      const r = canvas.getBoundingClientRect();
+      pointer = { x: event.clientX - r.left, y: event.clientY - r.top };
+    });
+    hero.addEventListener('pointerleave', () => { pointer = null; });
+  }
 }
 
 // Covenda tree: arm the grow-from-the-roots animation, fired when the tree enters view.

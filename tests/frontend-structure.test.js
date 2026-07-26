@@ -308,3 +308,15 @@ test('candidate browser is not on the public site', () => {
   assert.match(script, /const bar = \$\('#candToolbar'\);\n  if \(!bar\) return;/);
   assert.match(script, /const grid = \$\('#candGrid'\);\n  if \(!grid\) return;/);
 });
+
+// The hero field is the geometric motif the rest of the site borrows from. It gained a
+// pointer-reactive layer; the guardrails around it must survive that.
+test('hero field reacts to the pointer without breaking motion or touch guardrails', () => {
+  assert.match(script, /function drawPointerLinks\(\)/);
+  assert.match(script, /pointerleave/);
+  // Reduced-motion returns before any listener is attached (the early `if (reduce) return`),
+  // and coarse pointers never get a hover handler at all.
+  assert.match(script, /\(hover: hover\) and \(pointer: fine\)/);
+  // Listens on the hero, not the canvas — the canvas sits behind the copy.
+  assert.match(script, /canvas\.closest\('\.hero'\)/);
+});
