@@ -432,6 +432,40 @@ function setAudience(audience) {
   renderSubmissionHistory();
 }
 
+let audienceTransitionTimer = 0;
+function transitionAudience(audience) {
+  if (!['home', 'student', 'company', 'university'].includes(audience)) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const labels = {
+    home: 'Covenda',
+    student: 'For students',
+    company: 'For startups',
+    university: 'For referrers',
+  };
+  window.clearTimeout(audienceTransitionTimer);
+  if (reduceMotion || audience === state.audience) {
+    setAudience(audience);
+    setSurface('site');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    return;
+  }
+
+  const label = $('#audienceTransitionLabel');
+  if (label) label.textContent = labels[audience];
+  document.body.classList.remove('is-audience-transitioning');
+  void document.body.offsetWidth;
+  document.body.classList.add('is-audience-transitioning');
+
+  window.setTimeout(() => {
+    setAudience(audience);
+    setSurface('site');
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, 380);
+  audienceTransitionTimer = window.setTimeout(() => {
+    document.body.classList.remove('is-audience-transitioning');
+  }, 860);
+}
+
 function setSurface(surface) {
   state.surface = surface;
   document.body.dataset.surface = surface;
@@ -448,7 +482,7 @@ function selectWorkType(workType) {
   if (!workType) return;
   state.workType = workType;
   writeStorage(workTypeStorageKey, workType);
-  $$('.work-option').forEach(button => {
+  $$('.work-option, .student-vertical').forEach(button => {
     const selected = button.dataset.workType === workType;
     const newlySelected = selected && !button.classList.contains('is-selected');
     button.classList.toggle('is-selected', selected);
@@ -2220,12 +2254,9 @@ $('#rosterList')?.addEventListener('click', event => {
 });
 
 $$('[data-audience-option]').forEach(button => button.addEventListener('click', () => {
-  setAudience(button.dataset.audienceOption);
+  transitionAudience(button.dataset.audienceOption);
   // The core-story demo only belongs to the opening/default home view.
   document.body.dataset.audienceSwitched = 'true';
-  // Land on the new audience's hero, not mid-page in its content.
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  window.scrollTo({ top: 0, behavior: reduceMotion ? 'instant' : 'smooth' });
 }));
 $$('[data-workspace-tab]').forEach(button => button.addEventListener('click', () => setWorkspaceTab(button.dataset.workspaceTab)));
 // ---- Work-type explore: per-niche detail panels (explore before the form) ----
@@ -4675,9 +4706,9 @@ function initScrollReveal() {
 // That conversion is the whole argument rendered literally: real work becomes credible proof.
 // The ratio is held near a tenth, so gold always reads as "some of these", never as a field.
 //
-// 3D is real, not faked: nodes carry z, the camera eases toward the pointer, and everything
-// is perspective-projected — so depth changes size, opacity, link reach and parallax together.
-// Nothing depends on the values, so Math.random is fine here.
+// 3D depth changes size, opacity and link reach, but the field itself does not chase the
+// cursor. The pointer only discovers nearby nodes. Separately, one lasting connection forms
+// between two gold nodes every ten seconds, making the network feel more credible over time.
 function initHeroField() {
   const canvas = document.getElementById('heroFieldCanvas');
   if (!canvas) return;
@@ -4690,9 +4721,9 @@ function initHeroField() {
   const FOCAL = 760;
   const DEPTH = 680;
   const LINK_DISTANCE = 112;
-  let W = 0, H = 0, nodes = [], signals = [], running = false, raf = 0, t = 0;
-  let pointer = null, camX = 0, camY = 0, targetX = 0, targetY = 0;
-  let nextSignalAt = 0;
+  let W = 0, H = 0, nodes = [], signals = [], goldBonds = [], running = false, raf = 0, t = 0;
+  let pointer = null;
+  let nextSignalAt = 0, nextGoldBondAt = 0;
 
   function build() {
     const target = Math.max(140, Math.min(240, Math.round((W * H) / 4200)));
@@ -4708,7 +4739,9 @@ function initHeroField() {
       phase: Math.random() * Math.PI * 2,
     }));
     signals = [];
+    goldBonds = [];
     nextSignalAt = performance.now() + 620;
+    nextGoldBondAt = performance.now() + 10000;
   }
 
   function resize() {
@@ -4725,8 +4758,8 @@ function initHeroField() {
     const z = n.z + FOCAL;
     const scale = FOCAL / z;
     return {
-      x: W / 2 + (n.x + camX * (1 - n.z / DEPTH) * 72) * scale,
-      y: H / 2 + (n.y + camY * (1 - n.z / DEPTH) * 72) * scale,
+      x: W / 2 + n.x * scale,
+      y: H / 2 + n.y * scale,
       scale,
     };
   }
@@ -4740,10 +4773,25 @@ function initHeroField() {
     nextSignalAt = now + 560 + Math.random() * 760;
   }
 
+  function formGoldBond(now) {
+    const goldIndexes = nodes
+      .map((node, index) => node.gold ? index : -1)
+      .filter(index => index >= 0);
+    if (goldIndexes.length < 2) return;
+    const used = new Set(goldBonds.map(bond => `${Math.min(bond.a, bond.b)}:${Math.max(bond.a, bond.b)}`));
+    const candidates = [];
+    for (let i = 0; i < goldIndexes.length; i += 1) {
+      for (let j = i + 1; j < goldIndexes.length; j += 1) {
+        const key = `${goldIndexes[i]}:${goldIndexes[j]}`;
+        if (!used.has(key)) candidates.push({ a: goldIndexes[i], b: goldIndexes[j], born: now });
+      }
+    }
+    if (candidates.length) goldBonds.push(candidates[Math.floor(Math.random() * candidates.length)]);
+    nextGoldBondAt = now + 10000;
+  }
+
   function step(now) {
     t += 1;
-    camX += (targetX - camX) * 0.045;
-    camY += (targetY - camY) * 0.045;
     for (const n of nodes) {
       n.x += n.vx; n.y += n.vy; n.z += n.vz;
       const bx = W * 0.9, by = H * 0.9;
@@ -4753,6 +4801,7 @@ function initHeroField() {
     }
     signals = signals.filter(signal => now - signal.born < signal.duration);
     if (now >= nextSignalAt) spawnSignal(now);
+    if (now >= nextGoldBondAt) formGoldBond(now);
   }
 
   function draw(now = performance.now()) {
@@ -4779,6 +4828,20 @@ function initHeroField() {
         ctx.stroke();
         linkCount += 1;
       }
+    }
+
+    // These are lasting, deliberately slow connections: one new gold-to-gold bond every
+    // ten seconds. They are brighter than the ambient mesh but still sit behind the nodes.
+    for (const bond of goldBonds) {
+      const a = pts[bond.a], b = pts[bond.b];
+      if (!a || !b) continue;
+      const age = Math.min(1, (now - bond.born) / 900);
+      ctx.strokeStyle = `rgba(${GOLD},${.12 + age * .34})`;
+      ctx.lineWidth = 1.1 + age * .55;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
     }
 
     // The cursor discovers the seven closest people and visibly connects to them.
@@ -4808,8 +4871,12 @@ function initHeroField() {
       const r = n.r * q.scale;
       if (n.gold) {
         const pulse = 0.5 + 0.5 * Math.sin(t * 0.03 + n.phase);
-        ctx.fillStyle = `rgba(${GOLD},${.08 + pulse * .05})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 3) * 3.1, 0, Math.PI * 2); ctx.fill();
+        const aura = ctx.createRadialGradient(q.x, q.y, r, q.x, q.y, (r + 5) * 5);
+        aura.addColorStop(0, `rgba(255,224,151,${.22 + pulse * .12})`);
+        aura.addColorStop(.34, `rgba(${GOLD},${.11 + pulse * .08})`);
+        aura.addColorStop(1, `rgba(${GOLD},0)`);
+        ctx.fillStyle = aura;
+        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 5) * 5, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = `rgba(255,224,151,${.78 * q.scale + .18})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r + 1 + pulse * .7, 0, Math.PI * 2); ctx.fill();
         const glint = (5 + pulse * 7) * q.scale;
@@ -4866,10 +4933,8 @@ function initHeroField() {
     hero.addEventListener('pointermove', event => {
       const r = canvas.getBoundingClientRect();
       pointer = { x: event.clientX - r.left, y: event.clientY - r.top };
-      targetX = -((pointer.x / Math.max(1, W)) - 0.5) * 2;
-      targetY = -((pointer.y / Math.max(1, H)) - 0.5) * 2;
     });
-    hero.addEventListener('pointerleave', () => { pointer = null; targetX = 0; targetY = 0; });
+    hero.addEventListener('pointerleave', () => { pointer = null; });
   }
 }
 
@@ -5705,48 +5770,39 @@ function initBatchWeb() {
   const INK = '17,17,15';
   const MUTED = '149,146,137';
   const PALE = '218,217,210';
-  const PAPER = '255,255,255';
+  let W = 0, H = 0, progress = 0, raf = 0, t = 0;
 
-  // Illustrative categories only. These describe the network shape without presenting any
-  // company, club, faculty member, or industry professional as a signed Covenda partner.
-  const COMPANIES = [
-    { label: 'Seed-stage AI', x: .16, y: .33 },
-    { label: 'Robotics startup', x: .24, y: .26 },
-    { label: 'Fintech, Series A', x: .30, y: .43 },
-    { label: 'Health operations', x: .18, y: .58 },
-    { label: 'Consumer brand', x: .27, y: .67 },
-    { label: 'Developer tools', x: .21, y: .82 },
-    { label: 'Climate software', x: .32, y: .78 },
-  ];
-  const REFERRALS = [
-    { label: 'Selective consulting club', x: .82, y: .25 },
-    { label: 'University club', x: .91, y: .43 },
-    { label: 'Professor referral', x: .86, y: .67 },
-    { label: 'Industry referral', x: .94, y: .79 },
-  ];
-  const COMPANY_LINKS = [[0,1],[0,3],[1,2],[1,3],[2,4],[2,6],[3,4],[3,5],[4,5],[4,6],[5,6]];
-
-  // Golden-angle placement gives us a stable, organic crowd without random layout shifts.
-  const TALENT = Array.from({ length: 30 }, (_, index) => {
-    const angle = index * 2.399963;
-    const ring = .055 + (index % 9) * .012;
-    return {
-      x: .83 + Math.cos(angle) * ring,
-      y: .53 + Math.sin(angle) * ring * 2.2,
-      gold: index % 7 === 2 || index % 11 === 5,
-      phase: index * .67,
-    };
-  });
-  const TALENT_LINKS = [];
-  for (let i = 0; i < TALENT.length; i += 1) {
-    for (let j = i + 1; j < TALENT.length; j += 1) {
-      const dx = TALENT[i].x - TALENT[j].x;
-      const dy = TALENT[i].y - TALENT[j].y;
-      if (Math.hypot(dx, dy) < .075) TALENT_LINKS.push([i, j]);
-    }
+  // Stable point sets keep the clouds organic without shifting on reload. The labels live in
+  // semantic HTML; canvas carries only the spatial relationship and movement.
+  function seeded(index, salt) {
+    const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453;
+    return value - Math.floor(value);
   }
 
-  let W = 0, H = 0, progress = 0, raf = 0, t = 0;
+  function makeCloud(count, salt, goldRate) {
+    const nodes = Array.from({ length: count }, (_, index) => {
+      const angle = seeded(index, salt) * Math.PI * 2;
+      const radius = Math.sqrt(seeded(index, salt + 1));
+      return {
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+        gold: seeded(index, salt + 2) < goldRate,
+        phase: seeded(index, salt + 3) * Math.PI * 2,
+        size: .7 + seeded(index, salt + 4) * 1.4,
+      };
+    });
+    const links = [];
+    for (let i = 0; i < nodes.length; i += 1) {
+      for (let j = i + 1; j < nodes.length; j += 1) {
+        if (links.length > count * 2.2) break;
+        if (Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y) < .34) links.push([i, j]);
+      }
+    }
+    return { nodes, links };
+  }
+
+  const startupCloud = makeCloud(72, 3, .055);
+  const talentCloud = makeCloud(90, 11, .12);
 
   function resize() {
     const r = canvas.getBoundingClientRect();
@@ -5767,17 +5823,12 @@ function initBatchWeb() {
   function setProgress(value) {
     progress = Math.min(1, Math.max(0, value));
     section.style.setProperty('--bridge-progress', progress.toFixed(4));
-    if (progressOutput) progressOutput.textContent = `${Math.round(progress * 100)}% connected`;
+    if (progressOutput) progressOutput.textContent = `${Math.round(progress * 100)}% together`;
   }
 
   const ease = p => 1 - Math.pow(1 - p, 3);
   const lerp = (a, b, p) => a + (b - a) * p;
   const clamp = value => Math.min(1, Math.max(0, value));
-
-  function point(node, drift = true) {
-    const depth = drift && !reduce ? Math.sin(t * .008 + (node.phase || 0)) * 2.3 : 0;
-    return { x: node.x * W + depth, y: node.y * H + depth * .45 };
-  }
 
   function line(a, b, color, width = 1, alpha = 1) {
     ctx.strokeStyle = `rgba(${color},${alpha})`;
@@ -5788,266 +5839,128 @@ function initBatchWeb() {
     ctx.stroke();
   }
 
-  function drawCompanyNetwork(p) {
-    const reveal = clamp((p + .16) / .58);
-    for (const [from, to] of COMPANY_LINKS) {
-      const alpha = .11 + reveal * .18;
-      line(point(COMPANIES[from], false), point(COMPANIES[to], false), MUTED, 1, alpha);
-    }
-
-    const fontSize = Math.max(9, Math.min(11.5, W / 118));
-    ctx.font = `600 ${fontSize}px "Manrope", system-ui, sans-serif`;
-    ctx.textBaseline = 'middle';
-    COMPANIES.forEach((company, index) => {
-      const q = point(company, false);
-      const born = clamp((reveal * 1.35) - index * .075);
-      const active = p > .74 && (index === 1 || index === 4);
-      const radius = 8 + born * 5;
-      ctx.fillStyle = active ? `rgba(${GOLD},.16)` : `rgba(${PAPER},${.86 * born})`;
-      ctx.strokeStyle = active ? `rgba(${GOLD},.9)` : `rgba(${INK},${.35 + born * .52})`;
-      ctx.lineWidth = active ? 1.7 : 1.2;
-      ctx.beginPath();
-      ctx.rect(q.x - radius, q.y - radius, radius * 2, radius * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      if (W > 760 && born > .32) {
-        const rightSide = company.x > .2;
-        ctx.fillStyle = `rgba(${INK},${.25 + born * .62})`;
-        ctx.textAlign = rightSide ? 'right' : 'left';
-        ctx.fillText(company.label, q.x + (rightSide ? -radius - 6 : radius + 6), q.y);
-      }
-    });
-  }
-
-  function drawTalentNetwork() {
-    for (const [from, to] of TALENT_LINKS) {
-      const a = point(TALENT[from]);
-      const b = point(TALENT[to]);
-      const goldLink = TALENT[from].gold || TALENT[to].gold;
-      line(a, b, goldLink ? GOLD : MUTED, 1, goldLink ? .17 : .13);
-    }
-
-    TALENT.forEach((talent, index) => {
-      const q = point(talent);
-      const pulse = .5 + Math.sin(t * .025 + talent.phase) * .5;
-      if (talent.gold) {
-        ctx.fillStyle = `rgba(${GOLD},${.07 + pulse * .05})`;
-        ctx.beginPath();
-        ctx.arc(q.x, q.y, 10 + pulse * 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.fillStyle = talent.gold ? `rgba(${GOLD},.94)` : '#fff';
-      ctx.strokeStyle = talent.gold ? `rgba(${GOLD},1)` : `rgba(${MUTED},.72)`;
-      ctx.lineWidth = talent.gold ? 1.3 : 1;
-      ctx.beginPath();
-      ctx.arc(q.x, q.y, talent.gold ? 5.2 : 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      if (!talent.gold && index % 3 === 0) {
-        ctx.fillStyle = `rgba(${INK},.42)`;
-        ctx.beginPath();
-        ctx.arc(q.x, q.y, 1.1, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    });
-
-    const labelSize = Math.max(8.5, Math.min(10.5, W / 128));
-    ctx.font = `650 ${labelSize}px "Manrope", system-ui, sans-serif`;
-    ctx.textBaseline = 'middle';
-    REFERRALS.forEach((referral, index) => {
-      const q = point(referral, false);
-      ctx.fillStyle = '#fff';
-      ctx.strokeStyle = `rgba(${INK},.72)`;
-      ctx.lineWidth = 1.25;
-      ctx.beginPath();
-      ctx.arc(q.x, q.y, W > 760 ? 11 : 8, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = `rgba(${GOLD},.88)`;
-      ctx.beginPath();
-      ctx.arc(q.x, q.y, 2.4, 0, Math.PI * 2);
-      ctx.fill();
-
-      if (W > 760) {
-        ctx.fillStyle = `rgba(${INK},.82)`;
-        ctx.textAlign = index % 2 ? 'right' : 'left';
-        const offset = index % 2 ? -17 : 17;
-        ctx.fillText(referral.label, q.x + offset, q.y);
-      }
-    });
-  }
-
-  function bridgeGeometry(p) {
-    const midX = W / 2;
-    const centerY = H / 2;
+  function cloudFrame(side, p) {
     const mobile = W <= 720;
     if (mobile) {
-      const mouth = Math.min(W * .32, 116);
-      const gap = lerp(H * .17, 0, p);
+      return side === 'startup'
+        ? { x: W * .5, y: lerp(H * .25, H * .4, p), rx: W * .44, ry: H * .17 }
+        : { x: W * .5, y: lerp(H * .78, H * .61, p), rx: W * .44, ry: H * .18 };
+    }
+    return side === 'startup'
+      ? { x: lerp(W * .23, W * .41, p), y: H * .49, rx: W * .24, ry: H * .34 }
+      : { x: lerp(W * .77, W * .59, p), y: H * .49, rx: W * .25, ry: H * .35 };
+  }
+
+  function cloudPoints(cloud, frame) {
+    return cloud.nodes.map(node => {
+      const drift = reduce ? 0 : Math.sin(t * .009 + node.phase) * 2.2;
       return {
-        mobile,
-        centerX: midX,
-        centerY,
-        top: H * .31,
-        bottom: H * .69,
-        left: midX - mouth,
-        right: midX + mouth,
-        gap,
+        x: frame.x + node.x * frame.rx + drift,
+        y: frame.y + node.y * frame.ry + drift * .45,
       };
-    }
-    return {
-      mobile,
-      centerX: midX,
-      centerY,
-      left: W * .31,
-      right: W * .69,
-      top: centerY - H * .28,
-      bottom: centerY + H * .28,
-      gap: lerp(W * .13, 0, p),
-    };
+    });
   }
 
-  function drawDesktopBridge(p, geometry) {
-    const { left, right, top, bottom, centerX, centerY, gap } = geometry;
-    const leftEnd = centerX - gap / 2;
-    const rightStart = centerX + gap / 2;
-    const neck = H * .085;
-    const bridgeAlpha = .18 + p * .46;
-
-    ctx.lineWidth = 1.25;
-    ctx.strokeStyle = `rgba(${GOLD},${.34 + p * .42})`;
+  function drawCloud(cloud, side, p) {
+    const frame = cloudFrame(side, p);
+    const points = cloudPoints(cloud, frame);
+    const glow = ctx.createRadialGradient(frame.x, frame.y, 0, frame.x, frame.y, frame.rx);
+    glow.addColorStop(0, side === 'talent' ? `rgba(${GOLD},.035)` : `rgba(${PALE},.08)`);
+    glow.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.moveTo(left, top);
-    ctx.bezierCurveTo(left + W * .08, top + H * .02, leftEnd - W * .07, centerY - neck, leftEnd, centerY - neck);
-    ctx.moveTo(left, bottom);
-    ctx.bezierCurveTo(left + W * .08, bottom - H * .02, leftEnd - W * .07, centerY + neck, leftEnd, centerY + neck);
-    ctx.moveTo(rightStart, centerY - neck);
-    ctx.bezierCurveTo(rightStart + W * .07, centerY - neck, right - W * .08, top + H * .02, right, top);
-    ctx.moveTo(rightStart, centerY + neck);
-    ctx.bezierCurveTo(rightStart + W * .07, centerY + neck, right - W * .08, bottom - H * .02, right, bottom);
-    ctx.stroke();
+    ctx.ellipse(frame.x, frame.y, frame.rx, frame.ry, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    ctx.strokeStyle = `rgba(${MUTED},${bridgeAlpha})`;
-    ctx.lineWidth = 1;
-    for (let i = 1; i <= 4; i += 1) {
-      const q = i / 5;
-      const lx = lerp(left, leftEnd, q);
-      const rx = lerp(rightStart, right, q);
-      const leftHalf = lerp((bottom - top) / 2, neck, q);
-      const rightHalf = lerp(neck, (bottom - top) / 2, q);
+    for (const [from, to] of cloud.links) {
+      const goldLink = cloud.nodes[from].gold && cloud.nodes[to].gold;
+      line(points[from], points[to], goldLink ? GOLD : MUTED, goldLink ? 1.15 : .75, goldLink ? .3 : .13);
+    }
+
+    cloud.nodes.forEach((node, index) => {
+      const q = points[index];
+      const pulse = .5 + Math.sin(t * .022 + node.phase) * .5;
+      if (node.gold) {
+        ctx.fillStyle = `rgba(${GOLD},${.05 + pulse * .055})`;
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, 11 + pulse * 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = node.gold ? `rgba(${GOLD},.96)` : '#fff';
+      ctx.strokeStyle = node.gold ? `rgba(${GOLD},1)` : `rgba(${MUTED},.72)`;
+      ctx.lineWidth = node.gold ? 1.35 : .9;
       ctx.beginPath();
-      ctx.moveTo(lx, centerY - leftHalf);
-      ctx.lineTo(lx, centerY + leftHalf);
-      ctx.moveTo(rx, centerY - rightHalf);
-      ctx.lineTo(rx, centerY + rightHalf);
+      ctx.arc(q.x, q.y, node.gold ? 3.8 + node.size : 2.3 + node.size, 0, Math.PI * 2);
+      ctx.fill();
       ctx.stroke();
+      if (!node.gold && index % 4 === 0) {
+        ctx.fillStyle = `rgba(${INK},.3)`;
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, .8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+    return { frame, points };
+  }
+
+  function drawSharedRoute(p) {
+    const alpha = .2 + p * .55;
+    if (W <= 720) {
+      line({ x: W * .5, y: H * .42 }, { x: W * .5, y: H * .62 }, GOLD, 1.4, alpha);
+      return;
     }
-
-    const joinP = clamp((p - .08) / .72);
-    ctx.setLineDash(joinP >= .98 ? [] : [5, 7]);
-    line({ x: left, y: centerY }, { x: lerp(left, right, joinP), y: centerY }, joinP > .88 ? GOLD : MUTED, joinP > .88 ? 1.8 : 1, .32 + joinP * .5);
-    ctx.setLineDash([]);
+    line({ x: W * .36, y: H * .58 }, { x: W * .64, y: H * .58 }, GOLD, 1.4, alpha);
   }
 
-  function drawMobileBridge(p, geometry) {
-    const { centerX, centerY, left, right, top, bottom, gap } = geometry;
-    const topEnd = centerY - gap / 2;
-    const bottomStart = centerY + gap / 2;
-    const neck = W * .13;
-
-    ctx.strokeStyle = `rgba(${GOLD},${.34 + p * .42})`;
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(left, top);
-    ctx.bezierCurveTo(left, top + H * .08, centerX - neck, topEnd - H * .04, centerX - neck, topEnd);
-    ctx.moveTo(right, top);
-    ctx.bezierCurveTo(right, top + H * .08, centerX + neck, topEnd - H * .04, centerX + neck, topEnd);
-    ctx.moveTo(centerX - neck, bottomStart);
-    ctx.bezierCurveTo(centerX - neck, bottomStart + H * .04, left, bottom - H * .08, left, bottom);
-    ctx.moveTo(centerX + neck, bottomStart);
-    ctx.bezierCurveTo(centerX + neck, bottomStart + H * .04, right, bottom - H * .08, right, bottom);
-    ctx.stroke();
-
-    const joinP = clamp((p - .08) / .72);
-    ctx.setLineDash(joinP >= .98 ? [] : [5, 7]);
-    line({ x: centerX, y: bottom }, { x: centerX, y: lerp(bottom, top, joinP) }, joinP > .88 ? GOLD : MUTED, joinP > .88 ? 1.8 : 1, .32 + joinP * .5);
-    ctx.setLineDash([]);
-  }
-
-  function drawCrossingTalent(p, geometry) {
-    const move = clamp((p - .4) / .58);
-    if (move <= 0) return;
-    const count = W <= 720 ? 4 : 6;
+  function drawCrossCloudLinks(p, startup, talent) {
+    const strength = clamp((p - .54) / .42);
+    if (!strength) return;
+    const startupGold = startupCloud.nodes.map((node, i) => node.gold ? i : -1).filter(i => i >= 0);
+    const talentGold = talentCloud.nodes.map((node, i) => node.gold ? i : -1).filter(i => i >= 0);
+    const count = Math.min(3, startupGold.length, talentGold.length);
     for (let index = 0; index < count; index += 1) {
-      const local = clamp(move * 1.38 - index * .11);
+      line(
+        talent.points[talentGold[index]],
+        startup.points[startupGold[index]],
+        GOLD,
+        1,
+        strength * (.16 + index * .045),
+      );
+    }
+  }
+
+  function drawCrossingTalent(p) {
+    const move = clamp((p - .28) / .68);
+    if (move <= 0) return;
+    const count = W <= 720 ? 4 : 5;
+    for (let index = 0; index < count; index += 1) {
+      const local = clamp(move * 1.32 - index * .13);
       if (local <= 0) continue;
       let x;
       let y;
-      if (geometry.mobile) {
-        x = geometry.centerX + Math.sin(local * Math.PI * 2 + index) * 2;
-        y = lerp(geometry.bottom, geometry.top, local);
+      if (W <= 720) {
+        x = W * .5 + Math.sin(local * Math.PI + index) * 3;
+        y = lerp(H * .67, H * .36, local);
       } else {
-        x = lerp(geometry.right, geometry.left, local);
-        y = geometry.centerY + Math.sin(local * Math.PI + index) * 3;
+        x = lerp(W * .68, W * .32, local);
+        y = H * .58 + Math.sin(local * Math.PI + index) * 3;
       }
-      const fade = Math.sin(Math.min(.99, local) * Math.PI) * .55 + .4;
+      const fade = Math.sin(Math.min(.99, local) * Math.PI) * .5 + .42;
       ctx.fillStyle = `rgba(${GOLD},${fade})`;
       ctx.beginPath();
-      ctx.arc(x, y, 3.5 + (index % 2), 0, Math.PI * 2);
+      ctx.arc(x, y, 3.4 + (index % 2), 0, Math.PI * 2);
       ctx.fill();
-      if (local > .92) {
-        ctx.strokeStyle = `rgba(${GOLD},${(local - .92) * 5})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.arc(x, y, 8 + (local - .92) * 60, 0, Math.PI * 2);
-        ctx.stroke();
-      }
     }
   }
 
   function draw() {
     const p = ease(reduce ? 1 : progress);
     ctx.clearRect(0, 0, W, H);
-
-    if (W <= 720) {
-      // On mobile the same relationship stacks vertically: constrained companies above,
-      // the referral network below, and talent moves upward through the proof bridge.
-      const originalCompanies = COMPANIES.map(company => ({ ...company }));
-      COMPANIES.forEach((company, index) => {
-        company.x = .42 + (index % 4) * .16;
-        company.y = .19 + Math.floor(index / 4) * .07;
-      });
-      const originalTalent = TALENT.map(talent => ({ ...talent }));
-      TALENT.forEach((talent, index) => {
-        const angle = index * 2.399963;
-        const radius = .07 + (index % 8) * .012;
-        talent.x = .5 + Math.cos(angle) * radius * 2.4;
-        talent.y = .8 + Math.sin(angle) * radius;
-      });
-      const originalReferrals = REFERRALS.map(referral => ({ ...referral }));
-      REFERRALS.forEach((referral, index) => {
-        referral.x = .18 + index * .21;
-        referral.y = .88 - (index % 2) * .045;
-      });
-
-      drawCompanyNetwork(p);
-      drawTalentNetwork();
-      const geometry = bridgeGeometry(p);
-      drawMobileBridge(p, geometry);
-      drawCrossingTalent(p, geometry);
-
-      COMPANIES.forEach((company, index) => Object.assign(company, originalCompanies[index]));
-      TALENT.forEach((talent, index) => Object.assign(talent, originalTalent[index]));
-      REFERRALS.forEach((referral, index) => Object.assign(referral, originalReferrals[index]));
-      return;
-    }
-
-    drawCompanyNetwork(p);
-    drawTalentNetwork();
-    const geometry = bridgeGeometry(p);
-    drawDesktopBridge(p, geometry);
-    drawCrossingTalent(p, geometry);
+    const startup = drawCloud(startupCloud, 'startup', p);
+    const talent = drawCloud(talentCloud, 'talent', p);
+    drawCrossCloudLinks(p, startup, talent);
+    drawSharedRoute(p);
+    drawCrossingTalent(p);
   }
 
   function frame() { t += 1; draw(); raf = requestAnimationFrame(frame); }
@@ -6057,7 +5970,7 @@ function initBatchWeb() {
   draw();
   window.addEventListener('resize', () => { resize(); draw(); });
   if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); draw(); }).observe(canvas);
-  if (reduce) return; // finished state, painted once
+  if (reduce) return; // joined state, painted once
 
   let ticking = false;
   window.addEventListener('scroll', () => {

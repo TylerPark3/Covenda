@@ -57,6 +57,12 @@
     </defs>
   </svg>
 
+  <div class="audience-transition" id="audienceTransition" aria-hidden="true">
+    <i class="audience-transition-sheet audience-transition-sheet--a"></i>
+    <i class="audience-transition-sheet audience-transition-sheet--b"></i>
+    <span id="audienceTransitionLabel"></span>
+  </div>
+
   <dialog class="intro-screen" id="introScreen" aria-labelledby="introStatement" tabindex="-1">
     <div class="intro-shell">
       <div class="intro-brand" aria-label="Covenda">
@@ -121,46 +127,48 @@
         <a class="scroll-cue" href="#bridgeStory"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
-      <!-- Home-only. The company in one scroll-controlled visual: constrained startups on
-           the left, referral-led talent on the right, and real project work closing the gap.
-           Every named node is an illustrative category, never a claimed partner. -->
+      <!-- Home-only. Two referral clouds move together around one legible route:
+           project, deliverable, proof. The labels are categories, never claimed partners. -->
       <section class="bridge-section" id="bridgeStory" aria-labelledby="bridgeTitle">
         <div class="bridge-sticky">
           <div class="bridge-head">
-            <h2 id="bridgeTitle">Talent is moving. <span class="word-gold">The bridge is missing.</span></h2>
-            <p>Covenda connects startups that need exceptional early talent with students vouched for by people who have seen their work.</p>
+            <h2 id="bridgeTitle">Talent, connected through <span class="word-gold">the work.</span></h2>
+            <p>Trusted referrals. Real startup projects. Proof you can use.</p>
           </div>
 
           <div class="bridge-visual">
             <div class="bridge-side bridge-side--startups" aria-hidden="true">
               <strong>Startups</strong>
-              <span>Great projects. Real constraints.</span>
               <ul>
-                <li>Limited capital</li>
-                <li>No training program</li>
-                <li>Lean oversight</li>
+                <li>Need capable help</li>
+                <li>Lean teams</li>
+                <li>Real projects</li>
               </ul>
             </div>
             <div class="bridge-side bridge-side--talent" aria-hidden="true">
-              <strong>Vouched talent</strong>
-              <span>Referred by people who have seen the work.</span>
+              <strong>Referred talent</strong>
+              <ul>
+                <li>Clubs</li>
+                <li>Professors</li>
+                <li>Peers</li>
+              </ul>
             </div>
 
             <ol class="bridge-process" aria-label="How work becomes proof">
-              <li><span>01</span><strong>Projects<br>posted</strong></li>
-              <li><span>02</span><strong>Work<br>submitted</strong></li>
-              <li><span>03</span><strong>Proof<br>earned</strong></li>
+              <li><strong>Project</strong></li>
+              <li><strong>Deliverable</strong></li>
+              <li><strong>Proof</strong></li>
             </ol>
 
             <canvas id="bridgeCanvas" class="bridge-canvas" role="img"
-                    aria-label="A scroll-controlled network. Startup project nodes face a larger network of students referred by selective clubs, faculty and industry professionals. As the bridge closes, gold talent crosses through projects posted, work submitted and proof earned."></canvas>
+                    aria-label="Two scroll-controlled clouds come together. Startups with real projects meet talented students referred by clubs, professors and peers. Gold talent moves through a project, produces a deliverable and earns credible proof."></canvas>
           </div>
 
           <div class="bridge-progress" aria-hidden="true">
-            <span>The gap</span>
+            <span>Separate</span>
             <i><b></b></i>
-            <output>0% connected</output>
-            <span>Talent moves</span>
+            <output>0% together</output>
+            <span>Connected</span>
           </div>
           <p class="bridge-illus">Illustrative network — categories, not affiliations or partnership claims.</p>
         </div>
@@ -271,8 +279,8 @@
 
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
-          <h1 id="studentHeroTitle">What is your <span class="word-gold">domain expertise</span>?</h1>
-          <p>Pick your field. Paid work on real problems — domain expertise, not filing. The record it builds is what startups hire on.</p>
+          <h1 id="studentHeroTitle">Do work that proves<br><span class="word-gold">what you can do.</span></h1>
+          <p>Join the referred talent network, then choose where you want to prove yourself.</p>
         </div>
         <!-- F3: partner-referral landing. Populated + shown by app.js only when the
              visitor arrives via a partner's ?ref= link. Not identity-verified. -->
@@ -284,56 +292,19 @@
             <button class="referral-banner-dismiss" type="button" data-action="referral-dismiss" aria-label="Dismiss referral note"><svg><use href="#icon-close"/></svg></button>
           </div>
         </div>
-        <div class="selector-orbit" aria-label="Choose a work path">
-          <div class="selector-fx" aria-hidden="true">
-            <canvas id="selectorFxCanvas"></canvas>
-            <i class="selector-fx-glow selector-fx-glow-a"></i>
-            <i class="selector-fx-glow selector-fx-glow-b"></i>
-          </div>
-          <!-- Vertical-first narrowing: industry → focus area → the specific work. Each
-               round is derived from the previous pick, so a student ends on something
-               concrete ("Month-end close · reconciliation cleanup") rather than a generic
-               skill. The final pick still calls selectWorkType(), so everything
-               downstream (detail panel, profile, submissions) is unchanged. -->
-          <div class="narrow-flow" id="narrowFlow" data-narrow-flow></div>
-          <details class="narrow-fallback" id="narrowFallback">
-            <summary>Or pick a work type directly</summary>
-          <div class="work-selector glass-panel">
-            <button class="work-option is-selected" type="button" data-work-type="Research" aria-pressed="true"><svg><use href="#icon-search"/></svg><span>Research</span></button>
-            <button class="work-option" type="button" data-work-type="Data & spreadsheets" aria-pressed="false"><svg><use href="#icon-data"/></svg><span>Data &amp;<br>spreadsheets</span></button>
-            <button class="work-option" type="button" data-work-type="Operations" aria-pressed="false"><svg><use href="#icon-operations"/></svg><span>Operations</span></button>
-            <button class="work-option" type="button" data-work-type="QA & testing" aria-pressed="false"><svg><use href="#icon-shield"/></svg><span>QA &amp; testing</span></button>
-            <button class="work-option" type="button" data-work-type="Writing & documentation" aria-pressed="false"><svg><use href="#icon-write"/></svg><span>Writing &amp;<br>documentation</span></button>
-          </div>
-          </details>
-          <div class="work-detail glass-panel" id="workDetail" hidden aria-live="polite">
-            <div class="work-detail-top">
-              <span class="work-detail-tag" id="workDetailTag"><svg><use href="#icon-search"/></svg><b>Research</b></span>
-              <button class="work-detail-back" type="button" data-action="explore-back"><svg class="flip"><use href="#icon-chevron"/></svg>See all paths</button>
+        <div class="student-entry">
+          <button class="gold-button student-join-primary" type="button" data-action="student-quick">
+            Join the talent network<svg><use href="#icon-arrow-right"/></svg>
+          </button>
+          <fieldset class="student-vertical-picker">
+            <legend>Choose your vertical</legend>
+            <div class="student-vertical-rail">
+              <button class="student-vertical is-selected" type="button" data-work-type="Research" aria-pressed="true">Product &amp; strategy</button>
+              <button class="student-vertical" type="button" data-work-type="Data & spreadsheets" aria-pressed="false">Software &amp; data</button>
+              <button class="student-vertical" type="button" data-work-type="Operations" aria-pressed="false">Finance &amp; operations</button>
+              <button class="student-vertical" type="button" data-work-type="Writing & documentation" aria-pressed="false">Growth &amp; research</button>
             </div>
-            <p class="work-detail-desc" id="workDetailDesc"></p>
-            <div class="work-detail-roles">
-              <span class="work-detail-label">Sample roles</span>
-              <ul id="workDetailRoles"></ul>
-            </div>
-            <div class="work-detail-flow">
-              <div class="work-detail-flow-head"><span class="work-detail-label">Workflow preview</span><span class="work-detail-step" id="workDetailStep">Step 1 of 3</span></div>
-              <div class="work-flow-frame" id="workFlowFrame"></div>
-              <div class="work-flow-nav">
-                <button type="button" class="work-flow-prev" data-action="flow-prev" aria-label="Previous step"><svg class="flip"><use href="#icon-chevron"/></svg></button>
-                <div class="work-flow-dots" id="workFlowDots"></div>
-                <button type="button" class="work-flow-next" data-action="flow-next" aria-label="Next step"><svg><use href="#icon-chevron"/></svg></button>
-              </div>
-            </div>
-            <button class="gold-button work-detail-cta" type="button" data-action="student-form">This fits me → join the talent<svg><use href="#icon-arrow-right"/></svg></button>
-          </div>
-          <button class="gold-button selector-submit" type="button" data-action="student-quick">Join the talent<svg><use href="#icon-arrow-right"/></svg></button>
-          <button class="quiet-link selector-detail" type="button" data-action="student-form">Or add full details now<svg><use href="#icon-chevron"/></svg></button>
-          <nav class="student-journey" aria-label="Student journey">
-            <button type="button" data-action="focus-pathfinder"><i>1</i><span><b>Explore</b><small>Choose a work path</small></span></button>
-            <button type="button" data-action="student-form"><i>2</i><span><b>Profile</b><small>Tell us what fits</small></span></button>
-            <button type="button" data-action="workspace-submissions"><i>3</i><span><b>Track</b><small>See every receipt</small></span></button>
-          </nav>
+          </fieldset>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
@@ -638,36 +609,6 @@
                   <div class="ct-chips"><span class="ct-chip">Verified clubs</span><span class="ct-chip">Lab PIs</span><span class="ct-chip">Faculty</span></div>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="contrast-section" id="why-covenda" aria-labelledby="contrastTitle">
-        <div class="contrast-inner">
-          <div class="contrast-head">
-            <p class="feature-kicker">Why Covenda</p>
-            <h2 id="contrastTitle">The problem isn’t talent.<br>It’s noise.</h2>
-            <p>AI made mass applications free, so whoever can actually deliver disappears into the pile. Covenda is the opposite bet: a short, vouched, reviewed list.</p>
-          </div>
-          <div class="contrast-cols">
-            <div class="contrast-col contrast-col-old">
-              <p class="contrast-col-tag">The open pile</p>
-              <ul>
-                <li>Thousands of look-alike applications, most of them AI-written</li>
-                <li>Founders and HR sift résumés no one wrote by hand</li>
-                <li>The students who’d actually deliver are invisible in the volume</li>
-                <li>Everyone competes on quantity — a race no one wins</li>
-              </ul>
-            </div>
-            <div class="contrast-col contrast-col-new">
-              <p class="contrast-col-tag">Covenda</p>
-              <ul>
-                <li>A short list, vouched by a professor, club, or industry pro</li>
-                <li>Proven on a reviewed work-trial before it reaches you</li>
-                <li>Curated and selective on purpose; the vetting is the value</li>
-                <li>Judged on what they can do, not just where they studied</li>
-              </ul>
             </div>
           </div>
         </div>

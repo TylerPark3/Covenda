@@ -17,11 +17,11 @@ test('HTML ids remain unique', () => {
   assert.deepEqual([...new Set(duplicates)], []);
 });
 
-test('student-first hero offers five work paths and a scroll continuation', () => {
+test('student-first hero leads with joining, four verticals, and a scroll continuation', () => {
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
-  assert.match(hero, /What is your <span class="word-gold">domain expertise<\/span>\?/); // §8 rename
-  assert.equal((hero.match(/class="work-option/g) || []).length, 5);
-  assert.match(hero, /Join the talent/); // §8: one student-account flow (CTA renamed per founder)
+  assert.match(hero, /Do work that proves/);
+  assert.equal((hero.match(/data-work-type=/g) || []).length, 4);
+  assert.match(hero, /Join the talent network/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
 });
@@ -40,19 +40,20 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
   assert.match(styles, /\.intro-statement/);
 });
 
-test('the initial path chooser uses a continuous responsive glass control', () => {
-  // Squared deliberately: the pill/rounded-rectangle look was the thing being removed.
-  assert.match(styles, /\.work-selector[\s\S]*border-radius: 0/);
-  assert.match(styles, /\.work-option\.is-selected[\s\S]*radial-gradient/);
-  // The picker used to force five columns and side-scroll, which squeezed each option to
-  // whatever width was left. It auto-fits on a real minimum now and wraps instead.
-  assert.match(styles, /\.work-selector[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(196px/);
-  assert.match(html, /<\/div>\s*<button class="gold-button selector-submit"/);
-  assert.match(html, /id="selectorFxCanvas"/);
-  assert.match(html, /class="student-journey"/);
-  assert.match(script, /function initSelectorFx\(\)/);
+test('the student entry leads with joining and follows with one clear vertical rail', () => {
+  const studentHero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
+  assert.match(studentHero, /Do work that proves/);
+  assert.match(studentHero, /class="gold-button student-join-primary"[\s\S]*Join the talent network/);
+  assert.match(studentHero, /Join the talent network[\s\S]*Choose your vertical/);
+  for (const vertical of ['Product &amp; strategy', 'Software &amp; data', 'Finance &amp; operations', 'Growth &amp; research']) {
+    assert.match(studentHero, new RegExp(vertical));
+  }
+  assert.doesNotMatch(studentHero, /Explore[\s\S]*Profile[\s\S]*Track/);
+  assert.doesNotMatch(studentHero, /selectorFxCanvas|student-journey|narrowFlow/);
+  assert.match(styles, /\.student-vertical-rail[\s\S]*grid-template-columns: repeat\(4/);
+  assert.match(styles, /\.student-join-primary[\s\S]*min-height:/);
+  assert.match(script, /\$\$\('\.work-option, \.student-vertical'\)/);
   assert.match(script, /function initButtonFeedback\(\)/);
-  assert.match(styles, /\.selector-fx/);
 });
 
 test('audience switch supports student and company site states', () => {
@@ -336,12 +337,16 @@ test('candidate browser is not on the public site', () => {
 
 // The hero field is the geometric motif the rest of the site borrows from. It gained a
 // pointer-reactive layer; the guardrails around it must survive that.
-test('hero field reacts to the pointer without breaking motion or touch guardrails', () => {
-  // The cursor drives camera parallax and finds the seven nearest visible nodes.
-  assert.match(script, /targetX = -\(\(pointer\.x/);
+test('hero field keeps pointer discovery without shifting the 3D field', () => {
+  // The cursor finds nearby nodes, but no longer drives camera parallax.
+  assert.doesNotMatch(script, /targetX = -\(\(pointer\.x/);
   assert.match(script, /\.slice\(0, 7\)/);
   assert.match(script, /ctx\.lineTo\(item\.point\.x, item\.point\.y\)/);
   assert.match(script, /pointerleave/);
+  assert.match(script, /function formGoldBond\(now\)/);
+  assert.match(script, /nextGoldBondAt = now \+ 10000/);
+  assert.match(script, /for \(const bond of goldBonds\)/);
+  assert.match(script, /createRadialGradient\(q\.x, q\.y/);
   // Reduced-motion returns before any listener is attached (the early `if (reduce) return`),
   // and coarse pointers never get a hover handler at all.
   assert.match(script, /\(hover: hover\) and \(pointer: fine\)/);
@@ -425,8 +430,8 @@ test('batch selection has real feedback and respects reduced motion', () => {
 });
 
 test('joining the talent pool is name, email and school — not the four-step form', () => {
-  assert.match(html, /data-action="student-quick"[^>]*>Join the talent/);
-  assert.match(html, /Or add full details now/);
+  assert.match(html, /data-action="student-quick"[^>]*>[\s\S]*Join the talent network/);
+  assert.doesNotMatch(html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '', /Or add full details now/);
 });
 
 // The geometry is interactive, not wallpaper: selecting batches knits a link web, and the
@@ -569,41 +574,50 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
   assert.match(script, /if \(reduce\) return; \/\/ static frame only/);
 });
 
-// The bridge is the company in one scroll-controlled picture: constrained startups, a
-// referral-led talent network, and real project work turning into durable proof.
-test('the bridge visual turns referral-led talent into proof without partner claims', () => {
+// The bridge is intentionally only two clouds and one route: startups, referred talent,
+// and project work turning into durable proof.
+test('the bridge visual joins two readable clouds without partner claims or a funnel', () => {
   assert.match(html, /class="bridge-section"/);
   assert.match(html, /id="bridgeStory"/);
   assert.match(html, /id="bridgeCanvas"/);
-  assert.match(html, /Talent is moving\./);
-  assert.match(html, /The bridge is missing\./);
-  assert.match(html, /Limited capital/);
-  assert.match(html, /No training program/);
-  assert.match(html, /Lean oversight/);
-  for (const stage of ['Projects', 'Work', 'Proof']) assert.match(html, new RegExp(stage));
+  assert.match(html, /Talent, connected through/);
+  for (const label of ['Need capable help', 'Lean teams', 'Real projects', 'Clubs', 'Professors', 'Peers']) {
+    assert.match(html, new RegExp(label));
+  }
+  for (const stage of ['Project', 'Deliverable', 'Proof']) assert.match(html, new RegExp(stage));
   assert.match(html, /href="#bridgeStory"/);
   assert.match(html, /data-nav-target="bridgeStory"/);
   assert.match(script, /function initBridge\(\)/);
   assert.match(script, /function readProgress\(\)/);
-  assert.match(script, /function drawCompanyNetwork\(p\)/);
-  assert.match(script, /function drawTalentNetwork\(\)/);
-  assert.match(script, /function drawCrossingTalent\(p, geometry\)/);
-  assert.match(script, /lerp\(geometry\.right, geometry\.left, local\)/);
+  assert.match(script, /function makeCloud\(count, salt, goldRate\)/);
+  assert.match(script, /function cloudFrame\(side, p\)/);
+  assert.match(script, /function drawCloud\(cloud, side, p\)/);
+  assert.match(script, /function drawCrossingTalent\(p\)/);
+  assert.match(script, /lerp\(W \* \.68, W \* \.32, local\)/);
+  assert.doesNotMatch(script, /function bridgeGeometry|function drawDesktopBridge|function drawMobileBridge/);
   assert.match(script, /section\.style\.setProperty\('--bridge-progress'/);
   // Categories only. A named club or company on a public page could read as a signed partner.
-  assert.match(script, /Selective consulting club/);
-  assert.match(script, /Professor referral/);
-  assert.match(script, /Industry referral/);
   assert.doesNotMatch(script, /Columbia Consulting Group/);
   assert.match(html, /Illustrative network — categories, not affiliations or partnership claims\./);
   // The canvas must carry its meaning to a screen reader.
-  assert.match(html, /aria-label="A scroll-controlled network/);
+  assert.match(html, /aria-label="Two scroll-controlled clouds come together/);
   // Reduced motion gets the FINISHED state, because the connection is the point.
-  assert.match(script, /if \(reduce\) return; \/\/ finished state, painted once/);
+  assert.match(script, /if \(reduce\) return; \/\/ joined state, painted once/);
   assert.match(styles, /\.bridge-sticky \{[\s\S]*position: sticky/);
   assert.match(styles, /\.bridge-visual \{[\s\S]*position: relative/);
   assert.match(styles, /\.bridge-process \{[\s\S]*grid-template-columns: repeat\(3/);
   assert.match(styles, /body\[data-audience="home"\] \.stat-band/);
+  assert.doesNotMatch(html, /The problem isn’t talent/);
+});
+
+test('audience choices use a folded-sheet transition with a reduced-motion bypass', () => {
+  assert.match(html, /id="audienceTransition"/);
+  assert.match(script, /function transitionAudience\(audience\)/);
+  assert.match(script, /document\.body\.classList\.add\('is-audience-transitioning'\)/);
+  assert.match(script, /window\.setTimeout\(\(\) => \{\s*setAudience\(audience\)/);
+  assert.match(styles, /@keyframes audience-sheet-a/);
+  assert.match(styles, /@keyframes audience-sheet-b/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.audience-transition \{ display: none; \}/);
 });
 
 // Machine checks and expert judgement are complementary instruments, not a primary and a
