@@ -3306,48 +3306,45 @@ function renderVideoIntroCard(container, rawUrl, opts = {}) {
 // captured on the student submission (details.batch) — this structured batch +
 // outcome data is the intended future training-data source for a per-industry
 // capability assessment (no model or scoring is built yet).
-const BATCHES = [
-  { id: 'accounting-finance', industry: 'Accounting & finance', title: 'Accounting & finance', description: 'Reconciliations, close-prep checklists, cleanups, and workflow docs from real, de-identified finance work.', status: 'Pilot cohort · limited seats' },
-  { id: 'software-ai', industry: 'Software & AI', title: 'Software & AI', description: 'QA passes, reproducible bug reports, docs, and data cleanups for software and AI teams.', status: 'Pilot cohort · limited seats' },
-  { id: 'healthcare-ops', industry: 'Healthcare operations', title: 'Healthcare operations', description: 'Process mapping, documentation, and public-source research — never any patient records.', status: 'Forming' },
-  { id: 'consumer-retail', industry: 'Consumer & retail', title: 'Consumer & retail', description: 'Customer-research synthesis, competitor scans, and approved catalog/data cleanups.', status: 'Forming' },
-  { id: 'professional-services', industry: 'Professional services', title: 'Professional services', description: 'Research briefs, playbooks, and operations docs for consulting, legal, and agency teams.', status: 'Forming' },
-];
+// joinBatch stays: the deep dive's apply button calls it.
 function joinBatch(batch) {
   const field = $('#studentBatch');
-  if (field) field.value = batch.id + ' \u00b7 ' + batch.industry;
+  if (field) field.value = batch.id + ' · ' + batch.industry;
   openDialog(studentDialog, studentForm);
   if (field) saveDraft(studentForm);
 }
 
-// The public batch board. Renders the SAME brief the portal renders — fetched from
-// api/batches.js via the pre-auth 'batch-briefs' action — so the bar a visitor reads here
-// and the bar the portal checks them against can never drift apart.
-//
-// Selection state for the board. A student is usually weighing two or three batches, so the
-// card is a CHOICE, not a commit — the old per-card "Join this batch" button asked for a
-// decision before showing what the batch actually requires.
+// Selection state for the board.
 const batchPicks = new Set();
 const batchBriefIndex = new Map();
 
-function renderBatchCard(grid, entry, brief) {
+function renderBatchCard(row, brief) {
   const card = document.createElement('article');
-  card.className = 'batch-card glass-panel is-pickable';
-  card.append(
-    Object.assign(document.createElement('p'), { className: 'batch-function', textContent: entry.industry }),
-    Object.assign(document.createElement('h3'), { className: 'batch-title', textContent: entry.title }),
-    Object.assign(document.createElement('p'), { className: 'batch-desc', textContent: brief ? brief.summary : entry.description }),
-    Object.assign(document.createElement('span'), { className: 'batch-status', textContent: entry.status }),
-  );
-  if (brief) batchBriefIndex.set(entry.id, { entry, brief });
-
-  // The whole card is the target. A separate "Select" button asked the reader to find a
-  // small control on a big obvious box — the box IS the control. Kept keyboard-operable and
-  // announced as a toggle rather than faking it with a click handler on a div.
+  card.className = 'batch-card is-pickable';
   card.setAttribute('role', 'button');
   card.tabIndex = 0;
   card.setAttribute('aria-pressed', 'false');
-  card.dataset.batchPick = entry.id;
+  card.dataset.batchPick = brief.slug;
+  batchBriefIndex.set(brief.slug, brief);
+
+  const tier = document.createElement('span');
+  tier.className = 'batch-tier' + (brief.tier === 'elite' ? ' is-elite' : '');
+  tier.textContent = brief.tier === 'elite' ? 'Elite' : 'Open';
+  card.append(
+    tier,
+    Object.assign(document.createElement('h3'), { className: 'batch-title', textContent: brief.name }),
+    Object.assign(document.createElement('p'), { className: 'batch-desc', textContent: brief.summary }),
+  );
+
+  const meta = document.createElement('div');
+  meta.className = 'batch-meta';
+  const rail = document.createElement('span');
+  rail.className = 'batch-rail-chip' + (brief.vetting.apiVerified ? ' is-api' : '');
+  rail.textContent = brief.vetting.apiVerified ? 'Machine-checked' : 'Expert-vetted';
+  meta.append(rail, Object.assign(document.createElement('span'), {
+    className: 'batch-req-count', textContent: brief.requirements.length + ' requirements',
+  }));
+  card.append(meta);
 
   const mark = document.createElement('span');
   mark.className = 'batch-mark';
@@ -3355,27 +3352,21 @@ function renderBatchCard(grid, entry, brief) {
   card.append(mark);
 
   const toggle = () => {
-    const on = !batchPicks.has(entry.id);
-    if (on) batchPicks.add(entry.id); else batchPicks.delete(entry.id);
+    const on = !batchPicks.has(brief.slug);
+    if (on) batchPicks.add(brief.slug); else batchPicks.delete(brief.slug);
     card.setAttribute('aria-pressed', String(on));
     card.classList.toggle('is-picked', on);
-    if (on) {
-      // A short, one-shot confirmation. Restarted by hand so rapid re-selection still reads.
-      card.classList.remove('just-picked');
-      void card.offsetWidth;
-      card.classList.add('just-picked');
-    }
+    if (on) { card.classList.remove('just-picked'); void card.offsetWidth; card.classList.add('just-picked'); }
     syncBatchPickBar();
     batchWeb?.animate();
   };
   card.addEventListener('click', toggle);
   card.addEventListener('keydown', event => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault(); // Space would scroll the page
+    event.preventDefault();
     toggle();
   });
-
-  grid.append(card);
+  row.append(card);
 }
 
 function syncBatchPickBar() {
@@ -3386,18 +3377,14 @@ function syncBatchPickBar() {
   $('#batchPickCount').textContent = n === 1 ? '1 batch selected' : n + ' batches selected';
 }
 
-// A labelled flow diagram per batch: the vetting rails feeding the bar, the bar feeding
-// review, review feeding the batch. Built from the brief so it can never describe a rail
-// the batch does not actually use.
 function batchDiagram(brief) {
   const fig = document.createElement('figure');
   fig.className = 'bd-figure';
   fig.setAttribute('role', 'group');
   fig.setAttribute('aria-label',
     brief.name + ' vetting flow: ' + brief.vetting.rails.map(r => r.label).join(', ')
-    + ' produce evidence, which is checked against ' + brief.requirements.length
-    + ' published requirements, then reviewed by an operator before admission to the batch.');
-
+    + ' produce evidence, checked against ' + brief.requirements.length
+    + ' published requirements, then reviewed by an operator before admission.');
   const rails = document.createElement('div');
   rails.className = 'bd-rails';
   brief.vetting.rails.forEach(rail => {
@@ -3409,72 +3396,80 @@ function batchDiagram(brief) {
     );
     rails.append(node);
   });
-  fig.append(rails);
-  fig.append(Object.assign(document.createElement('div'), { className: 'bd-arrow', ariaHidden: 'true' }));
-
+  fig.append(rails, Object.assign(document.createElement('div'), { className: 'bd-arrow' }));
   const bar = document.createElement('div');
   bar.className = 'bd-node bd-bar';
   bar.append(
     Object.assign(document.createElement('b'), { textContent: 'The published bar' }),
-    Object.assign(document.createElement('span'), { textContent: brief.requirements.length + ' requirements, each one stated up front' }),
+    Object.assign(document.createElement('span'), { textContent: brief.requirements.length + ' requirements, each stated up front' }),
   );
-  fig.append(bar);
-  fig.append(Object.assign(document.createElement('div'), { className: 'bd-arrow', ariaHidden: 'true' }));
-
+  fig.append(bar, Object.assign(document.createElement('div'), { className: 'bd-arrow' }));
   const review = document.createElement('div');
   review.className = 'bd-node bd-review';
   review.append(
     Object.assign(document.createElement('b'), { textContent: 'Operator review' }),
     Object.assign(document.createElement('span'), { textContent: 'Clearing the bar is a recommendation. A human decides and records why.' }),
   );
-  fig.append(review);
-  fig.append(Object.assign(document.createElement('div'), { className: 'bd-arrow', ariaHidden: 'true' }));
-
-  const batch = document.createElement('div');
-  batch.className = 'bd-node bd-batch';
-  batch.append(
+  fig.append(review, Object.assign(document.createElement('div'), { className: 'bd-arrow' }));
+  const node = document.createElement('div');
+  node.className = 'bd-node bd-batch';
+  node.append(
     Object.assign(document.createElement('b'), { textContent: 'The batch' }),
     Object.assign(document.createElement('span'), { textContent: 'Companies unlock it and see your evidence, not your résumé.' }),
   );
-  fig.append(batch);
+  fig.append(node);
   return fig;
 }
 
 const HOW_TO_APPLY = [
-  ['Check where you stand', 'Every requirement below is public. Work out which ones you already clear before you write anything.'],
+  ['Check where you stand', 'Every requirement below is public. Work out which you already clear before writing anything.'],
   ['Close the nearest gap', 'One artifact or one connected account usually moves two requirements at once.'],
-  ['Record a short walkthrough', 'Five minutes on work you did, unscripted. This is the authorship check, and it is the part that cannot be faked.'],
+  ['Record a short walkthrough', 'Five minutes on work you did, unscripted. This is the authorship check, and the part that cannot be faked.'],
   ['Apply', 'A few written answers about why this field. You can apply before you clear everything — the bar is guidance, not a gate.'],
   ['Operator review', 'A person reads it and records a reason either way. A miss comes back with the specific gap, not a rejection.'],
 ];
 
-// The deep dive: one full-width walkthrough per selected batch.
 function renderBatchDeepDive() {
   const host = $('#batchDeep');
   if (!host) return;
   host.replaceChildren();
-  const picked = [...batchPicks].map(id => batchBriefIndex.get(id)).filter(Boolean);
+  const picked = [...batchPicks].map(slug => batchBriefIndex.get(slug)).filter(Boolean);
   if (!picked.length) { host.hidden = true; return; }
 
-  picked.forEach(({ brief }) => {
+  picked.forEach(brief => {
     const panel = document.createElement('article');
     panel.className = 'bd-panel';
-
     const head = document.createElement('header');
     head.className = 'bd-head';
     head.append(
-      Object.assign(document.createElement('p'), { className: 'feature-kicker', textContent: brief.tier === 'elite' ? 'Elite batch' : 'Open batch' }),
+      Object.assign(document.createElement('p'), { className: 'feature-kicker', textContent: brief.discipline + ' · ' + (brief.tier === 'elite' ? 'Elite batch' : 'Open batch') }),
       Object.assign(document.createElement('h3'), { textContent: brief.name }),
       Object.assign(document.createElement('p'), { className: 'bd-lede', textContent: brief.description }),
     );
-    panel.append(head);
-    panel.append(batchDiagram(brief));
+    panel.append(head, batchDiagram(brief));
 
     const railBadge = document.createElement('span');
     railBadge.className = 'pb-badge' + (brief.vetting.apiVerified ? ' is-api' : '');
-    railBadge.textContent = brief.vetting.apiVerified
-      ? 'Platform-verified evidence' : 'Human rail — no API can prove this work';
+    railBadge.textContent = brief.vetting.apiVerified ? 'Machine-checked evidence' : 'Expert-vetted — judgement, scored';
     panel.append(railBadge);
+
+    // The specifics. "We vet your work" is a claim; naming what is inspected is a mechanism
+    // a student can prepare for and a company can decide whether to trust.
+    if ((brief.whatWeRead || []).length) {
+      const read = document.createElement('section');
+      read.className = 'bd-block';
+      read.append(Object.assign(document.createElement('h4'), { textContent: 'What we actually read' }));
+      const dl = document.createElement('dl');
+      dl.className = 'bd-read';
+      brief.whatWeRead.forEach(item => {
+        dl.append(
+          Object.assign(document.createElement('dt'), { textContent: item.signal }),
+          Object.assign(document.createElement('dd'), { textContent: item.detail }),
+        );
+      });
+      read.append(dl);
+      panel.append(read);
+    }
 
     const reqs = document.createElement('section');
     reqs.className = 'bd-block';
@@ -3535,19 +3530,27 @@ let batchWeb = null;
 (() => {
   const grid = document.querySelector('[data-batch-grid]');
   if (!grid) return;
-  const paint = briefs => {
+
+  // Grouped by vertical: thirteen specialisations in one flat wall is unreadable, and the
+  // vertical is what a student chooses between first.
+  const paint = groups => {
     grid.textContent = '';
     batchBriefIndex.clear();
-    for (const entry of BATCHES) {
-      // Match on slug; the old hardcoded ids drifted from the catalogue (healthcare-ops vs
-      // healthcare-operations), so fall back to the discipline name.
-      const brief = (briefs || []).find(b => b.slug === entry.id)
-        || (briefs || []).find(b => b.name === entry.industry)
-        || null;
-      renderBatchCard(grid, entry, brief);
-    }
-    // The fetch repaints over the fallback cards; re-apply any selection made in between so
-    // a fast clicker does not have their choice silently dropped.
+    (groups || []).forEach(group => {
+      const section = document.createElement('section');
+      section.className = 'batch-group';
+      const head = document.createElement('div');
+      head.className = 'batch-group-head';
+      head.append(
+        Object.assign(document.createElement('h3'), { textContent: group.vertical }),
+        Object.assign(document.createElement('span'), { textContent: group.batches.length + ' batches' }),
+      );
+      const row = document.createElement('div');
+      row.className = 'batch-row';
+      group.batches.forEach(brief => renderBatchCard(row, brief));
+      section.append(head, row);
+      grid.append(section);
+    });
     $$('[data-batch-pick]').forEach(b => {
       if (!batchPicks.has(b.dataset.batchPick)) return;
       b.setAttribute('aria-pressed', 'true');
@@ -3555,28 +3558,27 @@ let batchWeb = null;
     });
     syncBatchPickBar();
   };
-  paint(null); // Static-preview safe: cards render before (and without) the serverless call.
+
   batchWeb = initBatchWeb();
   $('#batchLearnMore')?.addEventListener('click', renderBatchDeepDive);
   $('#batchPickClear')?.addEventListener('click', () => {
     batchPicks.clear();
-    $$('[data-batch-pick]').forEach(b => {
-      b.setAttribute('aria-pressed', 'false');
-      b.classList.remove('is-picked', 'just-picked');
-    });
+    $$('[data-batch-pick]').forEach(b => { b.setAttribute('aria-pressed', 'false'); b.classList.remove('is-picked', 'just-picked'); });
     syncBatchPickBar();
     batchWeb?.redraw();
     const host = $('#batchDeep');
     if (host) { host.replaceChildren(); host.hidden = true; }
   });
+
   fetch('/api/portal', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'batch-briefs' }),
   })
     .then(res => (res.ok ? res.json() : null))
-    .then(data => { if (data && data.ok && Array.isArray(data.batches)) paint(data.batches); })
-    .catch(() => { /* No serverless in static preview — the plain cards above still stand. */ });
+    .then(data => { if (data && data.ok && Array.isArray(data.groups)) paint(data.groups); })
+    // No static fallback list: with thirteen specialisations a hand-kept duplicate would
+    // drift from the catalogue immediately. Better an empty board than a wrong one.
+    .catch(() => {});
 })();
 
 $('#submissionHistory').addEventListener('click', event => {

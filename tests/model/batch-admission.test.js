@@ -5,10 +5,10 @@ import {
   batchBySlug, batchBrief, evaluateBatchAdmission, tierAtLeast,
 } from '../../api/batches.js';
 
-const software = batchBySlug('software-ai');
+const software = batchBySlug('ml-engineering'); // a specialisation, not the vertical
 
 test('every vertical has a batch with a named technical vetting rail', () => {
-  assert.ok(BATCH_CATALOG.length >= 5);
+  assert.ok(BATCH_CATALOG.length >= 10, 'a vertical must split into specialisations');
   for (const batch of BATCH_CATALOG) {
     assert.ok(batch.slug && batch.name && batch.discipline, `${batch.slug} is missing identity`);
     const rails = batch.vetting?.rails || [];
@@ -33,7 +33,7 @@ test('batches without a connector are labelled human-rail, never API-verified', 
 
 test('a brief publishes the bar and the company walkthrough but never the applicant or weights', () => {
   const brief = batchBrief(software);
-  assert.equal(brief.slug, 'software-ai');
+  assert.equal(brief.slug, 'ml-engineering');
   assert.ok(brief.requirements.every(r => r.label));
   assert.ok(brief.companyWorkflow.every(s => s.step && s.title && s.detail));
   assert.equal(brief.admissionVersion, BATCH_ADMISSION_VERSION);

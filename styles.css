@@ -3457,3 +3457,62 @@ body:not([data-audience="home"]) .trial-flow { display: none; }
 .verify-col-sub { max-width: 46ch; margin: 8px 0 16px; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
 .verify-col-human { border-color: var(--gold-light); }
 .verify-col-human .verify-col-tag { color: var(--gold-deep); }
+
+/* ---- Batch board: grouped by vertical, bigger cards ---------------------------------
+   Thirteen specialisations in one flat wall is unreadable, and the vertical is what a
+   student picks between first. */
+.batch-group + .batch-group { margin-top: clamp(30px, 4vw, 48px); }
+.batch-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.batch-group-head h3 { margin: 0; font-family: var(--font-display); font-size: clamp(19px, 2.1vw, 25px); font-weight: 500; letter-spacing: -.02em; }
+.batch-group-head span { color: var(--soft); font-family: var(--font-mono); font-size: 12px; }
+.batch-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(292px, 1fr)); gap: clamp(14px, 1.8vw, 20px); }
+
+/* Bigger, and the whole card is the control — so it needs to feel like one. */
+.batch-card.is-pickable {
+  position: relative;
+  display: grid; align-content: start; gap: 10px;
+  min-height: 232px;
+  padding: clamp(22px, 2.4vw, 30px);
+  border: 1px solid var(--line-strong); background: #fff;
+  cursor: pointer;
+  transition: transform .16s cubic-bezier(.2,.8,.3,1), border-color .16s ease, box-shadow .16s ease;
+}
+.batch-card.is-pickable .batch-title { margin: 0; font-family: var(--font-display); font-size: clamp(20px, 2.1vw, 25px); font-weight: 500; letter-spacing: -.02em; line-height: 1.16; }
+.batch-card.is-pickable .batch-desc { margin: 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
+.batch-card .batch-tier { justify-self: start; padding: 4px 10px; border: 1px solid var(--line-strong); font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.batch-card .batch-tier.is-elite { border-color: var(--gold-deep); background: var(--gold-pale); color: var(--gold-deep); }
+.batch-meta { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--line); }
+.batch-rail-chip { padding: 4px 10px; border: 1px solid var(--line-strong); font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.batch-rail-chip.is-api { border-color: var(--gold); color: var(--gold-deep); }
+.batch-req-count { color: var(--soft); font-family: var(--font-mono); font-size: 11.5px; }
+
+/* "What we actually read" — the specifics that make the process checkable. */
+.bd-read { display: grid; gap: 0; margin: 0; }
+.bd-read dt { padding-top: 14px; border-top: 1px solid var(--line); font-size: 15.5px; font-weight: 650; color: var(--gold-deep); }
+.bd-read dt:first-child { padding-top: 0; border-top: 0; }
+.bd-read dd { max-width: 76ch; margin: 6px 0 16px; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.65; }
+.bd-read dd:last-child { margin-bottom: 0; }
+
+/* ---- What a referral becomes. The promise was abstract; this is the artefact. --------- */
+.ref-result { padding: clamp(48px, 6vw, 92px) var(--page-gutter); border-top: 1px solid var(--line); background: #fff; }
+.ref-result > * { width: min(100%, var(--content)); margin-left: auto; margin-right: auto; }
+.ref-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(300px, .95fr); gap: clamp(24px, 3.4vw, 48px); align-items: start; margin-top: clamp(24px, 3vw, 38px); }
+.ref-timeline { display: grid; gap: 20px; margin: 0; padding: 0; list-style: none; }
+.ref-timeline li { display: grid; grid-template-columns: 34px 1fr; gap: 15px; align-items: start; }
+.ref-n { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--gold-deep); color: var(--gold-deep); font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
+.ref-timeline strong { display: block; font-size: 16.5px; }
+.ref-timeline p { max-width: 52ch; margin: 5px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
+.ref-timeline em { display: block; margin-top: 6px; font-family: var(--font-mono); font-size: 11.5px; font-style: normal; letter-spacing: .06em; color: var(--soft); }
+
+.ref-card { margin: 0; border: 1px solid var(--gold-light); background: var(--gold-pale); }
+.ref-card figcaption { padding: 12px 20px; border-bottom: 1px solid var(--gold-light); font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); }
+.ref-card-body { padding: clamp(18px, 2.2vw, 26px); }
+.ref-card-org { margin: 0 0 16px; font-family: var(--font-display); font-size: 20px; font-weight: 500; letter-spacing: -.015em; }
+.ref-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ref-stats div { padding: 14px 16px; border: 1px solid var(--gold-light); background: rgba(255,255,255,.72); }
+.ref-stats b { display: block; font-family: var(--font-display); font-size: 30px; font-weight: 500; line-height: 1; color: var(--gold-deep); }
+.ref-stats span { display: block; margin-top: 5px; color: var(--muted); font-size: 12.5px; }
+.ref-card-note { margin: 16px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.ref-illus { display: flex; align-items: flex-start; gap: 9px; margin-top: clamp(20px, 2.4vw, 28px); color: var(--soft); font-size: 13px; }
+.ref-illus svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 2px; color: var(--gold-deep); }
+@media (max-width: 900px) { .ref-grid { grid-template-columns: 1fr; } }

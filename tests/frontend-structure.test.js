@@ -289,7 +289,7 @@ test('public batch board renders the shipped brief in the full-width walkthrough
   assert.match(script, /What this batch asks of you/);
   assert.match(script, /How this industry is vetted|batchDiagram/);
   // Honest labelling survives the trip to the marketing site.
-  assert.match(script, /Human rail/);
+  assert.match(script, /Expert-vetted/);
   assert.match(script, /recommendation, not an admission|recommendation\. A human decides/);
   // The orphaned per-card panel must not creep back.
   assert.doesNotMatch(script, /function batchDetailPanel\(/);
@@ -298,10 +298,19 @@ test('public batch board renders the shipped brief in the full-width walkthrough
   assert.match(styles, /\.bd-steps \{ grid-template-columns: repeat\(auto-fit/);
 });
 
-test('batch board degrades without the serverless function', () => {
-  // paint(null) runs before the fetch, so a static preview still shows the cards.
-  assert.match(script, /paint\(null\)/);
-  assert.match(script, /\.catch\(\(\) => \{ \/\* No serverless in static preview/);
+// The hand-kept fallback list is gone: with 13 specialisations a duplicate array would drift
+// from the catalogue immediately, and a wrong board is worse than an empty one.
+test('the board has no second source of truth for the catalogue', () => {
+  assert.doesNotMatch(script, /const BATCHES = \[/);
+  assert.match(script, /Better an empty board than a wrong one/);
+});
+
+test('the board groups by vertical and the deep dive names what is inspected', () => {
+  assert.match(script, /className = 'batch-group'/);
+  assert.match(script, /data\.groups/);
+  assert.match(script, /What we actually read/);
+  assert.match(styles, /\.bd-read dt/);
+  assert.match(styles, /\.batch-row \{ display: grid/);
 });
 
 // The candidate browser is portal-only. index.html long claimed it was "scoped to the company
@@ -595,4 +604,16 @@ test('verification reads as two instruments, not a fallback', () => {
   // Judgement is measured, not vibes — and the honesty line survives the reframe.
   assert.match(html, /adjudicate where they disagree/);
   assert.match(html, /simulation or a self-reported number/);
+});
+
+// A referrer was told their "vouch gains weight" with nothing showing what that becomes.
+test('the referral section shows the outcome, labelled illustrative', () => {
+  assert.match(html, /What a referral becomes/);
+  assert.match(html, /One vouch, six months on/);
+  assert.match(html, /Your track record page/);
+  // A vouch is a head start, never a bypass — that has to survive into the example.
+  assert.match(html, /carries them to review, not past it/);
+  // Numbers on a page with no outcome data must be labelled, every time.
+  assert.match(html, /Covenda has no outcome data yet/);
+  assert.match(html, /No student names, just the numbers/);
 });

@@ -5,7 +5,7 @@ import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicatio
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
-import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical } from './batches.js';
+import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical } from './batches.js';
 import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION } from './clubs.js';
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
@@ -1522,7 +1522,12 @@ export default async function handler(req, res, dependencies = {}) {
       // §13 slice 4: the batch catalogue is public by design — a bar nobody can read is not a
       // published bar. Briefs carry requirements + the company evaluation walkthrough, and no
       // applicant data, weights, or connector scopes.
-      if (input.action === 'batch-briefs') return res.status(200).json({ ok: true, batches: BATCH_CATALOG.map(batchBrief) });
+      if (input.action === 'batch-briefs') return res.status(200).json({
+        ok: true,
+        batches: BATCH_CATALOG.map(batchBrief),
+        // Grouped as well as flat: the board renders by vertical, the portal by batch.
+        groups: batchesByVertical().map(g => ({ ...g, batches: g.batches.map(batchBrief) })),
+      });
       // Public too: a club deciding whether to register needs to see what verification takes
       // and what it earns, before handing over a single student.
       // Pre-auth: a company describes the person they need and gets the requirement card
