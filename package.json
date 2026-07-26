@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check api/submissions.js && node --check api/receipts.js && node --check api/admin.js && node --check api/portal.js && node --check api/project-intake.js && node --check api/project-upload.js && node --check admin.js && node --check portal.js && node --test tests/*.test.js",
+    "check": "node --check api/submissions.js && node --check api/receipts.js && node --check api/admin.js && node --check api/portal.js && node --check api/project-intake.js && node --check api/project-upload.js && node --check api/company-workflow.js && node --check api/company-workflow-upload.js && node --check admin.js && node --check portal.js && node --check app/company/intakes/new/company-intake.js && node --check app/reviewer/projects/reviewer-project.js && node --check operator/operator-workflow.js && node --check operator/intakes/intake-queue.js && node --test tests/*.test.js",
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {

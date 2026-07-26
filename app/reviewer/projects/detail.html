@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Review project brief · Covenda</title>
+  <link rel="stylesheet" href="/workflow.css">
+</head>
+<body>
+  <header class="workflow-header">
+    <a class="workflow-brand" href="/"><img src="/assets/covenda-mark.svg" alt="">Covenda</a>
+    <nav aria-label="Reviewer navigation"><a href="/portal.html">Member workspace</a></nav>
+  </header>
+  <main>
+    <section class="login-shell" id="reviewerLogin">
+      <h1>Domain reviewer sign in.</h1>
+      <p>Use the Covenda account assigned to this project brief.</p>
+      <form id="reviewerLoginForm">
+        <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required></label>
+        <button class="button primary" type="submit">Email me a sign-in link</button>
+        <p id="reviewerLoginMessage" class="alert" aria-live="polite" hidden></p>
+      </form>
+    </section>
+    <div class="workflow-page narrow" id="reviewerContent" hidden><div class="loading">Loading project brief…</div></div>
+  </main>
+  <script type="module" src="/app/reviewer/projects/reviewer-project.js"></script>
+</body>
+</html>
