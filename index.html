@@ -133,86 +133,81 @@
               <p class="broken-answer"><strong>What Covenda does:</strong> scores evidence, not background. School, name, and age are not inputs — and a test fails the build if any of them moves a score.</p>
             </article>
           </div>
-          <!-- Pop-art panel, original artwork in the Lichtenstein IDIOM (heavy contour, flat
-               fills, Ben-Day dot shading, caption box) recoloured to Covenda gold rather than
-               comic primaries — deliberately not a trace of any existing work. The reversal is
-               the point: the student is the one asking. Decorative, so aria-hidden with the
-               meaning carried in the visible caption beneath. -->
+          <!-- Pop-art panel, original artwork in the Lichtenstein IDIOM: hard diagonal
+               burst, Ben-Day halftone, heavy contour, caption slab. Deliberately NOT
+               figurative — the first pass drew little people and read as clip art. The
+               confrontation is carried by two balloons facing each other, which is what the
+               scene is actually about: both sides asking. Decorative; aria-hidden, with the
+               meaning in the visible caption. -->
           <figure class="popart">
-            <svg class="popart-svg" viewBox="0 0 880 470" role="img" aria-label="A comic-style panel: a student interviews a startup founder, asking what they would actually be shipping.">
+            <svg class="popart-svg" viewBox="0 0 900 520" role="img" aria-label="A comic-style panel. Two speech balloons face each other: the company asks what the student can build; the student asks what they would be shipping.">
               <defs>
-                <pattern id="benday" width="14" height="14" patternUnits="userSpaceOnUse">
-                  <circle cx="4" cy="4" r="3.1" fill="#e0b055"/>
-                  <circle cx="11" cy="11" r="3.1" fill="#e0b055"/>
+                <pattern id="benday" width="16" height="16" patternUnits="userSpaceOnUse">
+                  <circle cx="4" cy="4" r="3.4" fill="#d8a445"/>
+                  <circle cx="12" cy="12" r="3.4" fill="#d8a445"/>
                 </pattern>
-                <pattern id="bendayDense" width="9" height="9" patternUnits="userSpaceOnUse">
-                  <circle cx="3" cy="3" r="2.4" fill="#c99433"/>
-                  <circle cx="7.5" cy="7.5" r="2.4" fill="#c99433"/>
+                <pattern id="bendayTight" width="9" height="9" patternUnits="userSpaceOnUse">
+                  <circle cx="2.6" cy="2.6" r="2.5" fill="#b8862b"/>
+                  <circle cx="7" cy="7" r="2.5" fill="#b8862b"/>
                 </pattern>
-                <clipPath id="panelClip"><rect x="8" y="8" width="864" height="454"/></clipPath>
+                <clipPath id="panelClip"><rect x="10" y="10" width="880" height="500"/></clipPath>
               </defs>
 
               <g clip-path="url(#panelClip)">
-                <rect x="8" y="8" width="864" height="454" fill="#fbf6ec"/>
-                <rect x="8" y="8" width="864" height="454" fill="url(#benday)" opacity=".55"/>
-                <!-- radiating ground, the pop-art "impact" burst, kept low-contrast -->
-                <g opacity=".22">
-                  <path d="M440 250 L-40 -60 L120 -60 Z" fill="#c99433"/>
-                  <path d="M440 250 L250 -60 L360 -60 Z" fill="#c99433"/>
-                  <path d="M440 250 L560 -60 L680 -60 Z" fill="#c99433"/>
-                  <path d="M440 250 L860 -20 L920 90 Z" fill="#c99433"/>
-                </g>
+                <rect x="10" y="10" width="880" height="500" fill="#fcf8f0"/>
 
-                <!-- desk -->
-                <rect x="60" y="352" width="760" height="16" fill="#11110f"/>
-                <rect x="60" y="368" width="760" height="34" fill="#e0b055"/>
-                <rect x="60" y="368" width="760" height="34" fill="url(#bendayDense)" opacity=".5"/>
-
-                <!-- STUDENT, left — the one asking -->
+                <!-- hard diagonal burst from the seam between the two voices -->
                 <g>
-                  <path d="M188 352 v-74 a76 76 0 0 1 152 0 v74 Z" fill="#e8c274" stroke="#11110f" stroke-width="7" stroke-linejoin="round"/>
-                  <path d="M188 352 v-74 a76 76 0 0 1 76 -76 v150 Z" fill="url(#bendayDense)" opacity=".55"/>
-                  <circle cx="264" cy="178" r="60" fill="#fdf8ef" stroke="#11110f" stroke-width="7"/>
-                  <path d="M204 172 a60 60 0 0 1 120 0 a60 60 0 0 0 -120 0 Z" fill="#11110f"/>
-                  <path d="M206 160 a60 62 0 0 1 116 0 q-16 -46 -58 -46 t-58 46 Z" fill="#11110f"/>
-                  <circle cx="243" cy="186" r="6.5" fill="#11110f"/>
-                  <circle cx="288" cy="186" r="6.5" fill="#11110f"/>
-                  <path d="M244 214 q20 16 40 0" fill="none" stroke="#11110f" stroke-width="6" stroke-linecap="round"/>
-                  <!-- laptop, closed: the student is not the one being examined -->
-                  <rect x="196" y="330" width="120" height="22" rx="0" fill="#fdf8ef" stroke="#11110f" stroke-width="6"/>
+                  <path d="M450 268 L-120 -140 L60 -140 Z" fill="#f0dcae"/>
+                  <path d="M450 268 L140 -140 L300 -140 Z" fill="#e7c884"/>
+                  <path d="M450 268 L380 -140 L470 -140 Z" fill="#f0dcae"/>
+                  <path d="M450 268 L560 -140 L700 -140 Z" fill="#e7c884"/>
+                  <path d="M450 268 L800 -140 L1020 -60 Z" fill="#f0dcae"/>
+                  <path d="M450 268 L1040 180 L1040 340 Z" fill="#e7c884"/>
+                  <path d="M450 268 L980 560 L800 640 Z" fill="#f0dcae"/>
+                  <path d="M450 268 L420 660 L300 640 Z" fill="#e7c884"/>
+                  <path d="M450 268 L-120 520 L-120 360 Z" fill="#f0dcae"/>
                 </g>
+                <rect x="10" y="10" width="880" height="500" fill="url(#benday)" opacity=".38"/>
 
-                <!-- FOUNDER, right — being asked -->
+                <!-- the seam: a hard black rule where the two voices meet -->
+                <path d="M450 10 L450 510" stroke="#11110f" stroke-width="8"/>
+
+                <!-- LEFT balloon — the company -->
                 <g>
-                  <path d="M556 352 v-66 a68 68 0 0 1 136 0 v66 Z" fill="#fdf8ef" stroke="#11110f" stroke-width="7" stroke-linejoin="round"/>
-                  <path d="M624 220 v132 h68 v-66 a68 68 0 0 0 -68 -66 Z" fill="url(#benday)" opacity=".7"/>
-                  <circle cx="624" cy="192" r="54" fill="#e8c274" stroke="#11110f" stroke-width="7"/>
-                  <path d="M576 176 q48 -34 96 0 q-8 -46 -48 -46 t-48 46 Z" fill="#11110f"/>
-                  <circle cx="606" cy="198" r="6" fill="#11110f"/>
-                  <circle cx="644" cy="198" r="6" fill="#11110f"/>
-                  <path d="M604 226 q20 10 40 0" fill="none" stroke="#11110f" stroke-width="6" stroke-linecap="round"/>
-                  <!-- open laptop, screen toward the student -->
-                  <path d="M540 352 l24 -62 h132 l24 62 Z" fill="#e0b055" stroke="#11110f" stroke-width="6" stroke-linejoin="round"/>
-                  <rect x="566" y="238" width="128" height="54" fill="#fdf8ef" stroke="#11110f" stroke-width="6"/>
-                  <path d="M578 252 h72 M578 264 h96 M578 276 h56" stroke="#11110f" stroke-width="5" stroke-linecap="round"/>
+                  <path d="M52 66 h330 a26 26 0 0 1 26 26 v128 a26 26 0 0 1 -26 26 h-108 l-72 54 l12 -54 h-162 a26 26 0 0 1 -26 -26 v-128 a26 26 0 0 1 26 -26 Z"
+                        fill="#fdfaf3" stroke="#11110f" stroke-width="8" stroke-linejoin="round"/>
+                  <text x="84" y="128" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#11110f">Show me what</text>
+                  <text x="84" y="172" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#11110f">you&#8217;ve actually</text>
+                  <text x="84" y="216" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#11110f">built.</text>
+                  <rect x="84" y="238" width="118" height="7" fill="#b8862b"/>
                 </g>
+                <text x="52" y="330" font-family="ui-monospace,Menlo,monospace" font-size="17" letter-spacing="3" fill="#11110f">THE COMPANY</text>
 
-                <!-- speech balloon: the student speaking -->
+                <!-- RIGHT balloon — the student, answering with a question -->
                 <g>
-                  <path d="M56 44 h396 a20 20 0 0 1 20 20 v88 a20 20 0 0 1 -20 20 h-166 l-38 44 l-6 -44 h-186 a20 20 0 0 1 -20 -20 v-88 a20 20 0 0 1 20 -20 Z"
-                        fill="#fdf8ef" stroke="#11110f" stroke-width="7" stroke-linejoin="round"/>
-                  <text x="88" y="94" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-style="italic" fill="#11110f">So — what would I</text>
-                  <text x="88" y="132" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-style="italic" fill="#11110f">actually be shipping?</text>
+                  <path d="M520 246 h330 a26 26 0 0 1 26 26 v128 a26 26 0 0 1 -26 26 h-162 l12 54 l-72 -54 h-108 a26 26 0 0 1 -26 -26 v-128 a26 26 0 0 1 26 -26 Z"
+                        fill="#11110f" stroke="#11110f" stroke-width="8" stroke-linejoin="round"/>
+                  <text x="552" y="308" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#fcf8f0">And what would</text>
+                  <text x="552" y="352" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#fcf8f0">I be shipping</text>
+                  <text x="552" y="396" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#e7c884">for you?</text>
+                  <rect x="552" y="418" width="118" height="7" fill="#e7c884"/>
                 </g>
+                <text x="520" y="192" font-family="ui-monospace,Menlo,monospace" font-size="17" letter-spacing="3" fill="#11110f">THE STUDENT</text>
 
-                <!-- caption box, the pop-art narration slab -->
-                <rect x="600" y="44" width="240" height="70" fill="#e8c274" stroke="#11110f" stroke-width="6"/>
-                <text x="620" y="76" font-family="Georgia, serif" font-size="19" fill="#11110f">The student is</text>
-                <text x="620" y="100" font-family="Georgia, serif" font-size="19" fill="#11110f">asking the questions.</text>
+                <!-- halftone weight in the lower left, the way a printed panel shades -->
+                <path d="M10 380 L300 510 L10 510 Z" fill="url(#bendayTight)" opacity=".5"/>
+
+                <!-- caption slab -->
+                <g>
+                  <rect x="52" y="404" width="352" height="76" fill="#e7c884" stroke="#11110f" stroke-width="7"/>
+                  <text x="74" y="440" font-family="Georgia,serif" font-size="21" fill="#11110f">Both sides are</text>
+                  <text x="74" y="466" font-family="Georgia,serif" font-size="21" fill="#11110f">interviewing.</text>
+                </g>
               </g>
-              <rect x="8" y="8" width="864" height="454" fill="none" stroke="#11110f" stroke-width="9"/>
+              <rect x="10" y="10" width="880" height="500" fill="none" stroke="#11110f" stroke-width="10"/>
             </svg>
-            <figcaption>Both sides are choosing. A trial shows a company what a student can do — and shows the student what the company is actually like.</figcaption>
+            <figcaption>A trial answers both questions at once — it shows a company what a student can do, and shows the student what the company is actually like to work with.</figcaption>
           </figure>
           <p class="broken-thesis">That top cohort has stopped defaulting to banking, and increasingly to big tech — they would rather build something that matters. Capable students are more abundant than ever, and capability tracks neither age nor school. The résumé was never built to parse that, and it still can't.</p>
         </div>

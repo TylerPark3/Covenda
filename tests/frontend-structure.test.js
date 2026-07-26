@@ -451,9 +451,12 @@ test('the demo walks each vertical separately and stays labelled illustrative', 
 test('the pop-art panel is original, decorative and captioned', () => {
   assert.match(html, /class="popart"/);
   assert.match(html, /benday/);           // dot shading, built as an SVG pattern
-  assert.match(html, /The student is/);   // the reversal is the point
+  assert.match(html, /THE STUDENT/);      // the reversal is the point
+  assert.match(html, /Both sides are/);
   assert.match(html, /popart-svg[^>]*role="img"/);
-  assert.match(html, /Both sides are choosing/); // meaning carried in visible text
+  assert.match(html, /answers both questions at once/); // meaning carried in visible text
+  // Figurative drawing read as clip art; the panel is typographic and graphic now.
+  assert.doesNotMatch(html, /popart[\s\S]{0,4000}?<circle[^>]*r="6\.5"/);
   assert.match(styles, /\.popart-svg/);
 });
 
