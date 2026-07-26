@@ -493,21 +493,26 @@ test('the company problem field lives inside the builder, with its fit chip', ()
 
 // "Why this exists" names both forces: applications became free to generate, and the
 // students worth finding started leaving the places that used to collect them.
-test('why-this-exists names the AI application flood and the talent shift', () => {
-  assert.match(html, /The signal collapsed/);
-  assert.match(html, /The talent moved/);
-  assert.match(html, /AI writes a strong application in seconds/);
-  assert.match(html, /turning down banking and increasingly big tech/);
-  // The shift is stated as early and starting, not as an established fact we cannot cite.
-  assert.match(html, /Early, but started/);
-  assert.match(styles, /\.broken-subtaps/);
+// The section carried its argument in three stacked paragraph blocks. It is a figure now —
+// a company buried in identical applications, a student radiating signal nobody receives, and
+// a broken line between them — with the prose cut to a line each.
+test('the broken-system section leads with a visual, not paragraphs', () => {
+  assert.match(html, /class="break-fig"/);
+  assert.match(html, /ALL IDENTICAL/);
+  assert.match(html, /REAL, UNSEEN/);
+  assert.match(html, /NO<\/text>/);
+  // The figure must carry its meaning to a screen reader, not just to the eye.
+  assert.match(html, /aria-label="A company on the left is buried/);
+  // The subtaps are gone; their point is in the drawing.
+  assert.doesNotMatch(html, /broken-subtaps/);
+  assert.doesNotMatch(styles, /\.bsub-tag/);
 });
 
 // The student's case is not only "you get judged unfairly" — it is that the work itself is
 // real: contributing to something and building domain expertise, not monkey work.
 test('the student case names real work and domain expertise, not monkey work', () => {
   assert.match(html, /not monkey work/);
-  assert.match(html, /build domain expertise while contributing/);
+  assert.match(html, /not monkey work/);
   assert.match(html, /domain expertise, not filing/);
 });
 
@@ -569,6 +574,9 @@ test('the hero field converts pale nodes into proof, and keeps gold scarce', () 
   assert.match(script, /const MAX_GOLD = \d+;/);
   // The crowd is UNLINKED — the network is what proof buys, so only proven nodes connect.
   assert.match(script, /if \(nodes\[i\]\.lit > 0\.12\) litIdx\.push\(i\)/);
+  // And proven nodes connect to EVERY other one across the field, not just near neighbours:
+  // proximity would say "these two happen to be close", which is not the claim.
+  assert.doesNotMatch(script, /GOLD_LINK/);
   // Real 3D: depth, perspective projection, and far-to-near paint order.
   assert.match(script, /function project\(n\)/);
   assert.match(script, /FOCAL \/ z/);

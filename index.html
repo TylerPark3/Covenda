@@ -118,32 +118,69 @@
           <div class="section-heading">
             <p class="feature-kicker">Why this exists</p>
             <h2 id="brokenTitle">The system is broken on both sides.</h2>
-            <p>Applications became free to generate. At the same time, the students worth finding started leaving the places that used to collect them.</p>
           </div>
-          <div class="broken-subtaps">
-            <div class="bsub">
-              <p class="bsub-tag">The signal collapsed</p>
-              <p>AI writes a strong application in seconds, so everyone sends hundreds. The polish is free and the claims are unverifiable — someone who can do the work now reads exactly like someone who can’t.</p>
-            </div>
-            <div class="bsub">
-              <p class="bsub-tag">The talent moved</p>
-              <p>Early, but started: capable students turning down banking and increasingly big tech for work where their output is visible. Reachable now, before the market catches up.</p>
-            </div>
-          </div>
+
+          <!-- The break, drawn. Two sides reaching for each other and a connection that never
+               completes: a company buried in undifferentiated applications, a student sending
+               signal nobody receives. Carries the argument the paragraphs used to. -->
+          <figure class="break-fig">
+            <svg viewBox="0 0 900 260" role="img" aria-label="A company on the left is buried under a stack of identical applications. A student on the right sends signals that reach nobody. The line between them is broken in the middle.">
+              <g font-family="ui-monospace,Menlo,monospace" font-size="12" letter-spacing="2.5" fill="#60605b">
+                <text x="40" y="30">THE COMPANY</text>
+                <text x="742" y="30">THE STUDENT</text>
+              </g>
+
+              <!-- company: a stack of identical, indistinguishable applications -->
+              <g stroke="#11110f" stroke-width="2" fill="#fff">
+                <rect x="40" y="60" width="150" height="26"/><rect x="40" y="92" width="150" height="26"/>
+                <rect x="40" y="124" width="150" height="26"/><rect x="40" y="156" width="150" height="26"/>
+                <rect x="40" y="188" width="150" height="26"/>
+              </g>
+              <g stroke="#deded9" stroke-width="4" stroke-linecap="round">
+                <path d="M56 73h104M56 105h104M56 137h104M56 169h104M56 201h104"/>
+              </g>
+              <text x="40" y="240" font-family="ui-monospace,monospace" font-size="11" fill="#8b5709">ALL IDENTICAL</text>
+
+              <!-- the broken connection -->
+              <g stroke="#11110f" stroke-width="2.5">
+                <path d="M210 130h150"/>
+                <path d="M540 130h150"/>
+              </g>
+              <g stroke="#b47b20" stroke-width="2.5" stroke-linecap="round">
+                <path d="M372 106l22 24-22 24"/>
+                <path d="M528 106l-22 24 22 24"/>
+              </g>
+              <text x="404" y="126" font-family="ui-monospace,monospace" font-size="12" letter-spacing="2" fill="#b47b20">NO</text>
+              <text x="386" y="146" font-family="ui-monospace,monospace" font-size="12" letter-spacing="2" fill="#b47b20">SIGNAL</text>
+
+              <!-- student: real capability, radiating outward, received by nobody -->
+              <circle cx="790" cy="130" r="26" fill="#fbf7ed" stroke="#b47b20" stroke-width="2.5"/>
+              <g stroke="#b47b20" stroke-width="2" stroke-linecap="round" opacity=".85">
+                <path d="M790 92V70M790 168v22M752 130h-22M850 130h22M763 103l-15-15M817 157l15 15M817 103l15-15M763 157l-15 15"/>
+              </g>
+              <g stroke="#deded9" stroke-width="2" fill="none">
+                <circle cx="790" cy="130" r="48"/><circle cx="790" cy="130" r="68"/>
+              </g>
+              <text x="726" y="240" font-family="ui-monospace,monospace" font-size="11" fill="#8b5709">REAL, UNSEEN</text>
+            </svg>
+          </figure>
+
           <div class="broken-grid">
             <article class="broken-col">
               <p class="broken-eyebrow"><svg><use href="#icon-company"/></svg>If you hire</p>
               <h3>You want the top 1% of the 1%.</h3>
-              <p>Startups don’t need more applicants — they need the few who compound. Every application reads well now, so screening got slower, not faster.</p>
-              <p class="broken-answer"><strong>What Covenda does:</strong> shows you the work first — a connected account, a parsed model, a recorded walkthrough — evidence with a source you can open.</p>
+              <p>Every application reads well now. Volume went up, signal went to zero.</p>
+              <p class="broken-answer"><strong>Covenda:</strong> the work first — a connected account, a parsed model, a recorded walkthrough. Evidence you can open.</p>
             </article>
             <article class="broken-col">
               <p class="broken-eyebrow"><svg><use href="#icon-student"/></svg>If you're a student</p>
               <h3>Tired of being underestimated?</h3>
-              <p>Filtered on graduation year, age, and whether anyone recognises your school — decided before anyone looks at what you built. And the internships that land are filing and formatting.</p>
-              <p class="broken-answer"><strong>What Covenda does:</strong> real work a company needs shipped, not monkey work — you build domain expertise while contributing something. Scores evidence, not background: school, name and age are not inputs.</p>
+              <p>Filtered on year, age and school before anyone looks at what you built.</p>
+              <p class="broken-answer"><strong>Covenda:</strong> real work a company needs shipped, not monkey work — and evidence scored, not background.</p>
             </article>
           </div>
+          <p class="broken-thesis">Capable students are more abundant than ever, and capability tracks neither age nor school. The résumé was never built to parse that.</p>
+
           <!-- How a trial actually runs, five steps you can page through. Replaces the
                pop-art panel: a picture that made an argument, where what this spot needed was
                an explanation. Scroll-snap track so it works by swipe, arrows, dots or keyboard;

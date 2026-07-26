@@ -3349,12 +3349,6 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
   .ib-chips { gap: 9px; }
 }
 
-/* Two subtaps under "Why this exists": the collapse of the signal, and the movement of the
-   talent. Sits above the two audience columns and sets up both of them. */
-.broken-subtaps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: clamp(20px, 3vw, 40px); margin-top: clamp(24px, 3vw, 36px); }
-.bsub { padding-top: 16px; border-top: 2px solid var(--gold-deep); }
-.bsub-tag { margin: 0 0 10px; color: var(--gold-deep); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.bsub p:last-child { max-width: 52ch; margin: 0; color: var(--muted); font-size: var(--step-body); line-height: 1.65; }
 
 /* ---- Type system, stated once ------------------------------------------------------
    Titles: the display serif ("Real work becomes credible proof" — the founder's reference).
@@ -3366,7 +3360,7 @@ h1, h2, h3, .brand, .ct-title, .bf-label, .bd-head h3, .vdemo-company,
   font-weight: 500;
   letter-spacing: -.02em;
 }
-h4, h5, h6, .feature-kicker, .home-kicker, .company-job-eyebrow, .bsub-tag,
+h4, h5, h6, .feature-kicker, .home-kicker, .company-job-eyebrow,
 .broken-eyebrow, .ct-k, .ib-line span, .bd-block h4 {
   font-family: var(--font-body);
 }
@@ -3439,3 +3433,7 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .tf-dot { width: 26px; height: 4px; padding: 0; border: 0; background: var(--line-strong); cursor: pointer; transition: background .16s ease; }
 .tf-dot[aria-selected="true"] { background: var(--gold-deep); }
 @media (prefers-reduced-motion: reduce) { .tf-viewport { scroll-behavior: auto; } }
+
+/* The break, drawn. Carries what three paragraphs used to, so it gets real width. */
+.break-fig { margin: clamp(26px, 3.4vw, 44px) 0 clamp(30px, 4vw, 48px); }
+.break-fig svg { display: block; width: 100%; height: auto; max-width: 940px; margin: 0 auto; }

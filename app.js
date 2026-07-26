@@ -4689,7 +4689,8 @@ function initHeroField() {
   const PALE = '124,120,108';
   const FOCAL = 780;           // perspective strength
   const DEPTH = 620;           // how far back the field runs
-  const GOLD_LINK = 380;       // proven nodes reach far for each other; the crowd never links
+  // Proven nodes have no reach limit: each connects to every other one across the whole
+  // field. At MAX_GOLD = 11 that is at most 55 lines a frame.
   const LIGHT = 190;           // how far the cursor's light reaches along the gold network
   const MAX_GOLD = 11;          // an absolute ceiling, not a ratio — a bigger crowd must not mean more gold
   let W = 0, H = 0, nodes = [], running = false, raf = 0, t = 0;
@@ -4777,10 +4778,10 @@ function initHeroField() {
     for (let a = 0; a < litIdx.length; a++) {
       for (let b = a + 1; b < litIdx.length; b++) {
         const p1 = pts[litIdx[a]], p2 = pts[litIdx[b]];
-        const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-        if (d > GOLD_LINK) continue;
         const strength = Math.min(nodes[litIdx[a]].lit, nodes[litIdx[b]].lit);
-        const fade = (1 - d / GOLD_LINK) * ((p1.scale + p2.scale) / 2) * strength;
+        // No distance cut-off: proof connects people wherever they are. Depth still fades a
+        // link so the far side of the field does not shout as loudly as the near side.
+        const fade = ((p1.scale + p2.scale) / 2) * strength;
 
         // How close the cursor comes to THIS connection — distance to the segment, not to
         // its midpoint, so a long link lights along its whole length.
@@ -4795,7 +4796,7 @@ function initHeroField() {
         }
 
         ctx.lineWidth = 1 + glow * 1.4;
-        ctx.strokeStyle = `rgba(${GOLD},${(0.46 + 0.5 * glow) * fade})`;
+        ctx.strokeStyle = `rgba(${GOLD},${(0.30 + 0.45 * glow) * fade})`;
         ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
       }
     }
