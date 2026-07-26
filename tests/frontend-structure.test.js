@@ -480,30 +480,27 @@ test('the demo walks each vertical separately and stays labelled illustrative', 
   assert.match(styles, /\.vdemo-beats/);
 });
 
-// The pop-art panel made an argument where this spot needed an explanation. Replaced with a
-// five-step walkthrough of how a trial actually runs.
-test('the trial walkthrough explains the five steps and stays operable', () => {
-  assert.match(html, /id="tfTrack"/);
-  assert.equal((html.match(/class="tf-slide"/g) || []).length, 5);
+// The five-step explanation belongs inside the two-sided exchange, not in a second section
+// that repeats the same process with another row of cards.
+test('the work exchange contains one swipeable five-step trial', () => {
+  assert.match(html, /id="exchangeStepViewport"/);
+  assert.match(html, /id="exchangeStepTrack"/);
+  assert.equal((html.match(/data-exchange-card/g) || []).length, 5);
   assert.match(html, /A company brings real work/);
-  assert.match(html, /We scope it into a trial/);
-  assert.match(html, /It goes to a vetted batch/);
+  assert.match(html, /We shape a fair trial/);
+  assert.match(html, /It reaches a vetted batch/);
   assert.match(html, /The student does the work/);
   assert.match(html, /The company decides/);
-  // Native scroll-snap means swipe works with no JS; the rail must still read unscripted.
-  // Proximity, not mandatory: paging moves a full viewport, and card-level snapping
-  // fought that and landed the rail where the dots did not claim it was.
-  assert.match(styles, /\.tf-viewport \{[\s\S]*?scroll-snap-type: x proximity/);
-  // Dots follow the scroll rather than assuming they caused it.
-  assert.match(script, /if \(at !== page\) sync\(at\)/);
-  // One dot per PAGE, not per slide: with four of five cards already visible, five dots
-  // described a journey that does not exist. Controls hide entirely when nothing can move.
-  assert.match(script, /pages = Math\.max\(1, Math\.ceil\(track\.scrollWidth/);
-  assert.match(script, /var idle = pages < 2;/);
-  assert.match(script, /ArrowRight/);
-  // The pop-art panel must not linger.
-  assert.doesNotMatch(html, /popart/);
-  assert.doesNotMatch(styles, /\.popart-svg/);
+  assert.equal((html.match(/data-exchange-dot=/g) || []).length, 5);
+  assert.match(styles, /\.exchange-step-viewport \{[\s\S]*?scroll-snap-type: x mandatory/);
+  assert.match(styles, /\.exchange-step-card \{[\s\S]*?scroll-snap-align: start/);
+  assert.match(styles, /@keyframes exchange-card-pop/);
+  assert.match(script, /viewport\.addEventListener\('scroll'/);
+  assert.match(script, /visibleStep = Math\.round\(viewport\.scrollLeft/);
+  assert.match(script, /event\.key === 'ArrowRight'/);
+  assert.doesNotMatch(html, /class="trial-flow"|id="tfTrack"|Five steps, start to finish/);
+  assert.doesNotMatch(script, /function initTrialFlow\(\)/);
+  assert.doesNotMatch(styles, /\.tf-viewport|\.tf-slide/);
 });
 
 test('the founder quote stands alone, unattributed and without a portrait', () => {
@@ -545,20 +542,6 @@ test('no module-level binding is assigned before it is declared', () => {
   assert.deepEqual(offenders, [], 'temporal dead zone — these would throw at runtime');
 });
 
-// The tree is the vetting system, told top to bottom. It used to describe the model in the
-// abstract ("the talent", "Covenda") without saying how anyone is actually vetted.
-test('the tree explains the vetting system specifically', () => {
-  assert.match(html, /Vetted twice, then proven/);
-  assert.match(html, /Soil · the first vet/);
-  assert.match(html, /Trunk · the second vet/);
-  assert.match(html, /Three ways to prove it/);
-  // The low-barrier rail must be named, since it is the one most fields actually use.
-  assert.match(html, /recorded walkthrough where neither applies/);
-  // Guardrails survive into the diagram.
-  assert.match(html, /never a person score, never a ranking/);
-  assert.match(html, /an operator decides and records why/);
-});
-
 // The gold word is painted with background-clip:text, so any glyph extending past the
 // padding box renders TRANSPARENT — which is why the italic "f" in "proof" looked cut off.
 // The padding must stay wide enough to cover Newsreader's italic overhang.
@@ -586,25 +569,69 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
   assert.match(script, /if \(reduce\) return; \/\/ static frame only/);
 });
 
-// The bridge replaced three blocks of prose under the hero: two columns converging as the
-// page scrolls, with proven talent crossing once a span completes.
-test('the bridge tells the story and never names a partner it does not have', () => {
-  assert.match(html, /class="bridge-section"/);
-  assert.match(html, /id="bridgeCanvas"/);
-  assert.match(html, /Two sides\. One bridge\./);
-  assert.match(script, /function initBridge\(\)/);
-  assert.match(script, /function readProgress\(\)/);
-  // Categories only. A named club or company on a public page reads as a signed partner.
-  assert.match(script, /const RIGHT = \['Robotics club'/);
+// The first explanation is one two-way exchange, not another field of abstract nodes.
+// A visitor can understand the static frame, then inspect each phase with any input method.
+test('the work exchange turns one project into clear value for both sides', () => {
+  assert.match(html, /class="exchange-section"/);
+  assert.match(html, /id="bridgeStory"/);
+  assert.match(html, /id="workExchange"/);
+  assert.match(
+    html,
+    /Swipe, use the arrow buttons, or press the arrow keys to move through five steps\./
+  );
+  assert.doesNotMatch(html, /Brief, Build, and Review/);
+  assert.match(html, /One project\./);
+  assert.match(html, /Two sides win\./);
+  assert.match(html, /Covenda turns referred talent and real startup work into a trial both sides can trust/);
+  for (const label of [
+    'Real startup task',
+    'Work the team needs done',
+    'Referred student',
+    'Talent vouched for by people who know them',
+    'Scoped work trial',
+    'A company brings real work',
+    'We shape a fair trial',
+    'It reaches a vetted batch',
+    'The student does the work',
+    'The company decides',
+    'Useful deliverable',
+    'Credible proof',
+  ]) {
+    assert.match(html, new RegExp(label));
+  }
+  assert.match(html, /href="#bridgeStory"/);
+  assert.match(script, /function initWorkExchange\(\)/);
+  assert.match(script, /function setExchangeStep\(nextStep, userInitiated = false, shouldScroll = true\)/);
+  assert.match(script, /viewport\.addEventListener\('pointerdown', takeControl/);
+  assert.match(script, /event\.key === 'ArrowRight'/);
+  assert.match(script, /event\.key === 'Home'/);
+  assert.match(script, /window\.setInterval/);
+  assert.match(script, /if \(reduce\) return; \/\/ Swipe and controls remain; only autoplay and pop motion stop\./);
+  assert.match(styles, /\.exchange-stage \{[\s\S]*grid-template-areas:/);
+  assert.match(styles, /\.exchange-dots \{[\s\S]*grid-template-columns: repeat\(5/);
+  assert.match(styles, /\.exchange-source \{[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.exchange-output \{[\s\S]*border-radius: 0/);
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*"task student"[\s\S]*"bench bench"[\s\S]*"outputs outputs"/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.exchange-source/);
+  assert.doesNotMatch(html, /id="bridgeCanvas"/);
+  assert.doesNotMatch(script, /function initBridge\(\)|function makeCloud\(|function drawCloud\(/);
   assert.doesNotMatch(script, /Columbia Consulting Group/);
-  assert.match(html, /Illustrative — categories, not named partners\./);
-  // The canvas must carry its meaning to a screen reader.
-  assert.match(html, /aria-label="Two columns converge/);
-  // Reduced motion gets the FINISHED state, because the connection is the point.
-  assert.match(script, /if \(reduce\) return; \/\/ finished state, painted once/);
-  assert.match(styles, /\.bridge-sticky \{ position: sticky/);
 });
 
+test('the qualification rail is shorter and visually distinct from the trial carousel', () => {
+  assert.match(html, /Before the project/);
+  assert.match(html, /Vetted before the/);
+  assert.match(html, /trial begins/);
+  assert.match(html, /A referral starts the signal\. Evidence has to confirm it\./);
+  for (const label of ['Referred', 'Evidence checked', 'Admitted to a batch', 'Ready for a trial']) {
+    assert.match(html, new RegExp(label));
+  }
+  assert.doesNotMatch(html, /Selective clubs and faculty screen first\. Covenda vets again/);
+  assert.match(styles, /\.batch-funnel \.bf-track \{[\s\S]*grid-template-columns: repeat\(4/);
+  assert.match(styles, /\.bf-card \{[\s\S]*border: 0;[\s\S]*background: transparent/);
+  assert.match(styles, /\.batch-funnel\.is-armed \.bf-stage \{[\s\S]*scale\(\.96\)/);
+  assert.match(styles, /\.batch-funnel\.is-playing \.bf-stage-4 \{ transition-delay: \.54s; \}/);
+});
 // Machine checks and expert judgement are complementary instruments, not a primary and a
 // fallback. The section used to head "We verify what can be verified" with the human column
 // titled "Where that isn't possible", which framed judgement as a deficiency.

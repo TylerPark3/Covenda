@@ -4899,23 +4899,7 @@ function initHeroField() {
   }
 }
 
-// Covenda tree: arm the grow-from-the-roots animation, fired when the tree enters view.
-// No-JS / no-IO / reduced-motion paths never hide the tree (classes are simply not added).
-(function initTreeGrow() {
-  const tree = document.getElementById('covendaModel');
-  if (!tree) return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  if (!('IntersectionObserver' in window)) return;
-  tree.classList.add('ct-pre');
-  const io = new IntersectionObserver(entries => {
-    entries.forEach(en => {
-      if (!en.isIntersecting) return;
-      tree.classList.add('ct-grow');
-      io.disconnect();
-    });
-  }, { threshold: 0.3 });
-  io.observe(tree);
-})();
+
 
 // How proof is verified per vertical, straight from the connector registry. Deliberately shows
 // ONLY mechanisms that are actually built (status 'live') plus the honest-limits verticals —
@@ -5618,248 +5602,111 @@ function initBatchWeb() {
 })();
 
 
-// The trial walkthrough. Scroll-snap does the moving; this only keeps the dots, the arrows
-// and the scroll position agreeing with each other. Native scrolling means swipe and
-// trackpad work for free, and the track stays usable if this script never runs.
-(function initTrialFlow() {
-  var viewport = document.getElementById('tfViewport');
-  var track = document.getElementById('tfTrack');
-  var dotsHost = document.getElementById('tfDots');
-  var prev = document.getElementById('tfPrev');
-  var next = document.getElementById('tfNext');
-  if (!viewport || !track || !dotsHost || !prev || !next) return;
-  var slides = Array.prototype.slice.call(track.children);
-  if (slides.length < 2) return;
-  var page = 0, pages = 1;
+// The five-step explanation now lives inside the two-sided exchange. Native horizontal
+// scrolling supplies touch/trackpad swipe; controls and keyboard keep the same state in sync.
+(function initWorkExchange() {
+  const stage = document.getElementById('workExchange');
+  if (!stage) return;
+  const viewport = document.getElementById('exchangeStepViewport');
+  const track = document.getElementById('exchangeStepTrack');
+  const cards = Array.from(stage.querySelectorAll('[data-exchange-card]'));
+  const dots = Array.from(stage.querySelectorAll('[data-exchange-dot]'));
+  const previous = document.getElementById('exchangePrev');
+  const next = document.getElementById('exchangeNext');
+  const status = document.getElementById('exchangeStatus');
+  if (!viewport || !track || !cards.length || cards.length !== dots.length || !previous || !next) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const lastStep = cards.length - 1;
+  let exchangeStep = 0;
+  let userPauseUntil = 0;
+  let isVisible = true;
+  let scrollQueued = false;
 
-  // One dot per PAGE, not per slide. On a wide screen four of the five cards are already on
-  // show, so five dots and five clicks described a journey that is not there — the controls
-  // have to reflect how far the rail can actually move.
-  function measure() {
-    var span = track.scrollWidth - viewport.clientWidth;
-    if (span < 8) { pages = 1; return; }
-    pages = Math.max(1, Math.ceil(track.scrollWidth / Math.max(1, viewport.clientWidth)));
+  function takeControl() {
+    userPauseUntil = Number.POSITIVE_INFINITY;
   }
 
-  function buildDots() {
-    dotsHost.replaceChildren();
-    if (pages < 2) return;
-    for (var i = 0; i < pages; i++) {
-      (function (n) {
-        var dot = document.createElement('button');
-        dot.type = 'button';
-        dot.className = 'tf-dot';
-        dot.setAttribute('role', 'tab');
-        dot.setAttribute('aria-label', 'View ' + (n + 1) + ' of ' + pages);
-        dot.addEventListener('click', function () { go(n); });
-        dotsHost.append(dot);
-      })(i);
+  function setExchangeStep(nextStep, userInitiated = false, shouldScroll = true) {
+    exchangeStep = Math.max(0, Math.min(lastStep, Number(nextStep) || 0));
+    stage.dataset.exchangeStep = String(exchangeStep);
+    stage.style.setProperty('--exchange-position', String(exchangeStep / Math.max(1, lastStep)));
+    cards.forEach((card, index) => {
+      const active = index === exchangeStep;
+      card.classList.toggle('is-active', active);
+      card.setAttribute('aria-hidden', String(!active));
+    });
+    dots.forEach((button, index) => {
+      const active = index === exchangeStep;
+      button.setAttribute('aria-selected', String(active));
+      button.tabIndex = active ? 0 : -1;
+    });
+    previous.disabled = exchangeStep === 0;
+    next.disabled = exchangeStep === lastStep;
+    if (status) status.textContent = `${exchangeStep + 1} of ${cards.length}`;
+    if (userInitiated) takeControl();
+    if (shouldScroll) {
+      viewport.scrollTo({
+        left: exchangeStep * viewport.clientWidth,
+        behavior: reduce ? 'auto' : 'smooth',
+      });
     }
   }
 
-  function sync(nextPage) {
-    page = Math.max(0, Math.min(pages - 1, nextPage));
-    Array.prototype.forEach.call(dotsHost.children, function (d, i) {
-      d.setAttribute('aria-selected', String(i === page));
-    });
-    prev.disabled = page === 0;
-    next.disabled = page >= pages - 1;
-    // Nothing to page through: hide the controls rather than showing dead arrows.
-    var idle = pages < 2;
-    prev.hidden = idle; next.hidden = idle; dotsHost.hidden = idle;
-    viewport.setAttribute('aria-label', idle
-      ? 'Trial steps'
-      : 'Trial steps, use arrow keys to move between them');
-  }
+  dots.forEach((button, index) => {
+    button.addEventListener('click', () => setExchangeStep(index, true));
+  });
+  previous.addEventListener('click', () => setExchangeStep(exchangeStep - 1, true));
+  next.addEventListener('click', () => setExchangeStep(exchangeStep + 1, true));
 
-  // A programmatic scroll fires scroll events all the way through its animation, with
-  // scrollLeft still near the OLD position — so the handler below would compute page 0 and
-  // drag the gold marker straight back to the first dot mid-flight. Suppress scroll-driven
-  // syncing until the animation has landed.
-  var settling = 0;
-  function go(nextPage) {
-    sync(nextPage);
-    window.clearTimeout(settling);
-    settling = window.setTimeout(function () { settling = 0; }, 520);
-    viewport.scrollTo({ left: page * viewport.clientWidth, behavior: 'smooth' });
-  }
-
-  prev.addEventListener('click', function () { go(page - 1); });
-  next.addEventListener('click', function () { go(page + 1); });
-  viewport.addEventListener('keydown', function (event) {
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-    if (pages < 2) return;
-    event.preventDefault();
-    go(page + (event.key === 'ArrowRight' ? 1 : -1));
+  stage.addEventListener('keydown', event => {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      setExchangeStep(exchangeStep + 1, true);
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      setExchangeStep(exchangeStep - 1, true);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      setExchangeStep(0, true);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      setExchangeStep(lastStep, true);
+    } else {
+      return;
+    }
+    if (event.target.closest('.exchange-dots')) dots[exchangeStep]?.focus();
   });
 
-  // Swipe and trackpad move the rail without going through go(), so the dots follow the
-  // scroll rather than assuming they caused it.
-  var ticking = false;
-  viewport.addEventListener('scroll', function () {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(function () {
-      ticking = false;
-      if (settling) return; // an arrow or dot is driving; do not fight it
-      var at = Math.round(viewport.scrollLeft / Math.max(1, viewport.clientWidth));
-      if (at !== page) sync(at);
+  viewport.addEventListener('pointerdown', takeControl, { passive: true });
+  viewport.addEventListener('wheel', takeControl, { passive: true });
+  viewport.addEventListener('scroll', () => {
+    if (scrollQueued) return;
+    scrollQueued = true;
+    requestAnimationFrame(() => {
+      const visibleStep = Math.round(viewport.scrollLeft / Math.max(1, viewport.clientWidth));
+      if (visibleStep !== exchangeStep) setExchangeStep(visibleStep, false, false);
+      scrollQueued = false;
     });
   }, { passive: true });
 
-  function refresh() {
-    var before = pages;
-    measure();
-    if (pages !== before) buildDots();
-    sync(Math.min(page, pages - 1));
-  }
-  refresh();
-  window.addEventListener('resize', refresh);
-  if ('ResizeObserver' in window) new ResizeObserver(refresh).observe(viewport);
-})();
-
-
-// The bridge. Two columns converge as you scroll: startups on the left, vouched student
-// talent on the right, and a span that closes between them. Once a connection completes,
-// proven talent crosses it — which is the product in one picture.
-//
-// Scroll progress drives everything, so the reader controls the animation rather than
-// watching a loop. Under reduced motion it paints the FINISHED state immediately: the point
-// is the connection, and someone who cannot take the movement should still get the point.
-(function initBridge() {
-  const canvas = document.getElementById('bridgeCanvas');
-  const section = document.querySelector('.bridge-section');
-  if (!canvas || !section) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const GOLD = '184,126,32';
-  const INK = '17,17,15';
-  const MUTED = '134,130,118';
-
-  // Categories, never real names — a named club or company on a public page reads as a
-  // partner, and none have signed.
-  const LEFT = ['Seed-stage AI', 'Robotics startup', 'Fintech, Series A', 'Health ops', 'Consumer brand', 'Dev tools'];
-  const RIGHT = ['Robotics club', 'Consulting group', 'Quant society', 'Research lab', 'CS faculty', 'Design collective'];
-
-  let W = 0, H = 0, progress = 0, raf = 0, t = 0;
-
-  function resize() {
-    const r = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = r.width; H = r.height;
-    canvas.width = Math.max(1, Math.round(W * dpr));
-    canvas.height = Math.max(1, Math.round(H * dpr));
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  // 0 while the section is still below the fold, 1 once it has been scrolled through.
-  function readProgress() {
-    const r = section.getBoundingClientRect();
-    const total = Math.max(1, r.height - window.innerHeight);
-    return Math.min(1, Math.max(0, -r.top / total));
-  }
-
-  const ease = p => 1 - Math.pow(1 - p, 3);
-  const lerp = (a, b, p) => a + (b - a) * p;
-
-  function draw() {
-    const p = ease(reduce ? 1 : progress);
-    ctx.clearRect(0, 0, W, H);
-    const midX = W / 2;
-    const colGap = Math.min(0.34 * W, 300);
-    // The columns close in as you scroll — the gap itself is the argument.
-    const leftX = lerp(W * 0.10, midX - colGap * 0.42, p);
-    const rightX = lerp(W * 0.90, midX + colGap * 0.42, p);
-    const rows = LEFT.length;
-    const top = 54, spacing = (H - top - 40) / Math.max(1, rows - 1);
-    const label = Math.max(10, Math.min(12.5, W / 90));
-
-    ctx.textBaseline = 'middle';
-    ctx.font = `600 ${label}px "Manrope", system-ui, sans-serif`;
-
-    for (let i = 0; i < rows; i++) {
-      const y = top + i * spacing;
-      // Rows complete in sequence, so the bridge visibly knits rather than fading in.
-      const rowP = Math.min(1, Math.max(0, (p - i * 0.055) / 0.5));
-      const proven = rowP > 0.92;
-
-      // span
-      if (rowP > 0) {
-        const x1 = leftX + 12, x2 = rightX - 12;
-        const reach = lerp(x1, x2, rowP);
-        ctx.strokeStyle = proven ? `rgba(${GOLD},.55)` : `rgba(${MUTED},${0.22 + 0.3 * rowP})`;
-        ctx.lineWidth = proven ? 1.6 : 1;
-        ctx.setLineDash(proven ? [] : [4, 6]);
-        ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(reach, y); ctx.stroke();
-        ctx.setLineDash([]);
-        if (!proven && rowP < 1) {
-          ctx.strokeStyle = `rgba(${MUTED},.22)`;
-          ctx.setLineDash([4, 6]);
-          ctx.beginPath(); ctx.moveTo(x2, y); ctx.lineTo(lerp(x2, x1, rowP), y); ctx.stroke();
-          ctx.setLineDash([]);
-        }
-      }
-
-      // talent crossing a completed span
-      if (proven) {
-        const travel = ((t * 0.004) + i * 0.17) % 1;
-        const tx = lerp(leftX + 12, rightX - 12, travel);
-        ctx.fillStyle = `rgba(${GOLD},${0.9 * Math.sin(travel * Math.PI)})`;
-        ctx.beginPath(); ctx.arc(tx, y, 4.2, 0, Math.PI * 2); ctx.fill();
-      }
-
-      // left: a company, drawn square
-      ctx.fillStyle = proven ? `rgba(${GOLD},.16)` : '#fff';
-      ctx.strokeStyle = proven ? `rgba(${GOLD},.9)` : `rgba(${INK},.85)`;
-      ctx.lineWidth = 1.6;
-      ctx.beginPath(); ctx.rect(leftX - 9, y - 9, 18, 18); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = `rgba(${INK},.82)`;
-      ctx.textAlign = 'right';
-      ctx.fillText(LEFT[i], leftX - 18, y);
-
-      // right: a vouching source, drawn round
-      ctx.fillStyle = proven ? `rgba(${GOLD},.9)` : '#fff';
-      ctx.strokeStyle = proven ? `rgba(${GOLD},.9)` : `rgba(${MUTED},.9)`;
-      ctx.beginPath(); ctx.arc(rightX, y, 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = `rgba(${INK},.82)`;
-      ctx.textAlign = 'left';
-      ctx.fillText(RIGHT[i], rightX + 18, y);
-    }
-
-    // column headers
-    ctx.font = `700 ${label - 1}px "Manrope", system-ui, sans-serif`;
-    ctx.fillStyle = `rgba(${MUTED},1)`;
-    ctx.textAlign = 'right';
-    ctx.fillText('STARTUPS', leftX - 18, 22);
-    ctx.textAlign = 'left';
-    ctx.fillText('VOUCHED TALENT', rightX + 18, 22);
-  }
-
-  function frame() { t += 1; draw(); raf = requestAnimationFrame(frame); }
-
-  resize();
-  draw();
-  window.addEventListener('resize', () => { resize(); draw(); });
-  if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); draw(); }).observe(canvas);
-  if (reduce) return; // finished state, painted once
-
-  let ticking = false;
-  window.addEventListener('scroll', () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => { progress = readProgress(); ticking = false; });
-  }, { passive: true });
-  progress = readProgress();
-
-  // Only animate while the section is on screen.
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(entries => entries.forEach(e => {
-      if (e.isIntersecting && !raf) raf = requestAnimationFrame(frame);
-      else if (!e.isIntersecting && raf) { cancelAnimationFrame(raf); raf = 0; }
-    }), { threshold: 0.01 }).observe(section);
-  } else { raf = requestAnimationFrame(frame); }
+    new IntersectionObserver(entries => {
+      isVisible = Boolean(entries[0] && entries[0].isIntersecting);
+    }, { threshold: .2 }).observe(stage);
+  }
+
+  setExchangeStep(exchangeStep);
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(() => {
+      viewport.scrollTo({ left: exchangeStep * viewport.clientWidth, behavior: 'auto' });
+    }).observe(viewport);
+  }
+  if (reduce) return; // Swipe and controls remain; only autoplay and pop motion stop.
+  window.setInterval(() => {
+    if (isVisible && Date.now() >= userPauseUntil) {
+      setExchangeStep(exchangeStep === lastStep ? 0 : exchangeStep + 1);
+    }
+  }, 4600);
 })();
 
 initMemberNav();
