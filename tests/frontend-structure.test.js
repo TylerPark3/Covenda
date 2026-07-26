@@ -455,12 +455,17 @@ test('the pop-art panel is original, decorative and captioned', () => {
   assert.match(html, /benday/);           // dot shading, built as an SVG pattern
   assert.match(html, /THE STUDENT/);      // the reversal is the point
   assert.match(html, /THE COMPANY/);
+  assert.match(html, /I NEED SOMEONE WHO/);
+  assert.match(html, /I&#8217;M RIGHT/);
+  // Comic lettering is bold uppercase sans — serif was off-idiom and harder to read fast.
+  const panel = html.match(/<svg class="popart-svg"[\s\S]*?<\/svg>/)?.[0] || '';
+  assert.doesNotMatch(panel, /<text[^>]*Georgia/);
+  assert.match(panel, /<text[^>]*font-weight="800"/);
   assert.match(html, /popart-svg[^>]*role="img"/);
   assert.match(html, /answers both questions at once/); // meaning carried in visible text
   // The caption slab was removed; the two balloons carry it.
   assert.doesNotMatch(html, /Both sides are interviewing/);
   // Halftone must be solid-filled, never a translucent veil — that is what read as fog.
-  const panel = html.match(/<svg class="popart-svg"[\s\S]*?<\/svg>/)?.[0] || '';
   assert.doesNotMatch(panel, /fill="url\(#benday[A-Za-z]*\)"[^>]*opacity=/);
   // Figurative drawing read as clip art; the panel is typographic and graphic now.
   assert.doesNotMatch(html, /popart[\s\S]{0,4000}?<circle[^>]*r="6\.5"/);
