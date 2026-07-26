@@ -5,6 +5,7 @@ const state = {
   audience: 'home',
   surface: 'site',
   workType: 'Research',
+  studentSpecialty: '',
   toastTimer: null,
 };
 let selectorFxController = null;
@@ -89,6 +90,7 @@ const storageKey = 'covendaPilotSubmissions';
 const introStorageKey = 'covendaIntroSeen';
 const audienceStorageKey = 'covendaAudience';
 const workTypeStorageKey = 'covendaSelectedWorkType';
+const studentSpecialtyStorageKey = 'covendaSelectedSpecialty';
 const draftKeys = {
   studentForm: 'covendaStudentInterestDraft',
   companyForm: 'covendaCompanyProblemDraft',
@@ -434,14 +436,8 @@ function setAudience(audience) {
 
 let audienceTransitionTimer = 0;
 function transitionAudience(audience) {
-  if (!['home', 'student', 'company', 'university'].includes(audience)) return;
+  if (audience !== 'student') return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const labels = {
-    home: 'Covenda',
-    student: 'For students',
-    company: 'For startups',
-    university: 'For referrers',
-  };
   window.clearTimeout(audienceTransitionTimer);
   if (reduceMotion || audience === state.audience) {
     setAudience(audience);
@@ -451,7 +447,7 @@ function transitionAudience(audience) {
   }
 
   const label = $('#audienceTransitionLabel');
-  if (label) label.textContent = labels[audience];
+  if (label) label.textContent = 'For students';
   document.body.classList.remove('is-audience-transitioning');
   void document.body.offsetWidth;
   document.body.classList.add('is-audience-transitioning');
@@ -466,6 +462,12 @@ function transitionAudience(audience) {
   }, 860);
 }
 
+function showAudience(audience) {
+  setAudience(audience);
+  setSurface('site');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
 function setSurface(surface) {
   state.surface = surface;
   document.body.dataset.surface = surface;
@@ -476,6 +478,54 @@ function setSurface(surface) {
   setWorkspaceTab('overview');
   if (workspace) refreshDeliveryHealth();
   window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+const studentSpecialties = {
+  'Research': ['Product discovery', 'Market strategy', 'Customer research', 'Competitive analysis'],
+  'Data & spreadsheets': ['Frontend engineering', 'Backend engineering', 'Data analysis', 'AI & automation'],
+  'Operations': ['Financial modeling', 'Startup operations', 'Accounting & controls', 'Process design'],
+  'Writing & documentation': ['Growth strategy', 'Market research', 'Content & brand', 'Sales research'],
+};
+
+function selectStudentSpecialty(label) {
+  const choices = studentSpecialties[state.workType] || [];
+  if (!choices.includes(label)) return;
+  state.studentSpecialty = label;
+  writeStorage(studentSpecialtyStorageKey, { workType: state.workType, label });
+  $$('.student-specialty').forEach(button => {
+    const selected = button.dataset.specialty === label;
+    button.classList.toggle('is-selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  const status = $('#studentSpecialtyStatus');
+  if (status) status.textContent = `Selected: ${label}. We’ll use this to show you more relevant project work.`;
+}
+
+function renderStudentSpecialties(workType) {
+  const host = $('#studentSpecialtyOptions');
+  const title = $('#studentSpecialtyTitle');
+  const status = $('#studentSpecialtyStatus');
+  if (!host || !title || !status) return;
+  const vertical = $(`.student-vertical[data-work-type="${workType}"]`);
+  const choices = studentSpecialties[workType] || [];
+  title.textContent = vertical?.dataset.verticalLabel || workType;
+  host.replaceChildren();
+
+  if (!choices.includes(state.studentSpecialty)) state.studentSpecialty = '';
+  choices.forEach(label => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'student-specialty';
+    button.dataset.specialty = label;
+    button.textContent = label;
+    button.setAttribute('aria-pressed', String(label === state.studentSpecialty));
+    button.classList.toggle('is-selected', label === state.studentSpecialty);
+    button.addEventListener('click', () => selectStudentSpecialty(label));
+    host.append(button);
+  });
+  status.textContent = state.studentSpecialty
+    ? `Selected: ${state.studentSpecialty}. We’ll use this to show you more relevant project work.`
+    : 'Choose one to tell us what kind of work you want to prove.';
 }
 
 function selectWorkType(workType) {
@@ -498,6 +548,7 @@ function selectWorkType(workType) {
   $$('input[name="workType"]', $('#studentForm')).forEach(input => {
     if (input.value === workType) input.checked = true;
   });
+  renderStudentSpecialties(workType);
 }
 
 function setWorkspaceTab(tabName) {
@@ -1744,10 +1795,29 @@ function openQuickJoin() {
   done.hidden = true; done.textContent = '';
   quickJoinForm.hidden = false;
   $('#quickJoinMessage').textContent = '';
+  const selectedDirection = $('#quickJoinSpecialty');
+  if (selectedDirection) {
+    const vertical = $(`.student-vertical[data-work-type="${state.workType}"]`)?.dataset.verticalLabel || state.workType;
+    selectedDirection.hidden = !state.studentSpecialty;
+    selectedDirection.textContent = state.studentSpecialty
+      ? `Your direction: ${vertical} · ${state.studentSpecialty}`
+      : '';
+  }
   renderQuickInterests();
   quickJoinForm.dataset.startedAt = String(Date.now());
   quickJoinDialog.showModal();
   window.setTimeout(() => $('[name="quickName"]', quickJoinForm)?.focus(), 60);
+}
+
+function confirmStudentJoin(button) {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  button.classList.remove('is-confirming');
+  void button.offsetWidth;
+  button.classList.add('is-confirming');
+  window.setTimeout(() => {
+    button.classList.remove('is-confirming');
+    openQuickJoin();
+  }, reduceMotion ? 0 : 180);
 }
 function renderQuickJoinDone(reference) {
   quickJoinForm.hidden = true;
@@ -2254,7 +2324,12 @@ $('#rosterList')?.addEventListener('click', event => {
 });
 
 $$('[data-audience-option]').forEach(button => button.addEventListener('click', () => {
-  transitionAudience(button.dataset.audienceOption);
+  const audience = button.dataset.audienceOption;
+  if (audience === 'student' && button.matches('[data-student-hero-entry]') && state.audience === 'home') {
+    transitionAudience('student');
+  } else {
+    showAudience(audience);
+  }
   // The core-story demo only belongs to the opening/default home view.
   document.body.dataset.audienceSwitched = 'true';
 }));
@@ -2890,7 +2965,7 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     setSurface('workspace');
     setWorkspaceTab('submissions');
   }
-  if (action === 'student-quick') openQuickJoin();
+  if (action === 'student-quick') confirmStudentJoin(button);
   if (action === 'request-endorsement') openRequestEndorse();
   if (action === 'refresh-delivery') {
     refreshDeliveryHealth({ force: true }).then(primary => {
@@ -3724,6 +3799,10 @@ const restoredWorkTypes = checkedValues(studentForm, 'workType');
 const rememberedWorkType = readStorage(workTypeStorageKey, 'Research');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];
 else if (rememberedWorkType) state.workType = rememberedWorkType;
+const rememberedSpecialty = readStorage(studentSpecialtyStorageKey, null);
+if (rememberedSpecialty?.workType === state.workType && typeof rememberedSpecialty.label === 'string') {
+  state.studentSpecialty = rememberedSpecialty.label;
+}
 // ---- Motion (adapted from design_handoff_covenda_motion/covenda-motion.js) ----
 // Vanilla helper: play anything marked [data-animate] once it scrolls into view.
 function initCovendaMotion(root = document) {
@@ -5784,13 +5863,8 @@ function initBatchWeb() {
 })();
 
 
-// The bridge. Startup project nodes and a much denser referral network face each other.
-// Scrolling closes the missing span; gold talent then crosses from right to left through
-// posted work, a submission, and finally a durable proof trail at the company.
-//
-// Node labels remain illustrative categories rather than partner claims. Scroll progress
-// drives the actual product story, while a very small idle drift keeps each network alive.
-// Reduced motion paints the connected state once without attaching scroll or animation.
+// The bridge is intentionally quiet: two sparse fields frame the explanation and move
+// slightly closer on scroll. The words carry the product story; the canvas is atmosphere.
 (function initBridge() {
   const canvas = document.getElementById('bridgeCanvas');
   const section = document.querySelector('.bridge-section');
@@ -5798,13 +5872,11 @@ function initBatchWeb() {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const progressOutput = section.querySelector('.bridge-progress output');
 
   const GOLD = '180,123,32';
-  const INK = '17,17,15';
   const MUTED = '149,146,137';
   const PALE = '218,217,210';
-  let W = 0, H = 0, progress = 0, raf = 0, t = 0;
+  let W = 0, H = 0, progress = 0;
 
   // Stable point sets keep the clouds organic without shifting on reload. The labels live in
   // semantic HTML; canvas carries only the spatial relationship and movement.
@@ -5814,29 +5886,20 @@ function initBatchWeb() {
   }
 
   function makeCloud(count, salt, goldRate) {
-    const nodes = Array.from({ length: count }, (_, index) => {
+    return Array.from({ length: count }, (_, index) => {
       const angle = seeded(index, salt) * Math.PI * 2;
       const radius = Math.sqrt(seeded(index, salt + 1));
       return {
         x: Math.cos(angle) * radius,
         y: Math.sin(angle) * radius,
         gold: seeded(index, salt + 2) < goldRate,
-        phase: seeded(index, salt + 3) * Math.PI * 2,
         size: .7 + seeded(index, salt + 4) * 1.4,
       };
     });
-    const links = [];
-    for (let i = 0; i < nodes.length; i += 1) {
-      for (let j = i + 1; j < nodes.length; j += 1) {
-        if (links.length > count * 2.2) break;
-        if (Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y) < .34) links.push([i, j]);
-      }
-    }
-    return { nodes, links };
   }
 
-  const startupCloud = makeCloud(72, 3, .055);
-  const talentCloud = makeCloud(90, 11, .12);
+  const startupCloud = makeCloud(7, 3, .2);
+  const talentCloud = makeCloud(9, 11, .24);
 
   function resize() {
     const r = canvas.getBoundingClientRect();
@@ -5857,7 +5920,6 @@ function initBatchWeb() {
   function setProgress(value) {
     progress = Math.min(1, Math.max(0, value));
     section.style.setProperty('--bridge-progress', progress.toFixed(4));
-    if (progressOutput) progressOutput.textContent = `${Math.round(progress * 100)}% together`;
   }
 
   const ease = p => 1 - Math.pow(1 - p, 3);
@@ -5886,38 +5948,29 @@ function initBatchWeb() {
   }
 
   function cloudPoints(cloud, frame) {
-    return cloud.nodes.map(node => {
-      const drift = reduce ? 0 : Math.sin(t * .009 + node.phase) * 2.2;
-      return {
-        x: frame.x + node.x * frame.rx + drift,
-        y: frame.y + node.y * frame.ry + drift * .45,
-      };
-    });
+    return cloud.map(node => ({
+      x: frame.x + node.x * frame.rx,
+      y: frame.y + node.y * frame.ry,
+    }));
   }
 
   function drawCloud(cloud, side, p) {
     const frame = cloudFrame(side, p);
     const points = cloudPoints(cloud, frame);
     const glow = ctx.createRadialGradient(frame.x, frame.y, 0, frame.x, frame.y, frame.rx);
-    glow.addColorStop(0, side === 'talent' ? `rgba(${GOLD},.035)` : `rgba(${PALE},.08)`);
+    glow.addColorStop(0, side === 'talent' ? `rgba(${GOLD},.055)` : `rgba(${PALE},.12)`);
     glow.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
     ctx.ellipse(frame.x, frame.y, frame.rx, frame.ry, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    for (const [from, to] of cloud.links) {
-      const goldLink = cloud.nodes[from].gold && cloud.nodes[to].gold;
-      line(points[from], points[to], goldLink ? GOLD : MUTED, goldLink ? 1.15 : .75, goldLink ? .3 : .13);
-    }
-
-    cloud.nodes.forEach((node, index) => {
+    cloud.forEach((node, index) => {
       const q = points[index];
-      const pulse = .5 + Math.sin(t * .022 + node.phase) * .5;
       if (node.gold) {
-        ctx.fillStyle = `rgba(${GOLD},${.05 + pulse * .055})`;
+        ctx.fillStyle = `rgba(${GOLD},.08)`;
         ctx.beginPath();
-        ctx.arc(q.x, q.y, 11 + pulse * 7, 0, Math.PI * 2);
+        ctx.arc(q.x, q.y, 15, 0, Math.PI * 2);
         ctx.fill();
       }
       ctx.fillStyle = node.gold ? `rgba(${GOLD},.96)` : '#fff';
@@ -5927,64 +5980,17 @@ function initBatchWeb() {
       ctx.arc(q.x, q.y, node.gold ? 3.8 + node.size : 2.3 + node.size, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
-      if (!node.gold && index % 4 === 0) {
-        ctx.fillStyle = `rgba(${INK},.3)`;
-        ctx.beginPath();
-        ctx.arc(q.x, q.y, .8, 0, Math.PI * 2);
-        ctx.fill();
-      }
     });
     return { frame, points };
   }
 
-  function drawSharedRoute(p) {
-    const alpha = .2 + p * .55;
-    if (W <= 720) {
-      line({ x: W * .5, y: H * .42 }, { x: W * .5, y: H * .62 }, GOLD, 1.4, alpha);
-      return;
-    }
-    line({ x: W * .36, y: H * .58 }, { x: W * .64, y: H * .58 }, GOLD, 1.4, alpha);
-  }
-
   function drawCrossCloudLinks(p, startup, talent) {
-    const strength = clamp((p - .54) / .42);
+    const strength = clamp((p - .62) / .32);
     if (!strength) return;
-    const startupGold = startupCloud.nodes.map((node, i) => node.gold ? i : -1).filter(i => i >= 0);
-    const talentGold = talentCloud.nodes.map((node, i) => node.gold ? i : -1).filter(i => i >= 0);
-    const count = Math.min(3, startupGold.length, talentGold.length);
-    for (let index = 0; index < count; index += 1) {
-      line(
-        talent.points[talentGold[index]],
-        startup.points[startupGold[index]],
-        GOLD,
-        1,
-        strength * (.16 + index * .045),
-      );
-    }
-  }
-
-  function drawCrossingTalent(p) {
-    const move = clamp((p - .28) / .68);
-    if (move <= 0) return;
-    const count = W <= 720 ? 4 : 5;
-    for (let index = 0; index < count; index += 1) {
-      const local = clamp(move * 1.32 - index * .13);
-      if (local <= 0) continue;
-      let x;
-      let y;
-      if (W <= 720) {
-        x = W * .5 + Math.sin(local * Math.PI + index) * 3;
-        y = lerp(H * .67, H * .36, local);
-      } else {
-        x = lerp(W * .68, W * .32, local);
-        y = H * .58 + Math.sin(local * Math.PI + index) * 3;
-      }
-      const fade = Math.sin(Math.min(.99, local) * Math.PI) * .5 + .42;
-      ctx.fillStyle = `rgba(${GOLD},${fade})`;
-      ctx.beginPath();
-      ctx.arc(x, y, 3.4 + (index % 2), 0, Math.PI * 2);
-      ctx.fill();
-    }
+    const startupGold = startupCloud.findIndex(node => node.gold);
+    const talentGold = talentCloud.findIndex(node => node.gold);
+    if (startupGold < 0 || talentGold < 0) return;
+    line(talent.points[talentGold], startup.points[startupGold], GOLD, 1.2, strength * .45);
   }
 
   function draw() {
@@ -5993,11 +5999,7 @@ function initBatchWeb() {
     const startup = drawCloud(startupCloud, 'startup', p);
     const talent = drawCloud(talentCloud, 'talent', p);
     drawCrossCloudLinks(p, startup, talent);
-    drawSharedRoute(p);
-    drawCrossingTalent(p);
   }
-
-  function frame() { t += 1; draw(); raf = requestAnimationFrame(frame); }
 
   resize();
   setProgress(reduce ? 1 : readProgress());
@@ -6010,16 +6012,8 @@ function initBatchWeb() {
   window.addEventListener('scroll', () => {
     if (ticking) return;
     ticking = true;
-    requestAnimationFrame(() => { setProgress(readProgress()); ticking = false; });
+    requestAnimationFrame(() => { setProgress(readProgress()); draw(); ticking = false; });
   }, { passive: true });
-
-  // Only animate while the section is on screen.
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(entries => entries.forEach(e => {
-      if (e.isIntersecting && !raf) raf = requestAnimationFrame(frame);
-      else if (!e.isIntersecting && raf) { cancelAnimationFrame(raf); raf = 0; }
-    }), { threshold: 0.01 }).observe(section);
-  } else { raf = requestAnimationFrame(frame); }
 })();
 
 initMemberNav();
