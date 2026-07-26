@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#11110f">
   <meta name="description" content="Covenda turns delayed company work into safe, paid projects and credible proof of student ability.">
   <!-- Company demo booking. Paste your Calendly event URL (must be an https calendly.com link). -->
   <meta name="covenda-calendly-url" content="https://calendly.com/thp2117-columbia/30min">
@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,400;6..72,500&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="product-system.css">
   <script src="app.js" defer></script>
 </head>
 <body data-audience="home" data-surface="site">
@@ -64,7 +65,7 @@
   </dialog>
 
   <div class="site-shell" id="siteShell">
-    <header class="site-header">
+    <header class="site-header app-header">
       <button class="brand" type="button" data-action="home" aria-label="Covenda home">
         <img class="covenda-mark" src="/assets/covenda-mark.svg" alt="">
         <span>Covenda</span>
@@ -72,7 +73,8 @@
       <nav class="site-nav" aria-label="Primary navigation">
         <a class="student-nav-link" href="#studentPathfinder" data-nav-target="studentPathfinder" data-nav-audience="student">Explore work</a>
         <a href="#how" data-nav-target="how" data-nav-audience="home">How it works</a>
-        <a href="#whyCovenda" data-nav-target="whyCovenda" data-nav-audience="home">Why Covenda</a>
+        <a href="#whyNow" data-nav-target="whyNow" data-nav-audience="home">Why now</a>
+        <a href="#whyCovenda" data-nav-target="whyCovenda" data-nav-audience="home">The model</a>
       </nav>
       <div class="header-actions">
         <div class="audience-switch has-three" aria-label="Choose audience">
@@ -85,22 +87,21 @@
       </div>
     </header>
 
-    <main>
-      <section class="hero hero-home" aria-labelledby="homeHeroTitle">
+    <main class="public-main">
+      <section class="hero hero-home section" aria-labelledby="homeHeroTitle">
         <div class="hero-copy">
-          <p class="home-kicker">Rethinking internships</p>
           <h1 id="homeHeroTitle">Real work becomes<br>credible <span class="word-gold">proof</span>.</h1>
           <p>Covenda turns a company’s delayed, low-risk work into a safe, paid project—and durable evidence of what a student can do. No posting. No guessing. See the work.</p>
         </div>
         <div class="home-paths" role="group" aria-label="Choose your path">
           <button type="button" class="home-path" data-audience-option="student">
             <span class="home-path-index" aria-hidden="true">01</span>
-            <span class="home-path-copy"><strong>Student</strong><small>Build proof through paid, reviewed work</small></span>
+            <span class="home-path-copy"><strong>I’m a student</strong><small>Build proof through paid, reviewed work</small></span>
             <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
           </button>
           <button type="button" class="home-path" data-audience-option="company">
             <span class="home-path-index" aria-hidden="true">02</span>
-            <span class="home-path-copy"><strong>Company</strong><small>Turn delayed work into a safe project</small></span>
+            <span class="home-path-copy"><strong>I represent a company</strong><small>Turn delayed work into a safe project</small></span>
             <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
           </button>
           <button type="button" class="home-path" data-audience-option="university">
@@ -297,7 +298,7 @@
 
       <!-- Why now: the opportunity deficit, in cited numbers. These are published
            research figures, explicitly NOT Covenda outcome data — the note says so. -->
-      <section class="stat-band" id="whyNow" aria-labelledby="statBandTitle">
+      <section class="stat-band section" id="whyNow" aria-labelledby="statBandTitle">
         <div class="stat-band-inner">
           <div class="stat-band-head">
             <p class="feature-kicker">Why now</p>
@@ -683,11 +684,11 @@
       </section>
     </main>
 
-    <footer class="site-footer"><span>Covenda · Founder-led pilot</span><button type="button" data-action="replay-intro">Replay intro</button><span>Structured submissions · No live payment processing</span></footer>
+    <footer class="site-footer public-footer"><span>Covenda · Founder-led pilot</span><button type="button" data-action="replay-intro">Replay intro</button><span>Structured submissions · No live payment processing</span></footer>
   </div>
 
   <div class="workspace-shell" id="workspaceShell" hidden>
-    <header class="workspace-header">
+    <header class="workspace-header app-header">
       <button class="brand" type="button" data-action="site"><img class="covenda-mark" src="/assets/covenda-mark.svg" alt=""><span>Covenda</span></button>
       <strong>Local preview</strong>
       <div class="header-actions">
@@ -1067,9 +1068,9 @@
         <dl class="form-review-summary packet-review-summary" id="companyReviewSummary"></dl>
         <div class="time-case" id="companyTimeCase"><svg><use href="#icon-clock"/></svg><div><strong>Estimated time-saving case</strong><span>Add employee time avoided and review minutes to calculate it.</span></div></div>
         <section class="packet-readiness" aria-labelledby="companyReadinessTitle">
-          <header><div><small>Scoping readiness</small><h4 id="companyReadinessTitle">What Covenda can review now</h4></div><strong id="companyReadinessStatus">0 of 6 inputs ready</strong></header>
+          <header><div><small>Project review</small><h4 id="companyReadinessTitle">What Covenda can review now</h4></div><strong id="companyReadinessStatus">0 of 6 inputs ready</strong></header>
           <ul id="companyReadinessChecks"></ul>
-          <footer><svg><use href="#icon-shield"/></svg><p><strong>Readiness is not approval.</strong>Covenda still checks scope, value, safety, fairness, and review burden with a human.</p></footer>
+          <footer><svg><use href="#icon-shield"/></svg><p><strong>Complete inputs are not approval.</strong>Covenda still checks scope, value, safety, fairness, and review burden with a human.</p></footer>
         </section>
         <div class="review-boundary"><svg><use href="#icon-shield"/></svg><p><strong>Human scoping comes next.</strong>No payment, publication, or student assignment occurs from this submission.</p></div>
       </section>

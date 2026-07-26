@@ -182,7 +182,7 @@ test('company review calculates the net time case without promising launch', () 
 test('company review exposes a six-part Project Packet readiness model', () => {
   assert.match(html, /id="companyReadinessStatus"/);
   assert.match(html, /id="companyReadinessChecks"/);
-  assert.match(html, /Readiness is not approval/);
+  assert.match(html, /Complete inputs are not approval/);
   assert.match(script, /function companyPacketReadiness\(input\)/);
   for (const key of ['outcome', 'review', 'context', 'boundary', 'time', 'terms']) {
     assert.match(script, new RegExp("key: '" + key + "'"));

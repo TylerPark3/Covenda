@@ -12,6 +12,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="product-system.css">
   <script src="admin.js" defer></script>
 </head>
 <body>
@@ -53,18 +54,18 @@
         <button type="button" data-admin-type="student_interest"><svg><use href="#a-user"/></svg><span>Students</span><b data-admin-count="student_interest">0</b></button>
         <button type="button" data-admin-type="employer_intake"><svg><use href="#a-company"/></svg><span>Companies</span><b data-admin-count="employer_intake">0</b></button>
         <button type="button" data-admin-type="university_partner"><svg><use href="#a-university"/></svg><span>Universities</span><b data-admin-count="university_partner">0</b></button>
-        <button type="button" id="adminPackagingNav"><svg><use href="#a-packet"/></svg><span>Packaging</span><b id="adminPackagingCount">0</b></button>
+        <button type="button" id="adminPackagingNav"><svg><use href="#a-packet"/></svg><span>Project review</span><b id="adminPackagingCount">0</b></button>
       </nav>
       <button class="admin-signout" id="adminSignout" type="button"><svg><use href="#a-exit"/></svg>Sign out</button>
     </aside>
 
-    <header class="admin-header">
+    <header class="admin-header app-header">
       <span id="operatorEmail">Operator</span>
       <span class="admin-sync-status" id="adminSyncStatus" aria-live="polite">Not synced</span>
       <button class="admin-refresh" id="adminRefresh" type="button"><svg><use href="#a-refresh"/></svg>Refresh inbox</button>
     </header>
     <main class="admin-main" id="adminInboxMain">
-      <section class="admin-queue">
+      <section class="admin-queue page-container">
         <div class="admin-queue-heading">
           <div><h1>Submission inbox</h1><p>Review new intake, find blocked records, and keep every lead moving.</p></div>
           <strong id="adminQueueTotal">0 records</strong>
@@ -83,17 +84,17 @@
         </div>
         <div class="admin-results-bar"><p id="adminResultsCount" aria-live="polite">0 submissions</p><button id="adminClearFilters" type="button" hidden>Clear filters</button></div>
         <div class="admin-table-wrap">
-          <table><thead><tr><th>Reference</th><th>Submitter</th><th>Type</th><th>Status</th><th>Received</th></tr></thead><tbody id="adminRows"></tbody></table>
-          <div class="admin-empty" id="adminEmpty" hidden><strong>No submissions match these filters</strong><span>Reset the filters to return to the full operator queue.</span><button id="adminEmptyReset" type="button">Reset filters</button></div>
+          <table class="data-table"><thead><tr><th>Reference</th><th>Submitter</th><th>Type</th><th>Status</th><th>Received</th></tr></thead><tbody id="adminRows"></tbody></table>
+          <div class="admin-empty empty-state" id="adminEmpty" hidden><strong>No submissions match these filters</strong><span>Reset the filters to return to the full operator queue.</span><button id="adminEmptyReset" type="button">Reset filters</button></div>
         </div>
       </section>
-      <aside class="admin-detail" id="adminDetail" aria-live="polite">
+      <aside class="admin-detail approval-panel" id="adminDetail" aria-live="polite">
         <div class="admin-detail-empty"><svg><use href="#a-inbox"/></svg><h2>Select a submission</h2><p>Choose a row to inspect its private intake details.</p></div>
       </aside>
     </main>
     <main class="packaging-main" id="adminPackagingMain" hidden>
       <section class="packaging-queue">
-        <div class="packaging-heading"><div><p>Brokered work</p><h1>Packaging queue</h1><span>Turn company needs into safe, student-ready Project Packets.</span></div><strong id="packagingTotal">0 requests</strong></div>
+        <div class="packaging-heading"><div><p>Project requests</p><h1>Project review queue</h1><span>Review company requests and prepare approved Project Packets.</span></div><strong id="packagingTotal">0 requests</strong></div>
         <div class="packaging-tabs" role="tablist" aria-label="Packaging status"><button class="is-active" type="button" data-packaging-filter="submitted">Submitted</button><button type="button" data-packaging-filter="in_packaging">In packaging</button><button type="button" data-packaging-filter="packaged">Packaged</button><button type="button" data-packaging-filter="declined">Declined</button></div>
         <div class="packaging-list-head"><span>Request</span><span>Type</span><span>Status</span><span>Received</span></div>
         <div class="packaging-list" id="packagingList"></div>

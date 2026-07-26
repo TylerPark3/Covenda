@@ -13,6 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="portal.css">
+  <link rel="stylesheet" href="product-system.css">
   <script src="portal.js" defer></script>
 </head>
 <body>
@@ -72,7 +73,7 @@
     </section>
   </main>
 
-  <div class="portal-loading" id="portalLoading" hidden><span class="portal-spinner"></span><p>Opening your workspace…</p></div>
+  <div class="portal-loading loading-state" id="portalLoading" hidden><span class="portal-spinner"></span><p>Opening your workspace…</p></div>
 
   <div class="member-shell" id="memberShell" hidden>
     <aside class="member-nav">
@@ -91,13 +92,13 @@
       <button class="member-signout" id="memberSignout" type="button"><svg><use href="#p-exit"/></svg>Sign out</button>
     </aside>
 
-    <header class="member-header">
+    <header class="member-header app-header">
       <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Open navigation"><span></span><span></span></button>
       <div><small id="memberBreadcrumb">Workspace / Overview</small><strong id="memberHeaderStatus">Private member account</strong></div>
       <button class="header-profile" type="button" data-view="portfolio"><span id="headerInitial">C</span><span id="headerName">Member</span></button>
     </header>
 
-    <main class="member-main">
+    <main class="member-main page-container">
       <section class="portal-view is-active" data-portal-view="overview">
         <div class="overview-grid">
           <div class="overview-main">
@@ -106,7 +107,7 @@
             <section class="plain-section"><div class="section-heading"><div><p class="eyebrow">At a glance</p><h2>Your activity</h2></div></div><div class="metrics-row" id="memberMetrics"></div></section>
           </div>
           <aside class="overview-rail">
-            <section class="profile-progress"><div><p class="eyebrow">Profile readiness</p><h2 id="profileProgressTitle">Make a strong first impression</h2><p id="profileProgressCopy">A complete profile helps Covenda route the right work.</p><div class="profile-meter" id="profileRing" role="progressbar" aria-label="Profile completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span aria-hidden="true"><i></i></span><strong>0%</strong></div><button type="button" data-view="portfolio">Edit profile <svg><use href="#p-arrow"/></svg></button></div></section>
+            <section class="profile-progress detail-list"><div><p class="eyebrow">Profile completion</p><h2 id="profileProgressTitle">Make a strong first impression</h2><p id="profileProgressCopy">A complete profile helps Covenda route the right work.</p><div class="profile-meter" id="profileRing" role="progressbar" aria-label="Profile completion" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span aria-hidden="true"><i></i></span><strong>0%</strong></div><button type="button" data-view="portfolio">Edit profile <svg><use href="#p-arrow"/></svg></button></div></section>
             <section class="rail-list"><div class="section-heading"><div><p class="eyebrow">Next up</p><h2>Actions</h2></div></div><ul id="nextActions"></ul></section>
           </aside>
         </div>
@@ -118,8 +119,8 @@
       </section>
 
       <section class="portal-view" data-portal-view="requests" data-org-only>
-        <div class="page-heading request-page-heading"><div><p class="eyebrow">Brokered work</p><h1>Requests</h1><p>Covenda scopes and packages every request before students see it.</p></div><button class="portal-primary" id="newRequest" type="button"><svg><use href="#p-plus"/></svg>Request work</button></div>
-        <div class="request-lifecycle" aria-label="Request lifecycle"><div class="is-current"><span>1</span><strong>Submitted</strong><small>Your request reaches Covenda.</small></div><i></i><div><span>2</span><strong>Covenda is packaging</strong><small>We define scope and safety.</small></div><i></i><div><span>3</span><strong>Packaged &amp; live</strong><small>Reviewed work reaches students.</small></div></div>
+        <div class="page-heading request-page-heading"><div><p class="eyebrow">Project requests</p><h1>Requests</h1><p>Covenda reviews every request before students see it.</p></div><button class="portal-primary" id="newRequest" type="button"><svg><use href="#p-plus"/></svg>Request work</button></div>
+        <div class="request-lifecycle step-indicator" aria-label="Request lifecycle"><div class="is-current"><span>1</span><strong>Submitted</strong><small>Your request reaches Covenda.</small></div><i></i><div><span>2</span><strong>Covenda is reviewing</strong><small>We define scope and safety.</small></div><i></i><div><span>3</span><strong>Approved and open</strong><small>Reviewed work reaches students.</small></div></div>
         <div class="request-workspace">
           <section class="request-list-panel"><div class="request-panel-head"><div><h2>Your requests</h2><p id="requestSummary">0 requests</p></div><div class="request-filters" role="group" aria-label="Filter requests"><button class="is-active" type="button" data-request-filter="all">All</button><button type="button" data-request-filter="active">Active</button><button type="button" data-request-filter="packaged">Packaged</button></div></div><div id="requestList" class="request-list" aria-live="polite"></div></section>
           <aside id="requestDetail" class="request-detail" aria-live="polite"></aside>
@@ -198,12 +199,12 @@
     </main>
   </div>
 
-  <div class="onboard" id="onboardFlow" role="dialog" aria-modal="true" aria-label="Set up your Covenda profile" hidden>
+  <div class="onboard drawer" id="onboardFlow" role="dialog" aria-modal="true" aria-label="Set up your Covenda profile" hidden>
     <div class="onboard-glow" aria-hidden="true"></div>
     <div class="onboard-inner" id="onboardInner"></div>
   </div>
 
-  <dialog class="member-dialog" id="profileDialog">
+  <dialog class="member-dialog modal" id="profileDialog">
     <form method="dialog" id="profileForm">
       <header><div><p class="eyebrow">Member setup</p><h2>Make Covenda yours.</h2><p>Your role controls the projects and tools in your workspace.</p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
       <div class="dialog-body">
@@ -254,7 +255,7 @@
     <div class="discover-filter-sheet"><header><div><p class="eyebrow">Narrow the list</p><h2>Project filters</h2></div><button type="button" data-close-dialog aria-label="Close filters"><svg><use href="#p-close"/></svg></button></header><div id="discoverFilterSheetContent"></div><footer><button class="portal-primary" id="applyDiscoverFilters" type="button">Show projects<svg><use href="#p-arrow"/></svg></button></footer></div>
   </dialog>
 
-  <dialog class="member-dialog" id="intakeDialog">
+  <dialog class="member-dialog modal" id="intakeDialog">
     <form method="dialog" id="intakeForm">
       <header><div><p class="eyebrow">Guided work request</p><h2>Turn a real problem into a packet Covenda can review.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
       <div class="intake-progress" id="intakeProgress"><span class="is-active">1. Describe</span><span>2. Understand</span><span>3. Target</span><span>4. Consult &amp; post</span></div>

@@ -43,7 +43,7 @@ test('operator inbox has passwordless sign-in and a complete review surface', ()
   assert.match(styles, /\.admin-summary/);
   assert.match(styles, /\.detail-workflow/);
   assert.match(html, /id="adminPackagingMain"/);
-  assert.match(html, /Packaging queue/);
+  assert.match(html, /Project review queue/);
   assert.match(script, /action:'save-packaging'/);
   assert.match(script, /action:'publish-request'/);
   assert.match(script, /No client or patient records/);
