@@ -4724,14 +4724,17 @@ function initHeroField() {
         : m.ownership === 'artifact'
           ? 'The file itself is parsed, not eyeballed — structure and formulas, not a screenshot.'
           : 'Scored on the record by two independent raters against published anchors.';
-      machineList.append(row(m.label, note));
+      // Verification differs per vertical, so show a concrete company + what they see
+      // rather than one generic sentence that flatters the weak rails and undersells the
+      // strong ones. Falls back to the plain note when a connector has no example.
+      machineList.append(row(m.label, m.example ? m.example.company + ' sees ' + m.example.sees : note));
     });
 
     rails.forEach(function (m) {
       var note = m.rail === 'instrumented_trial'
         ? 'No API can confirm outreach really landed, so proof comes from an instrumented trial run through Covenda.'
         : 'Bench skills cannot be checked remotely, so a supervisor’s structured referral is the primary mechanism — by design.';
-      humanList.append(row(m.label, note));
+      humanList.append(row(m.label, m.example ? m.example.company + ' sees ' + m.example.sees : note));
     });
 
     section.hidden = false;

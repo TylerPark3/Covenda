@@ -37,6 +37,7 @@ export const CONNECTORS = {
     extraction_job: 'github-analyze', schema_mapper: 'github-skills',
     ownership: 'oauth', history: 'commit_timeline', status: 'live',
     label: 'GitHub', note: 'Paste-a-repo still works (ownership_verified:false); OAuth over your own account yields ownership_verified:true + full commit-timeline forensics.',
+    example: { company: 'A seed-stage AI startup hiring a backend student', sees: 'the student\u2019s own GitHub account connected via OAuth, eight months of commit history on a real project, and the specific files behind each language claim \u2014 not a r\u00e9sum\u00e9 line reading \u201cproficient in Python\u201d.' },
   },
 
   // ---- Connector B: the finance stack (flagship) — three instruments, one connector -----
@@ -46,6 +47,7 @@ export const CONNECTORS = {
     extraction_job: 'alpaca-orders', schema_mapper: 'finance-track-record',
     ownership: 'oauth', history: 'order_audit_trail', status: 'planned',
     label: 'Alpaca paper-trading', note: 'Read the complete order audit trail (entries/exits/timestamps/drawdown) → a timestamped track record that cannot be backfilled.',
+    example: { company: 'A prop desk or fintech evaluating a markets student', sees: 'a six-month timestamped order trail \u2014 entries, exits, drawdowns \u2014 scored on risk discipline and sustained activity, never on P&L, because rewarding returns rewards gambling.' },
     terms_note: 'BLOCKER: verify Alpaca API terms permit this read + credentialing use before enabling. Ships as status:planned until confirmed.',
   },
   xlsx_model: {
@@ -54,6 +56,7 @@ export const CONNECTORS = {
     extraction_job: 'xlsx-formula-parse', schema_mapper: 'dcf-rubric',
     ownership: 'artifact', history: 'none', status: 'live',
     label: 'Financial model (.xlsx)', note: 'Programmatic formula-integrity + structure scored against a DCF rubric — parse formulas, not just values.',
+    example: { company: 'A search fund screening an analyst', sees: 'the student\u2019s DCF parsed formula-by-formula: live formulas versus pasted values, structure against a published rubric. A workbook of hardcoded numbers scores low by construction.' },
     dep_note: 'Uses a minimal server-only .xlsx formula parser (api/xlsx-parse.js) — no new npm dependency; unzips the OOXML package with Node zlib.',
   },
   pitch_defense: {
@@ -62,6 +65,7 @@ export const CONNECTORS = {
     extraction_job: 'rubric-interview', schema_mapper: 'finance-rubric',
     ownership: 'interview', history: 'none', status: 'live',
     label: 'Pitch defense', note: 'Reuses the existing dual-rater anchored-rubric + walkthrough-interview machinery (api/hardening.js) with a finance rubric — no new mechanism.',
+    example: { company: 'A boutique advisory hiring a summer analyst', sees: 'the student defending that model live against anchored rubric questions, scored independently by two raters who then adjudicate.' },
   },
 
   // ---- Honest-limits routing: proof can't be API-verified → the human rail IS the proof --
@@ -70,12 +74,14 @@ export const CONNECTORS = {
     oauth_provider: null, extraction_job: null, schema_mapper: null,
     ownership: null, history: 'none', status: 'human_rail', rail: 'instrumented_trial',
     label: 'Sales', note: 'Simulations are entry-ticket only. Real proof = the instrumented trial: outreach through Covenda-provisioned tooling → platform-verified reply rates. Documented config, built later.',
+    example: { company: 'A B2B SaaS startup hiring an SDR', sees: 'a bounded outreach trial run through Covenda-provisioned tooling, so reply rates are platform-measured. No API can confirm outreach landed, so we do not claim one.' },
   },
   biotech_lab: {
     connector_id: 'biotech_lab', industry: 'biotech',
     oauth_provider: null, extraction_job: null, schema_mapper: null,
     ownership: null, history: 'none', status: 'human_rail', rail: 'pi_referral',
     label: 'Biotech / lab', note: 'Bench skills are physically unverifiable remotely. The PI structured-referral rail is the PRIMARY mechanism by design — never fake verification where it cannot exist.',
+    example: { company: 'A biotech lab taking on a research assistant', sees: 'narrow, cross-checked answers from the PI who supervised the bench work, under their own name. Bench skill cannot be verified remotely and we say so rather than invent a score.' },
   },
 
   // ---- Deferred: registry room only, ZERO feature code ----------------------------------
@@ -127,6 +133,7 @@ export function connectorDirectory() {
     status: c.status,
     ownership: c.ownership || null,
     verifiable: c.status === 'live' || c.status === 'planned',
+    example: c.example || null,
     rail: c.rail || null,
     note: c.note || '',
   }));

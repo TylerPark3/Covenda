@@ -41,7 +41,8 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
 });
 
 test('the initial path chooser uses a continuous responsive glass control', () => {
-  assert.match(styles, /\.work-selector[\s\S]*border-radius: 999px/);
+  // Squared deliberately: the pill/rounded-rectangle look was the thing being removed.
+  assert.match(styles, /\.work-selector[\s\S]*border-radius: 0/);
   assert.match(styles, /\.work-option\.is-selected[\s\S]*radial-gradient/);
   assert.match(styles, /scroll-snap-type: x proximity/);
   assert.match(html, /<\/div>\s*<button class="gold-button selector-submit"/);
