@@ -127,45 +127,76 @@
         <a class="scroll-cue" href="#bridgeStory"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
-      <!-- Home-only. A quiet first explanation: one startup need, one referred-talent
-           source, and one short route from real work to credible proof. -->
-      <section class="bridge-section" id="bridgeStory" aria-labelledby="bridgeTitle">
-        <div class="bridge-sticky">
-          <div class="bridge-head">
-            <h2 id="bridgeTitle">Startups need help.<br>Talented students need <span class="word-gold">proof.</span></h2>
-            <p>Covenda connects them through trusted referrals and real startup work.</p>
+      <!-- Home-only. One two-way exchange: the company contributes real work, referred
+           talent contributes execution, and the trial returns value to both sides. -->
+      <section class="exchange-section" id="bridgeStory" aria-labelledby="exchangeTitle">
+        <div class="exchange-head">
+          <h2 id="exchangeTitle">One project. <span class="word-gold">Two sides win.</span></h2>
+          <p>Covenda turns referred talent and real startup work into a trial both sides can trust.</p>
+        </div>
+
+        <div class="exchange-stage" id="workExchange" data-exchange-step="0" tabindex="0"
+             role="group" aria-label="Interactive work-trial exchange. Use the phase buttons or arrow keys to move through Brief, Build, and Review.">
+          <article class="exchange-source exchange-source--task">
+            <span class="exchange-source-index" aria-hidden="true">01</span>
+            <svg aria-hidden="true"><use href="#icon-file"/></svg>
+            <div>
+              <p>Real startup task</p>
+              <h3>Work the team needs done</h3>
+            </div>
+          </article>
+
+          <div class="exchange-flow exchange-flow--in exchange-flow--task" aria-hidden="true">
+            <i></i><svg><use href="#icon-arrow-right"/></svg>
           </div>
 
-          <div class="bridge-card">
-            <div class="bridge-visual">
-              <div class="bridge-side bridge-side--startups">
-                <span class="bridge-side-label">Lean startup</span>
-                <strong>Real work needs doing.</strong>
-                <p>Small teams cannot spend months screening or training.</p>
-              </div>
-
-              <div class="bridge-route" aria-label="How Covenda connects startups and students">
-                <span class="bridge-route-line" aria-hidden="true"></span>
-                <ol>
-                  <li><span>1</span><strong>Post a scoped project</strong></li>
-                  <li><span>2</span><strong>Complete the work</strong></li>
-                  <li><span>3</span><strong>Review the proof</strong></li>
-                </ol>
-              </div>
-
-              <div class="bridge-side bridge-side--talent">
-                <span class="bridge-side-label">Referred talent</span>
-                <strong>Ability needs a signal.</strong>
-                <p>Students arrive through clubs, professors, and people who know their work.</p>
-              </div>
-
-              <canvas id="bridgeCanvas" class="bridge-canvas" role="img"
-                      aria-label="Two quiet clouds come together: a lean startup with real work and talented students referred by trusted people. A scoped project becomes a reviewed deliverable and credible proof."></canvas>
+          <div class="exchange-workbench">
+            <div class="exchange-workbench-top">
+              <span>Scoped work trial</span>
+              <output id="exchangeStatus" aria-live="polite">Brief aligned</output>
             </div>
+            <div class="exchange-phases" role="tablist" aria-label="Work-trial phase">
+              <button class="exchange-phase is-active" type="button" role="tab" aria-selected="true" data-exchange-phase="0">
+                <span>01</span><svg aria-hidden="true"><use href="#icon-file"/></svg><strong>Brief</strong><small>One finish line</small>
+              </button>
+              <button class="exchange-phase" type="button" role="tab" aria-selected="false" data-exchange-phase="1">
+                <span>02</span><svg aria-hidden="true"><use href="#icon-operations"/></svg><strong>Build</strong><small>Real execution</small>
+              </button>
+              <button class="exchange-phase" type="button" role="tab" aria-selected="false" data-exchange-phase="2">
+                <span>03</span><svg aria-hidden="true"><use href="#icon-search"/></svg><strong>Review</strong><small>Named reviewer</small>
+              </button>
+            </div>
+            <div class="exchange-scrubber" aria-hidden="true"><i></i><b></b></div>
+          </div>
 
-            <p class="bridge-outcome"><span aria-hidden="true">→</span> The result is a better hiring signal: evidence from work, not another résumé.</p>
+          <div class="exchange-flow exchange-flow--in exchange-flow--student" aria-hidden="true">
+            <svg><use href="#icon-arrow-right"/></svg><i></i>
+          </div>
+
+          <article class="exchange-source exchange-source--student">
+            <span class="exchange-source-index" aria-hidden="true">02</span>
+            <svg aria-hidden="true"><use href="#icon-student"/></svg>
+            <div>
+              <p>Referred student</p>
+              <h3>Talent vouched for by people who know them</h3>
+            </div>
+          </article>
+
+          <div class="exchange-outputs" aria-label="What the work trial creates">
+            <article class="exchange-output exchange-output--deliverable">
+              <svg aria-hidden="true"><use href="#icon-file"/></svg>
+              <div><p>For the startup</p><strong>Useful deliverable</strong></div>
+              <span aria-hidden="true">←</span>
+            </article>
+            <article class="exchange-output exchange-output--proof">
+              <svg aria-hidden="true"><use href="#icon-shield"/></svg>
+              <div><p>For the student</p><strong>Credible proof</strong></div>
+              <span aria-hidden="true">→</span>
+            </article>
           </div>
         </div>
+
+        <p class="exchange-hint"><svg aria-hidden="true"><use href="#icon-route"/></svg> Move through the trial</p>
       </section>
 
         <!-- How a trial actually runs, five steps you can page through. Replaces the

@@ -5863,157 +5863,84 @@ function initBatchWeb() {
 })();
 
 
-// The bridge is intentionally quiet: two sparse fields frame the explanation and move
-// slightly closer on scroll. The words carry the product story; the canvas is atmosphere.
-(function initBridge() {
-  const canvas = document.getElementById('bridgeCanvas');
-  const section = document.querySelector('.bridge-section');
-  if (!canvas || !section) return;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+// One work trial is the product story. The scene progresses on its own, but pointer,
+// buttons, and arrow keys all let a visitor inspect the three phases at their own pace.
+(function initWorkExchange() {
+  const stage = document.getElementById('workExchange');
+  if (!stage) return;
+  const workbench = stage.querySelector('.exchange-workbench');
+  const buttons = Array.from(stage.querySelectorAll('[data-exchange-phase]'));
+  const status = document.getElementById('exchangeStatus');
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const labels = ['Brief aligned', 'Work in progress', 'Proof reviewed'];
+  let exchangeStep = reduce ? 2 : 0;
+  let userPauseUntil = 0;
+  let isVisible = true;
+  let pointerQueued = false;
 
-  const GOLD = '180,123,32';
-  const MUTED = '149,146,137';
-  const PALE = '218,217,210';
-  let W = 0, H = 0, progress = 0;
-
-  // Stable point sets keep the clouds organic without shifting on reload. The labels live in
-  // semantic HTML; canvas carries only the spatial relationship and movement.
-  function seeded(index, salt) {
-    const value = Math.sin(index * 127.1 + salt * 311.7) * 43758.5453;
-    return value - Math.floor(value);
-  }
-
-  function makeCloud(count, salt, goldRate) {
-    return Array.from({ length: count }, (_, index) => {
-      const angle = seeded(index, salt) * Math.PI * 2;
-      const radius = Math.sqrt(seeded(index, salt + 1));
-      return {
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle) * radius,
-        gold: seeded(index, salt + 2) < goldRate,
-        size: .7 + seeded(index, salt + 4) * 1.4,
-      };
+  function setExchangeStep(next, userInitiated = false) {
+    exchangeStep = Math.max(0, Math.min(2, Number(next) || 0));
+    stage.dataset.exchangeStep = String(exchangeStep);
+    stage.style.setProperty('--exchange-position', String(exchangeStep / 2));
+    buttons.forEach((button, index) => {
+      const active = index === exchangeStep;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-selected', String(active));
+      button.tabIndex = active ? 0 : -1;
     });
+    if (status) status.textContent = labels[exchangeStep];
+    // Once a visitor takes control, keep their chosen phase in place.
+    if (userInitiated) userPauseUntil = Number.POSITIVE_INFINITY;
   }
 
-  const startupCloud = makeCloud(7, 3, .2);
-  const talentCloud = makeCloud(9, 11, .24);
+  buttons.forEach((button, index) => {
+    button.addEventListener('click', () => setExchangeStep(index, true));
+  });
 
-  function resize() {
-    const r = canvas.getBoundingClientRect();
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = r.width; H = r.height;
-    canvas.width = Math.max(1, Math.round(W * dpr));
-    canvas.height = Math.max(1, Math.round(H * dpr));
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-
-  // 0 while the section is still below the fold, 1 once it has been scrolled through.
-  function readProgress() {
-    const r = section.getBoundingClientRect();
-    const total = Math.max(1, r.height - window.innerHeight);
-    return Math.min(1, Math.max(0, -r.top / total));
-  }
-
-  function setProgress(value) {
-    progress = Math.min(1, Math.max(0, value));
-    section.style.setProperty('--bridge-progress', progress.toFixed(4));
-  }
-
-  const ease = p => 1 - Math.pow(1 - p, 3);
-  const lerp = (a, b, p) => a + (b - a) * p;
-  const clamp = value => Math.min(1, Math.max(0, value));
-
-  function line(a, b, color, width = 1, alpha = 1) {
-    ctx.strokeStyle = `rgba(${color},${alpha})`;
-    ctx.lineWidth = width;
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.lineTo(b.x, b.y);
-    ctx.stroke();
-  }
-
-  function cloudFrame(side, p) {
-    const mobile = W <= 720;
-    if (mobile) {
-      return side === 'startup'
-        ? { x: W * .5, y: lerp(H * .25, H * .4, p), rx: W * .44, ry: H * .17 }
-        : { x: W * .5, y: lerp(H * .78, H * .61, p), rx: W * .44, ry: H * .18 };
+  stage.addEventListener('keydown', event => {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      setExchangeStep(exchangeStep + 1, true);
+      buttons[exchangeStep]?.focus();
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      setExchangeStep(exchangeStep - 1, true);
+      buttons[exchangeStep]?.focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      setExchangeStep(0, true);
+      buttons[exchangeStep]?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      setExchangeStep(2, true);
+      buttons[exchangeStep]?.focus();
     }
-    return side === 'startup'
-      ? { x: lerp(W * .23, W * .41, p), y: H * .49, rx: W * .24, ry: H * .34 }
-      : { x: lerp(W * .77, W * .59, p), y: H * .49, rx: W * .25, ry: H * .35 };
+  });
+
+  if (workbench && !reduce) {
+    workbench.addEventListener('pointermove', event => {
+      if (event.pointerType === 'touch' || pointerQueued) return;
+      pointerQueued = true;
+      requestAnimationFrame(() => {
+        const bounds = workbench.getBoundingClientRect();
+        const position = Math.max(0, Math.min(.999, (event.clientX - bounds.left) / bounds.width));
+        setExchangeStep(Math.floor(position * 3), true);
+        pointerQueued = false;
+      });
+    }, { passive: true });
   }
 
-  function cloudPoints(cloud, frame) {
-    return cloud.map(node => ({
-      x: frame.x + node.x * frame.rx,
-      y: frame.y + node.y * frame.ry,
-    }));
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      isVisible = Boolean(entries[0] && entries[0].isIntersecting);
+    }, { threshold: .2 }).observe(stage);
   }
 
-  function drawCloud(cloud, side, p) {
-    const frame = cloudFrame(side, p);
-    const points = cloudPoints(cloud, frame);
-    const glow = ctx.createRadialGradient(frame.x, frame.y, 0, frame.x, frame.y, frame.rx);
-    glow.addColorStop(0, side === 'talent' ? `rgba(${GOLD},.055)` : `rgba(${PALE},.12)`);
-    glow.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.ellipse(frame.x, frame.y, frame.rx, frame.ry, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    cloud.forEach((node, index) => {
-      const q = points[index];
-      if (node.gold) {
-        ctx.fillStyle = `rgba(${GOLD},.08)`;
-        ctx.beginPath();
-        ctx.arc(q.x, q.y, 15, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.fillStyle = node.gold ? `rgba(${GOLD},.96)` : '#fff';
-      ctx.strokeStyle = node.gold ? `rgba(${GOLD},1)` : `rgba(${MUTED},.72)`;
-      ctx.lineWidth = node.gold ? 1.35 : .9;
-      ctx.beginPath();
-      ctx.arc(q.x, q.y, node.gold ? 3.8 + node.size : 2.3 + node.size, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    });
-    return { frame, points };
-  }
-
-  function drawCrossCloudLinks(p, startup, talent) {
-    const strength = clamp((p - .62) / .32);
-    if (!strength) return;
-    const startupGold = startupCloud.findIndex(node => node.gold);
-    const talentGold = talentCloud.findIndex(node => node.gold);
-    if (startupGold < 0 || talentGold < 0) return;
-    line(talent.points[talentGold], startup.points[startupGold], GOLD, 1.2, strength * .45);
-  }
-
-  function draw() {
-    const p = ease(reduce ? 1 : progress);
-    ctx.clearRect(0, 0, W, H);
-    const startup = drawCloud(startupCloud, 'startup', p);
-    const talent = drawCloud(talentCloud, 'talent', p);
-    drawCrossCloudLinks(p, startup, talent);
-  }
-
-  resize();
-  setProgress(reduce ? 1 : readProgress());
-  draw();
-  window.addEventListener('resize', () => { resize(); draw(); });
-  if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); draw(); }).observe(canvas);
-  if (reduce) return; // joined state, painted once
-
-  let ticking = false;
-  window.addEventListener('scroll', () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => { setProgress(readProgress()); draw(); ticking = false; });
-  }, { passive: true });
+  setExchangeStep(exchangeStep);
+  if (reduce) return; // The complete reviewed state remains visible without autoplay.
+  window.setInterval(() => {
+    if (isVisible && Date.now() >= userPauseUntil) setExchangeStep((exchangeStep + 1) % 3);
+  }, 4200);
 })();
 
 initMemberNav();

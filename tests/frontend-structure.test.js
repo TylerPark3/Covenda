@@ -601,40 +601,47 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
   assert.match(script, /if \(reduce\) return; \/\/ static frame only/);
 });
 
-// The first explanation uses the research to say one thing clearly, with only sparse
-// atmospheric points around the three-step route.
-test('the bridge is a concise first card with two sparse clouds and one clear outcome', () => {
-  assert.match(html, /class="bridge-section"/);
+// The first explanation is one two-way exchange, not another field of abstract nodes.
+// A visitor can understand the static frame, then inspect each phase with any input method.
+test('the work exchange turns one project into clear value for both sides', () => {
+  assert.match(html, /class="exchange-section"/);
   assert.match(html, /id="bridgeStory"/);
-  assert.match(html, /id="bridgeCanvas"/);
-  assert.match(html, /Startups need help/);
-  assert.match(html, /Talented students need/);
-  for (const label of ['Real work needs doing', 'Ability needs a signal', 'Post a scoped project', 'Complete the work', 'Review the proof']) {
+  assert.match(html, /id="workExchange"/);
+  assert.match(html, /One project\./);
+  assert.match(html, /Two sides win\./);
+  assert.match(html, /Covenda turns referred talent and real startup work into a trial both sides can trust/);
+  for (const label of [
+    'Real startup task',
+    'Work the team needs done',
+    'Referred student',
+    'Talent vouched for by people who know them',
+    'Scoped work trial',
+    'Brief',
+    'Build',
+    'Review',
+    'Useful deliverable',
+    'Credible proof',
+  ]) {
     assert.match(html, new RegExp(label));
   }
-  assert.match(html, /Small teams cannot spend months screening or training/);
-  assert.match(html, /clubs, professors, and people who know their work/);
-  assert.match(html, /evidence from work, not another résumé/);
   assert.match(html, /href="#bridgeStory"/);
   assert.match(html, /data-nav-target="bridgeStory"/);
-  assert.match(script, /function initBridge\(\)/);
-  assert.match(script, /function readProgress\(\)/);
-  assert.match(script, /function makeCloud\(count, salt, goldRate\)/);
-  assert.match(script, /function cloudFrame\(side, p\)/);
-  assert.match(script, /function drawCloud\(cloud, side, p\)/);
-  assert.match(script, /makeCloud\(7, 3, \.2\)/);
-  assert.match(script, /makeCloud\(9, 11, \.24\)/);
-  assert.doesNotMatch(script, /function drawCrossingTalent|cloud\.links/);
-  assert.doesNotMatch(script, /function bridgeGeometry|function drawDesktopBridge|function drawMobileBridge/);
-  assert.match(script, /section\.style\.setProperty\('--bridge-progress'/);
+  assert.match(script, /function initWorkExchange\(\)/);
+  assert.match(script, /function setExchangeStep\(next, userInitiated = false\)/);
+  assert.match(script, /workbench\.addEventListener\('pointermove'/);
+  assert.match(script, /event\.key === 'ArrowRight'/);
+  assert.match(script, /event\.key === 'Home'/);
+  assert.match(script, /window\.setInterval/);
+  assert.match(script, /if \(reduce\) return; \/\/ The complete reviewed state remains visible without autoplay\./);
+  assert.match(styles, /\.exchange-stage \{[\s\S]*grid-template-areas:/);
+  assert.match(styles, /\.exchange-phases \{[\s\S]*grid-template-columns: repeat\(3/);
+  assert.match(styles, /\.exchange-source \{[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.exchange-output \{[\s\S]*border-radius: 0/);
+  assert.match(styles, /@media \(max-width: 760px\)[\s\S]*"task student"[\s\S]*"bench bench"[\s\S]*"outputs outputs"/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.exchange-source/);
+  assert.doesNotMatch(html, /id="bridgeCanvas"/);
+  assert.doesNotMatch(script, /function initBridge\(\)|function makeCloud\(|function drawCloud\(/);
   assert.doesNotMatch(script, /Columbia Consulting Group/);
-  // The canvas must carry its meaning to a screen reader.
-  assert.match(html, /aria-label="Two quiet clouds come together/);
-  // Reduced motion gets the FINISHED state, because the connection is the point.
-  assert.match(script, /if \(reduce\) return; \/\/ joined state, painted once/);
-  assert.match(styles, /\.bridge-sticky \{[\s\S]*position: sticky/);
-  assert.match(styles, /\.bridge-card \{[\s\S]*border: 1px solid/);
-  assert.match(styles, /\.bridge-route ol \{[\s\S]*grid-template-columns: repeat\(3/);
   assert.match(styles, /body\[data-audience="home"\] \.stat-band/);
   assert.doesNotMatch(html, /The problem isn’t talent/);
 });
