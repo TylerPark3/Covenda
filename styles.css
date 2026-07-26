@@ -2988,20 +2988,8 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 
 /* ---- Home-only: the two-sided problem. Generous type, short measure — this is the
        section that has to actually get read. ---------------------------------------- */
-body:not([data-audience="home"]) .broken-section { display: none; }
-.broken-section { padding: clamp(52px, 7vw, 104px) var(--page-gutter); border-top: 1px solid var(--line); background: #fff; }
-.broken-inner { width: min(100%, var(--content)); margin: 0 auto; }
-.broken-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: clamp(26px, 4vw, 64px); margin-top: clamp(28px, 4vw, 44px); }
-.broken-col { padding: clamp(22px, 2.6vw, 32px); border: 1px solid var(--line-strong); border-radius: 0; background: rgba(255,255,255,.7); }
-.broken-eyebrow { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: var(--gold-deep); font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; }
-.broken-eyebrow svg { width: 16px; height: 16px; }
-.broken-col h3 { margin: 0 0 14px; font-family: var(--font-display); font-size: clamp(21px, 2.3vw, 27px); font-weight: 500; line-height: 1.15; letter-spacing: -.02em; }
-.broken-col p { margin: 0 0 14px; max-width: 56ch; color: var(--muted); font-size: var(--step-body); line-height: 1.65; }
-.broken-answer { margin-bottom: 0 !important; padding-top: 14px; border-top: 1px solid var(--line); color: #31312e !important; }
-.broken-answer strong { color: var(--gold-deep); }
 
 @media (max-width: 820px) {
-  .broken-grid { grid-template-columns: 1fr; }
 }
 
 /* ---- The batch funnel (replaces the problem→packet→proof animation). Four stages,
@@ -3207,8 +3195,6 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 
 @media (max-width: 900px) { .club-grid { grid-template-columns: 1fr; } }
 
-/* The thesis line under the two columns — the sentence the whole page is arguing. */
-.broken-thesis { max-width: 74ch; margin: clamp(26px, 3.4vw, 40px) auto 0; padding-top: clamp(22px, 2.6vw, 30px); border-top: 1px solid var(--line); color: var(--ink); font-family: var(--font-display); font-size: clamp(18px, 1.9vw, 23px); font-weight: 500; line-height: 1.5; letter-spacing: -.015em; text-align: center; text-wrap: balance; }
 
 /* ---- Geometric motif, carried past the hero -----------------------------------------
    The hero field establishes the language (hairline gold, nodes and links). These pick it
@@ -3217,8 +3203,6 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
    safe — nothing here animates. ------------------------------------------------------ */
 
 /* Nodes-and-links plotting paper behind the thesis and the credibility routes. */
-.broken-section, .why-section .credibility-ladder { position: relative; }
-.broken-section::before,
 .credibility-ladder::before {
   content: "";
   position: absolute; inset: 0;
@@ -3232,22 +3216,9 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
   pointer-events: none;
   z-index: 0;
 }
-.broken-inner, .credibility-ladder > * { position: relative; z-index: 1; }
 
 /* Corner ticks — a drafting mark, not a border radius. Reinforces the squared language. */
-.broken-col, .cred-door, .bd-panel, .club-form, .club-ladder { position: relative; }
-.broken-col::before, .cred-door::before, .bd-panel::before, .club-form::before, .club-ladder::before,
-.broken-col::after,  .cred-door::after,  .bd-panel::after,  .club-form::after,  .club-ladder::after {
-  content: "";
-  position: absolute; width: 9px; height: 9px;
-  border-color: var(--gold); pointer-events: none;
-}
-.broken-col::before, .cred-door::before, .bd-panel::before, .club-form::before, .club-ladder::before {
-  top: -1px; left: -1px; border-top: 1.5px solid; border-left: 1.5px solid;
-}
-.broken-col::after, .cred-door::after, .bd-panel::after, .club-form::after, .club-ladder::after {
-  right: -1px; bottom: -1px; border-right: 1.5px solid; border-bottom: 1.5px solid;
-}
+.cred-door::before, .bd-panel::before, .club-form::before, .club-ladder::before,
 
 /* The diagram's rail nodes get the same tick, so the batch walkthrough shares the language. */
 .bd-node { position: relative; }
@@ -3257,7 +3228,7 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 }
 
 @media (max-width: 720px) {
-  .broken-section::before, .credibility-ladder::before { background-size: 54px 54px, 54px 54px, 54px 54px; }
+  .credibility-ladder::before { background-size: 54px 54px, 54px 54px, 54px 54px; }
 }
 
 /* ---- "Build the intern you need" — company-side narrowing, mirroring the student picker.
@@ -3355,15 +3326,7 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
    Everything else: the body sans. Declared here so a new heading inherits the system rather
    than needing its own font-family, which is how the page drifted. */
 h1, h2, h3, .brand, .ct-title, .bf-label, .bd-head h3, .vdemo-company,
-.broken-col h3, .cred-door h3, .ib-result-head h3, .club-ladder h3 {
-  font-family: var(--font-display);
-  font-weight: 500;
-  letter-spacing: -.02em;
-}
 h4, h5, h6, .feature-kicker, .home-kicker, .company-job-eyebrow,
-.broken-eyebrow, .ct-k, .ib-line span, .bd-block h4 {
-  font-family: var(--font-body);
-}
 p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .home-path small, .site-nav a, .audience-switch button {
   font-family: var(--font-body);
@@ -3435,5 +3398,36 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 @media (prefers-reduced-motion: reduce) { .tf-viewport { scroll-behavior: auto; } }
 
 /* The break, drawn. Carries what three paragraphs used to, so it gets real width. */
-.break-fig { margin: clamp(26px, 3.4vw, 44px) 0 clamp(30px, 4vw, 48px); }
-.break-fig svg { display: block; width: 100%; height: auto; max-width: 940px; margin: 0 auto; }
+
+/* ---- The bridge: two sides closing, driven by scroll -------------------------------
+   The section is tall and its contents stick, so scrolling THROUGH it is what closes the
+   span. Home-only, like the section it replaced. */
+body:not([data-audience="home"]) .bridge-section { display: none; }
+.bridge-section { position: relative; height: 240vh; border-top: 1px solid var(--line); background: #fff; }
+.bridge-sticky { position: sticky; top: var(--header-height); display: grid; align-content: center; gap: clamp(16px, 2vw, 26px); min-height: calc(100vh - var(--header-height)); padding: clamp(28px, 4vw, 56px) var(--page-gutter); }
+.bridge-head { width: min(100%, 720px); margin: 0 auto; text-align: center; }
+.bridge-head h2 { margin: 8px 0 0; font-size: clamp(28px, 4.2vw, 52px); line-height: 1.04; }
+.bridge-head > p { max-width: 62ch; margin: 14px auto 0; color: var(--muted); font-size: var(--step-body); line-height: 1.6; }
+.bridge-canvas { display: block; width: min(100%, 1180px); height: clamp(300px, 46vh, 460px); margin: 0 auto; }
+.bridge-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 26px; color: var(--muted); font-size: 13px; }
+.bridge-legend span { display: inline-flex; align-items: center; gap: 8px; }
+.bl-dot { width: 9px; height: 9px; border-radius: 50%; }
+.bl-grey { background: #fff; border: 1.5px solid var(--soft); }
+.bl-gold { background: var(--gold); }
+.bridge-illus { color: var(--soft); }
+
+/* Short viewports cannot afford 240vh of scroll for one figure. */
+@media (max-height: 620px), (max-width: 720px) {
+  .bridge-section { height: 180vh; }
+  .bridge-canvas { height: clamp(260px, 52vh, 380px); }
+}
+
+/* The hero's scroll cue was too quiet for the one instruction on the page. */
+.scroll-cue span { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+.scroll-cue svg { width: 22px; height: 22px; }
+
+/* The trial walkthrough is its own section now — it used to be nested inside the block the
+   bridge replaced, and went with it. Home-only, same as the rest of the story. */
+body:not([data-audience="home"]) .trial-flow { display: none; }
+.trial-flow { padding: clamp(48px, 6vw, 92px) var(--page-gutter); border-top: 1px solid var(--line); background: #fff; }
+.trial-flow > * { width: min(100%, var(--content)); margin-left: auto; margin-right: auto; }

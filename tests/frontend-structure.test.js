@@ -394,14 +394,7 @@ test('credibility section offers three routes with faculty de-emphasised', () =>
   assert.match(html, /still counts — it is just no longer the only door/);
 });
 
-test('the homepage states the abundance thesis', () => {
-  assert.match(html, /top 1% of the 1%/);
-  assert.match(html, /more abundant than ever/);
-  assert.match(html, /résumé was never built to parse that/);
-});
-
 test('the geometric motif extends past the hero and stays decorative', () => {
-  assert.match(styles, /\.broken-section::before/);
   assert.match(styles, /\.credibility-ladder::before/);
   // Decorative layers must never eat clicks.
   const motif = styles.slice(styles.indexOf('Geometric motif, carried past the hero'));
@@ -491,31 +484,6 @@ test('the company problem field lives inside the builder, with its fit chip', ()
   assert.ok(builder.includes('companyFitChip'), 'fit chip must sit with the field it describes');
 });
 
-// "Why this exists" names both forces: applications became free to generate, and the
-// students worth finding started leaving the places that used to collect them.
-// The section carried its argument in three stacked paragraph blocks. It is a figure now —
-// a company buried in identical applications, a student radiating signal nobody receives, and
-// a broken line between them — with the prose cut to a line each.
-test('the broken-system section leads with a visual, not paragraphs', () => {
-  assert.match(html, /class="break-fig"/);
-  assert.match(html, /ALL IDENTICAL/);
-  assert.match(html, /REAL, UNSEEN/);
-  assert.match(html, /NO<\/text>/);
-  // The figure must carry its meaning to a screen reader, not just to the eye.
-  assert.match(html, /aria-label="A company on the left is buried/);
-  // The subtaps are gone; their point is in the drawing.
-  assert.doesNotMatch(html, /broken-subtaps/);
-  assert.doesNotMatch(styles, /\.bsub-tag/);
-});
-
-// The student's case is not only "you get judged unfairly" — it is that the work itself is
-// real: contributing to something and building domain expertise, not monkey work.
-test('the student case names real work and domain expertise, not monkey work', () => {
-  assert.match(html, /not monkey work/);
-  assert.match(html, /not monkey work/);
-  assert.match(html, /domain expertise, not filing/);
-});
-
 // app.js is a classic script: a top-level throw kills every line after it. A `let`/`const`
 // assigned ABOVE its own declaration is a temporal-dead-zone ReferenceError that does exactly
 // that — and it shipped once, silently breaking the batch board, the company builder, club
@@ -583,4 +551,23 @@ test('the hero field converts pale nodes into proof, and keeps gold scarce', () 
   assert.match(script, /sort\(\(a, b\) => nodes\[b\]\.z - nodes\[a\]\.z\)/);
   // Reduced motion gets a single static frame — no drift, no conversions, no parallax.
   assert.match(script, /if \(reduce\) return; \/\/ static frame only/);
+});
+
+// The bridge replaced three blocks of prose under the hero: two columns converging as the
+// page scrolls, with proven talent crossing once a span completes.
+test('the bridge tells the story and never names a partner it does not have', () => {
+  assert.match(html, /class="bridge-section"/);
+  assert.match(html, /id="bridgeCanvas"/);
+  assert.match(html, /Two sides\. One bridge\./);
+  assert.match(script, /function initBridge\(\)/);
+  assert.match(script, /function readProgress\(\)/);
+  // Categories only. A named club or company on a public page reads as a signed partner.
+  assert.match(script, /const RIGHT = \['Robotics club'/);
+  assert.doesNotMatch(script, /Columbia Consulting Group/);
+  assert.match(html, /Illustrative — categories, not named partners\./);
+  // The canvas must carry its meaning to a screen reader.
+  assert.match(html, /aria-label="Two columns converge/);
+  // Reduced motion gets the FINISHED state, because the connection is the point.
+  assert.match(script, /if \(reduce\) return; \/\/ finished state, painted once/);
+  assert.match(styles, /\.bridge-sticky \{ position: sticky/);
 });
