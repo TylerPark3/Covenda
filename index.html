@@ -812,7 +812,10 @@
         </div>
         <div class="gold-tile gold-tile--banner batches-tile" data-gold-tile data-kicker="Meaningful Connection" aria-hidden="true"></div>
         <p class="batch-pick-hint">Select the benches you’re considering — then walk through what each one actually asks of you.</p>
-        <div class="batch-grid" id="batchGrid" data-batch-grid></div>
+        <div class="batch-web" id="batchWeb">
+          <canvas id="batchWebCanvas" aria-hidden="true"></canvas>
+          <div class="batch-grid" id="batchGrid" data-batch-grid></div>
+        </div>
         <div class="batch-pickbar" id="batchPickBar" hidden>
           <span id="batchPickCount" role="status" aria-live="polite">0 selected</span>
           <button class="gold-button" type="button" id="batchLearnMore">Learn more<svg><use href="#icon-arrow-right"/></svg></button>
@@ -1300,6 +1303,10 @@
     <div class="dialog-copy" id="traceIntro"></div>
     <div class="trace-chain" id="traceChain"></div>
   </dialog>
+
+  <!-- Decorative reading spine: a node per section, filled by scroll. aria-hidden because it
+       duplicates nothing — the sections themselves are the navigable structure. -->
+  <div class="page-spine" id="pageSpine" aria-hidden="true"><div class="ps-track"><div class="ps-fill" id="psFill"></div></div></div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>

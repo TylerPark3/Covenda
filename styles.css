@@ -3291,3 +3291,22 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
    at this stage is network size, and a four-step form at the front door costs more students
    than it qualifies. */
 .selector-detail { display: inline-flex; margin-top: 14px; font-size: 14px; }
+
+/* The selection web sits between the grid and the page: links behind the cards, never over
+   them, and never in the way of a click. */
+.batch-web { position: relative; }
+.batch-web > canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.batch-web .batch-grid { position: relative; z-index: 1; }
+
+/* ---- Section spine: a hairline with a node per section, filling as you read. Ties the
+       node-and-link language to the act of moving down the page. Desktop only — on a
+       narrow screen it would compete with the content for gutter. ---------------------- */
+.page-spine { position: fixed; top: 0; left: 22px; z-index: 30; display: none; height: 100vh; pointer-events: none; }
+@media (min-width: 1180px) { .page-spine { display: block; } }
+.page-spine .ps-track { position: absolute; top: 12vh; bottom: 12vh; left: 50%; width: 1px; background: var(--line-strong); transform: translateX(-50%); }
+.page-spine .ps-fill { position: absolute; top: 0; left: 0; width: 100%; height: 0; background: var(--gold); transition: height .12s linear; }
+.page-spine .ps-node { position: absolute; left: 50%; width: 7px; height: 7px; border: 1px solid var(--line-strong); background: var(--paper, #fff); transform: translate(-50%, -50%) rotate(45deg); transition: border-color .2s ease, background .2s ease, transform .2s ease; }
+.page-spine .ps-node.is-passed { border-color: var(--gold-deep); background: var(--gold-deep); transform: translate(-50%, -50%) rotate(45deg) scale(1.25); }
+@media (prefers-reduced-motion: reduce) {
+  .page-spine .ps-fill, .page-spine .ps-node { transition: none; }
+}

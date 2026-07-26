@@ -3366,6 +3366,7 @@ function renderBatchCard(grid, entry, brief) {
       card.classList.add('just-picked');
     }
     syncBatchPickBar();
+    batchWeb?.animate();
   };
   card.addEventListener('click', toggle);
   card.addEventListener('keydown', event => {
@@ -3551,6 +3552,7 @@ function renderBatchDeepDive() {
     syncBatchPickBar();
   };
   paint(null); // Static-preview safe: cards render before (and without) the serverless call.
+  batchWeb = initBatchWeb();
   $('#batchLearnMore')?.addEventListener('click', renderBatchDeepDive);
   $('#batchPickClear')?.addEventListener('click', () => {
     batchPicks.clear();
@@ -3559,6 +3561,7 @@ function renderBatchDeepDive() {
       b.classList.remove('is-picked', 'just-picked');
     });
     syncBatchPickBar();
+    batchWeb?.redraw();
     const host = $('#batchDeep');
     if (host) { host.replaceChildren(); host.hidden = true; }
   });
@@ -5310,6 +5313,132 @@ function renderReadiness(readiness) {
       result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }).catch(function () { message.textContent = 'That did not go through. Try again shortly.'; });
   });
+})();
+
+
+// The selection web. Covenda's whole thesis is nodes and links — people vouched into a
+// network — so selecting benches draws the link. Hairline gold between every selected pair,
+// animated in once, redrawn on resize. Decorative and aria-hidden: the canvas says nothing a
+// screen reader needs, because the cards already announce their pressed state.
+function initBatchWeb() {
+  const canvas = document.getElementById('batchWebCanvas');
+  const host = document.getElementById('batchWeb');
+  if (!canvas || !host) return null;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let progress = 1, raf = 0;
+
+  function size() {
+    const r = host.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.round(r.width * dpr));
+    canvas.height = Math.max(1, Math.round(r.height * dpr));
+    canvas.style.width = r.width + 'px';
+    canvas.style.height = r.height + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function points() {
+    const origin = host.getBoundingClientRect();
+    return $$('[data-batch-pick]')
+      .filter(card => card.classList.contains('is-picked'))
+      .map(card => {
+        const r = card.getBoundingClientRect();
+        return { x: r.left - origin.left + r.width / 2, y: r.top - origin.top + r.height / 2 };
+      });
+  }
+
+  function draw() {
+    const r = host.getBoundingClientRect();
+    ctx.clearRect(0, 0, r.width, r.height);
+    const nodes = points();
+    if (nodes.length < 1) return;
+    // Node dots first, so links appear to run underneath them.
+    ctx.lineWidth = 1;
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        ctx.strokeStyle = 'rgba(180,123,32,' + (0.34 * progress) + ')';
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        // Draw only `progress` of the way along, so the web knits itself together.
+        ctx.lineTo(a.x + (b.x - a.x) * progress, a.y + (b.y - a.y) * progress);
+        ctx.stroke();
+      }
+    }
+    for (const n of nodes) {
+      ctx.fillStyle = 'rgba(180,123,32,' + (0.55 * progress) + ')';
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function animate() {
+    if (reduce) { progress = 1; draw(); return; }
+    cancelAnimationFrame(raf);
+    progress = 0;
+    const t0 = performance.now();
+    const tick = now => {
+      const p = Math.min(1, (now - t0) / 380);
+      progress = 1 - Math.pow(1 - p, 3); // ease-out cubic
+      draw();
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+  }
+
+  size();
+  const refresh = () => { size(); draw(); };
+  window.addEventListener('resize', refresh);
+  if ('ResizeObserver' in window) new ResizeObserver(refresh).observe(host);
+  return { animate, redraw: refresh };
+}
+let batchWeb = null;
+
+
+// The reading spine: one node per major section, filled by scroll position. Decorative —
+// it duplicates no navigation, so it is aria-hidden and never focusable. Positions are
+// measured from the sections themselves, so adding or removing a section needs no edit here.
+(function initPageSpine() {
+  const spine = document.getElementById('pageSpine');
+  const fill = document.getElementById('psFill');
+  if (!spine || !fill) return;
+  const track = spine.querySelector('.ps-track');
+  const sections = $$('main > section').filter(el => el.offsetParent !== null || el.getClientRects().length);
+  if (sections.length < 3) { spine.style.display = 'none'; return; }
+
+  const nodes = sections.map(() => {
+    const dot = document.createElement('i');
+    dot.className = 'ps-node';
+    track.append(dot);
+    return dot;
+  });
+
+  let ticking = false;
+  function place() {
+    const doc = document.documentElement;
+    const total = Math.max(1, doc.scrollHeight - window.innerHeight);
+    sections.forEach((section, i) => {
+      const top = section.offsetTop;
+      nodes[i].style.top = Math.min(100, Math.max(0, (top / Math.max(1, doc.scrollHeight)) * 100)) + '%';
+    });
+    update(total);
+  }
+  function update(total) {
+    const progress = Math.min(1, Math.max(0, window.scrollY / (total || (document.documentElement.scrollHeight - window.innerHeight) || 1)));
+    fill.style.height = (progress * 100) + '%';
+    const mark = window.scrollY + window.innerHeight * 0.5;
+    sections.forEach((section, i) => nodes[i].classList.toggle('is-passed', section.offsetTop <= mark));
+  }
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { update(); ticking = false; });
+  }, { passive: true });
+  window.addEventListener('resize', place);
+  place();
 })();
 
 initMemberNav();

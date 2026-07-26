@@ -413,3 +413,24 @@ test('joining the talent pool is name, email and school — not the four-step fo
   assert.match(html, /data-action="student-quick"[^>]*>Join the talent/);
   assert.match(html, /Or add full details now/);
 });
+
+// The geometry is interactive, not wallpaper: selecting benches knits a link web, and the
+// spine tracks reading position. Both are decorative and must stay out of the way.
+test('selection draws a link web that never intercepts clicks', () => {
+  assert.match(html, /id="batchWebCanvas"/);
+  assert.match(html, /aria-hidden="true"/);
+  assert.match(script, /function initBatchWeb\(\)/);
+  assert.match(script, /batchWeb\?\.animate\(\)/);
+  assert.match(styles, /\.batch-web > canvas[\s\S]*pointer-events: none/);
+  // Cards must sit above the canvas or the whole board stops being clickable.
+  assert.match(styles, /\.batch-web \.batch-grid \{ position: relative; z-index: 1; \}/);
+});
+
+test('the reading spine is decorative, scroll-passive and reduced-motion safe', () => {
+  assert.match(html, /id="pageSpine"[^>]*aria-hidden="true"/);
+  assert.match(script, /function initPageSpine\(\)/);
+  // Scroll work is rAF-throttled and passive, or it fights the scroller.
+  assert.match(script, /\{ passive: true \}/);
+  assert.match(script, /requestAnimationFrame\(\(\) => \{ update\(\); ticking = false; \}\)/);
+  assert.match(styles, /prefers-reduced-motion: reduce\)\s*\{\s*\.page-spine/);
+});
