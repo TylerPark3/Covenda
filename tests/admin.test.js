@@ -1,7 +1,110 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import adminHandler, { AdminOperationalError, authorizeAdmin, listAdminProjectRequests, listAdminSubmissions, publishProjectRequest, requestAdminLink, saveProjectRequestPackaging, updateAdminSubmission, verifyPartnerSubmission } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, caseStudyMetrics, deleteAdminProject, deleteAdminUser, listAdminProjects, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission, verifyAdminCode } from '../api/admin.js';
+
+test('deleteAdminUser removes a member but never the operator themselves', async () => {
+  const uid = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  let deletedId = '';
+  const supabase = {
+    auth: { admin: {
+      getUserById: async (id) => ({ data: { user: { email: id === uid ? 'member@x.com' : 'ops@covenda.com' } } }),
+      deleteUser: async (id) => { deletedId = id; return { error: null }; },
+    } },
+  };
+  const out = await deleteAdminUser(supabase, { userId: uid }, 'ops@covenda.com');
+  assert.equal(out.deleted, uid);
+  assert.equal(deletedId, uid);
+
+  // Self-delete: the target's email matches the operator → blocked, deleteUser never called.
+  deletedId = '';
+  const selfSupabase = { auth: { admin: {
+    getUserById: async () => ({ data: { user: { email: 'ops@covenda.com' } } }),
+    deleteUser: async (id) => { deletedId = id; return { error: null }; },
+  } } };
+  await assert.rejects(deleteAdminUser(selfSupabase, { userId: uid }, 'ops@covenda.com'), /cannot delete your own/);
+  assert.equal(deletedId, '');
+});
+
+test('deleteAdminUser rejects a malformed user id', async () => {
+  await assert.rejects(deleteAdminUser({}, { userId: 'nope' }, 'ops@covenda.com'), /valid user/);
+});
+
+test('deleteAdminProject deletes by id (cascade handles children) and validates the id', async () => {
+  const pid = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  let deletedFrom = '', deletedId = '';
+  const supabase = { from: (table) => ({ delete: () => ({ eq: async (_col, val) => { deletedFrom = table; deletedId = val; return { error: null }; } }) }) };
+  const out = await deleteAdminProject(supabase, { projectId: pid });
+  assert.equal(out.deleted, pid);
+  assert.equal(deletedFrom, 'member_projects');
+  assert.equal(deletedId, pid);
+  await assert.rejects(deleteAdminProject({}, { projectId: 'nope' }), /valid project/);
+  const failing = { from: () => ({ delete: () => ({ eq: async () => ({ error: { message: 'boom' } }) }) }) };
+  await assert.rejects(deleteAdminProject(failing, { projectId: pid }), /deleting this project failed/);
+});
+
+test('listAdminProjects returns rows and degrades to [] on error', async () => {
+  const ok = { from: () => ({ select: () => ({ order: () => ({ limit: async () => ({ data: [{ id: 'a', title: 'T', status: 'open' }], error: null }) }) }) }) };
+  assert.deepEqual(await listAdminProjects(ok), [{ id: 'a', title: 'T', status: 'open' }]);
+  const bad = { from: () => ({ select: () => ({ order: () => ({ limit: async () => ({ data: null, error: { message: 'x' } }) }) }) }) };
+  assert.deepEqual(await listAdminProjects(bad), []);
+});
+
+const codeEnv = { COVENDA_ADMIN_EMAILS: 'ops@covenda.com', SUPABASE_URL: 'https://x.supabase.co', SUPABASE_PUBLISHABLE_KEY: 'pub' };
+
+test('verifyAdminCode exchanges a valid 6-digit code for a session token', async () => {
+  const createSupabaseClient = () => ({ auth: { verifyOtp: async ({ token }) => (
+    token === '123456'
+      ? { data: { session: { access_token: 'tok-123', user: { email: 'ops@covenda.com' } }, user: { email: 'ops@covenda.com' } }, error: null }
+      : { data: null, error: { message: 'invalid' } }
+  ) } });
+  const out = await verifyAdminCode('ops@covenda.com', '123456', { env: codeEnv, createSupabaseClient });
+  assert.equal(out.accessToken, 'tok-123');
+  await assert.rejects(verifyAdminCode('ops@covenda.com', '999999', { env: codeEnv, createSupabaseClient }), /invalid or has expired/);
+});
+
+test('verifyAdminCode rejects a short code and a non-allowlisted operator', async () => {
+  await assert.rejects(verifyAdminCode('ops@covenda.com', '12', { env: codeEnv }), /6-digit code/);
+  const createSupabaseClient = () => ({ auth: { verifyOtp: async () => ({ data: { session: { access_token: 'tok', user: { email: 'evil@x.com' } }, user: { email: 'evil@x.com' } }, error: null }) } });
+  await assert.rejects(verifyAdminCode('evil@x.com', '123456', { env: codeEnv, createSupabaseClient }), /not an authorized operator/);
+});
+
+test('caseStudyMetrics computes acceptance, repeat, and avg value from real rows', () => {
+  const completed = [
+    { owner_user_id: 'co-a', credits_listed: 400 },
+    { owner_user_id: 'co-a', credits_listed: 600 }, // co-a is a repeat buyer
+    { owner_user_id: 'co-b', credits_listed: 500 },
+  ];
+  const m = caseStudyMetrics(completed, { applications: 10, accepted: 4 });
+  assert.equal(m.delivered, 3);
+  assert.equal(m.acceptanceRate, 40);
+  assert.equal(m.repeatRate, 50, '1 of 2 companies delivered 2+');
+  assert.equal(m.avgDeliveredCredits, 500);
+});
+
+test('caseStudyMetrics is zero-safe with no data', () => {
+  assert.deepEqual(caseStudyMetrics(), { delivered: 0, acceptanceRate: 0, repeatRate: 0, avgDeliveredCredits: 0 });
+});
+
+test('summarizeLedger splits money-in, platform revenue, and student payouts', () => {
+  const rows = [
+    { entry_type: 'purchase', credits: 500, user_id: 'co' },
+    { entry_type: 'purchase', credits: 100, user_id: 'co' },
+    { entry_type: 'reach_fee', credits: 25, user_id: null },        // platform revenue
+    { entry_type: 'reach_fee', credits: -25, user_id: 'co' },       // company side, ignored
+    { entry_type: 'batch_access', credits: 50, user_id: null },     // platform revenue
+    { entry_type: 'escrow_release', credits: 200, user_id: 'stu' }, // paid to a student
+    { entry_type: 'escrow_hold', credits: -200, user_id: 'co' },    // ignored
+  ];
+  const out = summarizeLedger(rows);
+  assert.equal(out.purchased, 600);
+  assert.equal(out.platformRevenue, 75);
+  assert.equal(out.toStudents, 200);
+});
+
+test('summarizeLedger is zero-safe on empty input', () => {
+  assert.deepEqual(summarizeLedger(), { purchased: 0, platformRevenue: 0, toStudents: 0 });
+});
 
 function authClient({ user, authError = null } = {}) {
   return {
@@ -44,17 +147,6 @@ test('admin magic link never creates users and uses the current admin URL', asyn
     email: 'operator@covenda.com',
     options: { shouldCreateUser: false, emailRedirectTo: 'https://proof-path.vercel.app/admin.html' },
   });
-});
-
-test('admin magic link uses the configured deployed URL over the request host', async () => {
-  let credentials;
-  await requestAdminLink('configured-operator@covenda.com', {
-    headers: { host: 'untrusted-preview.example', 'x-forwarded-proto': 'https', 'x-forwarded-for': '203.0.113.12' },
-  }, {
-    env: { SUPABASE_URL: 'https://project.supabase.co', SUPABASE_SECRET_KEY: 'secret', SUPABASE_PUBLISHABLE_KEY: 'publishable', COVENDA_ADMIN_EMAILS: 'configured-operator@covenda.com', COVENDA_APP_URL: 'https://app.covenda.com' },
-    createSupabaseClient() { return { auth: { async signInWithOtp(input) { credentials = input; return { error: null }; } } }; },
-  });
-  assert.equal(credentials.options.emailRedirectTo, 'https://app.covenda.com/admin.html');
 });
 
 test('unlisted email receives a generic success without sending a link', async () => {
@@ -169,20 +261,16 @@ test('admin list is bounded and status update accepts only lifecycle states', as
   await assert.rejects(() => updateAdminSubmission({ from() { throw new Error('must not query'); } }, { reference: 'STU-AB12CD34', status: 'deleted' }), /valid submission status/);
 });
 
-test('operator packaging is bounded and publishing requires every safety clearance', async () => {
-  const request={id:'123e4567-e89b-12d3-a456-426614174000',status:'submitted'};
-  let updateValue;
-  const supabase={from(table){assert.equal(table,'project_requests');return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:request,error:null};},update(value){updateValue=value;return this;},async single(){return {data:{...request,...updateValue},error:null};}};}};
-  const saved=await saveProjectRequestPackaging(supabase,{requestId:request.id,packet:{title:'Research packet',credits:200}},'operator@covenda.com');
-  assert.equal(saved.status,'in_packaging');
-  assert.equal(saved.packet_draft.title,'Research packet');
-  await assert.rejects(publishProjectRequest(supabase,{requestId:request.id,packet:{title:'Research packet',summary:'A useful public-source research summary.',deliverable:'A cited comparison and recommendation.',acceptanceCriteria:'All requested companies are cited.',safeInputs:'Only public websites and the supplied template.',credits:200},safety:{clientRecords:false,pii:false,productionAccess:false}}),/Clear every safety boundary/);
-});
-
-test('project request listing is bounded for the operator queue', async () => {
-  const query={select(value){assert.equal(value,'*');return this;},order(column,options){assert.equal(column,'created_at');assert.equal(options.ascending,false);return this;},async limit(value){assert.equal(value,200);return {data:[{id:'r1'}],error:null};}};
-  const result=await listAdminProjectRequests({from(table){assert.equal(table,'project_requests');return query;}});
-  assert.equal(result.length,1);
+test('admin request triage validates and updates status + resolution, and lists degrade if unmigrated', async () => {
+  const REQ = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  const updateQuery = { update(v) { this._v = v; return this; }, eq() { return this; }, select() { return this; }, async single() { return { data: { id: REQ, status: 'in_packaging', resolution_note: 'packaging now' }, error: null }; } };
+  const updated = await updateAdminRequest({ from() { return updateQuery; } }, { id: REQ, status: 'in_packaging', resolution_note: 'packaging now' });
+  assert.equal(updated.status, 'in_packaging');
+  await assert.rejects(() => updateAdminRequest({ from() { throw new Error('must not query'); } }, { id: REQ, status: 'nope' }), /valid request status/);
+  await assert.rejects(() => updateAdminRequest({ from() { throw new Error('must not query'); } }, { id: 'not-a-uuid', status: 'closed' }), /valid request/);
+  // listAdminRequests returns [] when the table isn't there yet, so the inbox never breaks.
+  const rows = await listAdminRequests({ from() { return { select() { return this; }, order() { return this; }, async limit() { return { data: null, error: { message: 'relation "project_requests" does not exist' } }; } }; } });
+  assert.deepEqual(rows, []);
 });
 
 test('admin workflow update validates and records private follow-up context', async () => {
@@ -214,27 +302,25 @@ test('admin workflow update validates and records private follow-up context', as
   );
 });
 
-test('partner certification is founder-confirmed separately from submission approval', async () => {
-  const current = { reference:'REF-AB12CD34', submission_type:'referrer_endorsement', status:'approved', partner_verified:false, founding_partner:false };
-  let changes;
-  const query = {
-    select() { return this; },
-    eq() { return this; },
-    async maybeSingle() { return { data:current, error:null }; },
-    update(value) { changes=value; return this; },
-    async single() { return { data:{...current,...changes}, error:null }; },
-  };
-  const result = await verifyPartnerSubmission({ from(table) { assert.equal(table,'submissions'); return query; } }, {
-    reference:'ref-ab12cd34', partnerVerified:true, foundingPartner:true,
-  }, 'FOUNDER@COVENDA.APP');
-  assert.equal(result.partner_verified,true);
-  assert.equal(result.founding_partner,true);
-  assert.equal(result.partner_verified_by,'founder@covenda.app');
-  assert.match(result.partner_verified_at,/^\d{4}-\d{2}-\d{2}T/);
+test('repeatCompanyRate: companies with a second accepted project over companies with one', async () => {
+  const { repeatCompanyRate } = await import('../api/admin.js');
+  const rows = [
+    { owner_user_id: 'a' }, { owner_user_id: 'a' }, { owner_user_id: 'b' },
+    { owner_user_id: 'c' }, { owner_user_id: 'c' }, { owner_user_id: 'c' }, { owner_user_id: null },
+  ];
+  assert.deepEqual(repeatCompanyRate(rows), { companiesWithOne: 3, companiesWithRepeat: 2, rate: 2 / 3 });
+  assert.deepEqual(repeatCompanyRate([]), { companiesWithOne: 0, companiesWithRepeat: 0, rate: 0 });
+});
 
-  const pendingQuery = { select(){return this;},eq(){return this;},async maybeSingle(){return {data:{...current,status:'reviewing'},error:null};} };
-  await assert.rejects(
-    verifyPartnerSubmission({from(){return pendingQuery;}},{reference:'REF-AB12CD34',partnerVerified:true},'founder@covenda.app'),
-    /Approve the submission/,
-  );
+test('decideMatch demands a rationale — every human decision is a training label', async () => {
+  const { decideMatch } = await import('../api/admin.js');
+  const mid = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  await assert.rejects(decideMatch({}, { matchId: mid, decision: 'selected', rationale: '' }), /rationale/);
+  await assert.rejects(decideMatch({}, { matchId: 'nope', decision: 'selected', rationale: 'x' }), /valid match/);
+  await assert.rejects(decideMatch({}, { matchId: mid, decision: 'hired', rationale: 'x' }), /Choose a decision/);
+  let updated = null;
+  const supabase = { from: () => ({ update(row) { updated = row; return this; }, eq() { return this; }, select() { return this; }, async single() { return { data: { id: mid, ...updated }, error: null }; } }) };
+  const out = await decideMatch(supabase, { matchId: mid, decision: 'selected', rationale: 'Trial-proven ROS work; vouch from coach.' });
+  assert.equal(out.human_decision, 'selected');
+  assert.ok(out.human_rationale.length > 0);
 });

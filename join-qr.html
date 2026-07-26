@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Covenda · Join QR</title>
+  <meta name="robots" content="noindex">
+  <style>
+    :root { --ink:#1a1a17; --muted:#6b6b66; --line:#e6e4dd; --gold:#a9822f; --gold-deep:#8a6a2f; --paper:#faf9f6; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:start center; padding:26px 18px 44px;
+           font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+           color:var(--ink); background:var(--paper); }
+    .card { width:100%; max-width:430px; text-align:center; background:#fff; border:1px solid var(--line);
+            border-radius:20px; padding:26px 22px 22px; box-shadow:0 20px 50px -30px rgba(0,0,0,.35); }
+    .kicker { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--gold-deep); margin:0; }
+    h1 { font-size:22px; margin:8px 0 4px; letter-spacing:-.01em; }
+    p.sub { margin:0 0 18px; color:var(--muted); font-size:14px; line-height:1.5; }
+    .qrwrap { display:grid; place-items:center; min-height:240px; }
+    .qrwrap svg { width:min(272px,70vw); height:auto; border:1px solid var(--line); border-radius:14px; }
+    label { display:block; text-align:left; font-size:12px; font-weight:650; letter-spacing:.02em;
+            text-transform:uppercase; color:var(--muted); margin:18px 0 6px; }
+    input { width:100%; padding:13px 14px; font-size:16px; font-family:inherit; color:var(--ink);
+            border:1px solid var(--line); border-radius:12px; background:#fff; }
+    input:focus { outline:2px solid var(--gold); outline-offset:1px; }
+    .actions { display:flex; flex-direction:column; gap:10px; margin-top:18px; }
+    a.btn { display:block; width:100%; padding:14px 16px; border-radius:12px; font-size:15px;
+            font-weight:650; text-decoration:none; text-align:center; font-family:inherit;
+            border:1px solid transparent; cursor:pointer; }
+    .download { background:linear-gradient(96deg,#a9822f,#c9a24b); color:#fff; }
+    .open { border-color:var(--line); color:var(--ink); background:#fff; }
+    .link { margin-top:16px; font-size:12px; color:var(--muted); word-break:break-all; }
+    .hint { margin-top:14px; font-size:12.5px; color:var(--muted); line-height:1.5; }
+    @media (prefers-color-scheme: dark) {
+      body { background:#14140f; color:#f3f0e6; }
+      .card { background:#1c1b15; border-color:#33322a; }
+      input { background:#14140f; color:#f3f0e6; border-color:#33322a; }
+      .open { background:#1c1b15; border-color:#33322a; color:#f3f0e6; }
+      .qrwrap svg { border-color:#33322a; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <p class="kicker">Covenda</p>
+    <h1>Join QR</h1>
+    <p class="sub">Scan with any phone camera, or download the code to print and share.</p>
+
+    <div class="qrwrap" id="qrwrap"></div>
+
+    <label for="ref">Partner referral code <span style="text-transform:none;font-weight:400">(optional — traces who brought each student)</span></label>
+    <input id="ref" placeholder="e.g. BERKELEY-ROBOTICS" autocomplete="off" autocapitalize="characters" spellcheck="false">
+
+    <div class="actions">
+      <a class="btn download" id="download" download="covenda-join-student.png">Download QR code</a>
+      <a class="btn open" id="open" href="https://covenda.app/?join=student">Open the join page</a>
+    </div>
+    <p class="hint">On a phone: tap <b>Download QR code</b> and save it to your Photos. Or press and hold the code and choose “Save Image.”</p>
+    <p class="link" id="target">https://covenda.app/?join=student</p>
+  </main>
+
+  <script type="module">
+    import { makeQrMatrix, makeQrSvg } from './qrcode.js';
+
+    const wrap = document.getElementById('qrwrap');
+    const refInput = document.getElementById('ref');
+    const target = document.getElementById('target');
+    const openLink = document.getElementById('open');
+    const download = document.getElementById('download');
+
+    const BASE = 'https://covenda.app/?join=student';
+    // Referral codes travel in a URL, so keep them to characters that survive one unencoded.
+    const cleanRef = v => String(v || '').toUpperCase()
+      .replace(/[\s_]+/g, '-')        // "berkeley robotics" -> "BERKELEY-ROBOTICS"
+      .replace(/[^A-Z0-9-]/g, '')
+      .replace(/-{2,}/g, '-')
+      .slice(0, 60);
+
+    // Rasterize to a PNG data URL for the download: an SVG download saves as a file most phone
+    // photo apps won't preview, whereas a PNG lands in the camera roll and shares cleanly.
+    function pngDataUrl(text, modulePx = 12, border = 4) {
+      const { matrix, size } = makeQrMatrix(text);
+      const dim = (size + border * 2) * modulePx;
+      const canvas = document.createElement('canvas');
+      canvas.width = dim; canvas.height = dim;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, dim, dim);
+      ctx.fillStyle = '#1a1a17';
+      for (let r = 0; r < size; r += 1) for (let c = 0; c < size; c += 1) {
+        if (matrix[r][c]) ctx.fillRect((c + border) * modulePx, (r + border) * modulePx, modulePx, modulePx);
+      }
+      return canvas.toDataURL('image/png');
+    }
+
+    function render() {
+      const ref = cleanRef(refInput.value);
+      const url = ref ? `${BASE}&ref=${ref}` : BASE;
+      wrap.innerHTML = makeQrSvg(url, { scale: 8, border: 4, dark: '#1a1a17' });
+      target.textContent = url;
+      openLink.href = url;
+      download.href = pngDataUrl(url);
+      download.setAttribute('download', ref ? `covenda-join-${ref.toLowerCase()}.png` : 'covenda-join-student.png');
+    }
+
+    refInput.addEventListener('input', render);
+    // Prefill from ?ref= so a partner can be handed a ready-made link to their own code.
+    try {
+      const incoming = new URLSearchParams(location.search).get('ref');
+      if (incoming) refInput.value = cleanRef(incoming);
+    } catch { /* ignore */ }
+    render();
+  </script>
+</body>
+</html>

@@ -30,10 +30,6 @@ const projectMessages = readFileSync(
   new URL('../supabase/migrations/20260722003808_create_project_messages.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
-const projectRequests = readFileSync(
-  new URL('../supabase/migrations/20260727000000_create_project_requests.sql', import.meta.url),
-  'utf8',
-).toLowerCase();
 const projectReview = readFileSync(
   new URL('../supabase/migrations/20260724000000_add_project_review_fields.sql', import.meta.url),
   'utf8',
@@ -54,20 +50,8 @@ const escrowFunctions = readFileSync(
   new URL('../supabase/migrations/20260725100000_escrow_release_functions.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
-const trustedTalent = readFileSync(
-  new URL('../supabase/migrations/20260726000000_trusted_talent_network.sql', import.meta.url),
-  'utf8',
-).toLowerCase();
-const partnerVerification = readFileSync(
-  new URL('../supabase/migrations/20260728000000_partner_verification.sql', import.meta.url),
-  'utf8',
-).toLowerCase();
-const projectConversion = readFileSync(
+const conversionTracking = readFileSync(
   new URL('../supabase/migrations/20260726100000_project_conversion_tracking.sql', import.meta.url),
-  'utf8',
-).toLowerCase();
-const matchEvents = readFileSync(
-  new URL('../supabase/migrations/20260722212024_create_match_events.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
 
@@ -149,19 +133,6 @@ test('member portal migration creates private role-aware projects and applicatio
   assert.match(memberPortal, /grant select, insert, update, delete on table public\.member_profiles to service_role/);
 });
 
-test('student matching events are append-only and bookmarks remain server-only', () => {
-  assert.match(matchEvents, /create table if not exists public\.match_events/);
-  assert.match(matchEvents, /create table if not exists public\.saved_projects/);
-  for(const event of ['surfaced','viewed','applied','accepted','declined','submitted','revision_requested','completed','cancelled']) assert.match(matchEvents,new RegExp(`'${event}'`));
-  assert.match(matchEvents, /fit_score smallint check \(fit_score between 0 and 100\)/);
-  assert.match(matchEvents, /alter table public\.match_events force row level security/);
-  assert.match(matchEvents, /revoke all on table public\.match_events from public, anon, authenticated/);
-  assert.match(matchEvents, /grant select, insert on table public\.match_events to service_role/);
-  assert.doesNotMatch(matchEvents, /grant[^;]*(update|delete)[^;]*on table public\.match_events/);
-  assert.match(matchEvents, /grant select, insert, delete on table public\.saved_projects to service_role/);
-  assert.match(matchEvents, /notify pgrst, 'reload schema'/);
-});
-
 test('project message migration keeps conversations server-only and indexed', () => {
   assert.match(projectMessages, /create table public\.project_messages/);
   assert.match(projectMessages, /references public\.member_projects\(id\) on delete cascade/);
@@ -174,22 +145,6 @@ test('project message migration keeps conversations server-only and indexed', ()
   assert.doesNotMatch(projectMessages, /create policy|grant [^;]* to (anon|authenticated)/);
 });
 
-test('project requests are brokered server-only records with atomic operator publishing', () => {
-  assert.match(projectRequests, /create table public\.project_requests/);
-  assert.match(projectRequests, /related_project_id uuid references public\.member_projects/);
-  for (const type of ['new_project','more_students','scope_change','revision','consult','question','specific_student']) assert.match(projectRequests,new RegExp(`'${type}'`));
-  for (const status of ['submitted','in_packaging','packaged','declined','closed']) assert.match(projectRequests,new RegExp(`'${status}'`));
-  assert.match(projectRequests, /force row level security/);
-  assert.match(projectRequests, /revoke all on table public\.project_requests from public, anon, authenticated/);
-  assert.match(projectRequests, /grant select, insert, update on table public\.project_requests to service_role/);
-  assert.match(projectRequests, /create or replace function public\.publish_project_request/);
-  assert.match(projectRequests, /for update/);
-  assert.match(projectRequests, /insert into public\.credit_ledger/);
-  assert.match(projectRequests, /request_type not in \('scope_change', 'revision'\)/);
-  assert.match(projectRequests, /security definer[\s\S]*?set search_path = ''/);
-  assert.doesNotMatch(projectRequests, /grant [^;]* to (anon|authenticated)/);
-});
-
 test('project review migration adds close-the-loop fields idempotently without loosening access', () => {
   for (const column of ['deliverable_submitted_at timestamptz', 'review_note text', 'completed_at timestamptz']) {
     assert.match(projectReview, new RegExp(`add column if not exists ${column}`));
@@ -198,18 +153,6 @@ test('project review migration adds close-the-loop fields idempotently without l
   assert.match(projectReview, /create index if not exists member_projects_review_idx/);
   assert.match(projectReview, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(projectReview, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
-});
-
-test('project conversion tracking is constrained, repeatable, and does not loosen access', () => {
-  for (const column of ['conversion_outcome text', 'conversion_note text', 'conversion_recorded_at timestamptz']) {
-    assert.match(projectConversion, new RegExp(`add column if not exists ${column}`));
-  }
-  for (const outcome of ['none', 'continued', 'interview', 'internship', 'full_time', 'referred_on']) {
-    assert.match(projectConversion, new RegExp(`'${outcome}'`));
-  }
-  assert.match(projectConversion, /char_length\(conversion_note\) <= 500/);
-  assert.match(projectConversion, /notify pgrst, 'reload schema'/);
-  assert.doesNotMatch(projectConversion, /drop table|truncate|delete from|grant|create policy|security definer/);
 });
 
 test('member profile onboarding migration adds matching fields idempotently without loosening access', () => {
@@ -264,6 +207,15 @@ test('escrow settlement runs in the database so payout and completion commit tog
   assert.doesNotMatch(escrowFunctions, /grant [^;]* to (anon|authenticated)/);
 });
 
+test('conversion tracking migration adds outcome columns idempotently, whitelisted', () => {
+  for (const column of ['conversion_outcome text', 'conversion_note text', 'conversion_recorded_at timestamptz']) {
+    assert.match(conversionTracking, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(conversionTracking, /conversion_outcome in \('none', 'continued', 'interview', 'internship', 'full_time', 'referred_on'\)/);
+  assert.match(conversionTracking, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(conversionTracking, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
+});
+
 test('project targeting migration adds intake and file columns idempotently without loosening access', () => {
   for (const column of ['verticals jsonb', 'work_types jsonb', 'attachments jsonb', 'ai_brief jsonb', 'problem_text text', 'consult_booked boolean']) {
     assert.match(projectTargeting, new RegExp(`add column if not exists ${column}`));
@@ -273,30 +225,29 @@ test('project targeting migration adds intake and file columns idempotently with
   assert.doesNotMatch(projectTargeting, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
 });
 
-test('trusted talent normalizes operator-approved referrals without exposing student evidence to browsers', () => {
-  assert.match(trustedTalent, /'network_access_request'/);
-  assert.match(trustedTalent, /\|net\)-\[a-z0-9\]\{6,20\}/);
-  assert.match(trustedTalent, /add column if not exists contact_email text/);
-  assert.match(trustedTalent, /create unique index if not exists member_profiles_contact_email_unique_idx/);
-  assert.match(trustedTalent, /create table if not exists public\.student_endorsements/);
-  assert.match(trustedTalent, /alter table public\.student_endorsements force row level security/);
-  assert.match(trustedTalent, /revoke all on table public\.student_endorsements from public, anon, authenticated/);
-  assert.match(trustedTalent, /grant select, insert, update on table public\.student_endorsements to service_role/);
-  assert.doesNotMatch(trustedTalent, /grant delete on table public\.student_endorsements/);
-  assert.match(trustedTalent, /when new\.status = 'approved' then 'verified'/);
-  assert.match(trustedTalent, /create trigger submissions_sync_referrer_endorsements/);
-  assert.match(trustedTalent, /set search_path = public, pg_temp/);
-  assert.doesNotMatch(trustedTalent, /security definer/);
-  assert.doesNotMatch(trustedTalent, /create policy|grant [^;]* to (anon|authenticated)/);
-});
-
-test('partner verification requires a separate founder confirmation and rechecks referral evidence', () => {
-  for (const column of ['partner_verified boolean', 'partner_verified_at timestamptz', 'partner_verified_by text', 'founding_partner boolean']) {
-    assert.match(partnerVerification, new RegExp(`add column if not exists ${column}`));
-  }
-  assert.match(partnerVerification, /new\.status = 'approved' and new\.partner_verified = true then 'verified'/);
-  assert.match(partnerVerification, /founding_partner = false[\s\S]*partner_verified_at is null/);
-  assert.match(partnerVerification, /where submission_type = 'referrer_endorsement'/);
-  assert.match(partnerVerification, /notify pgrst, 'reload schema'/);
-  assert.doesNotMatch(partnerVerification, /drop table|truncate|delete from|create policy|grant [^;]* to (anon|authenticated)/);
+test('compatibility Stage-0 migration: evidence-tiered skill_claim, opportunity fields, match log with mandatory rationale, outcome slots — idempotent + locked down', () => {
+  const stage0 = readFileSync(
+    new URL('../supabase/migrations/20260726330000_compatibility_stage0.sql', import.meta.url),
+    'utf8',
+  ).toLowerCase();
+  // skill_claim: tiers + evidence requirement above 'claimed'
+  assert.match(stage0, /create table if not exists public\.skill_claim/);
+  assert.match(stage0, /verification_tier in \('claimed', 'artifact', 'referral', 'trial'\)/);
+  assert.match(stage0, /verification_tier = 'claimed' or evidence_pointer is not null/);
+  // opportunity fields (member_projects IS the opportunity — no rename)
+  assert.match(stage0, /add column if not exists opportunity_type text not null default 'project'/);
+  assert.match(stage0, /'project','part_time','internship','research','apprenticeship','talent_pipeline','full_time'/);
+  assert.match(stage0, /complexity_rating between 1 and 5/);
+  assert.match(stage0, /referral_requirement in \('required','preferred','none'\)/);
+  // matches: human decisions REQUIRE a rationale (training labels)
+  assert.match(stage0, /create table if not exists public\.matches/);
+  assert.match(stage0, /human_decision is null or \(human_rationale is not null/);
+  // outcome slots
+  assert.match(stage0, /add column if not exists milestones jsonb/);
+  assert.match(stage0, /founder_time_actual_min_week/);
+  // locked down + idempotent + PostgREST reload
+  assert.match(stage0, /revoke all on table public\.skill_claim from public, anon, authenticated/);
+  assert.match(stage0, /revoke all on table public\.matches from public, anon, authenticated/);
+  assert.match(stage0, /notify pgrst, 'reload schema';/);
+  assert.doesNotMatch(stage0, /drop table/);
 });

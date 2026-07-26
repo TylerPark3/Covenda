@@ -1,0 +1,62 @@
+/* Covenda unified type system (§14) — the SINGLE source of truth for the THREE font families
+   and one named type scale, linked by marketing, portal, and admin (same pattern as the
+   one-SVG logo). No fourth family, no second serif: display serif for headlines + gold stat
+   numbers, body sans for everything else, mono for reference codes only. Values match the
+   marketing site's existing stacks so linking this changes nothing there; portal/admin now
+   inherit the same families (headlines become the display serif instead of a stray Georgia). */
+:root {
+  --font-display: "Newsreader", "Iowan Old Style", "Baskerville", Georgia, serif;
+  --font-body: "Manrope", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-ui: var(--font-body); /* legacy alias used by the marketing stylesheet */
+
+  /* One scale. Sizes clamp; weight + line-height live on the utility classes below so every
+     text role maps to a named step instead of an ad-hoc size/weight per component. */
+  --step-display-xl: clamp(40px, 6.4vw, 76px);
+  --step-display-lg: clamp(32px, 4.4vw, 56px);
+  --step-h1: clamp(28px, 3.6vw, 40px);
+  --step-h2: clamp(22px, 2.8vw, 30px);
+  --step-h3: clamp(16px, 1.8vw, 20px);
+  --step-body-lg: 17px;
+  --step-body: 16px;
+  --step-small: 12.5px;
+  --step-eyebrow: 11px;
+}
+
+.t-display-xl { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-xl); line-height: 1.02; letter-spacing: -.03em; }
+.t-display-lg { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-lg); line-height: 1.05; letter-spacing: -.03em; }
+.t-h1 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-h1); line-height: 1.1; letter-spacing: -.02em; }
+.t-h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-h2); line-height: 1.15; letter-spacing: -.02em; }
+.t-h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-h3); line-height: 1.25; }
+.t-body-lg { font-family: var(--font-body); font-weight: 400; font-size: var(--step-body-lg); line-height: 1.6; }
+.t-body { font-family: var(--font-body); font-weight: 400; font-size: var(--step-body); line-height: 1.55; }
+.t-small { font-family: var(--font-body); font-weight: 500; font-size: var(--step-small); line-height: 1.5; }
+.t-eyebrow { font-family: var(--font-body); font-weight: 700; font-size: var(--step-eyebrow); letter-spacing: .12em; text-transform: uppercase; }
+.t-mono { font-family: var(--font-mono); }
+
+/* ---- §15 shared "elite" select (every dropdown, all surfaces) --------------------------
+   One consistent, considered control instead of the browser default: custom gold chevron
+   (inline SVG), calm 1px hairline, gold hover + focus ring, no native arrow. The OPEN list
+   is OS-rendered and can't be styled from CSS — the control itself carries the brand. */
+select {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  min-height: 44px;
+  padding: 10px 40px 10px 14px;
+  border: 1px solid var(--line-strong, #c9c9c2);
+  border-radius: 11px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5 11 1.5' fill='none' stroke='%238d5b0f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  padding-right: 40px !important;
+  color: var(--ink, #11110f);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: border-color .14s ease, box-shadow .14s ease;
+}
+select:hover { border-color: var(--gold, #b47b20); }
+select:focus { outline: 0; border-color: var(--gold, #b47b20); box-shadow: 0 0 0 3px rgba(180,123,32,.12); }
+select:disabled { opacity: .55; cursor: not-allowed; }

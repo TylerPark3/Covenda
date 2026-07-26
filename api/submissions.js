@@ -137,6 +137,12 @@ export function employerRecord(body) {
       },
       approvedContext: text(project.approvedContext, 2_000),
     },
+    // Partner referral attribution (GTM Move 3): if the firm arrived via a partner's ?ref= link,
+    // the code rides along so the partner's cohort/track record can credit the intro.
+    referral: {
+      code: text(body.referral?.code, 40),
+      via: text(body.referral?.via, 120),
+    },
   };
   if (!record.organization.size || !record.organization.industry || !record.organization.reason || !record.organization.workFrequency) {
     throw new Error('Please complete the company profile fields.');
@@ -299,6 +305,7 @@ export function studentQuickRecord(body) {
     contact: contact(body.contact),
     school: text(body.school, 160),
     interest: text(body.interest, 240),   // optional selected work path, if any
+    industries: textArray(body.industries), // interest domains tapped at quick-join (chips)
     stage: 'quick_added',
   };
   if (!record.contact.name || !record.contact.email) {
