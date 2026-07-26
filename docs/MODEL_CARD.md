@@ -19,9 +19,47 @@ tests that fail the build if a proxy moves a score.
 ## Metrics (tests/model/, runs in npm run check)
 Golden-set agreement with the human matcher (seed 6/6; set grows with operator decisions),
 hard-cap (≤3) + refusal-path behavior, evidence-citation invariants (no pointer → no claim),
-fairness invariance, tier ordering, precision@k / NDCG@k utilities, four-fifths (0.8)
-disparate-impact report generator. Calibration (ECE/Brier) is stubbed until real outcomes
-exist.
+fairness invariance, tier ordering, and the four-fifths (0.8) disparate-impact report.
+
+**Evaluation harness** — `api/eval-metrics.js` (pure JS, no dependencies; deliberately separate
+from `api/match.js` so evaluating the engine can never change how it scores):
+
+| Family | Measures |
+|---|---|
+| Ranking | precision@k, recall@k, MRR, MAP, NDCG@k |
+| Rank correlation | Spearman ρ, Kendall τ-b (τ ≥ 0.7 gates trusting an LLM judge) |
+| Calibration | Brier score, expected calibration error (ECE) |
+| Robustness | paraphrase stability, component ablation |
+| Fairness | four-fifths impact-ratio report |
+
+`evaluationReport()` reports `sampleSize` and sets `underpowered: true` below 20 cases, with a
+note saying the result is directional and **not** validation — so a 6-case number can never be
+quoted as if the engine were validated.
+
+### Ablation finding (honest, and a caveat on the weights)
+Running `ablationReport` over the live `MATCH_WEIGHTS`: on a pool where several candidates clear
+the hard filters, `skills_match` (34), `evidence_depth` (26) and `project_relevance` (20) each
+change the top-3 when zeroed — they earn their weight. `availability_fit` (12) and
+`referral_presence` (8) did **not** change the ranking on that pool, because availability is
+already enforced as a hard filter and referral presence only matters when a vouched candidate is
+otherwise borderline. This is expected given the architecture (hard filters do the heavy lifting;
+the weighted sum breaks ties among survivors) but it means those two weights are currently
+**unvalidated** — do not cite them as evidence the model "considers availability and referrals"
+until real outcome data shows them moving decisions.
+
+### Calibration status
+Brier/ECE are **implemented and tested**, but have no real predictions to score yet: calibration
+is only meaningful against realized outcomes, and the flywheel (`public.matches` decisions +
+conversion outcomes) is still filling. Reweighting stays gated at ≥50 outcomes (G1).
+
+### Extraction (AI intake) eval
+`tests/model/extraction-eval.test.js` is the hallucination check for `api/project-intake.js`:
+generated briefs are asserted to introduce no unsourced money amounts or durations, to drop
+off-taxonomy verticals/work-types rather than pass them through, to null out out-of-range
+ratings instead of emitting a confident fabrication, and to degrade to empty strings (never
+placeholder prose like "TBD — 4 weeks", which a company could read as a quote). Fixtures are
+model-shaped and run without an API key; a live-model eval belongs in a separate key-gated
+harness, since a suite that silently passes when the key is absent is worse than no suite.
 
 ## Limitations
 Rule-based heuristics tuned on a hand-built golden set; skill matching is string-level until
