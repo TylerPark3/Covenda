@@ -387,7 +387,7 @@ test('credibility section offers three routes with faculty de-emphasised', () =>
   assert.match(html, /Vetted work/);
   assert.doesNotMatch(html, /Two ways to earn/);
   // Faculty still counts — stated plainly, not deleted.
-  assert.match(html, /still counts, and still helps/);
+  assert.match(html, /still counts — it is just no longer the only door/);
 });
 
 test('the homepage states the abundance thesis', () => {
@@ -490,7 +490,7 @@ test('why-this-exists names the AI application flood and the talent shift', () =
   assert.match(html, /The signal collapsed/);
   assert.match(html, /The talent moved/);
   assert.match(html, /AI writes a strong application in seconds/);
-  assert.match(html, /turning down banking and, increasingly, big tech/);
+  assert.match(html, /turning down banking and increasingly big tech/);
   // The shift is stated as early and starting, not as an established fact we cannot cite.
   assert.match(html, /trend is early but it has started/);
   assert.match(styles, /\.broken-subtaps/);
@@ -501,5 +501,27 @@ test('why-this-exists names the AI application flood and the talent shift', () =
 test('the student case names real work and domain expertise, not monkey work', () => {
   assert.match(html, /not monkey work/);
   assert.match(html, /build domain expertise while contributing/);
-  assert.match(html, /real problems, real domain expertise/);
+  assert.match(html, /domain expertise, not filing/);
+});
+
+// app.js is a classic script: a top-level throw kills every line after it. A `let`/`const`
+// assigned ABOVE its own declaration is a temporal-dead-zone ReferenceError that does exactly
+// that — and it shipped once, silently breaking the batch board, the company builder, club
+// registration, the demo tabs and the spine all at once. `new Function(script)` only PARSES,
+// so it cannot catch this. This does.
+test('no module-level binding is assigned before it is declared', () => {
+  const lines = script.split('\n');
+  const declaredAt = new Map();
+  lines.forEach((line, i) => {
+    const m = line.match(/^(?:let|const)\s+([A-Za-z_$][\w$]*)/);
+    if (m && !declaredAt.has(m[1])) declaredAt.set(m[1], i);
+  });
+  const offenders = [];
+  lines.forEach((line, i) => {
+    const m = line.match(/^\s{0,4}([A-Za-z_$][\w$]*)\s*=\s*[^=]/);
+    if (!m) return;
+    const at = declaredAt.get(m[1]);
+    if (at !== undefined && at > i) offenders.push(`${m[1]}: assigned line ${i + 1}, declared line ${at + 1}`);
+  });
+  assert.deepEqual(offenders, [], 'temporal dead zone — these would throw at runtime');
 });

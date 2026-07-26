@@ -3092,7 +3092,7 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 /* ---- Batch board: pick benches, then walk through them full-width -------------------
    Squared to match the rest; the deep dive uses the whole page because the point is
    detail, not a teaser card. --------------------------------------------------------- */
-.batch-pick-hint { max-width: 62ch; margin: 0 0 22px; color: var(--muted); font-size: var(--step-body-sm); }
+.batch-pick-hint { max-width: 62ch; margin: 0 auto 22px; color: var(--muted); font-size: var(--step-body-sm); text-align: center; }
 .batch-card.is-pickable {
   position: relative;
   cursor: pointer;

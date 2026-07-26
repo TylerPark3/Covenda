@@ -3528,6 +3528,10 @@ function renderBatchDeepDive() {
   host.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+// Declared before the IIFE that assigns it: a `let` assigned above its own declaration is
+// a temporal-dead-zone ReferenceError, which kills a classic script dead at that line.
+let batchWeb = null;
+
 (() => {
   const grid = document.querySelector('[data-batch-grid]');
   if (!grid) return;
@@ -5395,7 +5399,6 @@ function initBatchWeb() {
   if ('ResizeObserver' in window) new ResizeObserver(refresh).observe(host);
   return { animate, redraw: refresh };
 }
-let batchWeb = null;
 
 
 // The reading spine: one node per major section, filled by scroll position. Decorative —
