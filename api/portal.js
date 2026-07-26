@@ -9,6 +9,7 @@ import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, bat
 import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION, evaluateClubVerification, memberStanding } from './clubs.js';
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normaliseEmail } from './verification.js';
+import { buildMilestoneSchedule, evaluateMilestones, reassignmentDecision, founderTimeVariance } from './milestones.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
@@ -1053,6 +1054,34 @@ export async function loadBatchStanding(member) {
 
 
 
+
+// ---- Stage 4: milestone telemetry, read on every dashboard load ----------------------
+// api/milestones.js was fully built and tested and imported by nothing, so the flake defense
+// never ran. These are the two calls that make it real: state for whoever is looking, and a
+// recommended action for the operator when someone has gone quiet.
+
+export function projectMilestoneState(project, now = new Date().toISOString()) {
+  const evaluation = evaluateMilestones(project?.milestones, now);
+  return {
+    ...evaluation,
+    // An ACTION, never a mutation. Reassignment is recorded and a human still signs it.
+    action: reassignmentDecision(evaluation, project || {}, now),
+    founderTime: founderTimeVariance(project || {}),
+  };
+}
+
+// Mark the active milestone submitted. Called when a deliverable lands, so on-time is
+// measured against the schedule rather than asserted afterwards.
+export function markMilestoneSubmitted(milestones, now = new Date().toISOString()) {
+  const rows = Array.isArray(milestones) ? milestones.map(m => ({ ...m })) : [];
+  const evaluation = evaluateMilestones(rows, now);
+  const index = evaluation.activeIndex;
+  if (index < 0 || !rows[index]) return rows;
+  rows[index].submitted_at = now;
+  rows[index].on_time = !rows[index].due_at || Date.parse(now) <= Date.parse(rows[index].due_at);
+  return rows;
+}
+
 // ---- §14 student verification --------------------------------------------------------
 // A six-digit code to the school address. The code is checked server-side against a stored
 // row, attempts are counted, and the row is consumed on success — none of which can be
@@ -1423,9 +1452,19 @@ export async function acceptApplication(member, input) {
     member.supabase.from('project_applications').update({ status: 'accepted', updated_at: now }).eq('id', applicationId).select('*').single(),
     null,
   );
-  // Assign the student and move the project into progress.
+  // Assign the student, move the project into progress, and lay down the milestone schedule.
+  // The first checkpoint lands inside 24-72h on purpose: it is the cheapest signal that
+  // someone has actually started, and it surfaces a flake while the work can still move.
+  // `project` is already a select('*') from above — refetching it cost a round-trip and
+  // bought nothing.
+  const milestones = buildMilestoneSchedule(project, { startAt: now });
   await checked(
-    member.supabase.from('member_projects').update({ assigned_student_user_id: application.student_user_id, status: 'in_progress', updated_at: now }).eq('id', project.id).select('id').single(),
+    member.supabase.from('member_projects').update({
+      assigned_student_user_id: application.student_user_id,
+      status: 'in_progress',
+      updated_at: now,
+      ...(milestones.length ? { milestones } : {}),
+    }).eq('id', project.id).select('id').single(),
     null,
   );
   // Decline the remaining live applications so the pipeline is unambiguous (leave withdrawn ones as-is).
