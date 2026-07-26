@@ -542,9 +542,12 @@ test('the hero field converts pale nodes into proof, and keeps gold scarce', () 
   assert.match(script, /const MAX_GOLD = \d+;/);
   // The crowd is UNLINKED — the network is what proof buys, so only proven nodes connect.
   assert.match(script, /if \(nodes\[i\]\.lit > 0\.12\) litIdx\.push\(i\)/);
-  // And proven nodes connect to EVERY other one across the field, not just near neighbours:
-  // proximity would say "these two happen to be close", which is not the claim.
+  // Proven nodes form a RING — two edges each — so the constellation reads as one figure
+  // rather than the scribble every-to-every became past three or four nodes. Sorted by
+  // bearing so the polygon never crosses itself, and the figure rotates as a body.
   assert.doesNotMatch(script, /GOLD_LINK/);
+  assert.match(script, /litIdx\.sort\(\(a, b\) => Math\.atan2/);
+  assert.match(script, /const SPIN = /);
   // Real 3D: depth, perspective projection, and far-to-near paint order.
   assert.match(script, /function project\(n\)/);
   assert.match(script, /FOCAL \/ z/);

@@ -4691,6 +4691,7 @@ function initHeroField() {
   const DEPTH = 620;           // how far back the field runs
   // Proven nodes have no reach limit: each connects to every other one across the whole
   // field. At MAX_GOLD = 5 that is at most 10 lines a frame.
+  const SPIN = 0.0016;         // radians per frame — the proven figure turns, the crowd does not
   const LIGHT = 190;           // how far the cursor's light reaches along the gold network
   const MAX_GOLD = 5;           // an absolute ceiling, not a ratio — a bigger crowd must not mean more gold
   let W = 0, H = 0, nodes = [], running = false, raf = 0, t = 0;
@@ -4755,6 +4756,12 @@ function initHeroField() {
     camY += (targetY - camY) * 0.045;
     for (const n of nodes) {
       n.x += n.vx; n.y += n.vy; n.z += n.vz;
+      if (n.lit > 0.12) {
+        const cos = Math.cos(SPIN), sin = Math.sin(SPIN);
+        const rx = n.x * cos - n.y * sin;
+        n.y = n.x * sin + n.y * cos;
+        n.x = rx;
+      }
       const bx = W * 0.9, by = H * 0.9;
       if (n.x < -bx) n.x = bx; else if (n.x > bx) n.x = -bx;
       if (n.y < -by) n.y = by; else if (n.y > by) n.y = -by;
@@ -4774,31 +4781,32 @@ function initHeroField() {
     // gold nodes means this loop is tiny, so the reach can be generous.
     const litIdx = [];
     for (let i = 0; i < nodes.length; i++) if (nodes[i].lit > 0.12) litIdx.push(i);
+    // Sorted by bearing from the centre, so consecutive nodes are actual neighbours around
+    // the ring — connecting them in array order would cross the figure over itself.
+    litIdx.sort((a, b) => Math.atan2(nodes[a].y, nodes[a].x) - Math.atan2(nodes[b].y, nodes[b].x));
+
     ctx.lineWidth = 1;
     for (let a = 0; a < litIdx.length; a++) {
-      for (let b = a + 1; b < litIdx.length; b++) {
-        const p1 = pts[litIdx[a]], p2 = pts[litIdx[b]];
-        const strength = Math.min(nodes[litIdx[a]].lit, nodes[litIdx[b]].lit);
-        // No distance cut-off: proof connects people wherever they are. Depth still fades a
-        // link so the far side of the field does not shout as loudly as the near side.
-        const fade = ((p1.scale + p2.scale) / 2) * strength;
+      if (litIdx.length < 2) break;
+      const i = litIdx[a], j = litIdx[(a + 1) % litIdx.length];
+      if (litIdx.length === 2 && a === 1) break; // two nodes make one edge, not two
+      const p1 = pts[i], p2 = pts[j];
+      const strength = Math.min(nodes[i].lit, nodes[j].lit);
+      const fade = ((p1.scale + p2.scale) / 2) * strength;
 
-        // How close the cursor comes to THIS connection — distance to the segment, not to
-        // its midpoint, so a long link lights along its whole length.
-        let glow = 0;
-        if (pointer) {
-          const vx = p2.x - p1.x, vy = p2.y - p1.y;
-          const len2 = vx * vx + vy * vy || 1;
-          let u = ((pointer.x - p1.x) * vx + (pointer.y - p1.y) * vy) / len2;
-          u = Math.max(0, Math.min(1, u));
-          const near = Math.hypot(pointer.x - (p1.x + vx * u), pointer.y - (p1.y + vy * u));
-          if (near < LIGHT) glow = 1 - near / LIGHT;
-        }
-
-        ctx.lineWidth = 1 + glow * 1.4;
-        ctx.strokeStyle = `rgba(${GOLD},${(0.30 + 0.45 * glow) * fade})`;
-        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+      let glow = 0;
+      if (pointer) {
+        const vx = p2.x - p1.x, vy = p2.y - p1.y;
+        const len2 = vx * vx + vy * vy || 1;
+        let u = ((pointer.x - p1.x) * vx + (pointer.y - p1.y) * vy) / len2;
+        u = Math.max(0, Math.min(1, u));
+        const near = Math.hypot(pointer.x - (p1.x + vx * u), pointer.y - (p1.y + vy * u));
+        if (near < LIGHT) glow = 1 - near / LIGHT;
       }
+
+      ctx.lineWidth = 1 + glow * 1.4;
+      ctx.strokeStyle = `rgba(${GOLD},${(0.34 + 0.45 * glow) * fade})`;
+      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
     }
     ctx.lineWidth = 1;
 
