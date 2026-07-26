@@ -5618,173 +5618,92 @@ function initBatchWeb() {
 })();
 
 
-// The trial walkthrough. Scroll-snap does the moving; this only keeps the dots, the arrows
-// and the scroll position agreeing with each other. Native scrolling means swipe and
-// trackpad work for free, and the track stays usable if this script never runs.
-(function initTrialFlow() {
-  var viewport = document.getElementById('tfViewport');
-  var track = document.getElementById('tfTrack');
-  var dotsHost = document.getElementById('tfDots');
-  var prev = document.getElementById('tfPrev');
-  var next = document.getElementById('tfNext');
-  if (!viewport || !track || !dotsHost || !prev || !next) return;
-  var slides = Array.prototype.slice.call(track.children);
-  if (slides.length < 2) return;
-  var page = 0, pages = 1;
-
-  // One dot per PAGE, not per slide. On a wide screen four of the five cards are already on
-  // show, so five dots and five clicks described a journey that is not there — the controls
-  // have to reflect how far the rail can actually move.
-  function measure() {
-    var span = track.scrollWidth - viewport.clientWidth;
-    if (span < 8) { pages = 1; return; }
-    pages = Math.max(1, Math.ceil(track.scrollWidth / Math.max(1, viewport.clientWidth)));
-  }
-
-  function buildDots() {
-    dotsHost.replaceChildren();
-    if (pages < 2) return;
-    for (var i = 0; i < pages; i++) {
-      (function (n) {
-        var dot = document.createElement('button');
-        dot.type = 'button';
-        dot.className = 'tf-dot';
-        dot.setAttribute('role', 'tab');
-        dot.setAttribute('aria-label', 'View ' + (n + 1) + ' of ' + pages);
-        dot.addEventListener('click', function () { go(n); });
-        dotsHost.append(dot);
-      })(i);
-    }
-  }
-
-  function sync(nextPage) {
-    page = Math.max(0, Math.min(pages - 1, nextPage));
-    Array.prototype.forEach.call(dotsHost.children, function (d, i) {
-      d.setAttribute('aria-selected', String(i === page));
-    });
-    prev.disabled = page === 0;
-    next.disabled = page >= pages - 1;
-    // Nothing to page through: hide the controls rather than showing dead arrows.
-    var idle = pages < 2;
-    prev.hidden = idle; next.hidden = idle; dotsHost.hidden = idle;
-    viewport.setAttribute('aria-label', idle
-      ? 'Trial steps'
-      : 'Trial steps, use arrow keys to move between them');
-  }
-
-  // A programmatic scroll fires scroll events all the way through its animation, with
-  // scrollLeft still near the OLD position — so the handler below would compute page 0 and
-  // drag the gold marker straight back to the first dot mid-flight. Suppress scroll-driven
-  // syncing until the animation has landed.
-  var settling = 0;
-  function go(nextPage) {
-    sync(nextPage);
-    window.clearTimeout(settling);
-    settling = window.setTimeout(function () { settling = 0; }, 520);
-    viewport.scrollTo({ left: page * viewport.clientWidth, behavior: 'smooth' });
-  }
-
-  prev.addEventListener('click', function () { go(page - 1); });
-  next.addEventListener('click', function () { go(page + 1); });
-  viewport.addEventListener('keydown', function (event) {
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-    if (pages < 2) return;
-    event.preventDefault();
-    go(page + (event.key === 'ArrowRight' ? 1 : -1));
-  });
-
-  // Swipe and trackpad move the rail without going through go(), so the dots follow the
-  // scroll rather than assuming they caused it.
-  var ticking = false;
-  viewport.addEventListener('scroll', function () {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(function () {
-      ticking = false;
-      if (settling) return; // an arrow or dot is driving; do not fight it
-      var at = Math.round(viewport.scrollLeft / Math.max(1, viewport.clientWidth));
-      if (at !== page) sync(at);
-    });
-  }, { passive: true });
-
-  function refresh() {
-    var before = pages;
-    measure();
-    if (pages !== before) buildDots();
-    sync(Math.min(page, pages - 1));
-  }
-  refresh();
-  window.addEventListener('resize', refresh);
-  if ('ResizeObserver' in window) new ResizeObserver(refresh).observe(viewport);
-})();
-
-
-// One work trial is the product story. The scene progresses on its own, but pointer,
-// buttons, and arrow keys all let a visitor inspect the three phases at their own pace.
+// The five-step explanation now lives inside the two-sided exchange. Native horizontal
+// scrolling supplies touch/trackpad swipe; controls and keyboard keep the same state in sync.
 (function initWorkExchange() {
   const stage = document.getElementById('workExchange');
   if (!stage) return;
-  const workbench = stage.querySelector('.exchange-workbench');
-  const buttons = Array.from(stage.querySelectorAll('[data-exchange-phase]'));
+  const viewport = document.getElementById('exchangeStepViewport');
+  const track = document.getElementById('exchangeStepTrack');
+  const cards = Array.from(stage.querySelectorAll('[data-exchange-card]'));
+  const dots = Array.from(stage.querySelectorAll('[data-exchange-dot]'));
+  const previous = document.getElementById('exchangePrev');
+  const next = document.getElementById('exchangeNext');
   const status = document.getElementById('exchangeStatus');
+  if (!viewport || !track || !cards.length || cards.length !== dots.length || !previous || !next) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const labels = ['Brief aligned', 'Work in progress', 'Proof reviewed'];
-  let exchangeStep = reduce ? 2 : 0;
+  const lastStep = cards.length - 1;
+  let exchangeStep = 0;
   let userPauseUntil = 0;
   let isVisible = true;
-  let pointerQueued = false;
+  let scrollQueued = false;
 
-  function setExchangeStep(next, userInitiated = false) {
-    exchangeStep = Math.max(0, Math.min(2, Number(next) || 0));
+  function takeControl() {
+    userPauseUntil = Number.POSITIVE_INFINITY;
+  }
+
+  function setExchangeStep(nextStep, userInitiated = false, shouldScroll = true) {
+    exchangeStep = Math.max(0, Math.min(lastStep, Number(nextStep) || 0));
     stage.dataset.exchangeStep = String(exchangeStep);
-    stage.style.setProperty('--exchange-position', String(exchangeStep / 2));
-    buttons.forEach((button, index) => {
+    stage.style.setProperty('--exchange-position', String(exchangeStep / Math.max(1, lastStep)));
+    cards.forEach((card, index) => {
       const active = index === exchangeStep;
-      button.classList.toggle('is-active', active);
+      card.classList.toggle('is-active', active);
+      card.setAttribute('aria-hidden', String(!active));
+    });
+    dots.forEach((button, index) => {
+      const active = index === exchangeStep;
       button.setAttribute('aria-selected', String(active));
       button.tabIndex = active ? 0 : -1;
     });
-    if (status) status.textContent = labels[exchangeStep];
-    // Once a visitor takes control, keep their chosen phase in place.
-    if (userInitiated) userPauseUntil = Number.POSITIVE_INFINITY;
+    previous.disabled = exchangeStep === 0;
+    next.disabled = exchangeStep === lastStep;
+    if (status) status.textContent = `${exchangeStep + 1} of ${cards.length}`;
+    if (userInitiated) takeControl();
+    if (shouldScroll) {
+      viewport.scrollTo({
+        left: exchangeStep * viewport.clientWidth,
+        behavior: reduce ? 'auto' : 'smooth',
+      });
+    }
   }
 
-  buttons.forEach((button, index) => {
+  dots.forEach((button, index) => {
     button.addEventListener('click', () => setExchangeStep(index, true));
   });
+  previous.addEventListener('click', () => setExchangeStep(exchangeStep - 1, true));
+  next.addEventListener('click', () => setExchangeStep(exchangeStep + 1, true));
 
   stage.addEventListener('keydown', event => {
     if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
       event.preventDefault();
       setExchangeStep(exchangeStep + 1, true);
-      buttons[exchangeStep]?.focus();
     } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
       event.preventDefault();
       setExchangeStep(exchangeStep - 1, true);
-      buttons[exchangeStep]?.focus();
     } else if (event.key === 'Home') {
       event.preventDefault();
       setExchangeStep(0, true);
-      buttons[exchangeStep]?.focus();
     } else if (event.key === 'End') {
       event.preventDefault();
-      setExchangeStep(2, true);
-      buttons[exchangeStep]?.focus();
+      setExchangeStep(lastStep, true);
+    } else {
+      return;
     }
+    if (event.target.closest('.exchange-dots')) dots[exchangeStep]?.focus();
   });
 
-  if (workbench && !reduce) {
-    workbench.addEventListener('pointermove', event => {
-      if (event.pointerType === 'touch' || pointerQueued) return;
-      pointerQueued = true;
-      requestAnimationFrame(() => {
-        const bounds = workbench.getBoundingClientRect();
-        const position = Math.max(0, Math.min(.999, (event.clientX - bounds.left) / bounds.width));
-        setExchangeStep(Math.floor(position * 3), true);
-        pointerQueued = false;
-      });
-    }, { passive: true });
-  }
+  viewport.addEventListener('pointerdown', takeControl, { passive: true });
+  viewport.addEventListener('wheel', takeControl, { passive: true });
+  viewport.addEventListener('scroll', () => {
+    if (scrollQueued) return;
+    scrollQueued = true;
+    requestAnimationFrame(() => {
+      const visibleStep = Math.round(viewport.scrollLeft / Math.max(1, viewport.clientWidth));
+      if (visibleStep !== exchangeStep) setExchangeStep(visibleStep, false, false);
+      scrollQueued = false;
+    });
+  }, { passive: true });
 
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(entries => {
@@ -5793,10 +5712,17 @@ function initBatchWeb() {
   }
 
   setExchangeStep(exchangeStep);
-  if (reduce) return; // The complete reviewed state remains visible without autoplay.
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(() => {
+      viewport.scrollTo({ left: exchangeStep * viewport.clientWidth, behavior: 'auto' });
+    }).observe(viewport);
+  }
+  if (reduce) return; // Swipe and controls remain; only autoplay and pop motion stop.
   window.setInterval(() => {
-    if (isVisible && Date.now() >= userPauseUntil) setExchangeStep((exchangeStep + 1) % 3);
-  }, 4200);
+    if (isVisible && Date.now() >= userPauseUntil) {
+      setExchangeStep(exchangeStep === lastStep ? 0 : exchangeStep + 1);
+    }
+  }, 4600);
 })();
 
 initMemberNav();

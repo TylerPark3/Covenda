@@ -130,7 +130,7 @@
         </div>
 
         <div class="exchange-stage" id="workExchange" data-exchange-step="0" tabindex="0"
-             role="group" aria-label="Interactive work-trial exchange. Use the phase buttons or arrow keys to move through Brief, Build, and Review.">
+             role="group" aria-label="Interactive work-trial exchange. Swipe, use the arrow buttons, or press the arrow keys to move through five steps.">
           <article class="exchange-source exchange-source--task">
             <span class="exchange-source-index" aria-hidden="true">01</span>
             <svg aria-hidden="true"><use href="#icon-file"/></svg>
@@ -147,20 +147,114 @@
           <div class="exchange-workbench">
             <div class="exchange-workbench-top">
               <span>Scoped work trial</span>
-              <output id="exchangeStatus" aria-live="polite">Brief aligned</output>
+              <output id="exchangeStatus" aria-live="polite">1 of 5</output>
             </div>
-            <div class="exchange-phases" role="tablist" aria-label="Work-trial phase">
-              <button class="exchange-phase is-active" type="button" role="tab" aria-selected="true" data-exchange-phase="0">
-                <span>01</span><svg aria-hidden="true"><use href="#icon-file"/></svg><strong>Brief</strong><small>One finish line</small>
+
+            <div class="exchange-step-viewport" id="exchangeStepViewport" tabindex="0"
+                 role="region" aria-roledescription="carousel" aria-label="Five steps in a Covenda work trial">
+              <div class="exchange-step-track" id="exchangeStepTrack">
+                <article class="exchange-step-card is-active" id="exchange-step-1" data-exchange-card role="group" aria-label="Step 1 of 5">
+                  <div class="exchange-step-copy">
+                    <span>01 · Bring</span>
+                    <h3>A company brings real work</h3>
+                    <p>A task already waiting on the team.</p>
+                  </div>
+                  <svg class="exchange-step-art" viewBox="0 0 260 120" aria-hidden="true">
+                    <rect x="14" y="24" width="96" height="72" fill="#fff" stroke="currentColor" stroke-width="2.5"/>
+                    <g stroke="#b47b20" stroke-width="5" stroke-linecap="round"><path d="M30 46h64M30 62h64M30 78h40"/></g>
+                    <path d="M124 60h34" stroke="currentColor" stroke-width="2.5"/>
+                    <path d="M152 53l10 7-10 7z" fill="currentColor"/>
+                    <rect x="176" y="34" width="70" height="52" fill="#fbf7ed" stroke="#b47b20" stroke-width="2.5"/>
+                    <circle cx="211" cy="60" r="13" fill="none" stroke="#8b5709" stroke-width="2.5"/>
+                    <path d="M211 52v8l6 4" stroke="#8b5709" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+                  </svg>
+                </article>
+
+                <article class="exchange-step-card" id="exchange-step-2" data-exchange-card role="group" aria-label="Step 2 of 5" aria-hidden="true">
+                  <div class="exchange-step-copy">
+                    <span>02 · Scope</span>
+                    <h3>We shape a fair trial</h3>
+                    <p>Paid, bounded, with one finish line.</p>
+                  </div>
+                  <svg class="exchange-step-art" viewBox="0 0 260 120" aria-hidden="true">
+                    <rect x="58" y="16" width="144" height="88" fill="#fff" stroke="currentColor" stroke-width="2.5"/>
+                    <path d="M74 40h112" stroke="currentColor" stroke-width="2.5"/>
+                    <g stroke="#deded9" stroke-width="5" stroke-linecap="round"><path d="M74 56h84M74 72h104"/></g>
+                    <circle cx="180" cy="84" r="13" fill="#fbf7ed" stroke="#b47b20" stroke-width="2.5"/>
+                    <path d="M174 84l4.5 5 8.5-9" fill="none" stroke="#8b5709" stroke-width="2.5" stroke-linecap="round"/>
+                  </svg>
+                </article>
+
+                <article class="exchange-step-card" id="exchange-step-3" data-exchange-card role="group" aria-label="Step 3 of 5" aria-hidden="true">
+                  <div class="exchange-step-copy">
+                    <span>03 · Match</span>
+                    <h3>It reaches a vetted batch</h3>
+                    <p>Only students who cleared the bar.</p>
+                  </div>
+                  <svg class="exchange-step-art" viewBox="0 0 260 120" aria-hidden="true">
+                    <rect x="10" y="44" width="52" height="32" fill="#fbf7ed" stroke="#b47b20" stroke-width="2.5"/>
+                    <path d="M70 60h26" stroke="currentColor" stroke-width="2.5"/>
+                    <path d="M90 53l10 7-10 7z" fill="currentColor"/>
+                    <rect x="112" y="20" width="138" height="80" fill="none" stroke="currentColor" stroke-width="2.5"/>
+                    <g fill="#deded9">
+                      <circle cx="136" cy="46" r="10"/><circle cx="172" cy="46" r="10"/><circle cx="226" cy="46" r="10"/>
+                      <circle cx="136" cy="76" r="10"/><circle cx="190" cy="76" r="10"/><circle cx="226" cy="76" r="10"/>
+                    </g>
+                    <circle cx="208" cy="46" r="11" fill="#b47b20"/><circle cx="172" cy="76" r="11" fill="#b47b20"/>
+                  </svg>
+                </article>
+
+                <article class="exchange-step-card" id="exchange-step-4" data-exchange-card role="group" aria-label="Step 4 of 5" aria-hidden="true">
+                  <div class="exchange-step-copy">
+                    <span>04 · Build</span>
+                    <h3>The student does the work</h3>
+                    <p>Checkpoints keep delivery visible.</p>
+                  </div>
+                  <svg class="exchange-step-art" viewBox="0 0 260 120" aria-hidden="true">
+                    <path d="M32 60h196" stroke="#deded9" stroke-width="4"/>
+                    <path d="M32 60h98" stroke="#b47b20" stroke-width="4"/>
+                    <circle cx="32" cy="60" r="13" fill="#b47b20"/>
+                    <path d="M26 60l5 5 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+                    <circle cx="130" cy="60" r="13" fill="#b47b20"/>
+                    <path d="M124 60l5 5 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
+                    <circle cx="228" cy="60" r="13" fill="#fff" stroke="#deded9" stroke-width="4"/>
+                  </svg>
+                </article>
+
+                <article class="exchange-step-card" id="exchange-step-5" data-exchange-card role="group" aria-label="Step 5 of 5" aria-hidden="true">
+                  <div class="exchange-step-copy">
+                    <span>05 · Review</span>
+                    <h3>The company decides</h3>
+                    <p>Useful output becomes credible proof.</p>
+                  </div>
+                  <svg class="exchange-step-art" viewBox="0 0 260 120" aria-hidden="true">
+                    <rect x="16" y="26" width="94" height="68" fill="#fff" stroke="currentColor" stroke-width="2.5"/>
+                    <g stroke="#deded9" stroke-width="5" stroke-linecap="round"><path d="M32 48h62M32 64h62M32 80h40"/></g>
+                    <path d="M124 60h34" stroke="currentColor" stroke-width="2.5"/>
+                    <path d="M152 53l10 7-10 7z" fill="currentColor"/>
+                    <rect x="176" y="26" width="70" height="68" fill="#f4faf5" stroke="#24753a" stroke-width="2.5"/>
+                    <circle cx="211" cy="60" r="17" fill="none" stroke="#24753a" stroke-width="3"/>
+                    <path d="M203 60l6 6 11-12" fill="none" stroke="#24753a" stroke-width="3" stroke-linecap="round"/>
+                  </svg>
+                </article>
+              </div>
+            </div>
+
+            <div class="exchange-controls">
+              <button class="exchange-arrow exchange-arrow--previous" id="exchangePrev" type="button" aria-label="Previous trial step" disabled>
+                <svg aria-hidden="true"><use href="#icon-arrow-right"/></svg>
               </button>
-              <button class="exchange-phase" type="button" role="tab" aria-selected="false" data-exchange-phase="1">
-                <span>02</span><svg aria-hidden="true"><use href="#icon-operations"/></svg><strong>Build</strong><small>Real execution</small>
-              </button>
-              <button class="exchange-phase" type="button" role="tab" aria-selected="false" data-exchange-phase="2">
-                <span>03</span><svg aria-hidden="true"><use href="#icon-search"/></svg><strong>Review</strong><small>Named reviewer</small>
+              <div class="exchange-dots" role="tablist" aria-label="Choose a trial step">
+                <button type="button" role="tab" aria-selected="true" aria-controls="exchange-step-1" data-exchange-dot="0"><span>01</span></button>
+                <button type="button" role="tab" aria-selected="false" aria-controls="exchange-step-2" data-exchange-dot="1"><span>02</span></button>
+                <button type="button" role="tab" aria-selected="false" aria-controls="exchange-step-3" data-exchange-dot="2"><span>03</span></button>
+                <button type="button" role="tab" aria-selected="false" aria-controls="exchange-step-4" data-exchange-dot="3"><span>04</span></button>
+                <button type="button" role="tab" aria-selected="false" aria-controls="exchange-step-5" data-exchange-dot="4"><span>05</span></button>
+              </div>
+              <button class="exchange-arrow" id="exchangeNext" type="button" aria-label="Next trial step">
+                <svg aria-hidden="true"><use href="#icon-arrow-right"/></svg>
               </button>
             </div>
-            <div class="exchange-scrubber" aria-hidden="true"><i></i><b></b></div>
           </div>
 
           <div class="exchange-flow exchange-flow--in exchange-flow--student" aria-hidden="true">
@@ -180,121 +274,18 @@
             <article class="exchange-output exchange-output--deliverable">
               <svg aria-hidden="true"><use href="#icon-file"/></svg>
               <div><p>For the startup</p><strong>Useful deliverable</strong></div>
-              <span aria-hidden="true">←</span>
+              <svg class="exchange-output-arrow is-back" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
             </article>
             <article class="exchange-output exchange-output--proof">
               <svg aria-hidden="true"><use href="#icon-shield"/></svg>
               <div><p>For the student</p><strong>Credible proof</strong></div>
-              <span aria-hidden="true">→</span>
+              <svg class="exchange-output-arrow" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
             </article>
           </div>
         </div>
 
         <p class="exchange-hint"><svg aria-hidden="true"><use href="#icon-route"/></svg> Move through the trial</p>
       </section>
-
-        <!-- How a trial actually runs, five steps you can page through. Replaces the
-             pop-art panel: a picture that made an argument, where what this spot needed was
-             an explanation. Scroll-snap track so it works by swipe, arrows, dots or keyboard;
-             each slide carries its own small diagram in the site's squared language. -->
-        <section class="trial-flow" aria-labelledby="trialFlowTitle">
-          <div class="tf-head">
-            <p class="feature-kicker">How a trial runs</p>
-            <h3 id="trialFlowTitle">Five steps, start to finish.</h3>
-          </div>
-
-          <div class="tf-viewport" id="tfViewport" tabindex="0" role="group" aria-label="Trial steps, use arrow keys to move between them">
-            <ol class="tf-track" id="tfTrack">
-              <li class="tf-slide" id="tf-1">
-                <span class="tf-n">01</span>
-                <h4>A company brings real work</h4>
-                <p>Something that keeps slipping — a backlog task, a piece of research, a model nobody has time to build.</p>
-                <svg class="tf-art" viewBox="0 0 260 120" aria-hidden="true">
-                  <rect x="14" y="24" width="96" height="72" fill="#fff" stroke="#11110f" stroke-width="2.5"/>
-                  <g stroke="#b47b20" stroke-width="5" stroke-linecap="round">
-                    <path d="M30 46h64M30 62h64M30 78h40"/>
-                  </g>
-                  <path d="M124 60h34" stroke="#11110f" stroke-width="2.5"/>
-                  <path d="M152 53l10 7-10 7z" fill="#11110f"/>
-                  <rect x="176" y="34" width="70" height="52" fill="#fbf7ed" stroke="#b47b20" stroke-width="2.5"/>
-                  <circle cx="211" cy="60" r="13" fill="none" stroke="#8b5709" stroke-width="2.5"/>
-                  <path d="M211 52v8l6 4" stroke="#8b5709" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-                </svg>
-              </li>
-
-              <li class="tf-slide" id="tf-2">
-                <span class="tf-n">02</span>
-                <h4>We scope it into a trial</h4>
-                <p>Bounded, paid, with a named reviewer and an agreed finish line. No production access at this stage.</p>
-                <svg class="tf-art" viewBox="0 0 260 120" aria-hidden="true">
-                  <rect x="58" y="16" width="144" height="88" fill="#fff" stroke="#11110f" stroke-width="2.5"/>
-                  <path d="M74 40h112" stroke="#11110f" stroke-width="2.5"/>
-                  <g stroke="#deded9" stroke-width="5" stroke-linecap="round">
-                    <path d="M74 56h84M74 72h104"/>
-                  </g>
-                  <circle cx="180" cy="84" r="13" fill="#fbf7ed" stroke="#b47b20" stroke-width="2.5"/>
-                  <path d="M174 84l4.5 5 8.5-9" fill="none" stroke="#8b5709" stroke-width="2.5" stroke-linecap="round"/>
-                </svg>
-              </li>
-
-              <li class="tf-slide" id="tf-3">
-                <span class="tf-n">03</span>
-                <h4>It goes to a vetted batch</h4>
-                <p>Only students who cleared that batch's published bar — vetted by their club or lab first, then by us.</p>
-                <svg class="tf-art" viewBox="0 0 260 120" aria-hidden="true">
-                  <rect x="10" y="44" width="52" height="32" fill="#fbf7ed" stroke="#b47b20" stroke-width="2.5"/>
-                  <path d="M70 60h26" stroke="#11110f" stroke-width="2.5"/>
-                  <path d="M90 53l10 7-10 7z" fill="#11110f"/>
-                  <rect x="112" y="20" width="138" height="80" fill="none" stroke="#11110f" stroke-width="2.5"/>
-                  <g fill="#deded9">
-                    <circle cx="136" cy="46" r="10"/><circle cx="172" cy="46" r="10"/><circle cx="226" cy="46" r="10"/>
-                    <circle cx="136" cy="76" r="10"/><circle cx="190" cy="76" r="10"/><circle cx="226" cy="76" r="10"/>
-                  </g>
-                  <circle cx="208" cy="46" r="11" fill="#b47b20"/>
-                  <circle cx="172" cy="76" r="11" fill="#b47b20"/>
-                </svg>
-              </li>
-
-              <li class="tf-slide" id="tf-4">
-                <span class="tf-n">04</span>
-                <h4>The student does the work</h4>
-                <p>Real output against checkpoints. Late is fine if they say so; going quiet is what gets the work reassigned.</p>
-                <svg class="tf-art" viewBox="0 0 260 120" aria-hidden="true">
-                  <path d="M32 60h196" stroke="#deded9" stroke-width="4"/>
-                  <path d="M32 60h98" stroke="#b47b20" stroke-width="4"/>
-                  <circle cx="32" cy="60" r="13" fill="#b47b20"/>
-                  <path d="M26 60l5 5 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
-                  <circle cx="130" cy="60" r="13" fill="#b47b20"/>
-                  <path d="M124 60l5 5 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
-                  <circle cx="228" cy="60" r="13" fill="#fff" stroke="#deded9" stroke-width="4"/>
-                </svg>
-              </li>
-
-              <li class="tf-slide" id="tf-5">
-                <span class="tf-n">05</span>
-                <h4>The company decides</h4>
-                <p>Accept and it becomes employer-verified evidence the student keeps. Hire them, or don't — the work was still useful.</p>
-                <svg class="tf-art" viewBox="0 0 260 120" aria-hidden="true">
-                  <rect x="16" y="26" width="94" height="68" fill="#fff" stroke="#11110f" stroke-width="2.5"/>
-                  <g stroke="#deded9" stroke-width="5" stroke-linecap="round">
-                    <path d="M32 48h62M32 64h62M32 80h40"/>
-                  </g>
-                  <path d="M124 60h34" stroke="#11110f" stroke-width="2.5"/>
-                  <path d="M152 53l10 7-10 7z" fill="#11110f"/>
-                  <rect x="176" y="26" width="70" height="68" fill="#f4faf5" stroke="#24753a" stroke-width="2.5"/>
-                  <circle cx="211" cy="60" r="17" fill="none" stroke="#24753a" stroke-width="3"/>
-                  <path d="M203 60l6 6 11-12" fill="none" stroke="#24753a" stroke-width="3" stroke-linecap="round"/>
-                </svg>
-              </li>
-            </ol>
-          </div>
-
-          <div class="tf-controls">
-            <button class="tf-arrow" type="button" id="tfPrev" aria-label="Previous step">&#8592;</button>
-            <div class="tf-dots" id="tfDots" role="tablist" aria-label="Choose a step"></div>
-            <button class="tf-arrow" type="button" id="tfNext" aria-label="Next step">&#8594;</button>
-          </div>
-        </section>
 
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
@@ -763,58 +754,57 @@
       </section>
 
       <section class="how-section" id="how">
-        <!-- The batch funnel. Replaces the old problem→packet→proof animation: the story is
-             no longer "we scope a project", it is "talent is vetted twice before you meet it".
-             ILLUSTRATIVE — a model of the pipeline, not current partner counts or traction. -->
-        <div class="flow-demo batch-funnel" id="flowDemo" role="img" aria-label="Selective clubs and faculty vet students first; Covenda vets again with a technical process per industry; admitted students form a vetted batch; companies hire from that batch through a paid trial.">
+        <!-- A qualification rail, intentionally different from the trial carousel above:
+             this explains who reaches the trial, not how the trial itself runs. -->
+        <div class="flow-demo batch-funnel" id="flowDemo" role="img" aria-label="A referral begins the signal, evidence is checked, qualified students enter a field-specific batch, and companies meet that vetted pool.">
           <div class="flow-demo-head">
-            <p class="flow-demo-kicker">The batch system</p>
-            <h2>Vetted twice before<br>you ever meet them.</h2>
-            <p>Selective clubs and faculty screen first. Covenda vets again — technically, per industry — and whoever clears it forms a batch you can hire from.</p>
+            <p class="flow-demo-kicker">Before the project</p>
+            <h2>Vetted before the<br><span class="word-gold">trial begins.</span></h2>
+            <p>A referral starts the signal. Evidence has to confirm it.</p>
           </div>
           <div class="bf-track">
             <div class="bf-stage bf-stage-1">
               <span class="bf-n">01</span>
               <div class="bf-card">
-                <p class="bf-label">Vetted by their people</p>
-                <p class="bf-body">Selective clubs, labs, and faculty already turn away most applicants. That screen happens before Covenda exists.</p>
+                <p class="bf-label">Referred</p>
+                <p class="bf-body">A club, lab, professor, or trusted peer vouches for the student.</p>
                 <div class="bf-pool" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
               </div>
             </div>
-            <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">vouched</span><span class="bf-arrow-line"></span></div>
+            <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">signal</span><span class="bf-arrow-line"></span></div>
             <div class="bf-stage bf-stage-2">
               <span class="bf-n">02</span>
               <div class="bf-card">
-                <p class="bf-label">Vetted again — technically</p>
-                <p class="bf-body">A process built for the industry: connect the account that owns the code, parse the model formula-by-formula, or defend the work on record.</p>
+                <p class="bf-label">Evidence checked</p>
+                <p class="bf-body">Ownership, history, and the work itself are tested.</p>
                 <ul class="bf-rails">
-                  <li><svg><use href="#icon-shield"/></svg>Ownership + timestamps</li>
-                  <li><svg><use href="#icon-file"/></svg>Artifact parsed, not skimmed</li>
-                  <li><svg><use href="#icon-user"/></svg>Walkthrough, two raters</li>
+                  <li><svg><use href="#icon-shield"/></svg>Ownership</li>
+                  <li><svg><use href="#icon-file"/></svg>Artifact</li>
+                  <li><svg><use href="#icon-user"/></svg>Walkthrough</li>
                 </ul>
               </div>
             </div>
-            <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">cleared the bar</span><span class="bf-arrow-line"></span></div>
+            <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">cleared</span><span class="bf-arrow-line"></span></div>
             <div class="bf-stage bf-stage-3">
               <span class="bf-n">03</span>
               <div class="bf-card bf-card-batch">
-                <p class="bf-label">The batch</p>
-                <p class="bf-body">A small batch in one field — every student carrying evidence you can open.</p>
+                <p class="bf-label">Admitted to a batch</p>
+                <p class="bf-body">Only students who clear the field-specific bar.</p>
                 <div class="bf-batch" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
-                <span class="bf-badge">Vetted batch</span>
+                <span class="bf-badge">Qualified pool</span>
               </div>
             </div>
-            <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">you hire</span><span class="bf-arrow-line"></span></div>
+            <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">ready</span><span class="bf-arrow-line"></span></div>
             <div class="bf-stage bf-stage-4">
               <span class="bf-n">04</span>
               <div class="bf-card bf-card-trial">
-                <p class="bf-label">The trial confirms it</p>
-                <p class="bf-body">A bounded, paid trial with a named reviewer. Accepted work becomes verified evidence — and the record compounds.</p>
-                <span class="bf-badge is-proof">Employer-verified</span>
+                <p class="bf-label">Ready for a trial</p>
+                <p class="bf-body">Companies meet a small, evidence-backed pool.</p>
+                <span class="bf-badge is-proof">Trial ready</span>
               </div>
             </div>
           </div>
-          <p class="bf-foot">Illustrative — this is the model of the pipeline, not a count of current partners or placements.</p>
+          <p class="bf-foot">Illustrative process — not a count of current partners or placements.</p>
         </div>
         <div class="student-story audience-content" data-for-audience="student">
           <div class="section-heading">
