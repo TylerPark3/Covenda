@@ -931,3 +931,12 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-step-n { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #b47b20; border-radius: 50%; color: #8b5709; font-size: 13px; font-weight: 700; }
 .batch-workflow-list strong { display: block; font-size: 14.5px; }
 .batch-workflow-list p { margin: 4px 0 0; font-size: 14px; line-height: 1.6; color: #5c5c57; }
+
+/* Talent view: the credit-gated benches sit above the open directory, so the vetted
+   subset is what a company sees first and the full list reads as the wider pool. */
+.talent-benches { margin-bottom: 30px; }
+.talent-benches-head { margin: 0 0 14px; }
+.talent-benches-head h3 { margin: 0; font-size: 18px; letter-spacing: -.015em; }
+.talent-benches-head p { margin: 6px 0 0; max-width: 62ch; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
+.talent-bench-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
+.talent-benches + .talent-benches-head { padding-top: 26px; border-top: 1px solid var(--line, #e4e4de); }

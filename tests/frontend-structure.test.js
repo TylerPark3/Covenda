@@ -295,3 +295,14 @@ test('batch board degrades without the serverless function', () => {
   assert.match(script, /paint\(null\)/);
   assert.match(script, /\.catch\(\(\) => \{ \/\* No serverless in static preview/);
 });
+
+// The candidate browser shows students to companies. index.html long claimed it was "scoped
+// to the company audience in CSS" while no such rule existed, so every audience — including
+// students — got a filterable, scored browser of other students: precisely the cross-student
+// leaderboard the scoring guardrails forbid.
+test('candidate browser is company-only', () => {
+  assert.match(html, /id="candidates"/);
+  assert.match(styles, /\.candidates-section \{ display: none; \}/);
+  assert.match(styles, /body\[data-audience="company"\] \.candidates-section \{ display: block; \}/);
+  assert.match(html, /Every candidate below is illustrative/);
+});

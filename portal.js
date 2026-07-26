@@ -158,7 +158,7 @@ function renderDashboard() {
   const role=profile?.role;
   $$('[data-student-only]').forEach(el=>el.hidden=role!=='student');
   $$('[data-org-only]').forEach(el=>el.hidden=!['company','university'].includes(role));
-  $('#portfolioNavLabel').textContent=role==='company'?'Student portfolios':'Portfolio';
+  $('#portfolioNavLabel').textContent=role==='company'?'Talent':'Your proof of work';
   $('#projectCount').textContent=projects.length;
   $('#intakeCount').textContent=intakes.length;
   $('#messageCount').textContent=messages.length;
@@ -1122,7 +1122,27 @@ function renderTalentCards(){
   for(const s of filtered)root.append(talentCard(s));
 }
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
-  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent directory';$('#portfolioIntro').textContent='Browse students who opted into discovery — startup-fit, building real evidence. Hire by inviting them to a scoped project.';$('#editProfile').hidden=true;
+  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Browse students who opted into discovery — startup-fit, building real evidence. Hire by inviting them to a scoped project.';$('#editProfile').hidden=true;
+  const benches=document.createElement('section');benches.className='talent-benches';
+  const bh=document.createElement('div');bh.className='talent-benches-head';
+  bh.append(Object.assign(document.createElement('h3'),{textContent:'Vetted benches'}));
+  bh.append(Object.assign(document.createElement('p'),{textContent:'Every student below opted into discovery. A bench is the vetted subset \u2014 unlock one with credits to see who was admitted.'}));
+  benches.append(bh);
+  const benchGrid=document.createElement('div');benchGrid.className='talent-bench-grid';
+  const openBatches=state.dashboard.batches||[];
+  const unlockedMap=new Map((state.dashboard.batchAccess||[]).map(a=>[a.batch_id,a]));
+  const admittedMap=state.dashboard.batchAdmitted||{};
+  if(openBatches.length){
+    for(const batch of openBatches)benchGrid.append(companyBatchCard(batch,unlockedMap.get(batch.id),admittedMap[batch.id]||0));
+  }else{
+    benchGrid.append(Object.assign(document.createElement('p'),{className:'batch-roster-empty',textContent:'No benches are open yet. When one opens you can unlock its admitted roster here.'}));
+  }
+  benches.append(benchGrid);
+  root.append(benches);
+  const dirHead=document.createElement('div');dirHead.className='talent-benches-head';
+  dirHead.append(Object.assign(document.createElement('h3'),{textContent:'Everyone who opted in'}));
+  dirHead.append(Object.assign(document.createElement('p'),{textContent:'The full directory \u2014 not bench-vetted. Filter by proven skill and evidence.'}));
+  root.append(dirHead);
   const bar=document.createElement('div');bar.className='talent-bar';
   const search=document.createElement('input');search.type='search';search.className='talent-search';search.placeholder='Search name, skill, school…';search.value=talentFilters.query;search.addEventListener('input',()=>{talentFilters.query=search.value.trim().toLowerCase();renderTalentCards();});
   const vsel=document.createElement('select');vsel.className='talent-vsel';const anyOpt=document.createElement('option');anyOpt.value='';anyOpt.textContent='Any vertical';vsel.append(anyOpt);TALENT_VERTICALS.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;if(v===talentFilters.vertical)o.selected=true;vsel.append(o);});vsel.addEventListener('change',()=>{talentFilters.vertical=vsel.value;renderTalentCards();});
