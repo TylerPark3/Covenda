@@ -3079,37 +3079,14 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
        Student sees the bar; company sees the evaluation walkthrough. ------------------ */
 .batch-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin-top: 16px; }
 .batch-actions-row .batch-join { margin-top: 0; }
-.pb-toggle { margin-top: 0; font-size: 14px; font-weight: 600; }
-.pb-toggle svg { transition: transform .16s ease; }
-.pb-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
 
-.pb-detail { display: grid; gap: 16px; margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
-.pb-block { padding: 16px 18px; border: 1px solid var(--line); border-radius: 0; background: rgba(255,255,255,.6); }
-.pb-block-t { margin: 0 0 12px; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); }
 .pb-badge { display: inline-block; margin-bottom: 12px; padding: 4px 11px; border: 1px solid var(--line-strong); border-radius: 0; font-size: 12px; font-weight: 600; color: var(--muted); }
 .pb-badge.is-api { border-color: var(--gold); background: var(--gold-pale); color: var(--gold-deep); }
-.pb-rail { padding-left: 13px; border-left: 2px solid var(--gold-light); }
-.pb-rail + .pb-rail { margin-top: 13px; }
-.pb-rail strong { display: block; font-size: 15px; }
-.pb-rail p { margin: 5px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
 
-.pb-reqs { display: grid; gap: 11px; margin: 0; padding: 0; list-style: none; }
-.pb-reqs li { display: grid; grid-template-columns: 18px 1fr; gap: 11px; align-items: start; }
-.pb-reqs svg { width: 15px; height: 15px; margin-top: 4px; color: var(--gold-deep); }
-.pb-reqs strong { display: block; font-size: 15px; }
-.pb-reqs p { margin: 4px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
-.pb-note { margin: 13px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
 
-.pb-steps { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; }
-.pb-steps li { display: grid; grid-template-columns: 27px 1fr; gap: 12px; align-items: start; }
 .pb-n { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid var(--gold-deep); border-radius: 50%; color: var(--gold-deep); font-size: 12.5px; font-weight: 700; }
-.pb-steps strong { display: block; font-size: 15px; }
-.pb-steps p { margin: 4px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
 
 /* The detail blocks are audience-split; on the home view show the student bar by default. */
-.pb-detail .audience-content[data-for-audience="student"] { display: block; }
-body[data-audience="company"] .pb-detail .audience-content[data-for-audience="student"] { display: none; }
-body[data-audience="company"] .pb-detail .audience-content[data-for-audience="company"] { display: block; }
 
 /* ---- Batch board: pick benches, then walk through them full-width -------------------
    Squared to match the rest; the deep dive uses the whole page because the point is
@@ -3136,9 +3113,11 @@ body[data-audience="company"] .pb-detail .audience-content[data-for-audience="co
    not decoration, so it gets real space. */
 .bd-figure { display: grid; gap: 0; margin: clamp(26px, 3.4vw, 40px) 0 0; }
 .bd-rails { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-.bd-node { padding: 18px 20px; border: 1px solid var(--line-strong); background: rgba(255,255,255,.65); }
-.bd-node b { display: block; font-size: 15.5px; }
-.bd-node span { display: block; margin-top: 6px; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
+.bd-node { padding: clamp(20px, 2.2vw, 26px); border: 1px solid var(--line-strong); background: rgba(255,255,255,.65); }
+.bd-node b { display: block; font-size: 17px; letter-spacing: -.012em; }
+.bd-node span { display: block; max-width: 54ch; margin-top: 7px; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.62; }
+.bd-bar, .bd-review, .bd-bench { text-align: center; }
+.bd-bar span, .bd-review span, .bd-bench span { margin-left: auto; margin-right: auto; }
 .bd-rail { border-left: 3px solid var(--gold-light); }
 .bd-bar { border-color: var(--gold-deep); background: var(--gold-pale); }
 .bd-review { border-style: dashed; }
@@ -3150,10 +3129,25 @@ body[data-audience="company"] .pb-detail .audience-content[data-for-audience="co
 .bd-block { margin-top: clamp(26px, 3.2vw, 40px); }
 .bd-block h4 { margin: 0 0 16px; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-deep); }
 .bd-reqs, .bd-steps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
-.bd-reqs li, .bd-steps li { display: grid; grid-template-columns: 30px 1fr; gap: 14px; align-items: start; }
-.bd-n { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--gold-deep); color: var(--gold-deep); font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
-.bd-reqs strong, .bd-steps strong { display: block; font-size: 16px; }
-.bd-reqs p, .bd-steps p { max-width: 66ch; margin: 5px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.65; }
+/* Requirements are a SET you scan, not a sequence you read — so they tile across the panel
+   instead of forming one narrow column of prose down a very wide box. */
+.bd-reqs { grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); }
+.bd-reqs li {
+  display: grid; grid-template-rows: auto 1fr; gap: 11px;
+  padding: 20px; border: 1px solid var(--line-strong); background: rgba(255,255,255,.6);
+}
+.bd-reqs li:hover { border-color: var(--gold); }
+/* The how-to-apply steps ARE ordered, so they stay a sequence — but flow across in columns
+   on wide screens so the panel does not become a scroll. */
+.bd-steps { grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); align-items: start; }
+.bd-steps li { display: grid; grid-template-rows: auto 1fr; gap: 10px; padding-top: 16px; border-top: 2px solid var(--gold-light); }
+.bd-n {
+  display: grid; place-items: center; width: 30px; height: 30px;
+  border: 1px solid var(--gold-deep); color: var(--gold-deep);
+  font-family: var(--font-mono); font-size: 13.5px; font-weight: 700;
+}
+.bd-reqs strong, .bd-steps strong { display: block; font-size: 16.5px; line-height: 1.3; letter-spacing: -.01em; }
+.bd-reqs p, .bd-steps p { max-width: 42ch; margin: 6px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
 .bd-cta { margin-top: clamp(26px, 3.2vw, 38px); }
 
 @media (max-width: 720px) {
@@ -3182,3 +3176,56 @@ body[data-audience="company"] .pb-detail .audience-content[data-for-audience="co
 .club-tiers p { margin: 7px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
 
 @media (max-width: 900px) { .club-grid { grid-template-columns: 1fr; } }
+
+/* The thesis line under the two columns — the sentence the whole page is arguing. */
+.broken-thesis { max-width: 74ch; margin: clamp(26px, 3.4vw, 40px) auto 0; padding-top: clamp(22px, 2.6vw, 30px); border-top: 1px solid var(--line); color: var(--ink); font-family: var(--font-display); font-size: clamp(18px, 1.9vw, 23px); font-weight: 500; line-height: 1.5; letter-spacing: -.015em; text-align: center; text-wrap: balance; }
+
+/* ---- Geometric motif, carried past the hero -----------------------------------------
+   The hero field establishes the language (hairline gold, nodes and links). These pick it
+   up so the geometry reads as a system across the page rather than one canvas at the top.
+   All decorative, all aria-hidden by construction (::before/::after), all reduced-motion
+   safe — nothing here animates. ------------------------------------------------------ */
+
+/* Nodes-and-links plotting paper behind the thesis and the credibility routes. */
+.broken-section, .why-section .credibility-ladder { position: relative; }
+.broken-section::before,
+.credibility-ladder::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at center, rgba(180,123,32,.16) 1px, transparent 1.4px),
+    linear-gradient(to right, rgba(180,123,32,.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(180,123,32,.05) 1px, transparent 1px);
+  background-size: 72px 72px, 72px 72px, 72px 72px;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 78%);
+          mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, #000 20%, transparent 78%);
+  pointer-events: none;
+  z-index: 0;
+}
+.broken-inner, .credibility-ladder > * { position: relative; z-index: 1; }
+
+/* Corner ticks — a drafting mark, not a border radius. Reinforces the squared language. */
+.broken-col, .cred-door, .bd-panel, .club-form, .club-ladder { position: relative; }
+.broken-col::before, .cred-door::before, .bd-panel::before, .club-form::before, .club-ladder::before,
+.broken-col::after,  .cred-door::after,  .bd-panel::after,  .club-form::after,  .club-ladder::after {
+  content: "";
+  position: absolute; width: 9px; height: 9px;
+  border-color: var(--gold); pointer-events: none;
+}
+.broken-col::before, .cred-door::before, .bd-panel::before, .club-form::before, .club-ladder::before {
+  top: -1px; left: -1px; border-top: 1.5px solid; border-left: 1.5px solid;
+}
+.broken-col::after, .cred-door::after, .bd-panel::after, .club-form::after, .club-ladder::after {
+  right: -1px; bottom: -1px; border-right: 1.5px solid; border-bottom: 1.5px solid;
+}
+
+/* The diagram's rail nodes get the same tick, so the batch walkthrough shares the language. */
+.bd-node { position: relative; }
+.bd-rail::before {
+  content: ""; position: absolute; top: -1px; left: -1px; width: 8px; height: 8px;
+  border-top: 1.5px solid var(--gold); border-left: 1.5px solid var(--gold); pointer-events: none;
+}
+
+@media (max-width: 720px) {
+  .broken-section::before, .credibility-ladder::before { background-size: 54px 54px, 54px 54px, 54px 54px; }
+}

@@ -275,20 +275,23 @@ test('the how-we-verify section exists and advertises only what is actually buil
 // 'batch-briefs' action — so the bar a visitor reads and the bar the portal checks them
 // against cannot drift. The old hardcoded BATCHES array survives only as a static-preview
 // fallback (no serverless locally), never as a second source of truth for the bar.
-test('public batch board renders the shipped brief, split by audience', () => {
+//
+// The per-card detail panel this used to assert is gone: the bar now renders full-width in
+// the deep dive, because five requirements in a card was a thin ribbon of text down a very
+// wide page.
+test('public batch board renders the shipped brief in the full-width walkthrough', () => {
   assert.match(script, /action: 'batch-briefs'/);
-  assert.match(script, /function batchDetailPanel\(/);
-  assert.match(script, /How this industry is vetted/);
-  assert.match(script, /What it takes to get in/);       // student view
-  assert.match(script, /How you evaluate this bench/);   // company view
   assert.match(script, /data-batch-grid/);
+  assert.match(script, /What this bench asks of you/);
+  assert.match(script, /How this industry is vetted|batchDiagram/);
   // Honest labelling survives the trip to the marketing site.
   assert.match(script, /Human rail/);
-  assert.match(script, /recommendation, not an admission/);
-  // Audience split is CSS-driven, so switching audience needs no re-render.
-  assert.match(styles, /body\[data-audience="company"\] \.pb-detail \.audience-content\[data-for-audience="company"\]/);
-  assert.match(styles, /\.pb-reqs/);
-  assert.match(styles, /\.pb-steps/);
+  assert.match(script, /recommendation, not an admission|recommendation\. A human decides/);
+  // The orphaned per-card panel must not creep back.
+  assert.doesNotMatch(script, /function batchDetailPanel\(/);
+  // Requirements tile across the panel instead of stacking in one column.
+  assert.match(styles, /\.bd-reqs \{ grid-template-columns: repeat\(auto-fit/);
+  assert.match(styles, /\.bd-steps \{ grid-template-columns: repeat\(auto-fit/);
 });
 
 test('batch board degrades without the serverless function', () => {
@@ -365,4 +368,29 @@ test('school clubs can register and see the earned verification ladder', () => {
 test('batches are described as elite benches', () => {
   assert.match(html, /Join an elite bench in your field/);
   assert.match(html, /an elite bench in one field/);
+});
+
+// Credibility is club-led now, and the geometric motif carries past the hero.
+test('credibility section offers three routes with faculty de-emphasised', () => {
+  assert.match(html, /Credibility is built,/);
+  assert.match(html, /A top club/);
+  assert.match(html, /Research/);
+  assert.match(html, /Vetted work/);
+  assert.doesNotMatch(html, /Two ways to earn/);
+  // Faculty still counts — stated plainly, not deleted.
+  assert.match(html, /still counts, and still helps/);
+});
+
+test('the homepage states the abundance thesis', () => {
+  assert.match(html, /top 1% of the 1%/);
+  assert.match(html, /more abundant than ever/);
+  assert.match(html, /résumé was never built to parse that/);
+});
+
+test('the geometric motif extends past the hero and stays decorative', () => {
+  assert.match(styles, /\.broken-section::before/);
+  assert.match(styles, /\.credibility-ladder::before/);
+  // Decorative layers must never eat clicks.
+  const motif = styles.slice(styles.indexOf('Geometric motif, carried past the hero'));
+  assert.ok((motif.match(/pointer-events: none/g) || []).length >= 3);
 });
