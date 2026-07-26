@@ -344,3 +344,25 @@ test('a selection made before the briefs load is not silently dropped', () => {
   // paint() repaints over the fallback cards; the selection must be re-applied.
   assert.match(script, /if \(!batchPicks\.has\(b\.dataset\.batchPick\)\) return;/);
 });
+
+// Referrals are club-first now: a club registers, names the vertical it feeds, and earns
+// verified status from outcomes. The ladder is fetched from api/clubs.js rather than
+// hardcoded, so what a club reads is what the code enforces.
+test('school clubs can register and see the earned verification ladder', () => {
+  assert.match(html, /id="clubRegisterForm"/);
+  assert.match(html, /id="clubTiers"/);
+  assert.match(html, /Get your club Covenda-verified/);
+  assert.match(html, /name="clubVertical"/);
+  assert.match(script, /action: 'club-tiers'/);
+  // Reuses the existing intake — no new storage path, no new inbox.
+  assert.match(script, /type: 'referrer_endorsement'/);
+  assert.match(script, /intent: 'club_verification'/);
+  // Earned, never granted — the honesty line has to survive into the UI.
+  assert.match(html, /never granted and never sold/);
+  assert.match(styles, /\.club-ladder/);
+});
+
+test('batches are described as elite benches', () => {
+  assert.match(html, /Join an elite bench in your field/);
+  assert.match(html, /an elite bench in one field/);
+});

@@ -6,6 +6,7 @@ import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
 import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission } from './batches.js';
+import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION } from './clubs.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
@@ -1469,6 +1470,15 @@ export default async function handler(req, res, dependencies = {}) {
       // published bar. Briefs carry requirements + the company evaluation walkthrough, and no
       // applicant data, weights, or connector scopes.
       if (input.action === 'batch-briefs') return res.status(200).json({ ok: true, batches: BATCH_CATALOG.map(batchBrief) });
+      // Public too: a club deciding whether to register needs to see what verification takes
+      // and what it earns, before handing over a single student.
+      if (input.action === 'club-tiers') return res.status(200).json({
+        ok: true,
+        tiers: VERIFICATION_TIERS,
+        value: REFERRER_VALUE,
+        verticals: BATCH_CATALOG.map(b => ({ slug: b.slug, name: b.name })),
+        version: CLUB_VERIFICATION_VERSION,
+      });
       if (input.action === 'google-login') return res.status(200).json({ ok: true, ...(await requestGoogleLogin(req, dependencies)) });
       if (input.action === 'refresh-session') return res.status(200).json({ ok: true, ...(await refreshSession(input.refreshToken, dependencies)) });
     }

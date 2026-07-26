@@ -5146,5 +5146,87 @@ function renderReadiness(readiness) {
   });
 })();
 
+
+// Club registration — the referral layer's new front door. The verification ladder is
+// fetched rather than hardcoded so the bar a club reads here is the same one api/clubs.js
+// actually enforces. Submits through the existing /api/submissions intake (type
+// referrer_endorsement), so there is no new storage path and no new inbox.
+(function initClubRegister() {
+  var form = document.getElementById('clubRegisterForm');
+  var tiersHost = document.getElementById('clubTiers');
+  var select = document.getElementById('clubVerticalSelect');
+  if (!form || !tiersHost || !select) return;
+
+  fetch('/api/portal', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'club-tiers' }),
+  }).then(function (res) { return res.ok ? res.json() : null; }).then(function (data) {
+    if (!data || !data.ok) return;
+    (data.verticals || []).forEach(function (v) {
+      var o = document.createElement('option');
+      o.value = v.slug; o.textContent = v.name; select.append(o);
+    });
+    (data.tiers || []).forEach(function (tier) {
+      var li = document.createElement('li');
+      var head = document.createElement('strong'); head.textContent = tier.label;
+      var need = document.createElement('span'); need.className = 'club-tier-need';
+      need.textContent = tier.minAdmitted + ' members admitted'
+        + (tier.minAccepted ? ' · ' + tier.minAccepted + ' with accepted work' : '');
+      var grants = document.createElement('p'); grants.textContent = tier.grants;
+      li.append(head, need, grants);
+      tiersHost.append(li);
+    });
+  }).catch(function () { /* endpoint unavailable — the form still submits */ });
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var message = document.getElementById('clubFormMessage');
+    var data = new FormData(form);
+    var name = String(data.get('clubName') || '').trim();
+    var email = String(data.get('clubEmail') || '').trim();
+    if (!name || !email) {
+      message.textContent = 'Club name and a contact email are needed.';
+      message.classList.remove('is-success');
+      return;
+    }
+    if (!data.get('clubConsent')) {
+      message.textContent = 'Tick the consent box so we can reply.';
+      message.classList.remove('is-success');
+      return;
+    }
+    message.classList.remove('is-success');
+    message.textContent = 'Sending…';
+    fetch('/api/submissions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'referrer_endorsement',
+        organizationType: 'Student club',
+        organization: name,
+        contactName: String(data.get('clubRole') || '').trim(),
+        email: email,
+        consent: true,
+        website: String(data.get('website') || ''),
+        details: {
+          club: name,
+          school: String(data.get('clubSchool') || '').trim(),
+          role: String(data.get('clubRole') || '').trim(),
+          vertical: String(data.get('clubVertical') || ''),
+          memberCount: String(data.get('clubSize') || ''),
+          intent: 'club_verification',
+        },
+      }),
+    }).then(function (res) { return res.json().catch(function () { return null; }); })
+      .then(function (body) {
+        if (body && body.reference) {
+          message.textContent = 'Registered — reference ' + body.reference + '. We will be in touch about verifying this club.';
+          message.classList.add('is-success');
+          form.reset();
+        } else {
+          message.textContent = (body && body.error) || 'That did not go through. Try again shortly.';
+        }
+      }).catch(function () { message.textContent = 'That did not go through. Try again shortly.'; });
+  });
+})();
+
 initMemberNav();
 window.requestAnimationFrame(() => openIntro());

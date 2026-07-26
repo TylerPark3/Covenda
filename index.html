@@ -768,8 +768,8 @@
       <section class="batches-section" id="batches">
         <div class="section-heading">
           <p class="feature-kicker">Build credibility</p>
-          <h2>Join a bench in your field.</h2>
-          <p>A batch is a bench in one field — a small cohort building a reviewed track record. A domain signal, not a placement guarantee.</p>
+          <h2>Join an elite bench in your field.</h2>
+          <p>A batch is an elite bench in one field — a small, vetted cohort building a reviewed track record. A domain signal, not a placement guarantee.</p>
         </div>
         <div class="gold-tile gold-tile--banner batches-tile" data-gold-tile data-kicker="Meaningful Connection" aria-hidden="true"></div>
         <p class="batch-pick-hint">Select the benches you’re considering — then walk through what each one actually asks of you.</p>
@@ -789,6 +789,35 @@
            the authenticated portal (Talent view), where the viewer is a known company.
            app.js keeps buildCandidateFilters()/renderCandidates(); both no-op without the
            #candToolbar / #candGrid nodes. -->
+
+      <section class="club-register audience-content" data-for-audience="university" id="clubRegister">
+        <div class="section-heading">
+          <p class="feature-kicker">For school clubs</p>
+          <h2>Get your club Covenda-verified.</h2>
+          <p>A selective club already screens harder than any form we could write. Register yours, pick the vertical it feeds, and earn verified status from what your members actually deliver.</p>
+        </div>
+        <div class="club-grid">
+          <form class="club-form" id="clubRegisterForm" novalidate>
+            <div class="field-grid">
+              <label class="wide">Club name<input name="clubName" autocomplete="organization" placeholder="e.g. Columbia Robotics"></label>
+              <label>School<input name="clubSchool" autocomplete="organization"></label>
+              <label>Your role<input name="clubRole" placeholder="President, VP, officer"></label>
+              <label class="wide">Vertical this club feeds<select name="clubVertical" id="clubVerticalSelect"><option value="">Choose one</option></select></label>
+              <label>Contact email<input name="clubEmail" type="email" autocomplete="email"></label>
+              <label>Members you'd put forward<input name="clubSize" type="number" min="1" max="500" inputmode="numeric" placeholder="8"></label>
+            </div>
+            <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+            <label class="consent-row"><input name="clubConsent" type="checkbox"><span>Covenda may contact me about verifying this club. No student details are shared here.</span></label>
+            <div class="form-message" id="clubFormMessage" role="status" aria-live="polite"></div>
+            <button class="gold-button" type="submit">Register this club<svg><use href="#icon-arrow-right"/></svg></button>
+          </form>
+          <aside class="club-ladder" id="clubLadder">
+            <h3>What verification takes</h3>
+            <p class="club-ladder-note">Earned from outcomes, never granted and never sold — otherwise the badge means “signed up”, and it is worth nothing to your members.</p>
+            <ol class="club-tiers" id="clubTiers"></ol>
+          </aside>
+        </div>
+      </section>
 
       <section class="referrer-section" id="referrerDashboard">
         <div class="gold-header">
