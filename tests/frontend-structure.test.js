@@ -69,6 +69,23 @@ test('audience switch supports student and company site states', () => {
   assert.match(script, /covendaSelectedWorkType/);
 });
 
+test('production home keeps the approved clean banner and talent-to-proof hero', () => {
+  const header = html.match(/<header class="site-header">[\s\S]*?<\/header>/)?.[0] || '';
+  const hero = html.match(/<section class="hero hero-home"[\s\S]*?<\/section>/)?.[0] || '';
+
+  for (const label of ['How it works', 'Students', 'Companies', 'Referrals', 'About']) {
+    assert.match(header, new RegExp(`>${label}<`));
+  }
+  assert.match(hero, /id="heroFieldCanvas"/);
+  assert.equal((hero.match(/class="home-path-index"/g) || []).length, 3);
+  assert.match(styles, /\.hero-home \{[\s\S]*linear-gradient\(145deg, #12120f/);
+  assert.match(styles, /\.site-header \{[\s\S]*font-family: var\(--font-display\)/);
+  assert.match(script, /function initHeroField\(\)/);
+  assert.match(script, /gold: Math\.random\(\) < \.1/);
+  assert.match(script, /\.slice\(0, 7\)/);
+  assert.match(script, /spawnSignal\(now\)/);
+});
+
 // Reframed from "approved Project Packet" to vetted-talent-then-trial. The managed workflow
 // and the risk boundary are unchanged — only the framing around them moved.
 test('company story preserves the managed workflow and risk boundary', () => {
@@ -320,11 +337,10 @@ test('candidate browser is not on the public site', () => {
 // The hero field is the geometric motif the rest of the site borrows from. It gained a
 // pointer-reactive layer; the guardrails around it must survive that.
 test('hero field reacts to the pointer without breaking motion or touch guardrails', () => {
-  // The cursor drives camera parallax and carries LIGHT along the gold links that already
-  // exist — it does not spray its own lines, which competed with the network it was lighting.
+  // The cursor drives camera parallax and finds the seven nearest visible nodes.
   assert.match(script, /targetX = -\(\(pointer\.x/);
-  assert.match(script, /const LIGHT = \d+;/);
-  assert.doesNotMatch(script, /const REACH = 155/);
+  assert.match(script, /\.slice\(0, 7\)/);
+  assert.match(script, /ctx\.lineTo\(item\.point\.x, item\.point\.y\)/);
   assert.match(script, /pointerleave/);
   // Reduced-motion returns before any listener is attached (the early `if (reduce) return`),
   // and coarse pointers never get a hover handler at all.
@@ -536,24 +552,15 @@ test('the gold word covers its italic overhang', () => {
   assert.match(rule, /box-decoration-break: clone/);
 });
 
-// The hero field argues the thesis: a crowd, a few already gold, and pale nodes visibly
-// BECOMING proof. If the conversion goes away the picture stops making the argument.
-test('the hero field converts pale nodes into proof, and keeps gold scarce', () => {
-  assert.match(script, /function proveOne\(\)/);
-  assert.match(script, /proofs\.push\(\{ node: n, age: 0 \}\)/);
-  // Scarcity is load-bearing: a gold field would say the opposite of what this is for.
-  // An ABSOLUTE ceiling, not a ratio: a denser crowd must not mean more gold, or the
-  // contrast the crowd exists to create disappears as the field grows.
-  assert.match(script, /goldCount >= MAX_GOLD/);
-  assert.match(script, /const MAX_GOLD = \d+;/);
-  // The crowd is UNLINKED — the network is what proof buys, so only proven nodes connect.
-  assert.match(script, /if \(nodes\[i\]\.lit > 0\.12\) litIdx\.push\(i\)/);
-  // Proven nodes form a RING — two edges each — so the constellation reads as one figure
-  // rather than the scribble every-to-every became past three or four nodes. Sorted by
-  // bearing so the polygon never crosses itself, and the figure rotates as a body.
-  assert.doesNotMatch(script, /GOLD_LINK/);
-  assert.match(script, /litIdx\.sort\(\(a, b\) => Math\.atan2/);
-  assert.match(script, /const SPIN = /);
+// The hero field argues the thesis: a large visible crowd, rare shining talent, and
+// periodic white-to-gold proof signals that make the idea readable without extra copy.
+test('the hero field turns talent into proof while keeping white nodes dominant', () => {
+  assert.match(script, /gold: Math\.random\(\) < \.1/);
+  assert.match(script, /function spawnSignal\(now\)/);
+  assert.match(script, /signals\.push\(\{ node, born: now, duration:/);
+  assert.match(script, /const color = progress < \.22 \? WHITE : GOLD/);
+  assert.match(script, /const target = Math\.max\(140, Math\.min\(240/);
+  assert.match(script, /linkCount < 520/);
   // Real 3D: depth, perspective projection, and far-to-near paint order.
   assert.match(script, /function project\(n\)/);
   assert.match(script, /FOCAL \/ z/);

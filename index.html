@@ -82,16 +82,14 @@
       </button>
       <nav class="site-nav" aria-label="Primary navigation">
         <a href="#covendaModel" data-nav-target="covendaModel" data-nav-audience="home">How it works</a>
-        <a href="#whyCovenda" data-nav-target="whyCovenda" data-nav-audience="home">Why Covenda</a>
+        <button type="button" data-audience-option="student" aria-pressed="false">Students</button>
+        <button type="button" data-audience-option="company" aria-pressed="false">Companies</button>
+        <button type="button" data-audience-option="university" aria-pressed="false">Referrals</button>
+        <a href="#whyCovenda" data-nav-target="whyCovenda" data-nav-audience="home">About</a>
       </nav>
       <div class="header-actions">
-        <div class="audience-switch has-three" aria-label="Choose audience">
-          <button type="button" data-audience-option="student" aria-pressed="true"><svg><use href="#icon-student"/></svg><span>Student</span></button>
-          <button type="button" data-audience-option="company" aria-pressed="false"><svg><use href="#icon-company"/></svg><span>Company</span></button>
-          <button type="button" data-audience-option="university" aria-pressed="false"><svg><use href="#icon-building"/></svg><span>Referrals</span></button>
-        </div>
         <a class="member-login-link" href="/portal.html"><svg><use href="#icon-lock"/></svg><span>Member sign in</span></a>
-        <button class="workspace-link" type="button" data-action="workspace"><svg><use href="#icon-user"/></svg><span>My receipts</span></button>
+        <button class="workspace-link" type="button" data-action="workspace" aria-label="My receipts"><svg><use href="#icon-user"/></svg><span>Receipts</span></button>
       </div>
     </header>
 
@@ -104,9 +102,21 @@
           <p class="home-oneliner">Startups meet undergraduates through work you can audit — not résumés.</p>
         </div>
         <div class="home-paths" role="group" aria-label="Choose your path">
-          <button type="button" class="home-path glass-panel" data-audience-option="student"><svg class="home-path-icon"><use href="#icon-student"/></svg><span><strong>I’m a student</strong><small>Prove your skills on real, paid work</small></span></button>
-          <button type="button" class="home-path glass-panel" data-audience-option="company"><svg class="home-path-icon"><use href="#icon-company"/></svg><span><strong>I’m a company</strong><small>Run a low-risk work-trial with vouched talent</small></span></button>
-          <button type="button" class="home-path glass-panel" data-audience-option="university"><svg class="home-path-icon"><use href="#icon-building"/></svg><span><strong>I vouch for talent</strong><small>Professors, clubs & industry pros</small></span></button>
+          <button type="button" class="home-path" data-audience-option="student">
+            <span class="home-path-index" aria-hidden="true">01</span>
+            <span class="home-path-copy"><strong>I’m a student</strong><small>Prove your skills on real, paid work</small></span>
+            <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+          </button>
+          <button type="button" class="home-path" data-audience-option="company">
+            <span class="home-path-index" aria-hidden="true">02</span>
+            <span class="home-path-copy"><strong>I’m a company</strong><small>Run a low-risk work-trial with vouched talent</small></span>
+            <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+          </button>
+          <button type="button" class="home-path" data-audience-option="university">
+            <span class="home-path-index" aria-hidden="true">03</span>
+            <span class="home-path-copy"><strong>I vouch for talent</strong><small>Professors, clubs &amp; industry pros</small></span>
+            <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+          </button>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
