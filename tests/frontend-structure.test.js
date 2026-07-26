@@ -492,7 +492,7 @@ test('why-this-exists names the AI application flood and the talent shift', () =
   assert.match(html, /AI writes a strong application in seconds/);
   assert.match(html, /turning down banking and increasingly big tech/);
   // The shift is stated as early and starting, not as an established fact we cannot cite.
-  assert.match(html, /trend is early but it has started/);
+  assert.match(html, /Early, but started/);
   assert.match(styles, /\.broken-subtaps/);
 });
 
