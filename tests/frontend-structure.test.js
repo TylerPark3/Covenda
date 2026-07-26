@@ -565,7 +565,10 @@ test('the hero field converts pale nodes into proof, and keeps gold scarce', () 
   assert.match(script, /function proveOne\(\)/);
   assert.match(script, /proofs\.push\(\{ node: n, age: 0 \}\)/);
   // Scarcity is load-bearing: a gold field would say the opposite of what this is for.
-  assert.match(script, /goldCount \/ nodes\.length > 0\.07/);
+  // An ABSOLUTE ceiling, not a ratio: a denser crowd must not mean more gold, or the
+  // contrast the crowd exists to create disappears as the field grows.
+  assert.match(script, /goldCount >= MAX_GOLD/);
+  assert.match(script, /const MAX_GOLD = \d+;/);
   // The crowd is UNLINKED — the network is what proof buys, so only proven nodes connect.
   assert.match(script, /if \(nodes\[i\]\.lit > 0\.12\) litIdx\.push\(i\)/);
   // Real 3D: depth, perspective projection, and far-to-near paint order.

@@ -4689,13 +4689,14 @@ function initHeroField() {
   const PALE = '124,120,108';
   const FOCAL = 780;           // perspective strength
   const DEPTH = 620;           // how far back the field runs
-  const GOLD_LINK = 360;       // proven nodes reach far for each other; the crowd never links
+  const GOLD_LINK = 380;       // proven nodes reach far for each other; the crowd never links
+  const MAX_GOLD = 9;          // an absolute ceiling, not a ratio — a bigger crowd must not mean more gold
   let W = 0, H = 0, nodes = [], running = false, raf = 0, t = 0;
   let pointer = null, camX = 0, camY = 0, targetX = 0, targetY = 0;
   let proofs = [];             // in-flight "this became proof" rings
 
   function build() {
-    const target = Math.max(90, Math.min(260, Math.round((W * H) / 5200)));
+    const target = Math.max(220, Math.min(620, Math.round((W * H) / 1900)));
     nodes = Array.from({ length: target }, () => ({
       x: (Math.random() - 0.5) * W * 1.5,
       y: (Math.random() - 0.5) * H * 1.5,
@@ -4703,8 +4704,8 @@ function initHeroField() {
       vx: (Math.random() - 0.5) * 0.16,
       vy: (Math.random() - 0.5) * 0.16,
       vz: (Math.random() - 0.5) * 0.12,
-      r: 1.5 + Math.random() * 1.4,
-      gold: Math.random() < 0.045,
+      r: 1.2 + Math.random() * 1.3,
+      gold: Math.random() < 0.014,
       phase: Math.random() * Math.PI * 2,
       lit: 0, // 0..1 conversion progress, drives the gold fade-in
     }));
@@ -4738,7 +4739,7 @@ function initHeroField() {
   // exceptional", never enough to say "everyone is".
   function proveOne() {
     const goldCount = nodes.filter(n => n.lit > 0.5).length;
-    if (!nodes.length || goldCount / nodes.length > 0.07) return;
+    if (!nodes.length || goldCount >= MAX_GOLD) return;
     const candidates = nodes.filter(n => n.lit < 0.05);
     if (!candidates.length) return;
     const n = candidates[Math.floor(Math.random() * candidates.length)];
@@ -4759,7 +4760,7 @@ function initHeroField() {
       if (n.gold && n.lit < 1) n.lit = Math.min(1, n.lit + 0.012);
     }
     proofs = proofs.filter(p => (p.age += 1) < 90);
-    if (t % 150 === 0) proveOne();
+    if (t % 110 === 0) proveOne();
   }
 
   function draw() {
@@ -4821,8 +4822,8 @@ function initHeroField() {
         ctx.stroke();
       } else {
         // The crowd: small, grey, unlinked.
-        ctx.fillStyle = `rgba(${PALE},${0.30 * q.scale})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, r * 0.82, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(${PALE},${0.46 * q.scale})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, r * 0.72, 0, Math.PI * 2); ctx.fill();
       }
     }
 
