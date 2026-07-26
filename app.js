@@ -4689,13 +4689,13 @@ function initHeroField() {
   const PALE = '124,120,108';
   const FOCAL = 780;           // perspective strength
   const DEPTH = 620;           // how far back the field runs
-  const LINK = 128;            // projected px within which two nodes wire together
+  const GOLD_LINK = 360;       // proven nodes reach far for each other; the crowd never links
   let W = 0, H = 0, nodes = [], running = false, raf = 0, t = 0;
   let pointer = null, camX = 0, camY = 0, targetX = 0, targetY = 0;
   let proofs = [];             // in-flight "this became proof" rings
 
   function build() {
-    const target = Math.max(40, Math.min(110, Math.round((W * H) / 14500)));
+    const target = Math.max(90, Math.min(260, Math.round((W * H) / 5200)));
     nodes = Array.from({ length: target }, () => ({
       x: (Math.random() - 0.5) * W * 1.5,
       y: (Math.random() - 0.5) * H * 1.5,
@@ -4704,7 +4704,7 @@ function initHeroField() {
       vy: (Math.random() - 0.5) * 0.16,
       vz: (Math.random() - 0.5) * 0.12,
       r: 1.5 + Math.random() * 1.4,
-      gold: Math.random() < 0.09,
+      gold: Math.random() < 0.045,
       phase: Math.random() * Math.PI * 2,
       lit: 0, // 0..1 conversion progress, drives the gold fade-in
     }));
@@ -4738,7 +4738,7 @@ function initHeroField() {
   // exceptional", never enough to say "everyone is".
   function proveOne() {
     const goldCount = nodes.filter(n => n.lit > 0.5).length;
-    if (!nodes.length || goldCount / nodes.length > 0.13) return;
+    if (!nodes.length || goldCount / nodes.length > 0.07) return;
     const candidates = nodes.filter(n => n.lit < 0.05);
     if (!candidates.length) return;
     const n = candidates[Math.floor(Math.random() * candidates.length)];
@@ -4766,22 +4766,21 @@ function initHeroField() {
     ctx.clearRect(0, 0, W, H);
     const pts = nodes.map(project);
 
-    // Links. Far nodes wire faintly, near ones firmly; a link touching proof is brighter,
-    // because the connection to someone proven is the thing worth drawing.
+    // Links run ONLY between proven nodes. The crowd is deliberately unconnected: a grey dot
+    // is someone nobody can vouch for yet, and the network is exactly what proof buys. Few
+    // gold nodes means this loop is tiny, so the reach can be generous.
+    const litIdx = [];
+    for (let i = 0; i < nodes.length; i++) if (nodes[i].lit > 0.12) litIdx.push(i);
     ctx.lineWidth = 1;
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const a = pts[i], b = pts[j];
-        const dx = a.x - b.x, dy = a.y - b.y;
-        if (Math.abs(dx) > LINK || Math.abs(dy) > LINK) continue;
-        const d = Math.hypot(dx, dy);
-        if (d > LINK) continue;
-        const depth = (a.scale + b.scale) / 2;
-        const lit = Math.max(nodes[i].lit, nodes[j].lit);
-        const fade = (1 - d / LINK) * depth;
-        const alpha = (0.13 + 0.30 * lit) * fade;
-        ctx.strokeStyle = `rgba(${lit > 0.35 ? GOLD : PALE},${alpha})`;
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    for (let a = 0; a < litIdx.length; a++) {
+      for (let b = a + 1; b < litIdx.length; b++) {
+        const p1 = pts[litIdx[a]], p2 = pts[litIdx[b]];
+        const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        if (d > GOLD_LINK) continue;
+        const strength = Math.min(nodes[litIdx[a]].lit, nodes[litIdx[b]].lit);
+        const fade = (1 - d / GOLD_LINK) * ((p1.scale + p2.scale) / 2) * strength;
+        ctx.strokeStyle = `rgba(${GOLD},${0.46 * fade})`;
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
       }
     }
 
@@ -4803,14 +4802,27 @@ function initHeroField() {
       const n = nodes[i], q = pts[i];
       const r = n.r * q.scale;
       if (n.lit > 0.02) {
-        const pulse = 0.5 + 0.5 * Math.sin(t * 0.02 + n.phase);
-        ctx.fillStyle = `rgba(${GOLD},${(0.45 + 0.4 * pulse) * n.lit * q.scale})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, r + 0.8 + pulse * 0.7, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = `rgba(${GOLD},${0.08 * pulse * n.lit})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 2.2) * 2.8, 0, Math.PI * 2); ctx.fill();
+        const pulse = 0.5 + 0.5 * Math.sin(t * 0.03 + n.phase);
+        const shine = n.lit * q.scale;
+        // Soft halo, then the core, then a four-point glint — the three parts that read as
+        // "shining" rather than merely "brighter".
+        ctx.fillStyle = `rgba(${GOLD},${0.07 * (0.5 + pulse) * shine})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 2.4) * 3.4, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(250,238,205,${(0.55 + 0.45 * pulse) * shine})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, r + 1 + pulse * 0.8, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(${GOLD},${(0.7 + 0.3 * pulse) * shine})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, r + 0.4, 0, Math.PI * 2); ctx.fill();
+        const glint = (5 + pulse * 7) * q.scale;
+        ctx.strokeStyle = `rgba(255,246,222,${0.5 * pulse * shine})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(q.x - glint, q.y); ctx.lineTo(q.x + glint, q.y);
+        ctx.moveTo(q.x, q.y - glint); ctx.lineTo(q.x, q.y + glint);
+        ctx.stroke();
       } else {
-        ctx.fillStyle = `rgba(${PALE},${0.34 * q.scale})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
+        // The crowd: small, grey, unlinked.
+        ctx.fillStyle = `rgba(${PALE},${0.30 * q.scale})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, r * 0.82, 0, Math.PI * 2); ctx.fill();
       }
     }
 

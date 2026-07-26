@@ -3361,3 +3361,51 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 .bsub { padding-top: 16px; border-top: 2px solid var(--gold-deep); }
 .bsub-tag { margin: 0 0 10px; color: var(--gold-deep); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .bsub p:last-child { max-width: 52ch; margin: 0; color: var(--muted); font-size: var(--step-body); line-height: 1.65; }
+
+/* ---- Type system, stated once ------------------------------------------------------
+   Titles: the display serif ("Real work becomes credible proof" — the founder's reference).
+   Everything else: the body sans. Declared here so a new heading inherits the system rather
+   than needing its own font-family, which is how the page drifted. */
+h1, h2, h3, .brand, .ct-title, .bf-label, .bd-head h3, .vdemo-company,
+.broken-col h3, .cred-door h3, .ib-result-head h3, .club-ladder h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -.02em;
+}
+h4, h5, h6, .feature-kicker, .home-kicker, .company-job-eyebrow, .bsub-tag,
+.broken-eyebrow, .ct-k, .ib-line span, .bd-block h4 {
+  font-family: var(--font-body);
+}
+p, li, small, cite, label, input, textarea, select, button, .home-path strong,
+.home-path small, .site-nav a, .audience-switch button {
+  font-family: var(--font-body);
+}
+
+/* The three audience buttons read as subtext, not as headings. */
+.home-path strong { font-family: var(--font-body); font-weight: 650; letter-spacing: -.01em; }
+.home-path small { font-family: var(--font-body); font-weight: 450; }
+
+/* ---- Top bar: even, and each group means one thing ---------------------------------
+   Left = identity. Centre = what Covenda is. Right = who you are, then your account.
+   The rail was three ad-hoc clusters at different heights; it is one baseline now with a
+   single divider between "choose your side" and "your account". */
+.site-header { height: 76px; gap: 32px; }
+.site-header .brand { font-size: 25px; letter-spacing: -.04em; }
+.site-nav { gap: 30px; }
+.site-nav a { font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--muted); }
+.site-nav a:hover { color: var(--ink); }
+.header-actions { gap: 0; }
+.header-actions .audience-switch { margin-right: 22px; }
+.header-actions .member-login-link { padding-left: 22px; border-left: 1px solid var(--line); }
+.audience-switch { padding: 0; border: 0; background: transparent; box-shadow: none; gap: 4px; }
+.audience-switch button {
+  min-width: 0; min-height: 36px; padding: 8px 13px;
+  border: 1px solid transparent; background: transparent;
+  font-size: 13.5px; font-weight: 600; color: var(--muted);
+}
+.audience-switch button:hover { color: var(--ink); }
+.audience-switch button[aria-pressed="true"] { border-color: var(--line-strong); background: #fff; color: var(--ink); }
+
+/* The hero kicker needs air above it — it was sitting against the header. */
+.hero-home .hero-copy { padding-top: clamp(18px, 5vh, 54px); }
+.home-kicker { margin-bottom: 20px; }
