@@ -454,20 +454,24 @@ test('the pop-art panel is original, decorative and captioned', () => {
   assert.match(html, /class="popart"/);
   assert.match(html, /benday/);           // dot shading, built as an SVG pattern
   assert.match(html, /THE STUDENT/);      // the reversal is the point
-  assert.match(html, /Both sides are/);
+  assert.match(html, /THE COMPANY/);
   assert.match(html, /popart-svg[^>]*role="img"/);
   assert.match(html, /answers both questions at once/); // meaning carried in visible text
+  // The caption slab was removed; the two balloons carry it.
+  assert.doesNotMatch(html, /Both sides are interviewing/);
+  // Halftone must be solid-filled, never a translucent veil — that is what read as fog.
+  const panel = html.match(/<svg class="popart-svg"[\s\S]*?<\/svg>/)?.[0] || '';
+  assert.doesNotMatch(panel, /fill="url\(#benday[A-Za-z]*\)"[^>]*opacity=/);
   // Figurative drawing read as clip art; the panel is typographic and graphic now.
   assert.doesNotMatch(html, /popart[\s\S]{0,4000}?<circle[^>]*r="6\.5"/);
   assert.match(styles, /\.popart-svg/);
 });
 
-test('the founder note carries a portrait and an attribution', () => {
-  assert.match(html, /founder-portrait/);
-  assert.match(html, /assets\/tyler-park\.png/);
-  assert.match(html, /Tyler Park · founder/);
-  assert.match(html, /alt="Tyler Park, founder of Covenda"/);
-  assert.match(html, /loading="lazy"/);
+test('the founder quote stands alone, unattributed and without a portrait', () => {
+  assert.match(html, /Every ambitious student hits the same wall/);
+  assert.doesNotMatch(html, /founder-portrait/);
+  assert.doesNotMatch(html, /Tyler Park · founder/);
+  assert.doesNotMatch(html, /assets\/tyler-park\.png/);
 });
 
 test('the company problem field lives inside the builder, with its fit chip', () => {

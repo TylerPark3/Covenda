@@ -3323,16 +3323,6 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 .talent-strip { margin: clamp(22px, 3vw, 38px) auto 0; max-width: 1100px; }
 .talent-strip img { display: block; width: 100%; height: auto; }
 
-/* A founder note reads differently with a face on it. The portrait is the only image asset
-   small enough to ship (52KB); the other three in assets/ are 2.7-3.2MB each and unused. */
-.founder-note.has-portrait { display: grid; grid-template-columns: auto 1fr; gap: clamp(18px, 2.4vw, 28px); align-items: start; }
-.founder-portrait { width: clamp(84px, 9vw, 120px); height: clamp(84px, 9vw, 120px); object-fit: cover; border: 1px solid var(--gold-deep); filter: grayscale(.15) contrast(1.03); }
-.founder-note.has-portrait cite { grid-column: 2; }
-@media (max-width: 620px) {
-  .founder-note.has-portrait { grid-template-columns: 1fr; }
-  .founder-note.has-portrait cite { grid-column: 1; }
-}
-
 /* ---- The demo, walked per vertical. Tabs then a six-beat walkthrough. --------------- */
 .vdemo { padding: clamp(52px, 6.5vw, 100px) var(--page-gutter); border-top: 1px solid var(--line); background: #fff; }
 .vdemo > * { width: min(100%, var(--content)); margin-left: auto; margin-right: auto; }

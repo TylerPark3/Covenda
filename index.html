@@ -134,78 +134,69 @@
             </article>
           </div>
           <!-- Pop-art panel, original artwork in the Lichtenstein IDIOM: hard diagonal
-               burst, Ben-Day halftone, heavy contour, caption slab. Deliberately NOT
-               figurative — the first pass drew little people and read as clip art. The
-               confrontation is carried by two balloons facing each other, which is what the
-               scene is actually about: both sides asking. Decorative; aria-hidden, with the
-               meaning in the visible caption. -->
+               burst, Ben-Day halftone, heavy contour. Not figurative — an earlier pass drew
+               little people and read as clip art. The confrontation is two balloons across a
+               black seam, which is the actual point: both sides are asking.
+               The halftone is applied as SOLID shading in defined zones. A translucent veil
+               over the whole panel was what made it read foggy — dots must be opaque and
+               sit ON a flat field, the way a printed panel actually works. -->
           <figure class="popart">
-            <svg class="popart-svg" viewBox="0 0 900 520" role="img" aria-label="A comic-style panel. Two speech balloons face each other: the company asks what the student can build; the student asks what they would be shipping.">
+            <svg class="popart-svg" viewBox="0 0 900 520" role="img" aria-label="A comic-style panel. Two speech balloons face each other across a hard black seam: the company says it wants to see the work, and the student asks the same question back.">
               <defs>
-                <pattern id="benday" width="16" height="16" patternUnits="userSpaceOnUse">
-                  <circle cx="4" cy="4" r="3.4" fill="#d8a445"/>
-                  <circle cx="12" cy="12" r="3.4" fill="#d8a445"/>
+                <pattern id="benday" width="18" height="18" patternUnits="userSpaceOnUse">
+                  <circle cx="4.5" cy="4.5" r="4.2" fill="#c98f26"/>
+                  <circle cx="13.5" cy="13.5" r="4.2" fill="#c98f26"/>
                 </pattern>
-                <pattern id="bendayTight" width="9" height="9" patternUnits="userSpaceOnUse">
-                  <circle cx="2.6" cy="2.6" r="2.5" fill="#b8862b"/>
-                  <circle cx="7" cy="7" r="2.5" fill="#b8862b"/>
+                <pattern id="bendayFine" width="11" height="11" patternUnits="userSpaceOnUse">
+                  <circle cx="2.8" cy="2.8" r="2.6" fill="#a8761d"/>
+                  <circle cx="8.3" cy="8.3" r="2.6" fill="#a8761d"/>
                 </pattern>
                 <clipPath id="panelClip"><rect x="10" y="10" width="880" height="500"/></clipPath>
               </defs>
 
               <g clip-path="url(#panelClip)">
-                <rect x="10" y="10" width="880" height="500" fill="#fcf8f0"/>
+                <!-- flat ground -->
+                <rect x="10" y="10" width="880" height="500" fill="#fbf4e4"/>
 
-                <!-- hard diagonal burst from the seam between the two voices -->
+                <!-- halftone lives in its own wedges at FULL opacity, so the dots stay crisp -->
+                <path d="M450 268 L-120 -140 L120 -140 Z" fill="url(#benday)"/>
+                <path d="M450 268 L380 -140 L520 -140 Z" fill="url(#bendayFine)"/>
+                <path d="M450 268 L820 -140 L1040 -20 Z" fill="url(#benday)"/>
+                <path d="M450 268 L1040 300 L940 560 Z" fill="url(#bendayFine)"/>
+                <path d="M450 268 L300 660 L120 560 Z" fill="url(#benday)"/>
+
+                <!-- solid burst wedges between them: flat colour, no transparency -->
+                <path d="M450 268 L120 -140 L380 -140 Z" fill="#f2dcae"/>
+                <path d="M450 268 L520 -140 L820 -140 Z" fill="#e8c476"/>
+                <path d="M450 268 L1040 -20 L1040 300 Z" fill="#f2dcae"/>
+                <path d="M450 268 L940 560 L300 660 Z" fill="#e8c476"/>
+                <path d="M450 268 L120 560 L-120 300 Z" fill="#f2dcae"/>
+                <path d="M450 268 L-120 300 L-120 -140 Z" fill="#e8c476"/>
+
+                <!-- the seam where the two voices meet -->
+                <path d="M450 10 L450 510" stroke="#11110f" stroke-width="9"/>
+
+                <!-- LEFT — the company -->
                 <g>
-                  <path d="M450 268 L-120 -140 L60 -140 Z" fill="#f0dcae"/>
-                  <path d="M450 268 L140 -140 L300 -140 Z" fill="#e7c884"/>
-                  <path d="M450 268 L380 -140 L470 -140 Z" fill="#f0dcae"/>
-                  <path d="M450 268 L560 -140 L700 -140 Z" fill="#e7c884"/>
-                  <path d="M450 268 L800 -140 L1020 -60 Z" fill="#f0dcae"/>
-                  <path d="M450 268 L1040 180 L1040 340 Z" fill="#e7c884"/>
-                  <path d="M450 268 L980 560 L800 640 Z" fill="#f0dcae"/>
-                  <path d="M450 268 L420 660 L300 640 Z" fill="#e7c884"/>
-                  <path d="M450 268 L-120 520 L-120 360 Z" fill="#f0dcae"/>
+                  <path d="M50 62 h336 a26 26 0 0 1 26 26 v150 a26 26 0 0 1 -26 26 h-104 l-74 56 l12 -56 h-170 a26 26 0 0 1 -26 -26 v-150 a26 26 0 0 1 26 -26 Z"
+                        fill="#fdfaf3" stroke="#11110f" stroke-width="9" stroke-linejoin="round"/>
+                  <text x="84" y="130" font-family="Georgia,'Times New Roman',serif" font-size="37" font-weight="700" fill="#11110f">Everyone says</text>
+                  <text x="84" y="176" font-family="Georgia,'Times New Roman',serif" font-size="37" font-weight="700" fill="#11110f">they&#8217;re good.</text>
+                  <text x="84" y="222" font-family="Georgia,'Times New Roman',serif" font-size="37" font-weight="700" fill="#a8761d">Show me.</text>
                 </g>
-                <rect x="10" y="10" width="880" height="500" fill="url(#benday)" opacity=".38"/>
+                <text x="50" y="330" font-family="ui-monospace,Menlo,monospace" font-size="16" letter-spacing="4" fill="#11110f">THE COMPANY</text>
 
-                <!-- the seam: a hard black rule where the two voices meet -->
-                <path d="M450 10 L450 510" stroke="#11110f" stroke-width="8"/>
-
-                <!-- LEFT balloon — the company -->
+                <!-- RIGHT — the student, inverted -->
                 <g>
-                  <path d="M52 66 h330 a26 26 0 0 1 26 26 v128 a26 26 0 0 1 -26 26 h-108 l-72 54 l12 -54 h-162 a26 26 0 0 1 -26 -26 v-128 a26 26 0 0 1 26 -26 Z"
-                        fill="#fdfaf3" stroke="#11110f" stroke-width="8" stroke-linejoin="round"/>
-                  <text x="84" y="128" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#11110f">Show me what</text>
-                  <text x="84" y="172" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#11110f">you&#8217;ve actually</text>
-                  <text x="84" y="216" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#11110f">built.</text>
-                  <rect x="84" y="238" width="118" height="7" fill="#b8862b"/>
+                  <path d="M514 236 h336 a26 26 0 0 1 26 26 v150 a26 26 0 0 1 -26 26 h-170 l12 56 l-74 -56 h-104 a26 26 0 0 1 -26 -26 v-150 a26 26 0 0 1 26 -26 Z"
+                        fill="#11110f" stroke="#11110f" stroke-width="9" stroke-linejoin="round"/>
+                  <text x="548" y="304" font-family="Georgia,'Times New Roman',serif" font-size="37" font-weight="700" fill="#fbf4e4">Good. Now show</text>
+                  <text x="548" y="350" font-family="Georgia,'Times New Roman',serif" font-size="37" font-weight="700" fill="#fbf4e4">me what I&#8217;d</text>
+                  <text x="548" y="396" font-family="Georgia,'Times New Roman',serif" font-size="37" font-weight="700" fill="#e8c476">be building.</text>
                 </g>
-                <text x="52" y="330" font-family="ui-monospace,Menlo,monospace" font-size="17" letter-spacing="3" fill="#11110f">THE COMPANY</text>
-
-                <!-- RIGHT balloon — the student, answering with a question -->
-                <g>
-                  <path d="M520 246 h330 a26 26 0 0 1 26 26 v128 a26 26 0 0 1 -26 26 h-162 l12 54 l-72 -54 h-108 a26 26 0 0 1 -26 -26 v-128 a26 26 0 0 1 26 -26 Z"
-                        fill="#11110f" stroke="#11110f" stroke-width="8" stroke-linejoin="round"/>
-                  <text x="552" y="308" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#fcf8f0">And what would</text>
-                  <text x="552" y="352" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#fcf8f0">I be shipping</text>
-                  <text x="552" y="396" font-family="Georgia,'Times New Roman',serif" font-size="34" font-weight="700" fill="#e7c884">for you?</text>
-                  <rect x="552" y="418" width="118" height="7" fill="#e7c884"/>
-                </g>
-                <text x="520" y="192" font-family="ui-monospace,Menlo,monospace" font-size="17" letter-spacing="3" fill="#11110f">THE STUDENT</text>
-
-                <!-- halftone weight in the lower left, the way a printed panel shades -->
-                <path d="M10 380 L300 510 L10 510 Z" fill="url(#bendayTight)" opacity=".5"/>
-
-                <!-- caption slab -->
-                <g>
-                  <rect x="52" y="404" width="352" height="76" fill="#e7c884" stroke="#11110f" stroke-width="7"/>
-                  <text x="74" y="440" font-family="Georgia,serif" font-size="21" fill="#11110f">Both sides are</text>
-                  <text x="74" y="466" font-family="Georgia,serif" font-size="21" fill="#11110f">interviewing.</text>
-                </g>
+                <text x="514" y="186" font-family="ui-monospace,Menlo,monospace" font-size="16" letter-spacing="4" fill="#11110f">THE STUDENT</text>
               </g>
-              <rect x="10" y="10" width="880" height="500" fill="none" stroke="#11110f" stroke-width="10"/>
+              <rect x="10" y="10" width="880" height="500" fill="none" stroke="#11110f" stroke-width="11"/>
             </svg>
             <figcaption>A trial answers both questions at once — it shows a company what a student can do, and shows the student what the company is actually like to work with.</figcaption>
           </figure>
@@ -483,10 +474,8 @@
             <li><b>50%</b><span>of students would rather build something than climb a ladder. Startup work fits them — if it reaches them.</span><cite>Morning Consult for Samsung, 2023</cite></li>
           </ul>
           <p class="stat-note"><svg><use href="#icon-lock"/></svg>These figures cite published research, not Covenda results. Covenda has no outcome data yet — the pilot is how we earn it.</p>
-          <blockquote class="founder-note has-portrait">
-            <img class="founder-portrait" src="/assets/tyler-park.png" alt="Tyler Park, founder of Covenda" width="120" height="120" loading="lazy" decoding="async">
+          <blockquote class="founder-note">
             <p>Every ambitious student hits the same wall: “I could contribute here — I just can’t get in front of the founder.” What still works is what always worked: someone credible stakes their name on you, you get one shot, and the work proves the rest.</p>
-            <cite>Tyler Park · founder</cite>
           </blockquote>
 
           <!-- The model in one figure: soil feeds roots, roots feed the trunk (Covenda),
