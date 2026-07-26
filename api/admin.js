@@ -4,6 +4,7 @@ import { supabaseConfiguration } from './submissions.js';
 import { sendPartnerDigests } from './digest.js';
 import { notifyMember, batchDecisionEmail } from './notify.js';
 import { matchOpportunity } from './match.js';
+import { batchBySlug, batchBrief, evaluateBatchAdmission } from './batches.js';
 import { recordRubricScore, adjudicateRubric, adjudicationStatus, interRaterReliability, normalizeDefense, forensicsAnomaly, labeledRows, scorerGate, rubricAnchorsFor } from './hardening.js';
 
 const ADMIN_STATUSES = new Set(['received', 'reviewing', 'needs_information', 'packet_proposed', 'approval_pending', 'approved', 'declined', 'archived']);
@@ -365,7 +366,37 @@ export async function listAdminBatches(supabase) {
     if (!appsByBatch.has(app.batch_id)) appsByBatch.set(app.batch_id, []);
     appsByBatch.get(app.batch_id).push(withStudent);
   }
-  return batches.map(b => ({ ...b, applications: appsByBatch.get(b.id) || [] }));
+  // §13 slice 4: draft the threshold verdict for each application so the operator opens the
+  // queue with the bar already checked. It is a RECOMMENDATION — accept/waitlist/decline is
+  // still a human decision and still records a rationale (see reviewBatchApplication).
+  const claimsByStudent = new Map();
+  if (studentIds.length) {
+    const { data: claims } = await supabase
+      .from('skill_claim')
+      .select('student_user_id,skill,verification_tier,evidence_pointer,evidence_meta')
+      .in('student_user_id', studentIds);
+    for (const claim of claims || []) {
+      if (!claimsByStudent.has(claim.student_user_id)) claimsByStudent.set(claim.student_user_id, []);
+      claimsByStudent.get(claim.student_user_id).push(claim);
+    }
+  }
+  return batches.map(b => {
+    const spec = b.slug ? batchBySlug(b.slug) : null;
+    const rows = (appsByBatch.get(b.id) || []).map(app => {
+      if (!spec) return app;
+      const materials = app.materials || {};
+      const admission = evaluateBatchAdmission(spec, {
+        skillClaims: claimsByStudent.get(app.student_user_id) || [],
+        artifacts: (materials.workSamples || []).map(url => ({ type: 'work_sample', url })),
+        defenses: materials.videoUrl ? [{ kind: 'walkthrough' }] : [],
+        referrals: materials.referral ? [{ referrer: materials.referral.name || 'referrer', verified: true }] : [],
+        completedTrials: [],
+        availabilityHoursPerWeek: materials.availability?.hoursPerWeek ?? undefined,
+      });
+      return { ...app, admission };
+    });
+    return { ...b, applications: rows, brief: spec ? batchBrief(spec) : null };
+  });
 }
 
 export async function createBatch(supabase, input, operatorEmail = '') {

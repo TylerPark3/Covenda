@@ -15,6 +15,16 @@
   <link rel="stylesheet" href="type.css">
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
+  <!-- QR encoder bridge. app.js is deliberately CLASSIC (a test evaluates it with
+       `new Function`, so an `import` there would fail the suite), while qrcode.js is an ES
+       module. This tiny module loads the encoder, hands it to app.js on `window.CovendaQR`,
+       and fires an event so a referral link already on screen picks up its QR. If the module
+       fails to load, app.js simply leaves the QR block hidden — the link still works. -->
+  <script type="module">
+    import { makeQrMatrix, makeQrSvg } from './qrcode.js';
+    window.CovendaQR = { makeQrMatrix, makeQrSvg };
+    document.dispatchEvent(new CustomEvent('covenda-qr-ready'));
+  </script>
   <!-- Vercel Web Analytics (privacy-friendly, no cookies). Served same-origin; needs Web
        Analytics enabled in the Vercel dashboard to collect data. -->
   <script defer src="/_vercel/insights/script.js"></script>
@@ -89,9 +99,9 @@
       <section class="hero hero-home" aria-labelledby="homeHeroTitle">
         <canvas id="heroFieldCanvas" class="hero-field" aria-hidden="true"></canvas>
         <div class="hero-copy">
-          <p class="home-kicker">Startup talent, vouched &amp; proven</p>
+          <p class="home-kicker">Covenda — the new way to find talent</p>
           <h1 id="homeHeroTitle">Real work becomes<br>credible <span class="word-gold">proof</span>.</h1>
-          <p class="home-oneliner">The infrastructure that helps startups turn their unmet work into opportunities for exceptional emerging talent.</p>
+          <p class="home-oneliner">Startups meet undergraduates through work you can audit — not résumés.</p>
         </div>
         <div class="home-paths" role="group" aria-label="Choose your path">
           <button type="button" class="home-path glass-panel" data-audience-option="student"><svg class="home-path-icon"><use href="#icon-student"/></svg><span><strong>I’m a student</strong><small>Prove your skills on real, paid work</small></span></button>
@@ -99,6 +109,31 @@
           <button type="button" class="home-path glass-panel" data-audience-option="university"><svg class="home-path-icon"><use href="#icon-building"/></svg><span><strong>I vouch for talent</strong><small>Professors, clubs & industry pros</small></span></button>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
+      </section>
+
+      <!-- Home-only. The two things both sides are actually tired of. Kept to two columns and
+           short lines on purpose — this section earns its place by being read, not skimmed. -->
+      <section class="broken-section" aria-labelledby="brokenTitle">
+        <div class="broken-inner">
+          <div class="section-heading">
+            <p class="feature-kicker">Why this exists</p>
+            <h2 id="brokenTitle">Hiring broke on both ends.</h2>
+          </div>
+          <div class="broken-grid">
+            <article class="broken-col">
+              <p class="broken-eyebrow"><svg><use href="#icon-company"/></svg>If you hire</p>
+              <h3>Tired of AI-written applications?</h3>
+              <p>Every application now reads well. Hundreds arrive, polished by the same models, and none of them tell you who can actually do the work. Screening got slower, not faster.</p>
+              <p class="broken-answer"><strong>What Covenda does:</strong> shows you the work first — a connected account, a parsed model, a recorded walkthrough — evidence with a source you can open.</p>
+            </article>
+            <article class="broken-col">
+              <p class="broken-eyebrow"><svg><use href="#icon-student"/></svg>If you're a student</p>
+              <h3>Tired of being underestimated?</h3>
+              <p>You get filtered on graduation year, on age, on whether anyone recognizes your school — decided before a single person looks at what you've built.</p>
+              <p class="broken-answer"><strong>What Covenda does:</strong> scores evidence, not background. School prestige, name, and age are not inputs — and a test fails the build if any of them moves a score.</p>
+            </article>
+          </div>
+        </div>
       </section>
 
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
@@ -195,7 +230,7 @@
           </article>
           <article class="company-job company-job-talent">
             <p class="company-job-eyebrow"><svg><use href="#icon-spark"/></svg>Hire vetted students</p>
-            <h2>Find elite talent</h2>
+            <h2>Hire from a vetted bench</h2>
             <p>Vouched undergraduates — startup-fit and reviewed before you ever meet them.</p>
             <ul class="company-job-points">
               <li><svg><use href="#icon-shield"/></svg>Vouched by a professor, club, or pro — not an open marketplace</li>
@@ -241,14 +276,17 @@
           <button type="button" data-prompt="What information can be shared safely without restricted or proprietary records?">What can be shared safely?<svg><use href="#icon-chevron"/></svg></button>
           <button type="button" data-prompt="Who can review the result and confirm it is useful?">Who can review the result?<svg><use href="#icon-chevron"/></svg></button>
         </div>
-        <button class="quiet-link" type="button" data-action="project-fit">See project fit before submitting<svg><use href="#icon-chevron"/></svg></button>
+        <div class="hero-quiet-actions">
+          <button class="quiet-link" type="button" data-action="project-fit">See project fit before submitting<svg><use href="#icon-chevron"/></svg></button>
+          <button class="quiet-link" type="button" data-action="readiness-check">Score your readiness — free, no account<svg><use href="#icon-chevron"/></svg></button>
+        </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda reduces oversight</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
       <section class="hero hero-university" aria-labelledby="universityHeroTitle">
         <div class="hero-copy">
           <h1 id="universityHeroTitle">Bring the students you <span class="word-gold">believe in</span>.</h1>
-          <p>For professors, club officers, and industry pros who can speak to a student’s real ability. Your referral is a signal you stake your name on — and it carries more weight as the students you back deliver. No job board, no placement guarantee.</p>
+          <p>For professors, club officers, and industry pros. Your referral is a signal you stake your name on — and it gains weight as the students you back deliver.</p>
         </div>
         <div class="selector-orbit university-orbit">
           <div class="roster-builder glass-panel">
@@ -318,7 +356,17 @@
                 <input id="referralLinkInput" class="referral-link-input" type="text" readonly aria-label="Your referral link">
                 <button class="gold-button compact" type="button" data-action="referral-copy">Copy link<svg><use href="#icon-copy"/></svg></button>
               </div>
-              <p class="referral-link-help referral-cohort-help">Your students also get a shareable <b>cohort page</b> — your <b>staked track record</b>: a live, public snapshot of how far the students you vouched for have come, from endorsement to employer-verified work. No student names, just the numbers.</p>
+              <!-- The same link as a scannable code, for handing out in person (class, club
+                   meeting, career fair). Rendered by app.js from window.CovendaQR; the whole
+                   block stays hidden if the encoder module fails to load. -->
+              <div class="referral-qr" id="referralQr" hidden>
+                <div class="referral-qr-code" id="referralQrCode"></div>
+                <div class="referral-qr-copy">
+                  <p class="referral-link-help">Print it, or show it on your phone — students who scan land pre-tagged to you, exactly like the link.</p>
+                  <a class="ghost-button compact" id="referralQrDownload" download="covenda-referral-qr.png">Download QR<svg><use href="#icon-arrow-right"/></svg></a>
+                </div>
+              </div>
+              <p class="referral-link-help referral-cohort-help">You also get a shareable <b>cohort page</b> — your <b>staked track record</b>: a live snapshot of how far the students you vouched for have come. No student names, just the numbers.</p>
               <div class="referral-link-row">
                 <input id="cohortLinkInput" class="referral-link-input" type="text" readonly aria-label="Your public cohort page link">
                 <a class="ghost-button compact" id="cohortLinkOpen" href="#" target="_blank" rel="noopener">View cohort page<svg><use href="#icon-arrow-right"/></svg></a>
@@ -346,7 +394,7 @@
           </ul>
           <p class="stat-note"><svg><use href="#icon-lock"/></svg>These figures cite published research, not Covenda results. Covenda has no outcome data yet — the pilot is how we earn it.</p>
           <blockquote class="founder-note">
-            <p>Every ambitious student hits the same wall: “I know I could contribute to this startup, but I don’t know how to get in front of the founder.” Another mass application won’t carry them — the pile is too deep, and AI made it deeper. What works is what has always worked: someone credible stakes their name on you, you get one real shot, and the work proves the rest. Covenda exists to make that the system instead of the exception.</p>
+            <p>Every ambitious student hits the same wall: “I could contribute here — I just can’t get in front of the founder.” Another mass application won’t carry them; AI made that pile too deep. What still works is what always worked: someone credible stakes their name on you, you get one real shot, and the work proves the rest.</p>
           </blockquote>
 
           <!-- The model in one figure: soil feeds roots, roots feed the trunk (Covenda),
@@ -492,57 +540,58 @@
       </section>
 
       <section class="how-section" id="how">
-        <div class="flow-demo" id="flowDemo" role="img" aria-label="Company problem becomes a scoped Project Packet and then a verified work record.">
+        <!-- The batch funnel. Replaces the old problem→packet→proof animation: the story is
+             no longer "we scope a project", it is "talent is vetted twice before you meet it".
+             ILLUSTRATIVE — a model of the pipeline, not current partner counts or traction. -->
+        <div class="flow-demo batch-funnel" id="flowDemo" role="img" aria-label="Selective clubs and faculty vet students first; Covenda vets again with a technical process per industry; admitted students form a vetted batch; companies hire from that bench through a paid trial.">
           <div class="flow-demo-head">
-            <p class="flow-demo-kicker">The core story</p>
-            <h2>Real work in, credible proof out.</h2>
-            <p>A real, low-risk task becomes a scoped, paid project with a named reviewer and a clear finish line. You see the actual work before you commit — and the student keeps it as durable proof of what they can do.</p>
+            <p class="flow-demo-kicker">The batch system</p>
+            <h2>Vetted twice before<br>you ever meet them.</h2>
+            <p>Selective clubs and faculty screen hard before we see anyone. Covenda vets again — technically, per industry — and the students who clear it form a batch you can hire from.</p>
           </div>
-          <div class="flow-demo-scroll">
-            <div class="flow-demo-track">
-              <div class="fd-stage fd-stage-a fd-anim">
-                <p class="fd-kicker fd-kicker-muted">01 · Company problem</p>
-                <div class="fd-card fd-card-problem">
-                  <span class="fd-tag fd-tag-backlog">Backlogged</span>
-                  <span class="fd-line" style="width:100%"></span>
-                  <span class="fd-line" style="width:82%"></span>
-                  <span class="fd-line" style="width:90%"></span>
-                  <span class="fd-line" style="width:60%"></span>
-                  <p class="fd-quote">“Customer research keeps slipping…”</p>
-                </div>
+          <div class="bf-track">
+            <div class="bf-stage bf-stage-1">
+              <span class="bf-n">01</span>
+              <div class="bf-card">
+                <p class="bf-label">Vetted by their people</p>
+                <p class="bf-body">Selective clubs, labs, and faculty already turn away most applicants. That screen happens before Covenda exists.</p>
+                <div class="bf-pool" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
               </div>
-              <div class="fd-connector fd-connector-1" aria-hidden="true">
-                <span class="fd-connector-label">Covenda<br>scopes</span>
-                <span class="fd-track"><span class="fd-fill fd-fill-1"></span><span class="fd-dot fd-dot-1"></span></span>
+            </div>
+            <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">vouched</span><span class="bf-arrow-line"></span></div>
+            <div class="bf-stage bf-stage-2">
+              <span class="bf-n">02</span>
+              <div class="bf-card">
+                <p class="bf-label">Vetted again — technically</p>
+                <p class="bf-body">A process built for the industry: connect the account that owns the code, parse the model formula-by-formula, or defend the work on record.</p>
+                <ul class="bf-rails">
+                  <li><svg><use href="#icon-shield"/></svg>Ownership + timestamps</li>
+                  <li><svg><use href="#icon-file"/></svg>Artifact parsed, not skimmed</li>
+                  <li><svg><use href="#icon-user"/></svg>Walkthrough, two raters</li>
+                </ul>
               </div>
-              <div class="fd-stage fd-stage-b fd-anim">
-                <p class="fd-kicker">02 · Project Packet</p>
-                <div class="fd-card fd-card-packet">
-                  <span class="fd-badge fd-badge-approved">Approved</span>
-                  <div class="fd-field fd-field-1"><span class="fd-field-label">Deliverable</span><span class="fd-field-value">Public research summary</span></div>
-                  <div class="fd-field fd-field-2"><span class="fd-field-label">Approved inputs</span><span class="fd-field-value">Public sources only</span></div>
-                  <div class="fd-field fd-field-3"><span class="fd-field-label">Boundary</span><span class="fd-field-value">No internal or customer data</span></div>
-                  <div class="fd-field fd-field-4"><span class="fd-field-label">Acceptance · Pay</span><span class="fd-field-value">12+ sources · fixed, confirmed</span></div>
-                </div>
+            </div>
+            <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">cleared the bar</span><span class="bf-arrow-line"></span></div>
+            <div class="bf-stage bf-stage-3">
+              <span class="bf-n">03</span>
+              <div class="bf-card bf-card-batch">
+                <p class="bf-label">The batch</p>
+                <p class="bf-body">A small bench in one field — every student carrying evidence you can open.</p>
+                <div class="bf-bench" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                <span class="bf-badge">Vetted bench</span>
               </div>
-              <div class="fd-connector fd-connector-2" aria-hidden="true">
-                <span class="fd-connector-label">reviewed<br>&amp; accepted</span>
-                <span class="fd-track"><span class="fd-fill fd-fill-2"></span><span class="fd-dot fd-dot-2"></span></span>
-              </div>
-              <div class="fd-stage fd-stage-c fd-anim">
-                <p class="fd-kicker">03 · Verified record</p>
-                <div class="fd-card fd-card-proof">
-                  <div class="fd-proof-head"><svg class="fd-seal" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.3l3 3 6-6.5"/></svg><span>Proven</span></div>
-                  <div class="fd-chips">
-                    <span class="fd-chip fd-chip-1">Source evaluation</span>
-                    <span class="fd-chip fd-chip-2">Research synthesis</span>
-                    <span class="fd-chip fd-chip-3">Written communication</span>
-                    <span class="fd-chip fd-chip-4">On-time delivery</span>
-                  </div>
-                </div>
+            </div>
+            <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">you hire</span><span class="bf-arrow-line"></span></div>
+            <div class="bf-stage bf-stage-4">
+              <span class="bf-n">04</span>
+              <div class="bf-card bf-card-trial">
+                <p class="bf-label">The trial confirms it</p>
+                <p class="bf-body">A bounded, paid trial with a named reviewer. Accepted work becomes verified evidence — and the record compounds.</p>
+                <span class="bf-badge is-proof">Employer-verified</span>
               </div>
             </div>
           </div>
+          <p class="bf-foot">Illustrative — this is the model of the pipeline, not a count of current partners or placements.</p>
         </div>
         <div class="student-story audience-content" data-for-audience="student">
           <div class="section-heading">
@@ -552,11 +601,11 @@
           <div class="story-layout">
             <ol class="proof-rail">
               <li><span>1</span><svg><use href="#icon-route"/></svg><h3>Choose a work path</h3><p>Tell us what you want to build and the kinds of projects that fit.</p></li>
-              <li><span>2</span><svg><use href="#icon-file"/></svg><h3>Complete a reviewed project</h3><p>Work from an approved packet with a named reviewer and clear finish line.</p></li>
+              <li><span>2</span><svg><use href="#icon-file"/></svg><h3>Clear the bar, then run a trial</h3><p>Vetting is published, so you know what it takes. Then a paid trial with a named reviewer.</p></li>
               <li><span>3</span><svg><use href="#icon-shield"/></svg><h3>Keep the proof</h3><p>Accepted work becomes a capability record—not a vague résumé bullet.</p></li>
             </ol>
             <article class="work-record glass-panel">
-              <header><div><small>Your future work record</small><h3>Research synthesis project</h3></div><span class="record-state"><svg><use href="#icon-shield"/></svg>After review</span></header>
+              <header><div><small>Your future trial record</small><h3>Research synthesis trial</h3></div><span class="record-state"><svg><use href="#icon-shield"/></svg>After review</span></header>
               <div class="record-preview">
                 <div class="document-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
                 <div><span>Deliverable</span><strong>Evidence-backed findings memo</strong><span>Review state</span><strong>Created only after accepted work</strong></div>
@@ -568,8 +617,8 @@
 
         <div class="company-story audience-content" data-for-audience="company">
           <div class="section-heading">
-            <h2>From messy work to an<br>approved Project Packet.</h2>
-            <p>Covenda carries the scoping and quality-review burden so the project saves more time than it consumes.</p>
+            <h2>Vetted talent, ready<br>for a paid trial.</h2>
+            <p>You meet students who already cleared two rounds of vetting. Covenda carries the scoping and review so the trial saves more time than it costs.</p>
           </div>
           <div class="story-layout company-story-layout">
             <div>
@@ -682,7 +731,7 @@
           </div>
         </div>
         <div class="university-why audience-content" data-for-audience="university">
-          <div class="why-copy"><h2>A pipeline of proof, not another job board.</h2><p>The students you vouch for get bounded, reviewed, paid work-trials and keep evidence tied to real work — and your vouch gains weight as they deliver. You stay in the loop without running a marketplace or managing accounts.</p><button class="outline-button" type="button" data-action="university-roster">Add students you vouch for<svg><use href="#icon-arrow-right"/></svg></button></div>
+          <div class="why-copy"><h2>A pipeline of proof, not another job board.</h2><p>The students you vouch for get bounded, paid, reviewed work-trials — and your vouch gains weight as they deliver. No marketplace to run, no accounts to manage.</p><button class="outline-button" type="button" data-action="university-roster">Add students you vouch for<svg><use href="#icon-arrow-right"/></svg></button></div>
           <div class="fit-table" id="partnerFit">
             <div><span>Good fit</span><strong>Professors, club officers, and industry pros who can speak to a student’s real ability</strong></div>
             <div><span>How data is used</span><strong>Names and school emails go to the Covenda pilot team only—no public listing</strong></div>
@@ -694,8 +743,8 @@
       <section class="batches-section" id="batches">
         <div class="section-heading">
           <p class="feature-kicker">Build credibility</p>
-          <h2>Join a vertical bench.</h2>
-          <p>Anyone can run a test or clean a spreadsheet — credibility is vertical-specific. A batch is a vertical bench: a small cohort in one field where you build a real, reviewed track record by completing bounded work-trials. Like a professor’s vouch, it’s a domain credibility signal — not a placement or job guarantee.</p>
+          <h2>Join a bench in your field.</h2>
+          <p>Credibility is vertical-specific. A batch is a bench in one field — a small cohort building a reviewed track record through bounded work-trials. A domain signal, not a placement guarantee.</p>
         </div>
         <div class="gold-tile gold-tile--banner batches-tile" data-gold-tile data-kicker="Meaningful Connection" aria-hidden="true"></div>
         <div class="batch-grid" id="batchGrid" data-batch-grid></div>
@@ -789,7 +838,7 @@
             <div class="dashboard-grid">
               <div>
                 <section class="path-panel glass-panel">
-                  <header><h2>Your work path</h2><button class="outline-button compact" type="button" data-action="student-form">Edit interests</button></header>
+                  <header><h2>The work you're building toward</h2><button class="outline-button compact" type="button" data-action="student-form">Edit interests</button></header>
                   <div class="dashboard-paths">
                     <div class="is-primary"><svg><use href="#icon-search"/></svg><span id="workspacePrimaryPath">Research</span></div>
                     <div><svg><use href="#icon-data"/></svg><span>Data &amp; spreadsheets</span></div>
@@ -797,7 +846,7 @@
                   </div>
                 </section>
                 <section class="activity-panel">
-                  <h2>Your Covenda activity</h2>
+                  <h2>What's happened on your projects</h2>
                   <ol class="activity-list">
                     <li><span class="activity-number"><svg><use href="#icon-check"/></svg></span><div><h3>Interest profile</h3><p>Tell us what you want to build proof of.</p></div><div class="activity-action"><span class="status ready" id="studentProfileStatus">Ready to submit</span><button class="gold-button compact" type="button" data-action="student-form">Complete interest profile</button></div></li>
                     <li><span class="activity-number">2</span><div><h3>Project application</h3><p>Available if a reviewed pilot project fits your interests.</p></div><div class="activity-action"><span class="status" id="studentReviewStatus"><svg><use href="#icon-clock"/></svg>Available after review</span><button class="locked-button" type="button" disabled><svg><use href="#icon-lock"/></svg>Locked</button></div></li>
@@ -817,7 +866,7 @@
                  shareable credential (F5). Rendered by app.js. -->
             <section class="proof-record glass-panel" id="proofRecord">
               <header class="proof-record-head">
-                <div><small>Your proof record</small><h2>Where you stand</h2></div>
+                <div><small>Your proof record</small><h2>Your evidence, and what's still missing</h2></div>
                 <span class="proof-record-standing" id="proofRecordStanding" data-started="false">Not started</span>
               </header>
               <p class="proof-record-endorsement" id="proofRecordEndorsement" hidden></p>
@@ -856,7 +905,7 @@
             <div class="dashboard-grid">
               <div>
                 <section class="path-panel glass-panel">
-                  <header><h2>Roster status</h2><button class="outline-button compact" type="button" data-action="university-roster">Edit roster</button></header>
+                  <header><h2>Who you've added, and how far they've got</h2><button class="outline-button compact" type="button" data-action="university-roster">Edit roster</button></header>
                   <div class="dashboard-paths">
                     <div class="is-primary"><svg><use href="#icon-building"/></svg><span id="workspaceRosterCount">0 students on your roster</span></div>
                     <div><svg><use href="#icon-route"/></svg><span id="workspaceRosterOrg">Add your organization details</span></div>
@@ -865,7 +914,7 @@
               </div>
               <aside class="evidence-panel glass-panel">
                 <small>What Covenda receives</small>
-                <header><svg><use href="#icon-lock"/></svg><div><h2>A private roster</h2><p>Names and school emails, tagged by interest. Shared only with the pilot team.</p></div></header>
+                <header><svg><use href="#icon-lock"/></svg><div><h2>Your roster stays private to you</h2><p>Names and school emails, tagged by interest. Shared only with the pilot team.</p></div></header>
                 <div class="evidence-capabilities"><span>Last roster sent</span><div><b id="workspaceRosterReference">Nothing sent yet</b></div></div>
                 <footer><svg><use href="#icon-lock"/></svg><p><strong>No placement guarantee.</strong>Students still choose every project and keep their own evidence.</p></footer>
               </aside>
@@ -874,7 +923,7 @@
                  counts, interest-area mix, and where the cohort sits on the ladder. -->
             <section class="cohort-dashboard glass-panel" aria-labelledby="cohortHeading">
               <header class="cohort-head">
-                <div><small>Cohort progress</small><h2 id="cohortHeading">Where your students stand</h2></div>
+                <div><small>Cohort progress</small><h2 id="cohortHeading">How far your students have got</h2></div>
                 <span class="cohort-total" id="cohortTotal">0 students</span>
               </header>
               <p class="cohort-empty" id="cohortEmpty">Add students to your roster to see your cohort’s credibility progress here.</p>
@@ -1003,7 +1052,7 @@
   <dialog class="form-dialog quick-join-dialog" id="quickJoinDialog" aria-labelledby="quickJoinTitle">
     <form id="quickJoinForm" novalidate>
       <header class="dialog-header"><div><small>Join the pilot list</small><h2 id="quickJoinTitle">Get on the list in seconds.</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
-      <p class="dialog-copy">Name and email puts you in the Covenda talent pool — that is all this does. When a project fits, we reach out. Your full interest profile is what we actually match against, and you can build it whenever you are ready.</p>
+      <p class="dialog-copy">Name and email puts you in the talent pool — that is all this does. When a project fits, we reach out.</p>
       <div class="field-grid">
         <label>Full name<input name="quickName" autocomplete="name" required></label>
         <label>Email<input name="quickEmail" type="email" autocomplete="email" required></label>
@@ -1125,6 +1174,42 @@
       <div class="form-message" id="companyFormMessage" role="status" aria-live="polite"></div>
       <footer class="dialog-footer"><button class="outline-button" type="button" data-form-back hidden>Back</button><button class="gold-button" type="button" data-form-next>Continue<svg><use href="#icon-arrow-right"/></svg></button><button class="gold-button" type="submit" data-form-submit hidden>Send company problem<svg><use href="#icon-arrow-right"/></svg></button></footer>
     </form>
+  </dialog>
+
+  <!-- A4 — Talent Readiness Assessment. A free, pre-auth diagnostic: the visitor's own
+       answers scored by readiness-1.0.0 (api/portal.js, action 'readiness-check'). Nothing
+       is stored and no account is needed; it is decision-support, never a gate, so a low
+       score returns how-to-fix reasons and the next step is always an invitation. -->
+  <dialog class="form-dialog readiness-dialog" id="readinessDialog" aria-labelledby="readinessTitle">
+    <form id="readinessForm" novalidate>
+      <header class="dialog-header"><div><small>Free · no account, nothing stored</small><h2 id="readinessTitle">Is your work ready for a student?</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
+      <p class="dialog-copy">Six questions. Three scores, with the reasoning shown.</p>
+      <div class="field-grid">
+        <label class="wide">What would finishing unlock?<textarea name="goal" rows="3" placeholder="One or two sentences…"></textarea></label>
+        <label class="wide">What is blocked right now?<textarea name="blocked" rows="2" placeholder="The work that keeps slipping…"></textarea></label>
+        <label class="wide">Skills the work needs <span>Comma-separated</span><input name="skills" placeholder="Research, SQL, Financial modeling"></label>
+        <label>Review time <span>Hrs / week</span><input name="supervisionHoursWeekly" type="number" min="0" max="40" step="0.5" inputmode="decimal" placeholder="1"></label>
+        <label>Length <span>Weeks</span><input name="projectWeeks" type="number" min="1" max="52" step="1" inputmode="numeric" placeholder="4"></label>
+        <label>Budget <span>USD, optional</span><input name="budget" type="number" min="0" step="50" inputmode="numeric" placeholder="1200"></label>
+      </div>
+      <div class="readiness-toggles">
+        <label class="consent-row"><input name="systemsAccess" type="checkbox"><span>Needs production or customer-record access.</span></label>
+        <label class="consent-row"><input name="hireIntent" type="checkbox"><span>We'd consider hiring if it goes well.</span></label>
+      </div>
+      <div class="form-message" id="readinessMessage" role="status" aria-live="polite"></div>
+      <div class="quick-join-actions"><button class="gold-button" type="submit">Score my project<svg><use href="#icon-arrow-right"/></svg></button></div>
+    </form>
+    <div class="readiness-result" id="readinessResult" hidden>
+      <header class="dialog-header"><div><small>Your readiness read-out</small><h2>What Covenda sees</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
+      <div class="readiness-axes" id="readinessAxes"></div>
+      <div class="readiness-profile" id="readinessProfile"></div>
+      <footer class="readiness-foot"><svg><use href="#icon-shield"/></svg><p><strong>A score is not a decision.</strong>Your own answers, scored by a published rule set. A human still scopes the work.</p></footer>
+      <div class="readiness-actions">
+        <button class="gold-button" type="button" data-action="readiness-submit-project">Submit this project<svg><use href="#icon-arrow-right"/></svg></button>
+        <button class="outline-button" type="button" data-action="readiness-restart">Score another<svg><use href="#icon-route"/></svg></button>
+      </div>
+      <p class="readiness-version" id="readinessVersion"></p>
+    </div>
   </dialog>
 
   <dialog class="form-dialog quick-join-dialog trace-dialog" id="traceDialog" aria-labelledby="traceTitle">

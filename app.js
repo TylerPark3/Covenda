@@ -2925,6 +2925,7 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
   if (action === 'flow-prev') { flowStep -= 1; renderFlowStep(); }
   if (action === 'flow-next') { flowStep += 1; renderFlowStep(); }
   if (action === 'project-fit') $('#projectFit').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (action === 'readiness-check') window.openReadinessCheck?.();
   if (action === 'replay-intro') {
     setSurface('site');
     openIntro({ force: true });
@@ -3691,8 +3692,56 @@ function renderReferralLink() {
   const cohortLink = partnerCohortLink();
   if (cohortInput) cohortInput.value = cohortLink;
   if (cohortOpen) cohortOpen.href = cohortLink || '#';
+  renderReferralQr(link);
   section.hidden = false;
 }
+
+// The referral link as a scannable code, for handing out in person. The encoder arrives on
+// window.CovendaQR from the module bridge in index.html (app.js must stay classic). Degrades
+// silently: no encoder, no QR block — the copyable link is unaffected.
+function renderReferralQr(link) {
+  const wrap = $('#referralQr');
+  const holder = $('#referralQrCode');
+  const download = $('#referralQrDownload');
+  if (!wrap || !holder) return;
+  const qr = window.CovendaQR;
+  if (!qr || !link) { wrap.hidden = true; return; }
+  try {
+    holder.innerHTML = qr.makeQrSvg(link, { scale: 5, border: 3, dark: '#1a1a17' });
+    if (download) {
+      download.href = referralQrPng(qr, link);
+      const code = (/[?&]ref=([^&]+)/.exec(link) || [])[1];
+      download.setAttribute('download', code ? 'covenda-referral-' + code.toLowerCase() + '.png' : 'covenda-referral-qr.png');
+    }
+    wrap.hidden = false;
+  } catch (_) {
+    wrap.hidden = true; // an over-long link (or any encoder error) simply hides the code
+  }
+}
+
+// Rasterize to PNG so the download saves to a phone's photos and prints cleanly; an SVG
+// download lands as a file most photo apps won't preview.
+function referralQrPng(qr, link, modulePx = 10, border = 4) {
+  const out = qr.makeQrMatrix(link);
+  const dim = (out.size + border * 2) * modulePx;
+  const canvas = document.createElement('canvas');
+  canvas.width = dim; canvas.height = dim;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, dim, dim);
+  ctx.fillStyle = '#1a1a17';
+  for (let r = 0; r < out.size; r += 1) {
+    for (let c = 0; c < out.size; c += 1) {
+      if (out.matrix[r][c]) ctx.fillRect((c + border) * modulePx, (r + border) * modulePx, modulePx, modulePx);
+    }
+  }
+  return canvas.toDataURL('image/png');
+}
+
+// The encoder module may finish loading after the link is already on screen.
+document.addEventListener('covenda-qr-ready', function () {
+  const section = $('#referralLinkSection');
+  if (section && !section.hidden) renderReferralQr(partnerReferralLink());
+});
 
 async function copyReferralLink() {
   const link = partnerReferralLink();
@@ -4579,5 +4628,156 @@ initScrollReveal();
   }, { threshold: 0.6 });
   stats.forEach(el => io.observe(el));
 })();
+// ---------------------------------------------------------------------------
+// A4 — Talent Readiness Assessment (free, pre-auth company diagnostic).
+// Posts the visitor's own answers to readiness-1.0.0 and renders the three axes
+// with their reasons, concerns, and uncertainty bands. Nothing is stored: the
+// endpoint is a pure function with no DB write, so there is no receipt to keep.
+// ---------------------------------------------------------------------------
+function readinessPayload(form) {
+  const data = new FormData(form);
+  const num = name => {
+    const raw = String(data.get(name) || '').trim();
+    return raw === '' ? null : Number(raw);
+  };
+  return {
+    action: 'readiness-check',
+    goal: String(data.get('goal') || '').trim(),
+    blocked: String(data.get('blocked') || '').trim(),
+    skills: String(data.get('skills') || '').trim(),
+    supervisionHoursWeekly: num('supervisionHoursWeekly'),
+    projectWeeks: num('projectWeeks'),
+    budget: num('budget'),
+    systemsAccess: data.get('systemsAccess') === 'on',
+    hireIntent: data.get('hireIntent') === 'on',
+  };
+}
+
+// Each axis renders as: score + band, what is working, what to tighten. The band
+// is always shown — a bare number would overstate what self-reported answers know.
+function renderReadinessAxis(title, axis) {
+  const card = document.createElement('article');
+  card.className = 'readiness-axis';
+  const band = axis.presentation?.band;
+  const head = document.createElement('header');
+  const name = document.createElement('h3');
+  name.textContent = title;
+  const score = document.createElement('strong');
+  score.textContent = String(axis.presentation?.value ?? axis.score);
+  head.append(name, score);
+  card.append(head);
+  if (band) {
+    const bandLine = document.createElement('p');
+    bandLine.className = 'readiness-band';
+    bandLine.textContent = band.label + ' · likely ' + band.low + '–' + band.high;
+    card.append(bandLine);
+  }
+  const list = document.createElement('ul');
+  (axis.reasons || []).forEach(reason => {
+    const li = document.createElement('li');
+    li.className = 'is-reason';
+    li.append(createIcon('icon-check'), Object.assign(document.createElement('span'), { textContent: reason }));
+    list.append(li);
+  });
+  (axis.concerns || []).forEach(concern => {
+    const li = document.createElement('li');
+    li.className = 'is-concern';
+    li.append(createIcon('icon-chevron'), Object.assign(document.createElement('span'), { textContent: concern }));
+    list.append(li);
+  });
+  card.append(list);
+  return card;
+}
+
+function renderReadiness(readiness) {
+  const axes = $('#readinessAxes');
+  axes.replaceChildren(
+    renderReadinessAxis('Project clarity', readiness.projectClarity),
+    renderReadinessAxis('Talent accessibility', readiness.talentAccessibility),
+    renderReadinessAxis('Fit for emerging talent', readiness.suitabilityForEmergingTalent),
+  );
+  const profile = $('#readinessProfile');
+  profile.replaceChildren();
+  profile.append(
+    Object.assign(document.createElement('small'), { textContent: 'Recommended shape' }),
+    Object.assign(document.createElement('strong'), { textContent: readiness.recommendedTalentProfile }),
+  );
+  $('#readinessVersion').textContent = 'Scored by ' + readiness.readinessVersion + ' · your answers were not stored.';
+  $('#readinessForm').hidden = true;
+  $('#readinessResult').hidden = false;
+}
+
+(function initReadinessCheck() {
+  const dialog = $('#readinessDialog');
+  const form = $('#readinessForm');
+  if (!dialog || !form) return;
+  const message = $('#readinessMessage');
+
+  function reset() {
+    form.hidden = false;
+    $('#readinessResult').hidden = true;
+    message.textContent = '';
+    message.classList.remove('is-success');
+  }
+
+  window.openReadinessCheck = function openReadinessCheck() {
+    reset();
+    // Carry over whatever the visitor already typed into the company composer so
+    // the diagnostic never asks twice for the same sentence.
+    const seed = $('#companyProblemSeed')?.value.trim();
+    if (seed && !form.elements.goal.value.trim()) form.elements.goal.value = seed;
+    dialog.showModal();
+    window.setTimeout(() => form.elements.goal?.focus(), 60);
+  };
+
+  form.addEventListener('submit', async event => {
+    event.preventDefault();
+    const payload = readinessPayload(form);
+    if (!payload.goal && !payload.blocked) {
+      message.textContent = 'Describe the goal or what is blocked — the score needs at least one of them.';
+      message.classList.remove('is-success');
+      return;
+    }
+    const submit = $('button[type="submit"]', form);
+    submit.disabled = true;
+    message.classList.remove('is-success');
+    message.textContent = 'Scoring…';
+    try {
+      const response = await fetch('/api/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json();
+      if (!response.ok || !body.ok) throw new Error(body.error || 'The readiness check is unavailable right now.');
+      renderReadiness(body.readiness);
+    } catch (error) {
+      message.textContent = error.message || 'The readiness check is unavailable right now.';
+    } finally {
+      submit.disabled = false;
+    }
+  });
+
+  $('[data-action="readiness-restart"]')?.addEventListener('click', () => {
+    reset();
+    window.setTimeout(() => form.elements.goal?.focus(), 60);
+  });
+
+  // The next step is always an invitation: hand the answers to the real intake.
+  $('[data-action="readiness-submit-project"]')?.addEventListener('click', () => {
+    const goal = form.elements.goal.value.trim();
+    const blocked = form.elements.blocked.value.trim();
+    dialog.close();
+    setAudience('company');
+    const seed = $('#companyProblemSeed');
+    if (seed && !seed.value.trim()) {
+      seed.value = [blocked, goal].filter(Boolean).join('\n\n');
+      seed.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    seed?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => seed?.focus(), 420);
+  });
+})();
+
 initMemberNav();
 window.requestAnimationFrame(() => openIntro());

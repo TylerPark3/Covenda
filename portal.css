@@ -907,3 +907,27 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .gh-badge.is-verified { border-color: var(--gold-deep); color: var(--gold-deep); }
 .gh-owner-pill { display: inline-block; margin-left: 8px; padding: 2px 9px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 .gh-owner-pill[data-status="verified"] { border-color: var(--gold-deep); color: var(--gold-deep); }
+
+/* §13 slice 4 — batch detail: the vetting rail, the published bar, the company walkthrough. */
+.batch-vetting .batch-rail-badge { display: inline-block; margin-bottom: 12px; padding: 5px 11px; border: 1px solid var(--line-strong, #c9c9c2); border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: .02em; color: #6c6c67; }
+.batch-vetting .batch-rail-badge.is-api { border-color: #b47b20; background: #fbf7ed; color: #8b5709; }
+.batch-rail { margin-top: 14px; padding-left: 14px; border-left: 2px solid #eadfca; }
+.batch-rail strong { display: block; font-size: 14.5px; }
+.batch-rail p { margin: 5px 0 0; font-size: 14px; line-height: 1.6; color: #5c5c57; }
+.batch-rail-defeats { color: #8b5709 !important; }
+
+.batch-standing-line { margin: 0 0 12px; font-size: 14px; font-weight: 650; color: #8b5709; }
+.batch-req-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.batch-req-list li { padding: 13px 15px; border: 1px solid #e4e4de; border-radius: 12px; }
+.batch-req-list li.is-met { border-color: #bcd9c3; background: #f4faf5; }
+.batch-req-list li.is-open { border-color: #eadfca; background: #fffdf9; }
+.batch-req-list li strong { display: block; font-size: 14.5px; }
+.batch-req-list li p { margin: 5px 0 0; font-size: 14px; line-height: 1.6; color: #5c5c57; }
+.batch-req-gap { color: #8b5709 !important; font-weight: 600; }
+.batch-req-note { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: #6c6c67; }
+
+.batch-workflow-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; counter-reset: none; }
+.batch-workflow-list li { display: grid; grid-template-columns: 30px 1fr; gap: 13px; align-items: start; }
+.batch-step-n { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #b47b20; border-radius: 50%; color: #8b5709; font-size: 13px; font-weight: 700; }
+.batch-workflow-list strong { display: block; font-size: 14.5px; }
+.batch-workflow-list p { margin: 4px 0 0; font-size: 14px; line-height: 1.6; color: #5c5c57; }

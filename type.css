@@ -19,6 +19,10 @@
   --step-h3: clamp(16px, 1.8vw, 20px);
   --step-body-lg: 17px;
   --step-body: 16px;
+  /* Supporting running text — card body, notes, field help. Previously these were
+     set ad-hoc at 12–13px, which read as cramped; --step-small is for micro-LABELS
+     (short, often uppercase), not for sentences anyone has to read. */
+  --step-body-sm: 15px;
   --step-small: 12.5px;
   --step-eyebrow: 11px;
 }

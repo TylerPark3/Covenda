@@ -898,6 +898,63 @@ function batchDetailSection(title,body){
   return wrap;
 }
 
+// §13 slice 4 — the batch detail is audience-split on purpose: a student needs the BAR
+// (what it takes and where they stand), a company needs the WALKTHROUGH (how evaluating
+// this bench actually goes). Both come from the published brief in api/batches.js.
+function batchBriefFor(batch){const briefs=state.dashboard?.batchBriefs||[];return briefs.find(b=>b.slug===batch.slug)||briefs.find(b=>b.name===batch.name)||null;}
+function batchStandingFor(batch){const rows=state.dashboard?.batchStanding||[];return rows.find(r=>r.slug===batch.slug)||rows.find(r=>r.name===batch.name)||null;}
+
+function batchVettingBlock(brief){
+  const wrap=document.createElement('div');wrap.className='batch-detail-block batch-vetting';
+  const h=document.createElement('h4');h.textContent='How this industry is vetted';wrap.append(h);
+  const badge=document.createElement('span');
+  badge.className='batch-rail-badge'+(brief.vetting.apiVerified?' is-api':'');
+  badge.textContent=brief.vetting.apiVerified?'Platform-verified evidence':'Human rail — no API can prove this work';
+  wrap.append(badge);
+  for(const rail of brief.vetting.rails){
+    const row=document.createElement('div');row.className='batch-rail';
+    const name=document.createElement('strong');name.textContent=rail.label;
+    const how=document.createElement('p');how.textContent=rail.how;
+    const beats=document.createElement('p');beats.className='batch-rail-defeats';beats.textContent=rail.defeats;
+    row.append(name,how,beats);wrap.append(row);
+  }
+  return wrap;
+}
+
+function batchRequirementsBlock(brief,standing){
+  const wrap=document.createElement('div');wrap.className='batch-detail-block batch-requirements';
+  const h=document.createElement('h4');h.textContent='What it takes to get in';wrap.append(h);
+  if(standing){const sum=document.createElement('p');sum.className='batch-standing-line';sum.textContent=standing.metCount+' of '+standing.total+' met'+(standing.meetsThreshold?' — you clear the bar.':' — here is the rest.');wrap.append(sum);}
+  const list=document.createElement('ul');list.className='batch-req-list';
+  for(const req of brief.requirements){
+    const check=standing?.checks?.find(c=>c.key===req.key)||null;
+    const li=document.createElement('li');li.className=check?(check.met?'is-met':'is-open'):'is-unknown';
+    const label=document.createElement('strong');label.textContent=req.label;li.append(label);
+    if(req.detail){const d=document.createElement('p');d.textContent=req.detail;li.append(d);}
+    if(check&&!check.met&&check.gap){const g=document.createElement('p');g.className='batch-req-gap';g.textContent=check.gap;li.append(g);}
+    list.append(li);
+  }
+  wrap.append(list);
+  const note=document.createElement('p');note.className='batch-req-note';note.textContent='Meeting the bar is a recommendation, not an admission — an operator reviews every application and records why.';
+  wrap.append(note);
+  return wrap;
+}
+
+function batchWorkflowBlock(brief){
+  const wrap=document.createElement('div');wrap.className='batch-detail-block batch-workflow';
+  const h=document.createElement('h4');h.textContent='How you evaluate this bench';wrap.append(h);
+  const ol=document.createElement('ol');ol.className='batch-workflow-list';
+  for(const step of brief.companyWorkflow){
+    const li=document.createElement('li');
+    const n=document.createElement('span');n.className='batch-step-n';n.textContent=String(step.step);
+    const body=document.createElement('div');
+    const t=document.createElement('strong');t.textContent=step.title;
+    const d=document.createElement('p');d.textContent=step.detail;
+    body.append(t,d);li.append(n,body);ol.append(li);
+  }
+  wrap.append(ol);return wrap;
+}
+
 function batchCard(batch,application){
   const card=document.createElement('article');card.className='batch-card batch-card-lg'+(batch.tier==='elite'?' is-elite':'');
   const top=document.createElement('div');top.className='batch-card-top';
@@ -914,6 +971,14 @@ function batchCard(batch,application){
   // Expandable detail panel: who it's for, the kind of teams it feeds, and how the application works.
   const detail=document.createElement('div');detail.className='batch-detail';detail.hidden=true;
   detail.append(batchDetailSection('Who this cohort is for',batchStudentProfile(batch)));
+  const brief=batchBriefFor(batch);
+  const role=state.dashboard?.profile?.role;
+  if(brief){
+    detail.append(batchVettingBlock(brief));
+    // Students get the bar + their standing; companies get the evaluation walkthrough.
+    if(role==='student')detail.append(batchRequirementsBlock(brief,batchStandingFor(batch)));
+    else detail.append(batchWorkflowBlock(brief));
+  }
   detail.append(batchDetailSection('Where admitted students go',batchSampleCompanies(batch)));
   detail.append(batchDetailSection('How the application works',`Two parts, about 15 minutes total: a short ~5-minute video answering a prompt we assign you when you start (so it stays spontaneous), and a few written questions about your interest in ${batchVertical(batch)}. An operator reviews every application by hand.`));
 

@@ -55,17 +55,19 @@ test('the initial path chooser uses a continuous responsive glass control', () =
 test('audience switch supports student and company site states', () => {
   assert.match(html, /data-audience-option="student"/);
   assert.match(html, /data-audience-option="company"/);
-  // Company hero leads with two segments: delegate work + find talent.
+  // Company hero leads with two segments: delegate work + hire from the vetted bench.
   assert.match(html, /Work that keeps getting pushed back/);
-  assert.match(html, /Find elite talent/);
+  assert.match(html, /Hire from a vetted bench/);
   assert.match(script, /document\.body\.dataset\.audience = audience/);
   assert.match(styles, /body\[data-audience="company"\] \.hero-student/);
   assert.match(script, /covendaAudience/);
   assert.match(script, /covendaSelectedWorkType/);
 });
 
-test('company story preserves the managed Project Packet workflow and risk boundary', () => {
-  assert.match(html, /From messy work to an/);
+// Reframed from "approved Project Packet" to vetted-talent-then-trial. The managed workflow
+// and the risk boundary are unchanged — only the framing around them moved.
+test('company story preserves the managed workflow and risk boundary', () => {
+  assert.match(html, /Vetted talent, ready/);
   for (const phrase of ['Company problem', 'Covenda scopes', 'You approve', 'Student works', 'Covenda reviews']) {
     assert.match(html, new RegExp(phrase));
   }
@@ -222,4 +224,31 @@ test('page avoids unsupported marketplace claims and legacy branding', () => {
   assert.doesNotMatch(html, /customer logos/i);
   assert.doesNotMatch(html, /success rate/i);
   assert.doesNotMatch(html, /Student score:/i);
+});
+
+// A4 — the free Talent Readiness Assessment. The scorer (readiness-1.0.0) shipped
+// before any UI existed; these guard the surface that finally reaches it.
+test('talent readiness assessment reaches the pre-auth scorer and stays decision-support', () => {
+  assert.match(html, /id="readinessDialog"/);
+  assert.match(html, /data-action="readiness-check"/);
+  // Every field the scorer reads must exist, or an axis silently scores zero.
+  for (const field of ['goal', 'blocked', 'skills', 'supervisionHoursWeekly', 'projectWeeks', 'budget', 'systemsAccess', 'hireIntent']) {
+    assert.match(html, new RegExp(`name="${field}"`), `readiness form is missing the ${field} input`);
+  }
+  assert.match(script, /action: 'readiness-check'/);
+  assert.match(script, /fetch\('\/api\/portal'/);
+  // Decision-support, never a gate: the read-out always offers the next step.
+  assert.match(html, /data-action="readiness-submit-project"/);
+  assert.match(html, /A score is not a decision\./);
+  // Scores never display bare — the band is what self-reported answers earn.
+  assert.match(script, /readiness-band/);
+  assert.match(script, /readinessVersion/);
+  assert.match(styles, /\.readiness-axis/);
+});
+
+test('readiness read-out builds nodes with createIcon, not raw icon strings', () => {
+  const block = script.match(/function renderReadinessAxis\([\s\S]*?\n}/)?.[0] || '';
+  assert.ok(block, 'renderReadinessAxis not found');
+  assert.match(block, /createIcon\('icon-check'\)/);
+  assert.doesNotMatch(block, /iconUse\(/); // iconUse returns a string; append() would print it
 });

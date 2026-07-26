@@ -5,6 +5,7 @@ import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicatio
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
+import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission } from './batches.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
 const MEMBER_ROLES = new Set(['student', 'company', 'university']);
@@ -242,7 +243,8 @@ export async function loadMemberDashboard(member, env = process.env) {
     const [walletBalance, creditLedger, payoutRequests, batches, batchApplications] = await Promise.all([
       creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member), loadBatches(member), loadBatchApplications(member),
     ]);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches, batchApplications, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    const batchStanding = await loadBatchStanding(member);
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches, batchApplications, batchStanding, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -283,7 +285,7 @@ export async function loadMemberDashboard(member, env = process.env) {
   const [walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted] = await Promise.all([
     creditBalance(member), loadCreditLedger(member), loadProjectRequests(member), loadBatches(member), loadBatchAccess(member), loadBatchAdmittedCounts(member),
   ]);
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -962,6 +964,37 @@ export async function applyToBatch(member, input) {
   return checked(member.supabase.from('batch_applications').insert({ batch_id: batchId, student_user_id: member.user.id, materials }).select('*').single(), null);
 }
 
+// §13 slice 4: the student's live standing against each batch's PUBLISHED bar, computed from
+// evidence that already exists — so "what do I still need?" is answerable before applying and
+// the bar is something to go earn rather than a verdict handed down after review.
+// Degrades to [] if skill_claim / the batches migration hasn't been applied yet.
+export async function loadBatchStanding(member) {
+  try {
+    const [claims, trials] = await Promise.all([
+      checked(member.supabase.from('skill_claim').select('skill,verification_tier,evidence_pointer,evidence_meta').eq('student_user_id', member.user.id).limit(200), []),
+      checked(member.supabase.from('member_projects').select('id,status,ownership_defense').eq('assigned_user_id', member.user.id).eq('status', 'complete').limit(50), []),
+    ]);
+    const applicant = {
+      skillClaims: claims || [],
+      completedTrials: (trials || []).map(t => ({ project_id: t.id })),
+      // A recorded ownership defense on any completed project counts as a defense on file.
+      defenses: (trials || []).filter(t => t.ownership_defense).map(t => ({ kind: 'walkthrough' })),
+      artifacts: (claims || []).filter(c => c.evidence_pointer).map(c => ({ type: 'artifact', url: c.evidence_pointer })),
+      referrals: [],
+      // Availability is stated on the application itself, not the profile — left undefined
+      // here so the check reads as "not yet confirmed" rather than a false zero.
+      availabilityHoursPerWeek: undefined,
+    };
+    return BATCH_CATALOG.map(batch => ({
+      slug: batch.slug,
+      name: batch.name,
+      ...evaluateBatchAdmission(batch, applicant),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 // ---- §13 slice 3: company credit-gated access to a batch's admitted students. ----
 // Which batches this company has unlocked (id + what it paid), so the UI can gate rosters.
 export async function loadBatchAccess(member) {
@@ -1432,6 +1465,10 @@ export default async function handler(req, res, dependencies = {}) {
       if (input.action === 'auth-readiness') return res.status(200).json({ ok: true, ...(await memberAuthReadiness(dependencies)) });
       // A4: free, pre-auth talent-readiness diagnostic (pure fn, no DB writes, no PII stored).
       if (input.action === 'readiness-check') return res.status(200).json({ ok: true, readiness: computeReadinessScore(input) });
+      // §13 slice 4: the batch catalogue is public by design — a bar nobody can read is not a
+      // published bar. Briefs carry requirements + the company evaluation walkthrough, and no
+      // applicant data, weights, or connector scopes.
+      if (input.action === 'batch-briefs') return res.status(200).json({ ok: true, batches: BATCH_CATALOG.map(batchBrief) });
       if (input.action === 'google-login') return res.status(200).json({ ok: true, ...(await requestGoogleLogin(req, dependencies)) });
       if (input.action === 'refresh-session') return res.status(200).json({ ok: true, ...(await refreshSession(input.refreshToken, dependencies)) });
     }
