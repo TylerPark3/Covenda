@@ -5990,87 +5990,129 @@ function initBatchWeb() {
 initMemberNav();
 window.requestAnimationFrame(() => openIntro());
 
-/* ── Live compatibility demo (home) ──────────────────────────────────────────────────
-   A claim that a score "shows its work" is worth very little next to the score itself, so
-   the same eight axes a company fills in run here, in the browser, against one illustrative
-   student. Nothing is sent anywhere and nothing is stored.
+/* ── Live "build your ideal intern" demo ─────────────────────────────────────────────
+   The first version asked a visitor to pick between "solo" and "paired", which is not what a
+   founder is thinking about and not what the product is actually built around. A company
+   describes an ideal intern — the technical work it needs done, how that person operates —
+   and the score is built against THAT.
 
-   The weighting mirrors api/portal.js. Kept small and readable on purpose: the point of the
-   demo is that a visitor can see WHY a number moved, which a black box cannot show them. */
-(function fitDemo() {
+   So this is the ideal-intern builder, running in the browser against one illustrative
+   student. Skills carry the most weight because they are the thing that can be evidenced;
+   traits carry the least because both sides self-report them. Nothing is sent anywhere. */
+(function idealInternDemo() {
   const host = document.getElementById('cdemoControls');
   if (!host) return;
 
+  const SKILLS = [
+    'Python', 'SQL', 'React', 'Data analysis', 'Financial modelling',
+    'User research', 'Figma', 'Technical writing', 'Automation', 'Machine learning',
+  ];
+  const TRAITS = ['ships fast', 'detail-obsessed', 'works well unsupervised', 'asks questions early', 'strong writer'];
   const AXES = [
-    { key: 'structure', label: 'How the work is defined', a: ['structured', 'Well-defined'], b: ['ambiguous', 'Figure it out'] },
-    { key: 'autonomy', label: 'Supervision', a: ['guided', 'Guided'], b: ['independent', 'Independent'] },
+    { key: 'structure', label: 'The work is', a: ['structured', 'Well-defined'], b: ['ambiguous', 'Ambiguous'] },
     { key: 'pace', label: 'Pace', a: ['steady', 'Steady'], b: ['fast', 'Fast'] },
-    { key: 'collaboration', label: 'Alone or paired', a: ['solo', 'Solo'], b: ['paired', 'Paired'] },
-    { key: 'feedback', label: 'Feedback', a: ['frequent', 'Frequent'], b: ['light', 'Light touch'] },
-    { key: 'communication', label: 'Communication', a: ['async', 'Async'], b: ['sync', 'Live'] },
     { key: 'scope', label: 'Scope', a: ['depth', 'One thing deeply'], b: ['breadth', 'A bit of everything'] },
   ];
 
-  // One illustrative student. Fixed, so two visitors comparing notes see the same thing.
+  // One illustrative student, fixed so two visitors comparing notes see the same thing.
   const STUDENT = {
-    name: 'An illustrative student',
-    style: { structure: 'ambiguous', autonomy: 'independent', pace: 'fast', collaboration: 'paired', feedback: 'light', communication: 'async', scope: 'depth' },
-    skills: ['python', 'sql'],
+    skills: ['Python', 'SQL', 'Data analysis', 'Automation'],
     traits: ['ships fast', 'asks questions early'],
+    style: { structure: 'ambiguous', pace: 'fast', scope: 'depth' },
+    evidence: 'Two of these are evidenced from a connected repository; the rest are self-reported.',
   };
 
-  const role = {};
+  const role = { skills: new Set(), traits: new Set(), style: {} };
   const scoreEl = document.getElementById('cdemoScore');
   const basisEl = document.getElementById('cdemoBasis');
   const reasonsEl = document.getElementById('cdemoReasons');
 
+  // Mirrors the shape of the real weighting: skills heaviest because they can be evidenced,
+  // traits lightest because both sides simply claim them.
+  const W = { skills: 44, style: 14, traits: 6 };
+
   function render() {
-    const answered = AXES.filter(ax => role[ax.key]);
-    const matched = answered.filter(ax => role[ax.key] === STUDENT.style[ax.key]);
+    const skillHits = [...role.skills].filter(s => STUDENT.skills.includes(s));
+    const traitHits = [...role.traits].filter(t => STUDENT.traits.includes(t));
+    const answeredAxes = AXES.filter(ax => role.style[ax.key]);
+    const axisHits = answeredAxes.filter(ax => role.style[ax.key] === STUDENT.style[ax.key]);
 
-    // Base credit for the things already true of any vetted candidate, then the axes.
-    const base = 46;                                    // vetted, evidenced, available
-    const fit = answered.length ? Math.round(38 * (matched.length / answered.length)) : 0;
-    const total = base + fit;
+    const asked = role.skills.size + role.traits.size + answeredAxes.length;
+    const base = 36;                       // vetted, evidenced, available — true of anyone here
+    let total = base;
+    if (role.skills.size) total += W.skills * (skillHits.length / role.skills.size);
+    if (answeredAxes.length) total += W.style * (axisHits.length / answeredAxes.length);
+    if (role.traits.size) total += W.traits * (traitHits.length / role.traits.size);
 
-    scoreEl.textContent = answered.length ? String(total) : '—';
-    // A score built on two answers is not the claim a score built on eight is, and saying so
-    // is the difference between an auditable number and a confident one.
-    basisEl.textContent = `compared on ${answered.length} of ${AXES.length}`;
+    scoreEl.textContent = asked ? String(Math.round(total)) : '—';
+    // A number built on one answer is not the claim a number built on ten is.
+    basisEl.textContent = asked
+      ? `Built on ${asked} thing${asked === 1 ? '' : 's'} you asked for`
+      : 'Describe the person and the score appears';
 
     reasonsEl.replaceChildren();
-    if (!answered.length) {
-      const li = document.createElement('li');
-      li.className = 'is-empty';
-      li.textContent = 'Answer an axis to see the score and why it moved.';
-      reasonsEl.append(li);
+    if (!asked) {
+      add('is-empty', 'Pick the skills the work needs, and the score explains itself.');
       return;
     }
-    matched.forEach(ax => {
-      const li = document.createElement('li');
-      li.className = 'is-match';
-      li.textContent = `${ax.label}: both want ${labelFor(ax, role[ax.key])}`;
-      reasonsEl.append(li);
-    });
-    answered.filter(ax => !matched.includes(ax)).forEach(ax => {
-      const li = document.createElement('li');
-      li.className = 'is-gap';
-      li.textContent = `${ax.label}: you said ${labelFor(ax, role[ax.key])}, they prefer ${labelFor(ax, STUDENT.style[ax.key])}`;
-      reasonsEl.append(li);
-    });
-    const unanswered = AXES.length - answered.length;
-    if (unanswered) {
-      const li = document.createElement('li');
-      li.className = 'is-empty';
-      li.textContent = `${unanswered} axis${unanswered === 1 ? '' : 'es'} not compared. Blanks are skipped, never counted against anyone.`;
-      reasonsEl.append(li);
-    }
+    skillHits.forEach(s => add('is-match', `${s}: evidenced on their profile`));
+    [...role.skills].filter(s => !skillHits.includes(s)).forEach(s => add('is-gap', `${s}: no evidence yet`));
+    axisHits.forEach(ax => add('is-match', `${ax.label.toLowerCase()}: matches how they work`));
+    answeredAxes.filter(ax => !axisHits.includes(ax)).forEach(ax => add('is-gap', `${ax.label.toLowerCase()}: they lean the other way`));
+    traitHits.forEach(t => add('is-match', `They describe themselves as ${t}`));
+    if (skillHits.length) add('is-empty', STUDENT.evidence);
   }
 
-  function labelFor(ax, value) {
-    return ax.a[0] === value ? ax.a[1].toLowerCase() : ax.b[1].toLowerCase();
+  function add(cls, text) {
+    const li = document.createElement('li');
+    li.className = cls;
+    li.textContent = text;
+    reasonsEl.append(li);
   }
 
+  function chipRow(title, items, onToggle, isOn) {
+    const wrap = document.createElement('div');
+    wrap.className = 'cdemo-group';
+    const cap = document.createElement('p');
+    cap.className = 'cdemo-group-cap';
+    cap.textContent = title;
+    const row = document.createElement('div');
+    row.className = 'cdemo-chips';
+    items.forEach(item => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = item;
+      btn.setAttribute('aria-pressed', 'false');
+      btn.addEventListener('click', () => {
+        onToggle(item);
+        btn.setAttribute('aria-pressed', String(isOn(item)));
+        render();
+      });
+      row.append(btn);
+    });
+    wrap.append(cap, row);
+    return wrap;
+  }
+
+  host.append(chipRow(
+    'Skills the work needs',
+    SKILLS,
+    s => (role.skills.has(s) ? role.skills.delete(s) : role.skills.add(s)),
+    s => role.skills.has(s),
+  ));
+  host.append(chipRow(
+    'How they should operate',
+    TRAITS,
+    t => (role.traits.has(t) ? role.traits.delete(t) : role.traits.add(t)),
+    t => role.traits.has(t),
+  ));
+
+  const envWrap = document.createElement('div');
+  envWrap.className = 'cdemo-group';
+  const envCap = document.createElement('p');
+  envCap.className = 'cdemo-group-cap';
+  envCap.textContent = 'What the role is actually like';
+  envWrap.append(envCap);
   AXES.forEach(ax => {
     const row = document.createElement('div');
     row.className = 'cdemo-row';
@@ -6088,15 +6130,16 @@ window.requestAnimationFrame(() => openIntro());
       btn.setAttribute('aria-pressed', 'false');
       btn.addEventListener('click', () => {
         // Clicking the selected option clears it, so "no preference" stays reachable.
-        role[ax.key] = role[ax.key] === value ? undefined : value;
-        [...group.children].forEach(c => c.setAttribute('aria-pressed', String(c === btn && role[ax.key] === value)));
+        role.style[ax.key] = role.style[ax.key] === value ? undefined : value;
+        [...group.children].forEach(c => c.setAttribute('aria-pressed', String(c === btn && role.style[ax.key] === value)));
         render();
       });
       group.append(btn);
     });
     row.append(cap, group);
-    host.append(row);
+    envWrap.append(row);
   });
+  host.append(envWrap);
 
   render();
 })();

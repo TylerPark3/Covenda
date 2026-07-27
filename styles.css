@@ -2196,7 +2196,11 @@ html.js-reveal .reveal.is-revealed { opacity: 1; transform: none; }
    two ways — so it is a real <table>: screen readers get the row/column relationship, and the
    Covenda column is emphasised through weight and a warm ground rather than through colour
    alone, which would say nothing to anyone not seeing colour. */
-body:not([data-audience="home"]) .compare-section { display: none; }
+/* Home and company. This is the buyer's argument, so it belongs on the page a buyer lands on
+   as well as on the opening one. */
+.compare-section { display: none; }
+body[data-audience="home"] .compare-section,
+body[data-audience="company"] .compare-section { display: block; }
 .compare-section { padding: 88px 6vw 84px; border-bottom: 1px solid var(--line); }
 .compare-head { max-width: 1100px; margin: 0 auto 0 0; }
 .compare-kicker { margin: 0 0 16px; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-deep); }
@@ -2247,6 +2251,19 @@ body:not([data-audience="home"]) .compare-section { display: none; }
 .cdemo-toggle button:hover { background: var(--gold-pale); color: var(--gold-deep); }
 .cdemo-toggle button[aria-pressed="true"] { background: var(--gold-deep); color: #fff; }
 .cdemo-toggle button:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: -2px; }
+
+
+.cdemo-group + .cdemo-group { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+.cdemo-group-cap { margin: 0 0 12px; font-size: 12.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--soft); }
+.cdemo-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.cdemo-chips button {
+  padding: 8px 14px; border: 1px solid var(--line-strong); background: #fff; color: var(--soft);
+  font: inherit; font-size: 14.5px; font-weight: 550; cursor: pointer;
+  transition: background-color .14s ease, color .14s ease, border-color .14s ease;
+}
+.cdemo-chips button:hover { border-color: var(--gold-deep); color: var(--gold-deep); }
+.cdemo-chips button[aria-pressed="true"] { background: var(--gold-deep); border-color: var(--gold-deep); color: #fff; }
+.cdemo-chips button:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 2px; }
 
 .cdemo-out { padding: 26px 30px; border-left: 1px solid var(--line); background: var(--gold-pale); }
 .cdemo-score { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
