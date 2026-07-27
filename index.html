@@ -1152,12 +1152,15 @@
           <p>Five per field. Select the ones you’re considering.</p>
         </div>
         <div class="batch-board">
-          <aside class="batch-rail">
+          <!-- A filter belongs across the top of what it filters, not in a column beside it.
+               As a rail it was a tall card holding one slider, and it took a fifth of the
+               width from the thing people came to look at. -->
+          <div class="batch-rail">
             <p class="batch-rail-cap">Minimum match</p>
             <input type="range" id="batchMinFit" min="0" max="100" step="10" value="0" aria-label="Minimum match">
             <b id="batchMinFitOut">Any</b>
-            <p class="batch-rail-note">Reads your listed skills against what each batch is about. Not part of admission.</p>
-          </aside>
+            <p class="batch-rail-note">Sorts these against your listed skills. Admission is decided by the vetting process, not by this.</p>
+          </div>
           <div class="batch-web" id="batchWeb">
           <canvas id="batchWebCanvas" aria-hidden="true"></canvas>
           <div class="batch-grid" id="batchGrid" data-batch-grid></div>
