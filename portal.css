@@ -1267,3 +1267,11 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .discover-band-top h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 19px; letter-spacing: -.02em; }
 .discover-band-top span { padding: 2px 8px; border: 1px solid var(--line-strong); font-size: 11px; font-weight: 700; color: var(--soft); font-variant-numeric: tabular-nums; }
 .discover-band p { margin: 4px 0 0; color: var(--muted); font-size: 12.5px; }
+
+/* The document path into the reverse audit. A URL assumed a technical founder with public
+   code; most companies can hand you a planning doc instead. */
+.ra-or { display: flex; align-items: center; gap: 12px; margin: 14px 0 10px; color: var(--soft); font-size: 11.5px; }
+.ra-or::before, .ra-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.ra-row input[type="file"] { flex: 1 1 240px; min-width: 0; padding: 9px 11px; border: 1px dashed var(--line-strong); background: #fff; font: inherit; font-size: 12.5px; cursor: pointer; }
+.ra-row input[type="file"]:hover { border-color: var(--gold); background: var(--gold-pale); }
+.ra-note { margin: 8px 0 0; color: var(--soft); font-size: 11.5px; line-height: 1.5; }

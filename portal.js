@@ -350,7 +350,22 @@ function renderMetrics(){
   const root=$('#memberMetrics');root.replaceChildren();const d=state.dashboard;const role=d.profile?.role;
   const values=role==='student'
     ?[[d.projects.length,'Current projects','projects','#projectList'],[d.verifiedCount||0,'Verified records','projects','#projectList'],[d.applications.length,'Applications','activity','#applicationList']]
-    :[[d.projects.length,'Posted projects','projects','#projectList'],[d.applications.length,'Student applications','activity','#applicationList'],[(d.intakes||[]).length,'Form submissions','activity','#intakeList']];
+    // Tyler, 26 July: a company dashboard should say who is working, what is live, and what
+    // is waiting on them. "Posted projects" answered none of those — it counted drafts and
+    // finished work together and pointed at nothing to act on.
+    :(()=>{
+      const projects=d.projects||[];
+      const live=projects.filter(p=>['open','matched','in_progress','review'].includes(p.status));
+      const working=projects.filter(p=>['matched','in_progress','review'].includes(p.status)&&p.assigned_student_user_id);
+      const awaiting=projects.filter(p=>p.status==='review');
+      const newApps=(d.applications||[]).filter(a=>a.status==='submitted');
+      return [
+        [working.length,'Students working now','projects','#projectList'],
+        [live.length,'Live projects','projects','#projectList'],
+        [newApps.length,'Applications to review','activity','#applicationList'],
+        [awaiting.length,'Deliverables awaiting you','projects','#projectList'],
+      ];
+    })();
   for(const [value,label,target,highlight] of values){
     const item=document.createElement('button');item.type='button';item.className='metric';item.setAttribute('aria-label',`${value} ${label} — open`);
     const strong=document.createElement('strong');strong.textContent=value;const span=document.createElement('span');span.textContent=label;item.append(strong,span);
@@ -2569,6 +2584,58 @@ checkAuthReadiness();
 if(authError)showAuth(authError,true);else if(session().accessToken)loadDashboard();else showAuth();
 
 // ---- Reverse-audit (opt-in): founder's own link -> 3 editable draft opportunities. --------
+// The document path. The file goes up, the text is extracted server-side, and only the
+// drafts come back — a company planning doc is confidential and should not round-trip
+// through the browser to get read.
+$('#reverseAuditFileBtn')?.addEventListener('click',async()=>{
+  const input=$('#reverseAuditFile');const file=input&&input.files&&input.files[0];
+  const status=$('#reverseAuditStatus');const results=$('#reverseAuditResults');const btn=$('#reverseAuditFileBtn');
+  if(!file){status.textContent='Choose a file first.';return;}
+  const consent=$('#intakeForm')?.elements?.aiConsent;
+  if(consent&&!consent.checked){status.textContent='Tick the AI consent box first — we read the file to draft from it.';return;}
+  btn.disabled=true;status.textContent='Reading '+file.name+'…';results.replaceChildren();
+  try{
+    const res=await fetch('/api/project-doc',{
+      method:'POST',
+      headers:{'Content-Type':'application/octet-stream','X-Covenda-Filename':file.name},
+      body:file,
+    });
+    const body=await res.json();
+    if(!res.ok||!body.ok)throw new Error(body.error||'That did not go through.');
+    status.textContent='';
+    renderReverseAuditDrafts(body.audit||body,results,status);
+  }catch(error){ status.textContent=error.message; }
+  finally{ btn.disabled=false; }
+});
+
+// Drafts render identically whether they came from a link or an uploaded document — one
+// renderer, so the two paths cannot drift.
+function renderReverseAuditDrafts(audit,results,status){
+  results.replaceChildren();
+  if(!audit.safeToPropose||!(audit.proposals||[]).length){
+    status.textContent=(audit.safetyFlags||[])[0]||'Nothing safely proposable was found in that.';
+    status.classList.add('is-error');return;
+  }
+  status.classList.remove('is-error');
+  status.textContent=`${audit.proposals.length} draft${audit.proposals.length===1?'':'s'} — edit anything, then use one to start the intake.`;
+  audit.proposals.forEach(p=>{
+    const card=document.createElement('article');card.className='ra-card';
+    const h=document.createElement('strong');h.textContent=`DRAFT · ${p.title}`;card.append(h);
+    const sm=document.createElement('p');sm.textContent=p.summary;card.append(sm);
+    const meta=document.createElement('p');meta.className='ra-meta';
+    meta.textContent=[`Deliverable: ${p.deliverable}`,p.estimatedHours?`~${p.estimatedHours} hrs`:'',p.founderTimeMinutes?`${p.founderTimeMinutes} min of your time`:''].filter(Boolean).join(' · ');
+    card.append(meta);
+    const use=document.createElement('button');use.type='button';use.className='portal-primary compact';use.textContent='Use this draft';
+    use.addEventListener('click',()=>{
+      const ta=$('#intakeForm [name="problem"]');
+      ta.value=`${p.summary}\n\nDeliverable: ${p.deliverable}\nDone when: ${p.acceptanceCriteria}\nOut of scope: ${p.boundary}`;
+      ta.dispatchEvent(new Event('input',{bubbles:true}));ta.focus();
+      status.textContent='Draft loaded into the description — edit it, then continue to Understand.';
+    });
+    card.append(use);results.append(card);
+  });
+}
+
 $('#reverseAuditBtn')?.addEventListener('click',async()=>{
   const url=($('#reverseAuditUrl')?.value||'').trim();
   const status=$('#reverseAuditStatus');const results=$('#reverseAuditResults');const btn=$('#reverseAuditBtn');
@@ -2579,26 +2646,7 @@ $('#reverseAuditBtn')?.addEventListener('click',async()=>{
     const res=await fetch('/api/project-intake',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'reverse-audit',linkUrl:url})});
     const data=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(data.error||'Reverse-audit failed.');
-    const audit=data.audit||{};
-    if(!audit.safeToPropose||!(audit.proposals||[]).length){
-      status.textContent=(audit.safetyFlags||[])[0]||'Nothing safely proposable was found at that link.';
-      return;
-    }
-    status.textContent=`${audit.proposals.length} draft${audit.proposals.length===1?'':'s'} — edit anything, then use one to start the intake.`;
-    audit.proposals.forEach(p=>{
-      const card=document.createElement('article');card.className='ra-card';
-      const h=document.createElement('strong');h.textContent=`DRAFT · ${p.title}`;card.append(h);
-      const s=document.createElement('p');s.textContent=p.summary;card.append(s);
-      const meta=document.createElement('p');meta.className='ra-meta';meta.textContent=[`Deliverable: ${p.deliverable}`,p.estimatedHours?`~${p.estimatedHours} hrs`:'',p.founderTimeMinWeek?`~${p.founderTimeMinWeek} min/week of your time`:''].filter(Boolean).join(' · ');card.append(meta);
-      const use=document.createElement('button');use.type='button';use.className='portal-primary compact';use.textContent='Use this draft';
-      use.addEventListener('click',()=>{
-        const ta=$('#intakeForm [name="problem"]');
-        ta.value=`${p.summary}\n\nDeliverable: ${p.deliverable}\nDone when: ${p.acceptanceCriteria}\nOut of scope: ${p.boundary}`;
-        ta.dispatchEvent(new Event('input',{bubbles:true}));ta.focus();
-        status.textContent='Draft loaded into the description — edit it, then continue to Understand.';
-      });
-      card.append(use);results.append(card);
-    });
+    renderReverseAuditDrafts(data.audit||{},results,status);
   }catch(error){status.textContent=error.message;status.classList.add('is-error');}
   finally{btn.disabled=false;}
 });
