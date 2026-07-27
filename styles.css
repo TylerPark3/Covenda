@@ -1699,13 +1699,15 @@ body[data-audience="university"] #flowDemo { display: none; }
   display: flex;
   align-items: stretch;
   gap: 0;
-  min-width: 820px;
+  /* Five stages inside 820px gave each about 200px — too narrow to read as a slide, so the
+     whole sequence scanned as a strip of labels. */
+  min-width: 1180px;
 }
 .flow-demo-scroll { overflow-x: auto; scrollbar-width: none; }
 .flow-demo-scroll::-webkit-scrollbar { display: none; }
 
-.fd-stage { flex: 1; min-width: 210px; }
-.fd-stage-b { flex: 1.25; min-width: 250px; }
+.fd-stage { flex: 1; min-width: 300px; }
+.fd-stage-b { flex: 1.25; min-width: 340px; }
 /* §10: the flow demo stacks vertically on narrow screens instead of scrolling sideways. */
 @media (max-width: 640px) {
   .flow-demo-track { flex-direction: column; min-width: 0; gap: 20px; }
@@ -4855,3 +4857,19 @@ body:not([data-audience="home"]) .slop-section { display: none; }
 .whynow-grid h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(19px, 1.9vw, 23px); letter-spacing: -.02em; line-height: 1.25; }
 .whynow-grid p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.65; }
 .whynow-close { max-width: 60ch; margin: clamp(22px, 3vw, 32px) auto 0; text-align: center; color: var(--ink); font-size: 16px; line-height: 1.6; }
+
+/* The five-stage story, sized to be read rather than glanced at. */
+.fd-stage { padding: clamp(20px, 2.2vw, 30px) clamp(16px, 1.8vw, 24px); }
+.fd-stage h3, .fd-stage strong { font-size: clamp(17px, 1.5vw, 21px); line-height: 1.25; }
+.fd-stage p, .fd-stage li { font-size: clamp(14px, 1.05vw, 15.5px); line-height: 1.6; }
+.fd-stage small { font-size: 13px; }
+.flow-demo-head h2 { font-size: clamp(30px, 3.4vw, 46px); }
+.flow-demo-head p { font-size: 17px; line-height: 1.65; }
+/* Who built this. It is not a footnote — a platform for students made BY students is the
+   reason to trust it over one built by a recruiting company. */
+.made-by {
+  width: min(100%, var(--content)); margin: 0 auto clamp(30px, 4vw, 52px);
+  padding: 0 var(--page-gutter); text-align: center;
+  font-family: var(--font-display); font-weight: 400;
+  font-size: clamp(19px, 2vw, 26px); letter-spacing: -.02em; color: var(--muted);
+}
