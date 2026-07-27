@@ -195,7 +195,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
+  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -529,6 +529,114 @@ function openReferralStep(){
   mail.addEventListener('click',()=>{ window.location.href='mailto:?subject='+encodeURIComponent('A quick referral ask')+'&body='+encodeURIComponent(area.value); });
   d.foot.append(copy,mail);
   d.open();
+}
+
+// ── The student workflow, made explicit ───────────────────────────────────────────────
+// Six steps, in the order they actually happen. Every one is computed from real state — a
+// step is done because the row exists, never because someone ticked it — and every one is
+// clickable to the exact place that advances it. The point is that a student can always
+// answer "what now?" without guessing which tab holds the answer.
+function studentJourney(d){
+  const profile=d.profile||{};
+  const v=d.verification||{};
+  const signals=v.signals||[];
+  const held=key=>Boolean(signals.find(s=>s.key===key)?.held);
+  const apps=d.applications||[];
+  const batchApps=d.batchApplications||[];
+  const projects=d.projects||[];
+  const assigned=projects.filter(p=>['assigned','in_progress','review','complete'].includes(p.status));
+  const submitted=projects.filter(p=>['review','complete'].includes(p.status));
+  const complete=projects.filter(p=>p.status==='complete');
+  const messages=d.messages||[];
+
+  return [
+    { key:'verify', title:'Get verified',
+      done:v.isStudentVerified===true,
+      partial:held('school_email'),
+      now:v.isStudentVerified?'A club or referral stands behind you.'
+         :held('school_email')?'School email confirmed — that is the floor. A club or referral is what companies weigh.'
+         :'Confirm your school email, then claim a club or ask for a referral.',
+      cta:v.isStudentVerified?'Review':'Verify', go:()=>openVerificationStep(held('school_email')?'club':'school_email') },
+
+    { key:'referral', title:'Get someone to vouch',
+      done:held('referral')||held('club'),
+      now:held('referral')?'A named referral is on your profile.'
+         :held('club')?'A club confirmed you. A named referral is the stronger version of the same thing.'
+         :'One person who has seen you work outweighs a page of self-reported skills.',
+      cta:held('referral')?'Manage':'Ask', go:()=>openReferralStep() },
+
+    { key:'profile', title:'Build the profile companies read',
+      done:profileCompletion(profile)>=100,
+      now:profileCompletion(profile)>=100?'Complete. Companies see it as written.'
+         :`${profileCompletion(profile)}% complete — headline, context, skills, and a 60-second intro.`,
+      cta:'Open', go:()=>setView('portfolio') },
+
+    { key:'apply', title:'Apply to a batch or a project',
+      done:batchApps.length>0||apps.length>0,
+      now:batchApps.length?`${batchApps.length} batch ${batchApps.length===1?'application':'applications'} in.`
+         :apps.length?`${apps.length} project ${apps.length===1?'application':'applications'} in.`
+         :'Batches are the curated route. Open projects are the direct one. Both are open to you.',
+      cta:batchApps.length||apps.length?'Track':'Start', go:()=>setView(batchApps.length||!apps.length?'batches':'discover') },
+
+    { key:'deliver', title:'Do the work and submit it',
+      done:submitted.length>0,
+      partial:assigned.length>0,
+      now:complete.length?`${complete.length} accepted ${complete.length===1?'deliverable':'deliverables'} — this is the evidence companies weigh.`
+         :submitted.length?'Submitted and waiting on review.'
+         :assigned.length?'You have work assigned. Hit the checkpoints; silence is what costs people the role.'
+         :'Nothing assigned yet. This is where evidence gets made.',
+      cta:assigned.length?'Open':'View', go:()=>setView('projects') },
+
+    { key:'talk', title:'Stay in the conversation',
+      done:messages.length>0,
+      now:messages.length?`${messages.length} ${messages.length===1?'message':'messages'} on your projects.`
+         :'Questions, scope changes, and check-ins all live on the project thread — not in your inbox.',
+      cta:'Open', go:()=>setView('messages') },
+  ];
+}
+
+function renderJourney(){
+  const host=$('#journeyPanel');
+  if(!host) return;
+  const d=state.dashboard;
+  if(d?.profile?.role!=='student'){ host.hidden=true; host.replaceChildren(); return; }
+  host.replaceChildren();
+  const steps=studentJourney(d);
+  const doneCount=steps.filter(s=>s.done).length;
+  // The next thing to do is the first unfinished step — highlighted, so there is exactly one
+  // obvious move at any moment.
+  const nextIndex=steps.findIndex(s=>!s.done);
+
+  const head=document.createElement('div'); head.className='journey-head';
+  const box=document.createElement('div');
+  const h=document.createElement('h3'); h.textContent='How this works for you';
+  const p=document.createElement('p');
+  p.textContent=nextIndex<0?'Every step is behind you. Keep the evidence current and the next role finds you.'
+    :'Six steps, in the order they happen. Each one opens where it gets done.';
+  box.append(h,p);
+  const count=document.createElement('span'); count.className='journey-count';
+  count.textContent=`${doneCount} of ${steps.length}`;
+  head.append(box,count); host.append(head);
+
+  const ol=document.createElement('ol'); ol.className='journey-list';
+  steps.forEach((step,i)=>{
+    const li=document.createElement('li');
+    li.className=step.done?'is-done':i===nextIndex?'is-next':step.partial?'is-partial':'is-open';
+    const row=document.createElement('button'); row.type='button'; row.className='journey-row';
+    const mark=document.createElement('span'); mark.className='journey-mark';
+    if(step.done) mark.append(icon('p-check')); else mark.textContent=String(i+1);
+    const div=document.createElement('div');
+    const strong=document.createElement('strong'); strong.textContent=step.title;
+    const small=document.createElement('small'); small.textContent=step.now;
+    div.append(strong,small);
+    if(i===nextIndex){ const tag=document.createElement('em'); tag.className='journey-tag'; tag.textContent='Do this next'; div.append(tag); }
+    const go=document.createElement('span'); go.className='journey-go'; go.textContent=step.cta;
+    row.append(mark,div,go);
+    row.addEventListener('click',step.go);
+    li.append(row); ol.append(li);
+  });
+  host.append(ol);
+  host.hidden=false;
 }
 
 function renderVerification(){

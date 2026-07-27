@@ -1113,3 +1113,35 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 #batchApplyDialog .dialog-body { display:grid; gap:22px; grid-template-columns:repeat(auto-fit,minmax(360px,1fr)); align-items:start; }
 #batchApplyDialog .batch-apply-step { min-width:0; }
 @media (max-width: 820px) { #batchApplyDialog .dialog-body { grid-template-columns:1fr; } }
+
+/* ── The student workflow, made explicit ──────────────────────────────────────────────
+   Six steps in the order they actually happen, each computed from real rows and each
+   clickable to the place that advances it. One step is marked "do this next" so there is
+   always exactly one obvious move. */
+.journey-panel { display:grid; gap:14px; }
+.journey-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.journey-head h3 { margin:0 0 5px; font-family:var(--font-display); font-weight:500; font-size: 20px; letter-spacing:-.02em; }
+.journey-head p { margin:0; max-width:52ch; color:var(--muted); font-size: 12px; line-height:1.6; }
+.journey-count { flex:none; padding:5px 10px; border:1px solid var(--line-strong); font-size: 11px; font-weight:700; color:var(--gold-deep); font-variant-numeric:tabular-nums; }
+.journey-list { display:grid; gap:2px; margin:0; padding:0; list-style:none; counter-reset:none; }
+.journey-row { display:flex; align-items:flex-start; gap:12px; width:100%; padding:12px; border:0; border-radius:0; background:none; text-align:left; font:inherit; color:inherit; cursor:pointer; transition:background .14s ease; }
+.journey-row:hover { background:var(--gold-pale); }
+.journey-row:focus-visible { outline:2px solid var(--gold); outline-offset:-2px; }
+.journey-row > div { flex:1 1 auto; min-width:0; display:grid; gap:3px; }
+.journey-row strong { font-size: 13px; }
+.journey-row small { color:var(--muted); font-size: 11.5px; line-height:1.5; }
+.journey-mark { display:grid; flex:none; width:26px; height:26px; place-items:center; border:1px solid var(--line-strong); font-size: 11px; font-weight:700; color:var(--soft); }
+.journey-mark svg { width:13px; height:13px; }
+.journey-go { flex:none; align-self:center; padding:5px 11px; border:1px solid var(--line-strong); font-size: 11px; font-weight:650; color:var(--gold-deep); white-space:nowrap; }
+.journey-row:hover .journey-go { border-color:var(--gold); background:#fff; }
+.journey-tag { justify-self:start; margin-top:3px; padding:3px 8px; background:var(--gold); color:#fff; font-size: 9.5px; font-style:normal; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+.journey-list li.is-done .journey-mark { border-color:rgba(36,117,58,.35); background:#f4faf5; color:var(--success); }
+.journey-list li.is-done strong { color:var(--muted); }
+.journey-list li.is-done .journey-go { color:var(--soft); }
+.journey-list li.is-next { background:var(--gold-pale); box-shadow:inset 3px 0 0 var(--gold); }
+.journey-list li.is-next .journey-mark { border-color:var(--gold); color:var(--gold-deep); }
+.journey-list li.is-partial .journey-mark { border-color:var(--gold-light); color:var(--gold-deep); }
+@media (max-width: 560px) {
+  .journey-head { flex-direction:column; }
+  .journey-go { align-self:flex-start; }
+}
