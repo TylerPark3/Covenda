@@ -435,8 +435,8 @@ function setAudience(audience) {
 }
 
 let audienceTransitionTimer = 0;
-// Labels the wipe. Each path deserves the same entry — the student route got the animation
-// and the other two snapped, which made the two the product actually sells to feel secondary.
+// Labels the wipe. Which paths use it is decided by the data-hero-entry attribute in the
+// markup, not here — every audience keeps a label so turning one on is a one-attribute change.
 const AUDIENCE_TRANSITION_LABEL = {
   student: 'For students',
   company: 'For companies',

@@ -686,15 +686,16 @@ test('the qualification rail is shorter and visually distinct from the trial car
   assert.match(styles, /\.batch-funnel\.is-playing \.bf-stage-4 \{ transition-delay: \.54s; \}/);
 });
 
-test('all three homepage paths get the folded-sheet transition, and it respects reduced motion', () => {
+test('only the student path uses the folded-sheet transition, and it respects reduced motion', () => {
   assert.match(html, /id="audienceTransition"/);
-  // Every path deserves the same entry. The student route used to get the animation while the
-  // other two snapped, which made the two the product actually sells to feel secondary.
-  for (const audience of ['student', 'company', 'university']) {
-    assert.match(
+  // Only the student path uses the wipe. The other two go straight through, which is a markup
+  // decision — the gate is the attribute, so turning one on is a one-attribute change.
+  assert.match(html, /data-audience-option="student" data-hero-entry/);
+  for (const audience of ['company', 'university']) {
+    assert.doesNotMatch(
       html,
       new RegExp(`data-audience-option="${audience}" data-hero-entry`),
-      `the ${audience} path must enter through the transition`,
+      `the ${audience} path should not use the transition`,
     );
   }
   assert.match(script, /function transitionAudience\(audience\)/);
