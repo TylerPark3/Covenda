@@ -466,7 +466,15 @@ function openSchoolEmailStep(){
           setTimeout(()=>d.close(),700);
         }catch(error){ confirm.disabled=false; d.say(error.message,true); }
       });
-    }catch(error){ send.disabled=false; d.say(error.message,true); }
+    }catch(error){
+      send.disabled=false; d.say(error.message,true);
+      if(/not switched on yet/i.test(error.message||'')&&!d.foot.querySelector('.verif-alt')){
+        const alt=document.createElement('button'); alt.type='button'; alt.className='portal-secondary verif-alt';
+        alt.textContent='Claim a club instead';
+        alt.addEventListener('click',()=>{ d.close(); openClubStep(); });
+        d.foot.prepend(alt);
+      }
+    }
   });
   d.open(); email.input.focus();
 }

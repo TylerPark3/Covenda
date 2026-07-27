@@ -1103,7 +1103,15 @@ export async function requestSchoolVerification(member, input, { env = process.e
 
   const apiKey = env.RESEND_API_KEY;
   const from = env.COVENDA_NOTIFICATION_FROM;
-  if (!apiKey || !from) throw new PortalOperationalError('VERIFY_EMAIL_NOT_CONFIGURED', 'Email is not configured for this deployment yet.');
+  // A student cannot act on "email is not configured" — that is our problem, not theirs. Say
+  // what it means for them and point at the two paths that do work, both of which count for
+  // more than a school email anyway.
+  if (!apiKey || !from) {
+    throw new PortalOperationalError(
+      'VERIFY_EMAIL_NOT_CONFIGURED',
+      'School-email codes are not switched on yet. Claim a club or ask for a named referral instead — either one counts for more than a school email.',
+    );
+  }
   const { Resend } = await import('resend');
   const { error } = await new Resend(apiKey).emails.send({
     from,
