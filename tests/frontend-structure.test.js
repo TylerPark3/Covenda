@@ -45,8 +45,13 @@ test('the student entry separates signup without a choice from signup with a spe
   const studentHero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(studentHero, /Do work that proves/);
   assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"[\s\S]*Join now — choose later/);
-  assert.match(studentHero, /Join now — choose later[\s\S]*Choose a work area/);
-  for (const vertical of ['Research &amp; strategy', 'Data &amp; analysis', 'Operations', 'QA &amp; testing', 'Writing &amp; documentation']) {
+  // The picker is on industry verticals now, matching BATCH_CATALOG. It used to offer work
+  // types — research, data, QA — a taxonomy nothing else on the platform spoke, so a
+  // student's choice lined up with no batch, no profile field and no matching signal.
+  assert.match(studentHero, /Join now — choose later[\s\S]*Choose your industry/);
+  assert.match(studentHero, /Software &amp; AI/);
+  assert.doesNotMatch(studentHero, /QA &amp; testing/);
+  for (const vertical of ['Software &amp; AI', 'Accounting &amp; finance', 'Healthcare operations', 'Consumer &amp; retail', 'Professional services']) {
     assert.match(studentHero, new RegExp(vertical));
   }
   assert.doesNotMatch(studentHero, /student-vertical is-selected/);
@@ -63,7 +68,8 @@ test('the student entry separates signup without a choice from signup with a spe
   assert.match(studentHero, /id="studentJoinSelected"[^>]*data-join-mode="selected"[^>]*disabled/);
   assert.match(studentHero, /id="studentChoiceClear"/);
   assert.match(script, /const studentSpecialties = \{/);
-  for (const specialty of ['Customer research', 'Spreadsheet modeling', 'Process mapping', 'Manual QA', 'Technical documentation']) {
+  // One specialty per vertical, all five drawn from the batch catalogue.
+  for (const specialty of ['AI & machine learning', 'Private equity', 'Clinical operations', 'Growth & performance', 'Management consulting']) {
     assert.match(script, new RegExp(specialty));
   }
   assert.match(script, /function renderStudentSpecialties\(workType\)/);

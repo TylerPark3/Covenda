@@ -480,12 +480,16 @@ function setSurface(surface) {
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
+// The five industry verticals, matching BATCH_CATALOG. These were work TYPES — research,
+// data, operations, QA, writing — which is a different taxonomy from the one the batches,
+// the profile and the matching engine all speak, so a student picked something that then
+// lined up with nothing.
 const studentSpecialties = {
-  'Research': ['Customer research', 'Competitive analysis', 'Market sizing', 'Product discovery'],
-  'Data & spreadsheets': ['Data cleanup', 'Spreadsheet modeling', 'Dashboards & reporting', 'Data analysis'],
-  'Operations': ['Process mapping', 'Project coordination', 'Vendor operations', 'Finance operations'],
-  'QA & testing': ['Manual QA', 'Test-case writing', 'Bug reproduction', 'Model evaluation'],
-  'Writing & documentation': ['Technical documentation', 'Research briefs', 'SOPs & playbooks', 'Content operations'],
+  'Software & AI': ['AI & machine learning', 'Physical AI & robotics', 'Product engineering', 'Infrastructure & data', 'Security & reliability'],
+  'Accounting & finance': ['Investment banking', 'Private equity', 'Venture capital', 'Asset & wealth management', 'Accounting & audit'],
+  'Healthcare operations': ['Clinical operations', 'Health data & analytics', 'Payer & revenue cycle', 'Regulatory & quality', 'Digital health product'],
+  'Consumer & retail': ['Growth & performance', 'Brand & content', 'Merchandising & assortment', 'Supply chain & operations', 'E-commerce & marketplace'],
+  'Professional services': ['Management consulting', 'Strategy & research', 'Market intelligence', 'Legal operations', 'Technical writing'],
 };
 
 function updateStudentJoinChoice() {
