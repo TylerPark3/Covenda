@@ -17,11 +17,12 @@ test('HTML ids remain unique', () => {
   assert.deepEqual([...new Set(duplicates)], []);
 });
 
-test('student-first hero leads with joining, four verticals, and a scroll continuation', () => {
+test('student-first hero leads with optional joining, five work areas, and a scroll continuation', () => {
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(hero, /Do work that proves/);
-  assert.equal((hero.match(/data-work-type=/g) || []).length, 4);
-  assert.match(hero, /Join the talent network/);
+  assert.equal((hero.match(/data-work-type=/g) || []).length, 5);
+  assert.match(hero, /Join now — choose later/);
+  assert.match(hero, /No work area is required/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
 });
@@ -40,28 +41,37 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
   assert.match(styles, /\.intro-statement/);
 });
 
-test('the student entry leads with a compact join action and working vertical specializations', () => {
+test('the student entry separates signup without a choice from signup with a specific direction', () => {
   const studentHero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(studentHero, /Do work that proves/);
-  assert.match(studentHero, /class="gold-button student-join-primary"[\s\S]*Join the talent network/);
-  assert.match(studentHero, /Join the talent network[\s\S]*Choose your vertical/);
-  for (const vertical of ['Product &amp; strategy', 'Software &amp; data', 'Finance &amp; operations', 'Growth &amp; research']) {
+  assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"[\s\S]*Join now — choose later/);
+  assert.match(studentHero, /Join now — choose later[\s\S]*Choose a work area/);
+  for (const vertical of ['Research &amp; strategy', 'Data &amp; analysis', 'Operations', 'QA &amp; testing', 'Writing &amp; documentation']) {
     assert.match(studentHero, new RegExp(vertical));
   }
+  assert.doesNotMatch(studentHero, /student-vertical is-selected/);
   assert.doesNotMatch(studentHero, /Explore[\s\S]*Profile[\s\S]*Track/);
   assert.doesNotMatch(studentHero, /selectorFxCanvas|student-journey|narrowFlow/);
-  assert.match(styles, /\.student-vertical-rail[\s\S]*grid-template-columns: repeat\(4/);
-  assert.match(styles, /\.student-join-primary \{[\s\S]*width: min\(100%, 430px\)[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.student-vertical-rail[\s\S]*grid-template-columns: repeat\(5/);
+  assert.match(styles, /\.student-vertical \{[\s\S]*border-right: 1px solid var\(--line-strong\)[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.student-join-primary \{[\s\S]*width: min\(100%, 320px\)[\s\S]*border-radius: 0/);
   assert.match(styles, /@keyframes student-join-confirm/);
   assert.match(script, /\$\$\('\.work-option, \.student-vertical'\)/);
   assert.match(studentHero, /id="studentSpecialtyPanel"/);
+  assert.match(studentHero, /id="studentSpecialtyPanel"[^>]*hidden/);
   assert.match(studentHero, /id="studentSpecialtyOptions"/);
+  assert.match(studentHero, /id="studentJoinSelected"[^>]*data-join-mode="selected"[^>]*disabled/);
+  assert.match(studentHero, /id="studentChoiceClear"/);
   assert.match(script, /const studentSpecialties = \{/);
-  for (const specialty of ['Product discovery', 'Frontend engineering', 'Financial modeling', 'Growth strategy']) {
+  for (const specialty of ['Customer research', 'Spreadsheet modeling', 'Process mapping', 'Manual QA', 'Technical documentation']) {
     assert.match(script, new RegExp(specialty));
   }
   assert.match(script, /function renderStudentSpecialties\(workType\)/);
   assert.match(script, /function selectStudentSpecialty\(label\)/);
+  assert.match(script, /function clearStudentWorkChoice\(\)/);
+  assert.match(script, /function updateStudentJoinChoice\(\)/);
+  assert.match(script, /quickJoinDirection/);
+  assert.match(script, /includeDirection = button\.dataset\.joinMode === 'selected'/);
   assert.match(script, /studentSpecialtyStorageKey/);
   assert.match(script, /function confirmStudentJoin\(button\)/);
 });
@@ -457,7 +467,7 @@ test('batch selection has real feedback and respects reduced motion', () => {
 });
 
 test('joining the talent pool is name, email and school — not the four-step form', () => {
-  assert.match(html, /data-action="student-quick"[^>]*>[\s\S]*Join the talent network/);
+  assert.match(html, /data-action="student-quick"[^>]*data-join-mode="open"[^>]*>[\s\S]*Join now — choose later/);
   assert.doesNotMatch(html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '', /Or add full details now/);
 });
 

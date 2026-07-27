@@ -4,7 +4,7 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const state = {
   audience: 'home',
   surface: 'site',
-  workType: 'Research',
+  workType: '',
   studentSpecialty: '',
   toastTimer: null,
 };
@@ -481,11 +481,21 @@ function setSurface(surface) {
 }
 
 const studentSpecialties = {
-  'Research': ['Product discovery', 'Market strategy', 'Customer research', 'Competitive analysis'],
-  'Data & spreadsheets': ['Frontend engineering', 'Backend engineering', 'Data analysis', 'AI & automation'],
-  'Operations': ['Financial modeling', 'Startup operations', 'Accounting & controls', 'Process design'],
-  'Writing & documentation': ['Growth strategy', 'Market research', 'Content & brand', 'Sales research'],
+  'Research': ['Customer research', 'Competitive analysis', 'Market sizing', 'Product discovery'],
+  'Data & spreadsheets': ['Data cleanup', 'Spreadsheet modeling', 'Dashboards & reporting', 'Data analysis'],
+  'Operations': ['Process mapping', 'Project coordination', 'Vendor operations', 'Finance operations'],
+  'QA & testing': ['Manual QA', 'Test-case writing', 'Bug reproduction', 'Model evaluation'],
+  'Writing & documentation': ['Technical documentation', 'Research briefs', 'SOPs & playbooks', 'Content operations'],
 };
+
+function updateStudentJoinChoice() {
+  const button = $('#studentJoinSelected');
+  const label = $('#studentJoinSelectedLabel');
+  if (!button || !label) return;
+  const ready = Boolean(state.workType && state.studentSpecialty);
+  button.disabled = !ready;
+  label.textContent = ready ? `Join for ${state.studentSpecialty}` : 'Choose a specialty to join';
+}
 
 function selectStudentSpecialty(label) {
   const choices = studentSpecialties[state.workType] || [];
@@ -498,16 +508,29 @@ function selectStudentSpecialty(label) {
     button.setAttribute('aria-pressed', String(selected));
   });
   const status = $('#studentSpecialtyStatus');
-  if (status) status.textContent = `Selected: ${label}. We’ll use this to show you more relevant project work.`;
+  if (status) status.textContent = `Selected: ${label}. This direction will be attached to your signup.`;
+  updateStudentJoinChoice();
 }
 
 function renderStudentSpecialties(workType) {
   const host = $('#studentSpecialtyOptions');
   const title = $('#studentSpecialtyTitle');
   const status = $('#studentSpecialtyStatus');
-  if (!host || !title || !status) return;
+  const panel = $('#studentSpecialtyPanel');
+  const empty = $('#studentSpecialtyEmpty');
+  if (!host || !title || !status || !panel || !empty) return;
   const vertical = $(`.student-vertical[data-work-type="${workType}"]`);
   const choices = studentSpecialties[workType] || [];
+  if (!vertical || !choices.length) {
+    host.replaceChildren();
+    title.textContent = '';
+    panel.hidden = true;
+    empty.hidden = false;
+    updateStudentJoinChoice();
+    return;
+  }
+  panel.hidden = false;
+  empty.hidden = true;
   title.textContent = vertical?.dataset.verticalLabel || workType;
   host.replaceChildren();
 
@@ -524,12 +547,17 @@ function renderStudentSpecialties(workType) {
     host.append(button);
   });
   status.textContent = state.studentSpecialty
-    ? `Selected: ${state.studentSpecialty}. We’ll use this to show you more relevant project work.`
-    : 'Choose one to tell us what kind of work you want to prove.';
+    ? `Selected: ${state.studentSpecialty}. This direction will be attached to your signup.`
+    : 'Choose the specific work you want attached to your signup.';
+  updateStudentJoinChoice();
 }
 
 function selectWorkType(workType) {
   if (!workType) return;
+  if (workType !== state.workType) {
+    state.studentSpecialty = '';
+    removeStorage(studentSpecialtyStorageKey);
+  }
   state.workType = workType;
   writeStorage(workTypeStorageKey, workType);
   $$('.work-option, .student-vertical').forEach(button => {
@@ -550,6 +578,21 @@ function selectWorkType(workType) {
   });
   renderStudentSpecialties(workType);
 }
+
+function clearStudentWorkChoice() {
+  state.workType = '';
+  state.studentSpecialty = '';
+  removeStorage(workTypeStorageKey);
+  removeStorage(studentSpecialtyStorageKey);
+  $$('.student-vertical').forEach(button => {
+    button.classList.remove('is-selected');
+    button.setAttribute('aria-pressed', 'false');
+  });
+  $('#workspacePrimaryPath').textContent = 'Not chosen yet';
+  renderStudentSpecialties('');
+}
+
+$('#studentChoiceClear')?.addEventListener('click', clearStudentWorkChoice);
 
 function setWorkspaceTab(tabName) {
   $$('[data-workspace-tab]').forEach(button => button.classList.toggle('is-active', button.dataset.workspaceTab === tabName));
@@ -1790,17 +1833,21 @@ function renderQuickInterests() {
 function selectedQuickInterests() {
   return $$('#quickJoinInterests .quick-chip[aria-pressed="true"]').map(chip => chip.textContent);
 }
-function openQuickJoin() {
+let quickJoinDirection = null;
+function openQuickJoin({ includeDirection = false } = {}) {
   const done = $('#quickJoinDone');
   done.hidden = true; done.textContent = '';
   quickJoinForm.hidden = false;
   $('#quickJoinMessage').textContent = '';
   const selectedDirection = $('#quickJoinSpecialty');
+  const vertical = $(`.student-vertical[data-work-type="${state.workType}"]`)?.dataset.verticalLabel || state.workType;
+  quickJoinDirection = includeDirection && state.studentSpecialty
+    ? { vertical, specialty: state.studentSpecialty }
+    : null;
   if (selectedDirection) {
-    const vertical = $(`.student-vertical[data-work-type="${state.workType}"]`)?.dataset.verticalLabel || state.workType;
-    selectedDirection.hidden = !state.studentSpecialty;
-    selectedDirection.textContent = state.studentSpecialty
-      ? `Your direction: ${vertical} · ${state.studentSpecialty}`
+    selectedDirection.hidden = !quickJoinDirection;
+    selectedDirection.textContent = quickJoinDirection
+      ? `Your direction: ${quickJoinDirection.vertical} · ${quickJoinDirection.specialty}`
       : '';
   }
   renderQuickInterests();
@@ -1811,12 +1858,13 @@ function openQuickJoin() {
 
 function confirmStudentJoin(button) {
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const includeDirection = button.dataset.joinMode === 'selected';
   button.classList.remove('is-confirming');
   void button.offsetWidth;
   button.classList.add('is-confirming');
   window.setTimeout(() => {
     button.classList.remove('is-confirming');
-    openQuickJoin();
+    openQuickJoin({ includeDirection });
   }, reduceMotion ? 0 : 180);
 }
 function renderQuickJoinDone(reference) {
@@ -1847,6 +1895,9 @@ if (quickJoinForm) {
     const submit = $('button[type="submit"]', quickJoinForm);
     submit.disabled = true; submit.textContent = 'Joining…';
     const industries = selectedQuickInterests();
+    const directionInterest = quickJoinDirection
+      ? `${quickJoinDirection.vertical} · ${quickJoinDirection.specialty}`
+      : '';
     try {
       const result = await sendSubmission({
         type: 'student_quick',
@@ -1856,13 +1907,16 @@ if (quickJoinForm) {
         contact: { name, email: emailVal },
         school: formValue(quickJoinForm, 'quickSchool'),
         industries,
-        interest: industries.join(', ') || state.workType || '',
+        interest: [directionInterest, industries.join(', ')].filter(Boolean).join(' · '),
       });
-      writeStorage(QUICK_KEY, { name, email: emailVal, school: formValue(quickJoinForm, 'quickSchool'), industries, reference: result.reference, stage: 'quick_added', at: new Date().toISOString() });
+      writeStorage(QUICK_KEY, { name, email: emailVal, school: formValue(quickJoinForm, 'quickSchool'), industries, direction: quickJoinDirection, reference: result.reference, stage: 'quick_added', at: new Date().toISOString() });
       saveSubmission({
         type: 'student_quick', reference: result.reference, status: result.status || 'received',
         storage: result.storage || 'confirmed', createdAt: result.createdAt || new Date().toISOString(),
-        title: name + ' · quick join', summary: industries.length ? 'Interested in ' + industries.join(', ') : (state.workType ? 'Interested in ' + state.workType : 'Full profile pending'),
+        title: name + ' · quick join',
+        summary: directionInterest
+          ? 'Interested in ' + directionInterest
+          : (industries.length ? 'Interested in ' + industries.join(', ') : 'Joined without choosing a work area'),
       });
       renderQuickJoinDone(result.reference);
       renderProfileBanner();
@@ -3748,7 +3802,7 @@ $('#introScreen').addEventListener('cancel', event => {
 const restoredAudience = readStorage(audienceStorageKey, 'home');
 if (['home', 'student', 'company', 'university'].includes(restoredAudience)) state.audience = restoredAudience;
 const restoredWorkTypes = checkedValues(studentForm, 'workType');
-const rememberedWorkType = readStorage(workTypeStorageKey, 'Research');
+const rememberedWorkType = readStorage(workTypeStorageKey, '');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];
 else if (rememberedWorkType) state.workType = rememberedWorkType;
 const rememberedSpecialty = readStorage(studentSpecialtyStorageKey, null);
@@ -4495,7 +4549,8 @@ function renderNarrowFlow() {
 restoreRosterDraft();
 renderLocalSubmissionState();
 renderNarrowFlow();
-selectWorkType(state.workType);
+if (state.workType) selectWorkType(state.workType);
+else renderStudentSpecialties('');
 setAudience(state.audience);
 renderReferralBanner();
 renderReferralLink();

@@ -297,7 +297,7 @@
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
           <h1 id="studentHeroTitle">Do work that proves<br><span class="word-gold">what you can do.</span></h1>
-          <p>Join the referred talent network, then choose where you want to prove yourself.</p>
+          <p>Join now without choosing a direction, or select the exact work you want before you sign up.</p>
         </div>
         <!-- F3: partner-referral landing. Populated + shown by app.js only when the
              visitor arrives via a partner's ?ref= link. Not identity-verified. -->
@@ -310,25 +310,38 @@
           </div>
         </div>
         <div class="student-entry">
-          <button class="gold-button student-join-primary" type="button" data-action="student-quick">
-            Join the talent network<svg><use href="#icon-arrow-right"/></svg>
-          </button>
+          <div class="student-open-join">
+            <div>
+              <p class="student-route-label">Join without choosing</p>
+              <h2>Start now. Choose later.</h2>
+              <p>No work area is required. Add or change your direction whenever you are ready.</p>
+            </div>
+            <button class="gold-button student-join-primary" type="button" data-action="student-quick" data-join-mode="open">
+              Join now — choose later<svg><use href="#icon-arrow-right"/></svg>
+            </button>
+          </div>
+          <div class="student-choice-divider" aria-hidden="true"><span>or</span></div>
           <fieldset class="student-vertical-picker">
-            <legend>Choose your vertical</legend>
+            <legend><span>Choose a work area</span><small>Optional — select one, then a specific specialty before joining.</small></legend>
             <div class="student-vertical-rail">
-              <button class="student-vertical is-selected" type="button" data-work-type="Research" data-vertical-label="Product &amp; strategy" aria-pressed="true">Product &amp; strategy</button>
-              <button class="student-vertical" type="button" data-work-type="Data & spreadsheets" data-vertical-label="Software &amp; data" aria-pressed="false">Software &amp; data</button>
-              <button class="student-vertical" type="button" data-work-type="Operations" data-vertical-label="Finance &amp; operations" aria-pressed="false">Finance &amp; operations</button>
-              <button class="student-vertical" type="button" data-work-type="Writing & documentation" data-vertical-label="Growth &amp; research" aria-pressed="false">Growth &amp; research</button>
+              <button class="student-vertical" type="button" data-work-type="Research" data-vertical-label="Research &amp; strategy" aria-pressed="false"><span>01</span><strong>Research &amp; strategy</strong><small>Markets, customers, products</small></button>
+              <button class="student-vertical" type="button" data-work-type="Data & spreadsheets" data-vertical-label="Data &amp; analysis" aria-pressed="false"><span>02</span><strong>Data &amp; analysis</strong><small>Models, cleanup, reporting</small></button>
+              <button class="student-vertical" type="button" data-work-type="Operations" data-vertical-label="Operations" aria-pressed="false"><span>03</span><strong>Operations</strong><small>Processes, programs, vendors</small></button>
+              <button class="student-vertical" type="button" data-work-type="QA & testing" data-vertical-label="QA &amp; testing" aria-pressed="false"><span>04</span><strong>QA &amp; testing</strong><small>Test cases, bugs, evaluation</small></button>
+              <button class="student-vertical" type="button" data-work-type="Writing & documentation" data-vertical-label="Writing &amp; documentation" aria-pressed="false"><span>05</span><strong>Writing &amp; documentation</strong><small>Briefs, SOPs, knowledge</small></button>
             </div>
           </fieldset>
-          <div class="student-specialty-panel" id="studentSpecialtyPanel" aria-live="polite">
+          <p class="student-specialty-empty" id="studentSpecialtyEmpty">Pick a work area to see the exact kinds of work inside it.</p>
+          <div class="student-specialty-panel" id="studentSpecialtyPanel" aria-live="polite" hidden>
             <div class="student-specialty-heading">
-              <p>Now choose a specialty</p>
-              <strong id="studentSpecialtyTitle">Product &amp; strategy</strong>
+              <div><p>Your work area</p><strong id="studentSpecialtyTitle"></strong></div>
+              <button type="button" id="studentChoiceClear">Clear choice</button>
             </div>
             <div class="student-specialty-options" id="studentSpecialtyOptions" role="group" aria-label="Choose a specialty"></div>
-            <p class="student-specialty-status" id="studentSpecialtyStatus">Choose one to tell us what kind of work you want to prove.</p>
+            <p class="student-specialty-status" id="studentSpecialtyStatus">Choose the specific work you want attached to your signup.</p>
+            <button class="gold-button student-join-selected" id="studentJoinSelected" type="button" data-action="student-quick" data-join-mode="selected" disabled>
+              <span id="studentJoinSelectedLabel">Choose a specialty to join</span><svg><use href="#icon-arrow-right"/></svg>
+            </button>
           </div>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
@@ -1099,7 +1112,7 @@
                 <section class="path-panel glass-panel">
                   <header><h2>The work you're building toward</h2><button class="outline-button compact" type="button" data-action="student-form">Edit interests</button></header>
                   <div class="dashboard-paths">
-                    <div class="is-primary"><svg><use href="#icon-search"/></svg><span id="workspacePrimaryPath">Research</span></div>
+                    <div class="is-primary"><svg><use href="#icon-search"/></svg><span id="workspacePrimaryPath">Not chosen yet</span></div>
                     <div><svg><use href="#icon-data"/></svg><span>Data &amp; spreadsheets</span></div>
                     <div><svg><use href="#icon-write"/></svg><span>Writing &amp; documentation</span></div>
                   </div>
