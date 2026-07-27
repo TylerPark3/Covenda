@@ -111,3 +111,13 @@ test('the OS preference is respected until someone chooses', () => {
 test('gold is reserved for earned signals, not applied as decoration', () => {
   assert.match(styles, /Gold marks what was EARNED/);
 });
+
+// Gold as a line or a ground is decoration and can be everywhere. Gold as a FILL is a
+// signal and stays rare. Losing that distinction is how an accent becomes noise.
+test('gold fills stay reserved while gold lines carry structure', () => {
+  assert.match(styles, /gold as a LINE or a GROUND is/i);
+  // The earned marks keep the strongest treatment.
+  assert.match(styles, /\.verif-list li\.is-held \.verif-mark[\s\S]{0,200}box-shadow: 0 0 0 1px var\(--accent\)/);
+  // And night mode gets its own ring value, because the day glow disappears on black.
+  assert.match(styles, /\[data-theme="night"\][\s\S]{0,300}rgba\(217,169,78,\.5\)/);
+});

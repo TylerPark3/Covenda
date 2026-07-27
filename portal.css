@@ -1755,3 +1755,100 @@ body { background: var(--surface); }
   color: var(--text-2); cursor: pointer; font-size: 15px;
 }
 .theme-toggle:hover { border-color: var(--accent); color: var(--accent-text); }
+
+/* ══ GOLD, TURNED UP ═══════════════════════════════════════════════════════════════════
+   The restrained version marked only what was earned. This adds presence without breaking
+   that rule: gold now carries STRUCTURE as well as achievement — rails, edges, headings,
+   the nav — while solid gold fills stay reserved for the earned things.
+
+   The distinction that keeps it from becoming noise: gold as a LINE or a GROUND is
+   decoration and can be everywhere. Gold as a FILL is a signal and stays rare. */
+
+/* The nav gets a gold spine. It is the one element on screen at all times, so it can carry
+   the brand without competing with anything. */
+.member-nav { border-right: 1px solid var(--edge); position: relative; }
+.member-nav::after {
+  content: ""; position: absolute; inset: 0 0 0 auto; width: 2px;
+  background: linear-gradient(180deg, var(--accent), transparent 55%);
+}
+.member-nav nav button.is-active {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.member-nav nav button.is-active svg { color: var(--accent-text); }
+.portal-brand { color: var(--text); }
+.portal-brand::after {
+  content: ""; display: block; height: 1px; margin-top: 12px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+
+/* Panels get a gold top edge. Reads as a considered surface rather than a plain box, and it
+   is a line so it stays decoration. */
+.panel-card, .company-form, .video-library, .coref, .ats-panel, .payout-setup, .pipeline-panel {
+  border-top: 2px solid transparent;
+  border-image: linear-gradient(90deg, var(--accent), transparent 70%) 1;
+  border-image-slice: 1;
+}
+
+/* Section headings get a fuller rule than the hairline. */
+.panel-card > h3::after, .company-form-head h3::after, .pipe-head h3::after {
+  width: 56px; height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-text) 60%, transparent);
+}
+
+/* Primary buttons: gold fill in day, gold-on-dark in night. This is the one place a fill is
+   right, because a primary action IS the earned next step. */
+.portal-primary {
+  background: linear-gradient(180deg, var(--accent), var(--accent-text));
+  border: 1px solid var(--accent-text);
+  color: #fff;
+}
+:root[data-theme="night"] .portal-primary {
+  background: linear-gradient(180deg, #d9a94e, #b8873a);
+  border-color: #e6c47a;
+  color: #14120c;
+}
+.portal-primary:hover { filter: brightness(1.06); }
+.portal-secondary { border-color: var(--accent); color: var(--accent-text); }
+.portal-secondary:hover { background: var(--accent-soft); }
+
+/* Metrics and counts pick up gold numerals, so the figures a founder scans read as the
+   figures rather than as body text. */
+.metric strong, .roster-total b, .pipe-col-top span, .journey-count, .brief-version {
+  color: var(--accent-text);
+}
+
+/* Night mode is where gold actually sings. Warm the surfaces very slightly so the accent
+   sits IN the page rather than on top of it. */
+:root[data-theme="night"] {
+  --surface-1: #17150f;
+  --surface-2: #1e1a12;
+}
+:root[data-theme="night"] body {
+  background:
+    radial-gradient(1200px 600px at 15% -10%, rgba(217,169,78,.07), transparent 60%),
+    var(--bg);
+}
+:root[data-theme="night"] .member-nav {
+  background: linear-gradient(180deg, #1b1811, var(--surface-1) 40%);
+}
+:root[data-theme="night"] .panel-card:hover,
+:root[data-theme="night"] .discover-card:hover,
+:root[data-theme="night"] .batch-card:hover { border-color: rgba(217,169,78,.35); }
+
+/* An earned mark gets a gold ring — the strongest treatment, and it stays rare because only
+   held signals and completed steps use it. */
+.verif-list li.is-held .verif-mark,
+.journey-list li.is-done .journey-mark,
+.coref-gate.is-done {
+  box-shadow: 0 0 0 1px var(--accent), 0 0 12px -2px rgba(180,123,32,.45);
+}
+:root[data-theme="night"] .verif-list li.is-held .verif-mark,
+:root[data-theme="night"] .journey-list li.is-done .journey-mark,
+:root[data-theme="night"] .coref-gate.is-done {
+  box-shadow: 0 0 0 1px var(--accent), 0 0 16px -2px rgba(217,169,78,.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal-primary:hover { filter: none; }
+}
