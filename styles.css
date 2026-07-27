@@ -4841,3 +4841,4 @@ body:not([data-audience="home"]) .slop-section { display: none; }
 .batch-grid > * { align-self: stretch; }
 .batch-card { display: flex; flex-direction: column; height: 100%; }
 .batch-card > p { flex: 1 1 auto; }
+.record-illus { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--soft); font-size: 12px; line-height: 1.5; }
