@@ -118,6 +118,41 @@ test('production home keeps the approved clean banner and talent-to-proof hero',
   assert.match(script, /spawnSignal\(now\)/);
 });
 
+test('the proof lens opens the homepage without removing the existing product story', () => {
+  const heroAt = html.indexOf('class="hero hero-home"');
+  const proofAt = html.indexOf('class="proof-lens-section"');
+  const compareAt = html.indexOf('class="compare-section"');
+  const exchangeAt = html.indexOf('class="exchange-section"');
+  assert.ok(heroAt >= 0 && heroAt < proofAt && proofAt < compareAt && compareAt < exchangeAt);
+  assert.match(html, /Stop screening claims\.[\s\S]*Inspect the proof\./);
+  assert.match(html, /data-proof-criterion="product"/);
+  assert.match(html, /data-proof-evidence="contribution"/);
+  assert.match(html, /A shortlist you can explain\./);
+  assert.match(html, /Quality over quantity/);
+  assert.match(html, /One project\.[\s\S]*Two sides win\./);
+  assert.match(styles, /body:not\(\[data-audience="home"\]\) \.proof-lens-section \{ display: none; \}/);
+  assert.match(styles, /body\[data-audience="home"\] \.compare-section \{ display: block; \}/);
+  assert.match(script, /function initProofLens\(\)/);
+});
+
+test('the ideal-intern walkthrough is a minimal company-only two-route demo', () => {
+  const demo = html.match(/<section class="company-product-demo[\s\S]*?<\/section>/)?.[0] || '';
+  assert.match(demo, /data-for-audience="company"/);
+  assert.match(demo, /Two ways to get the help you need\./);
+  assert.match(demo, /Find a student/);
+  assert.match(demo, /Post a trial/);
+  assert.match(demo, /You have a problem\./);
+  assert.match(demo, /Open Talent\./);
+  assert.match(demo, /Illustrative match/);
+  assert.match(demo, /Post one small task\./);
+  assert.match(demo, /Qualified students apply\./);
+  assert.match(demo, /Run the paid trial\./);
+  assert.doesNotMatch(html, /id="cdemoControls"|id="cdemoScore"|Build your ideal intern\. Watch the score/);
+  assert.match(script, /function initCompanyProductDemo\(\)/);
+  assert.match(script, /Object\.entries\(panels\)/);
+  assert.match(styles, /\.company-demo-steps \{[\s\S]*grid-template-columns: repeat\(3/);
+});
+
 // Reframed from "approved Project Packet" to vetted-talent-then-trial. The managed workflow
 // and the risk boundary are unchanged — only the framing around them moved.
 test('company story preserves the managed workflow and risk boundary', () => {
@@ -623,7 +658,7 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
 // A visitor can understand the static frame, then inspect each phase with any input method.
 test('the work exchange turns one project into clear value for both sides', () => {
   assert.match(html, /class="exchange-section"/);
-  assert.match(html, /id="bridgeStory"/);
+  assert.match(html, /id="workExchangeStory"/);
   assert.match(html, /id="workExchange"/);
   assert.match(
     html,

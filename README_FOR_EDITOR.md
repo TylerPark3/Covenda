@@ -64,6 +64,8 @@ For inspection, the local records are exposed at `window.COVENDA_DEMO_MODEL`. Th
 ## Presentation rules
 
 - Explain the product before exposing the operating interface.
+- Keep the home story in this order: dark hero, interactive proof lens, **Quality over quantity** comparison, then the existing project exchange and supporting sections. The proof lens adds an opening explanation; it does not replace the longer product story.
+- Keep the compact **Find a student / Post a trial** walkthrough on the company audience only. Each route uses three short steps and remains explicitly illustrative.
 - Use one strong accent, black text, consistent rounded geometry, and restrained depth instead of decorative card grids. Reserve translucent glass for navigation, controls, and dialogs; keep reading surfaces nearly opaque and high contrast.
 - Preserve the two-part wordmark: **Proof** stays upright black; **Path** is italic blue with a dark edge and no neon glow. Keep it legible at navigation size and avoid decorative flicker.
 - Keep one persistent pale-blue caret beside the second intro line from its first typed character through the final blinking state. Do not swap to a differently sized or offset cursor after the last letter.

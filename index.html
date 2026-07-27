@@ -129,6 +129,87 @@
         <a class="scroll-cue" href="#bridgeStory"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
+      <section class="proof-lens-section" id="bridgeStory" aria-labelledby="proofLensTitle">
+        <header class="proof-lens-heading">
+          <h2 id="proofLensTitle">Stop screening claims.<br>Inspect the proof.</h2>
+          <p>One brief. A few students. A clear reason to meet.</p>
+          <span>Illustrative preview</span>
+        </header>
+
+        <div class="proof-lens" id="proofLens" data-proof-key="product" data-proof-state="evidence">
+          <section class="proof-brief" aria-labelledby="proofBriefTitle">
+            <p class="proof-stage-label"><b>1</b>Define the proof</p>
+            <div class="proof-sheet">
+              <h3 id="proofBriefTitle">Frontend intern</h3>
+              <div class="proof-criteria" role="list" aria-label="Choose a requirement to trace">
+                <button type="button" class="is-selected" data-proof-criterion="product" aria-pressed="true">
+                  <span class="proof-check"><svg><use href="#icon-check"/></svg></span>
+                  <strong>Shipped React product</strong>
+                </button>
+                <button type="button" data-proof-criterion="contribution" aria-pressed="false">
+                  <span class="proof-check"><svg><use href="#icon-check"/></svg></span>
+                  <strong>Clear contribution</strong>
+                </button>
+                <button type="button" data-proof-criterion="hours" aria-pressed="false">
+                  <span class="proof-check"><svg><use href="#icon-check"/></svg></span>
+                  <strong>10+ hours weekly</strong>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="proof-evidence" aria-labelledby="proofEvidenceTitle">
+            <p class="proof-stage-label"><b>2</b><span id="proofEvidenceTitle">Follow the evidence</span></p>
+            <div class="proof-evidence-rows">
+              <button type="button" class="proof-evidence-row is-active" data-proof-evidence="product" aria-pressed="true">
+                <span class="proof-object-icon"><svg><use href="#icon-grid"/></svg></span>
+                <strong>Live product</strong>
+                <em class="is-linked">Linked</em>
+              </button>
+              <button type="button" class="proof-evidence-row" data-proof-evidence="contribution" aria-pressed="false">
+                <span class="proof-object-icon"><svg><use href="#icon-route"/></svg></span>
+                <strong>Code contribution</strong>
+                <em class="is-confirmed">Confirmed</em>
+              </button>
+              <button type="button" class="proof-evidence-row" data-proof-evidence="hours" aria-pressed="false">
+                <span class="proof-object-icon"><svg><use href="#icon-user"/></svg></span>
+                <strong>Availability</strong>
+                <em class="is-unverified">Unverified</em>
+              </button>
+            </div>
+          </section>
+
+          <section class="proof-candidate" aria-labelledby="proofCandidateTitle">
+            <p class="proof-stage-label"><b>3</b>Meet by mutual choice</p>
+            <div class="proof-person">
+              <div class="proof-person-main">
+                <img src="/assets/maya-chen-illustrative.jpg" alt="" width="132" height="132">
+                <div><h3 id="proofCandidateTitle">Maya Chen</h3><p>Frontend product builder</p></div>
+              </div>
+              <dl class="proof-readout" aria-live="polite">
+                <div><dt id="proofReadoutLabel">Shipped React product</dt><dd id="proofReadoutValue">Live product linked</dd></div>
+              </dl>
+              <button class="proof-request" id="proofRequestIntro" type="button">Request introduction<svg><use href="#icon-arrow-right"/></svg></button>
+              <div class="proof-requested" id="proofRequested" hidden>
+                <svg><use href="#icon-check"/></svg>
+                <div><strong>Request ready</strong><span>Maya chooses whether to connect.</span></div>
+                <button type="button" id="proofResetIntro">Reset</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="proof-difference" aria-label="What makes Covenda different">
+          <span>Not a résumé database.</span>
+          <span>Not a black-box score.</span>
+          <strong>A shortlist you can explain.</strong>
+        </div>
+        <div class="proof-lens-actions">
+          <button class="proof-primary-action" type="button" data-audience-option="company">Find student talent</button>
+          <button class="proof-secondary-action" type="button" data-audience-option="student">Build your proof</button>
+        </div>
+      </section>
+
 
       <!-- One comparison, not two sections making the same case in different shapes. A real
            table because this IS tabular: the same five questions, answered two ways. Every
@@ -164,31 +245,12 @@
           </table>
         </div>
 
-        <!-- The demo. A claim about an auditable score is worth very little next to the score
-             itself, so the same eight axes a company fills in are here, live, with the number
-             and its reasoning moving as you change them. Nothing is sent anywhere. -->
-        <div class="cdemo" id="fitDemo">
-          <div class="cdemo-head">
-            <p class="cdemo-cap">See it work</p>
-            <h3>Build your ideal intern. Watch the score explain itself.</h3>
-            <p class="cdemo-sub">Describe the work and the person. The same comparison the product runs, here in your browser against one illustrative student. Nothing is sent anywhere.</p>
-          </div>
-          <div class="cdemo-body">
-            <div class="cdemo-controls" id="cdemoControls"></div>
-            <div class="cdemo-out">
-              <div class="cdemo-score"><strong id="cdemoScore">0</strong><span>match</span><small id="cdemoBasis">Describe the person and the score appears</small></div>
-              <ul class="cdemo-reasons" id="cdemoReasons"></ul>
-            </div>
-          </div>
-          <p class="cdemo-note">Illustrative student, illustrative role. The weighting is the same one the product uses.</p>
-        </div>
-
         <p class="compare-foot"><b>Where the scoring stands.</b> V1 is a transparent weighted model: it reads the ideal intern you describe against what a student has evidenced, and it shows which parts matched, which did not, and how many were compared at all. The machine-learning re-ranker is built and running in shadow, deliberately not influencing any score until there are enough completed outcomes to train it honestly, because a model fitted on a handful of results is worse than the arithmetic it would replace. And Covenda has not placed a student yet, so everything above describes how the process works, not how well it has worked.</p>
       </section>
 
       <!-- Home-only. One two-way exchange: the company contributes real work, referred
            talent contributes execution, and the trial returns value to both sides. -->
-      <section class="exchange-section" id="bridgeStory" aria-labelledby="exchangeTitle">
+      <section class="exchange-section" id="workExchangeStory" aria-labelledby="exchangeTitle">
         <div class="exchange-head">
           <h2 id="exchangeTitle">One project. <span class="word-gold">Two sides win.</span></h2>
           <p>Referred talent, real work, one trial both sides can trust.</p>
@@ -493,6 +555,56 @@
           <button class="quiet-link" type="button" data-action="readiness-check">Score your readiness, free, no account<svg><use href="#icon-chevron"/></svg></button>
         </div>
         <a class="scroll-cue" href="#how"><span>See how Covenda reduces oversight</span><svg><use href="#icon-arrow-down"/></svg></a>
+      </section>
+
+      <section class="company-product-demo audience-content" data-for-audience="company" id="companyProductDemo" data-demo-mode="find" aria-labelledby="companyProductDemoTitle">
+        <div class="company-product-demo-head">
+          <h2 id="companyProductDemoTitle">Two ways to get the help you need.</h2>
+          <p>Find a matched student. Or post one paid trial.</p>
+        </div>
+
+        <div class="company-demo-tabs" role="tablist" aria-label="Choose a company walkthrough">
+          <button type="button" role="tab" id="companyDemoFindTab" data-company-demo-tab="find" aria-controls="companyDemoFind" aria-selected="true">Find a student</button>
+          <button type="button" role="tab" id="companyDemoTrialTab" data-company-demo-tab="trial" aria-controls="companyDemoTrial" aria-selected="false">Post a trial</button>
+        </div>
+
+        <div class="company-demo-panel" id="companyDemoFind" role="tabpanel" aria-labelledby="companyDemoFindTab">
+          <ol class="company-demo-steps">
+            <li>
+              <span>1</span>
+              <div><h3>You have a problem.</h3><p>Signups drop after onboarding.</p></div>
+            </li>
+            <li>
+              <span>2</span>
+              <div><h3>Open Talent.</h3><p>Covenda fills in what you need.</p></div>
+            </li>
+            <li class="company-demo-profile">
+              <span>3</span>
+              <div class="company-demo-person">
+                <img src="/assets/maya-chen-illustrative.jpg" alt="" width="72" height="72">
+                <div><small>Illustrative match</small><h3>Maya Chen</h3><p>React product linked · contribution confirmed</p></div>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <div class="company-demo-panel" id="companyDemoTrial" role="tabpanel" aria-labelledby="companyDemoTrialTab" hidden>
+          <ol class="company-demo-steps">
+            <li>
+              <span>1</span>
+              <div><h3>Post one small task.</h3><p>Audit the signup flow.</p></div>
+            </li>
+            <li>
+              <span>2</span>
+              <div><h3>Qualified students apply.</h3><p>You choose who starts.</p></div>
+            </li>
+            <li>
+              <span>3</span>
+              <div><h3>Run the paid trial.</h3><p>Clear finish. Named reviewer.</p></div>
+            </li>
+          </ol>
+        </div>
+        <p class="company-demo-note">Illustrative flow. No placement or outcome is claimed.</p>
       </section>
 
       <section class="hero hero-university" aria-labelledby="universityHeroTitle">

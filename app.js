@@ -5990,156 +5990,96 @@ function initBatchWeb() {
 initMemberNav();
 window.requestAnimationFrame(() => openIntro());
 
-/* ── Live "build your ideal intern" demo ─────────────────────────────────────────────
-   The first version asked a visitor to pick between "solo" and "paired", which is not what a
-   founder is thinking about and not what the product is actually built around. A company
-   describes an ideal intern — the technical work it needs done, how that person operates —
-   and the score is built against THAT.
+// The opening home card traces one requirement through its evidence to a mutual introduction.
+(function initProofLens() {
+  const lens = document.getElementById('proofLens');
+  if (!lens) return;
+  const criteria = Array.from(lens.querySelectorAll('[data-proof-criterion]'));
+  const evidenceRows = Array.from(lens.querySelectorAll('[data-proof-evidence]'));
+  const readoutLabel = document.getElementById('proofReadoutLabel');
+  const readoutValue = document.getElementById('proofReadoutValue');
+  const requestButton = document.getElementById('proofRequestIntro');
+  const requested = document.getElementById('proofRequested');
+  const resetButton = document.getElementById('proofResetIntro');
+  if (!criteria.length || criteria.length !== evidenceRows.length || !readoutLabel ||
+      !readoutValue || !requestButton || !requested || !resetButton) return;
 
-   So this is the ideal-intern builder, running in the browser against one illustrative
-   student. Skills carry the most weight because they are the thing that can be evidenced;
-   traits carry the least because both sides self-report them. Nothing is sent anywhere. */
-(function idealInternDemo() {
-  const host = document.getElementById('cdemoControls');
-  if (!host) return;
-
-  const SKILLS = [
-    'Python', 'SQL', 'React', 'Data analysis', 'Financial modelling',
-    'User research', 'Figma', 'Technical writing', 'Automation', 'Machine learning',
-  ];
-  const TRAITS = ['ships fast', 'detail-obsessed', 'works well unsupervised', 'asks questions early', 'strong writer'];
-  const AXES = [
-    { key: 'structure', label: 'The work is', a: ['structured', 'Well-defined'], b: ['ambiguous', 'Ambiguous'] },
-    { key: 'pace', label: 'Pace', a: ['steady', 'Steady'], b: ['fast', 'Fast'] },
-    { key: 'scope', label: 'Scope', a: ['depth', 'One thing deeply'], b: ['breadth', 'A bit of everything'] },
-  ];
-
-  // One illustrative student, fixed so two visitors comparing notes see the same thing.
-  const STUDENT = {
-    skills: ['Python', 'SQL', 'Data analysis', 'Automation'],
-    traits: ['ships fast', 'asks questions early'],
-    style: { structure: 'ambiguous', pace: 'fast', scope: 'depth' },
-    evidence: 'Two of these are evidenced from a connected repository; the rest are self-reported.',
+  const proof = {
+    product: { label: 'Shipped React product', value: 'Live product linked' },
+    contribution: { label: 'Clear contribution', value: 'Code contribution confirmed' },
+    hours: { label: '10+ hours weekly', value: 'Availability not yet verified' },
   };
 
-  const role = { skills: new Set(), traits: new Set(), style: {} };
-  const scoreEl = document.getElementById('cdemoScore');
-  const basisEl = document.getElementById('cdemoBasis');
-  const reasonsEl = document.getElementById('cdemoReasons');
-
-  // Mirrors the shape of the real weighting: skills heaviest because they can be evidenced,
-  // traits lightest because both sides simply claim them.
-  const W = { skills: 44, style: 14, traits: 6 };
-
-  function render() {
-    const skillHits = [...role.skills].filter(s => STUDENT.skills.includes(s));
-    const traitHits = [...role.traits].filter(t => STUDENT.traits.includes(t));
-    const answeredAxes = AXES.filter(ax => role.style[ax.key]);
-    const axisHits = answeredAxes.filter(ax => role.style[ax.key] === STUDENT.style[ax.key]);
-
-    const asked = role.skills.size + role.traits.size + answeredAxes.length;
-    const base = 36;                       // vetted, evidenced, available — true of anyone here
-    let total = base;
-    if (role.skills.size) total += W.skills * (skillHits.length / role.skills.size);
-    if (answeredAxes.length) total += W.style * (axisHits.length / answeredAxes.length);
-    if (role.traits.size) total += W.traits * (traitHits.length / role.traits.size);
-
-    scoreEl.textContent = asked ? String(Math.round(total)) : '—';
-    // A number built on one answer is not the claim a number built on ten is.
-    basisEl.textContent = asked
-      ? `Built on ${asked} thing${asked === 1 ? '' : 's'} you asked for`
-      : 'Describe the person and the score appears';
-
-    reasonsEl.replaceChildren();
-    if (!asked) {
-      add('is-empty', 'Pick the skills the work needs, and the score explains itself.');
-      return;
-    }
-    skillHits.forEach(s => add('is-match', `${s}: evidenced on their profile`));
-    [...role.skills].filter(s => !skillHits.includes(s)).forEach(s => add('is-gap', `${s}: no evidence yet`));
-    axisHits.forEach(ax => add('is-match', `${ax.label.toLowerCase()}: matches how they work`));
-    answeredAxes.filter(ax => !axisHits.includes(ax)).forEach(ax => add('is-gap', `${ax.label.toLowerCase()}: they lean the other way`));
-    traitHits.forEach(t => add('is-match', `They describe themselves as ${t}`));
-    if (skillHits.length) add('is-empty', STUDENT.evidence);
-  }
-
-  function add(cls, text) {
-    const li = document.createElement('li');
-    li.className = cls;
-    li.textContent = text;
-    reasonsEl.append(li);
-  }
-
-  function chipRow(title, items, onToggle, isOn) {
-    const wrap = document.createElement('div');
-    wrap.className = 'cdemo-group';
-    const cap = document.createElement('p');
-    cap.className = 'cdemo-group-cap';
-    cap.textContent = title;
-    const row = document.createElement('div');
-    row.className = 'cdemo-chips';
-    items.forEach(item => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = item;
-      btn.setAttribute('aria-pressed', 'false');
-      btn.addEventListener('click', () => {
-        onToggle(item);
-        btn.setAttribute('aria-pressed', String(isOn(item)));
-        render();
-      });
-      row.append(btn);
+  function selectProof(key) {
+    const item = proof[key];
+    if (!item) return;
+    lens.dataset.proofKey = key;
+    criteria.forEach(button => {
+      const selected = button.dataset.proofCriterion === key;
+      button.classList.toggle('is-selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
     });
-    wrap.append(cap, row);
-    return wrap;
+    evidenceRows.forEach(button => {
+      const selected = button.dataset.proofEvidence === key;
+      button.classList.toggle('is-active', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+    readoutLabel.textContent = item.label;
+    readoutValue.textContent = item.value;
+    readoutValue.classList.toggle('is-unverified', key === 'hours');
+    requestButton.hidden = false;
+    requested.hidden = true;
+    lens.dataset.proofState = 'evidence';
   }
 
-  host.append(chipRow(
-    'Skills the work needs',
-    SKILLS,
-    s => (role.skills.has(s) ? role.skills.delete(s) : role.skills.add(s)),
-    s => role.skills.has(s),
-  ));
-  host.append(chipRow(
-    'How they should operate',
-    TRAITS,
-    t => (role.traits.has(t) ? role.traits.delete(t) : role.traits.add(t)),
-    t => role.traits.has(t),
-  ));
-
-  const envWrap = document.createElement('div');
-  envWrap.className = 'cdemo-group';
-  const envCap = document.createElement('p');
-  envCap.className = 'cdemo-group-cap';
-  envCap.textContent = 'What the role is actually like';
-  envWrap.append(envCap);
-  AXES.forEach(ax => {
-    const row = document.createElement('div');
-    row.className = 'cdemo-row';
-    const cap = document.createElement('span');
-    cap.className = 'cdemo-label';
-    cap.textContent = ax.label;
-    const group = document.createElement('div');
-    group.className = 'cdemo-toggle';
-    group.setAttribute('role', 'group');
-    group.setAttribute('aria-label', ax.label);
-    [ax.a, ax.b].forEach(([value, text]) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.textContent = text;
-      btn.setAttribute('aria-pressed', 'false');
-      btn.addEventListener('click', () => {
-        // Clicking the selected option clears it, so "no preference" stays reachable.
-        role.style[ax.key] = role.style[ax.key] === value ? undefined : value;
-        [...group.children].forEach(c => c.setAttribute('aria-pressed', String(c === btn && role.style[ax.key] === value)));
-        render();
-      });
-      group.append(btn);
-    });
-    row.append(cap, group);
-    envWrap.append(row);
+  criteria.forEach(button => button.addEventListener('click', () => selectProof(button.dataset.proofCriterion)));
+  evidenceRows.forEach(button => button.addEventListener('click', () => selectProof(button.dataset.proofEvidence)));
+  requestButton.addEventListener('click', () => {
+    requestButton.hidden = true;
+    requested.hidden = false;
+    lens.dataset.proofState = 'requested';
+    resetButton.focus({ preventScroll: true });
   });
-  host.append(envWrap);
+  resetButton.addEventListener('click', () => {
+    requestButton.hidden = false;
+    requested.hidden = true;
+    lens.dataset.proofState = 'evidence';
+    requestButton.focus({ preventScroll: true });
+  });
+})();
 
-  render();
+// Company visitors can switch between the two simple product routes without reading a
+// feature list: find a matched student, or post a bounded paid trial.
+(function initCompanyProductDemo() {
+  const demo = document.getElementById('companyProductDemo');
+  if (!demo) return;
+  const tabs = Array.from(demo.querySelectorAll('[data-company-demo-tab]'));
+  const panels = {
+    find: document.getElementById('companyDemoFind'),
+    trial: document.getElementById('companyDemoTrial'),
+  };
+  if (tabs.length !== 2 || !panels.find || !panels.trial) return;
+
+  function setMode(mode, focus = false) {
+    if (!panels[mode]) return;
+    demo.dataset.demoMode = mode;
+    tabs.forEach(tab => {
+      const selected = tab.dataset.companyDemoTab === mode;
+      tab.setAttribute('aria-selected', String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      if (selected && focus) tab.focus();
+    });
+    Object.entries(panels).forEach(([key, panel]) => { panel.hidden = key !== mode; });
+  }
+
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => setMode(tab.dataset.companyDemoTab));
+    tab.addEventListener('keydown', event => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      const next = tabs[(index + direction + tabs.length) % tabs.length];
+      setMode(next.dataset.companyDemoTab, true);
+    });
+  });
 })();
