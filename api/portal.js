@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
+import { recordError } from './limits.js';
+
 import { supabaseConfiguration } from './submissions.js';
 import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail } from './notify.js';
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
@@ -268,18 +270,44 @@ export async function authorizeMember(req, dependencies = {}) {
 // and pretending otherwise hides it. But a portal that 503s in its entirety because an
 // introductions table has not been migrated yet is a code/schema skew taking down features
 // that have nothing to do with it. These degrade to empty and log the reason.
+// Every table optional() has quietly skipped this process, so a degraded feature can be seen
+// rather than inferred. In-memory: a counter is enough to answer "is this still happening",
+// and the durable record goes to error_events the first time each table fails.
+export const degraded = new Map();
+const reported = new Set();
+
 async function optional(query, fallback = [], label = 'optional table') {
   try {
     const { data, error } = await query;
     if (error) {
-      console.warn(JSON.stringify({ level: 'warn', message: 'Optional read skipped', label, error: error.message }));
+      noteDegraded(label, error.message);
       return fallback;
     }
     return data ?? fallback;
   } catch (error) {
-    console.warn(JSON.stringify({ level: 'warn', message: 'Optional read threw', label, error: String(error?.message || error) }));
+    noteDegraded(label, String(error?.message || error));
     return fallback;
   }
+}
+
+function noteDegraded(label, message) {
+  const seen = degraded.get(label) || { count: 0, lastMessage: '' };
+  degraded.set(label, { count: seen.count + 1, lastMessage: message, lastAt: new Date().toISOString() });
+  console.warn(JSON.stringify({ level: 'warn', message: 'Optional read skipped', label, error: message }));
+  // Recorded once per table per instance. A row per skipped read would bury the signal in
+  // its own noise — the point is to learn that a table is missing, not how often.
+  if (reported.has(label)) return;
+  reported.add(label);
+  recordError('portal', 'schema_missing', `Optional table unavailable: ${label}`, { detail: { label, reason: String(message).slice(0, 200) } })
+    .catch(() => { /* recording a degradation must never degrade anything further */ });
+}
+
+// What is currently degraded, for the operator health view. Nothing here is user data.
+export function degradedReport() {
+  return {
+    tables: [...degraded.entries()].map(([label, v]) => ({ label, ...v })),
+    healthy: degraded.size === 0,
+  };
 }
 
 async function checked(query, fallback = []) {

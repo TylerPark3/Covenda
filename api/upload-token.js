@@ -17,6 +17,7 @@
 
 import { issueSignedToken, presignUrl } from '@vercel/blob';
 
+import { checkLimit, limitResponse, recordError } from './limits.js';
 import { authorizeMember } from './portal.js';
 
 export const MAX_BYTES = 400 * 1024 * 1024;   // a long screen share, with room to spare
@@ -49,6 +50,9 @@ export default async function handler(req, res, dependencies = {}) {
   const member = await authorizeMember(req, dependencies);
   if (!member) return res.status(401).json({ ok: false, error: 'Sign in first.' });
 
+  const limit = await checkLimit('upload-token', member.user.id);
+  if (!limit.allowed) return limitResponse(res, limit, 'uploads');
+
   const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
   const kind = KINDS[body.kind] ? body.kind : 'video';
   const contentType = String(body.contentType || 'video/webm').split(';')[0].trim();
@@ -77,7 +81,7 @@ export default async function handler(req, res, dependencies = {}) {
     const { presignedUrl } = await presignUrl(token, { operation: 'put', pathname, access: 'private' });
     return res.status(200).json({ ok: true, uploadUrl: presignedUrl, pathname, expiresIn: TTL_SECONDS });
   } catch (error) {
-    console.error(JSON.stringify({ level: 'error', message: 'Upload token failed', error: String(error?.message || error) }));
+    await recordError('upload-token', 'error', error?.message || 'unknown', { userId: member.user.id, detail: { kind } });
     return res.status(500).json({ ok: false, error: 'Could not start the upload. Try again, or paste a link.' });
   }
 }

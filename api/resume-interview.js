@@ -11,6 +11,7 @@
 // a human to ask. `stripProxies` runs on the model's output because a model told not to probe
 // prestige still occasionally does, and a résumé is dense with the temptation.
 
+import { checkLimit, limitResponse, recordError } from './limits.js';
 import { authorizeMember } from './portal.js';
 import { questionsFromResume } from './resume-questions.js';
 
@@ -52,6 +53,10 @@ export default async function handler(req, res, dependencies = {}) {
   const member = await authorizeMember(req, dependencies);
   if (!member) return res.status(401).json({ ok: false, error: 'Sign in first.' });
 
+  // This route calls the Anthropic API on every upload, so the cap is about cost, not abuse.
+  const limit = await checkLimit('resume-interview', member.user.id);
+  if (!limit.allowed) return limitResponse(res, limit, 'résumés');
+
   const contentType = (req.headers['content-type'] || '').split(';')[0].trim();
   if (!ALLOWED.has(contentType)) {
     return res.status(415).json({ ok: false, error: 'Upload a PDF, Word document, or plain text résumé.' });
@@ -70,7 +75,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (!result.ok) return res.status(200).json({ ok: false, fallback: true, reason: result.reason });
     return res.status(200).json({ ok: true, questions: result.questions, note: result.note, droppedCount: (result.dropped || []).length });
   } catch (error) {
-    console.error(JSON.stringify({ level: 'error', message: 'Résumé questions failed', error: String(error?.message || error) }));
+    await recordError('resume-interview', 'error', error?.message || 'unknown', { userId: member.user.id, detail: { vertical } });
     return res.status(200).json({ ok: false, fallback: true, reason: 'Could not read that résumé. The published questions still apply.' });
   }
 }

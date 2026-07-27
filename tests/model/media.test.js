@@ -83,5 +83,7 @@ test('signing is short-lived, read-only, and the failure is named rather than sw
   assert.match(src, /operations: \['get', 'head'\]/, 'the delegation cannot write or delete');
   assert.match(src, /pathname: parsed\.pathname/, 'the delegation is scoped to one blob');
   assert.match(src, /'Cache-Control', 'no-store'/, 'a per-caller URL must not be cached at the edge');
-  assert.match(src, /console\.error\(JSON\.stringify/);
+  // Recorded rather than swallowed. It now goes to error_events via recordError, which is
+  // queryable, instead of a console line that dies in the platform logs.
+  assert.match(src, /recordError\('media', 'error'/);
 });

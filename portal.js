@@ -403,12 +403,49 @@ function projectActionNode(project){
   if(isOwner&&project.status==='complete'){wrap.append(loopNote('p-check','Accepted','You accepted this work, the student now holds a verified record, and the escrow has been released.'));wrap.append(conversionControl(project));return wrap;}
   // Cancelling is money-moving and irreversible, so it arms on the first click and only
   // sends on the second.
-  if(isOwner&&!['complete','archived'].includes(project.status)&&((Number(project.credits_held)||0)+(Number(project.platform_fee_credits)||0))>0){
-    wrap.append(cancelProjectButton(project));
+  if(isOwner&&!['complete','archived'].includes(project.status)){
+    wrap.append(endProjectControl(project));
     return wrap;
   }
   return null;
 }
+// Ending a live project. Which server action applies depends on what the project is carrying,
+// and a company should not have to know that: a bare draft is deleted, anything else is ended
+// and its escrow refunded. The label states the consequence rather than naming the verb.
+function endProjectControl(project){
+  const held=(Number(project.credits_held)||0)+(Number(project.platform_fee_credits)||0);
+  const applicants=(state.dashboard.applications||[]).filter(a=>a.project_id===project.id).length;
+  const assigned=Boolean(project.assigned_student_user_id);
+  const deletable=project.status==='draft'&&held===0&&!applicants;
+  if(deletable)return deleteDraftButton(project);
+
+  const label=held>0?`End project · refund ${held.toLocaleString()} credits`:'End project';
+  // Says what actually happens to the other people involved. A student mid-work finding out
+  // by the project vanishing is the failure this wording exists to prevent.
+  const confirm=assigned
+    ? 'Click again — this ends the work a student has started'
+    : applicants
+      ? `Click again — ${applicants} applicant${applicants===1?'':'s'} will be closed out`
+      : 'Click again to end it';
+  return armedButton({
+    label, confirm, busy:'Ending…',
+    run:()=>portalRequest({method:'POST',body:JSON.stringify({action:'cancel-project',projectId:project.id})}),
+  });
+}
+// Two-step confirm for anything irreversible. Extracted because cancel, delete and end all
+// had their own copy of this and they had already drifted apart.
+function armedButton({label,confirm,busy,run,className='portal-ghost cancel-project'}){
+  const b=document.createElement('button');b.type='button';b.className=className;b.textContent=label;
+  let armed=false,timer=0;
+  b.addEventListener('click',async()=>{
+    if(!armed){armed=true;b.textContent=confirm;b.classList.add('is-armed');timer=window.setTimeout(()=>{armed=false;b.textContent=label;b.classList.remove('is-armed');},5000);return;}
+    window.clearTimeout(timer);b.disabled=true;b.textContent=busy;
+    try{await run();await loadDashboard();setView('projects');}
+    catch(error){b.textContent=error.message;b.disabled=false;armed=false;b.classList.remove('is-armed');}
+  });
+  return b;
+}
+
 function cancelProjectButton(project){
   const refund=(Number(project.credits_held)||0)+(Number(project.platform_fee_credits)||0);
   const label=`Cancel project · refund ${refund.toLocaleString()} credits`;
@@ -1023,7 +1060,7 @@ function renderActions(){const root=$('#nextActions');root.replaceChildren();con
 
 function emptyList(root,iconId,title,copy,action){root.replaceChildren();const box=document.createElement('div');box.className='list-empty';const mark=document.createElement('span');mark.append(icon(iconId));const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=copy;box.append(mark,h,p);if(action&&action.label&&typeof action.run==='function'){const b=document.createElement('button');b.type='button';b.className='empty-cta';b.textContent=action.label;b.addEventListener('click',action.run);box.append(b);}root.append(box);}
 
-function renderProjects(){const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();if(!items.length){const isStudent=state.dashboard.profile?.role==='student';emptyList(root,'p-project','No projects in this workspace yet.',isStudent?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.',isStudent?{label:'Discover projects →',run:()=>setView('discover')}:{label:'Post a project →',run:openIntake});return;}for(const project of items){if(project.status==='archived')continue;if(project.status==='complete'){root.append(verifiedCard(project,{full:true}));continue;}if(project.status==='proposed'){root.append(packetCard(project));continue;}const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');const visibility=cell('Visibility',titleCase(project.visibility));row.append(main,status,due,visibility);if(project.status==='draft'&&['company','university'].includes(state.dashboard.profile?.role))row.append(deleteDraftButton(project));root.append(row);}}
+function renderProjects(){const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();if(!items.length){const isStudent=state.dashboard.profile?.role==='student';emptyList(root,'p-project','No projects in this workspace yet.',isStudent?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.',isStudent?{label:'Discover projects →',run:()=>setView('discover')}:{label:'Post a project →',run:openIntake});return;}for(const project of items){if(project.status==='archived')continue;if(project.status==='complete'){root.append(verifiedCard(project,{full:true}));continue;}if(project.status==='proposed'){root.append(packetCard(project));continue;}const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');const visibility=cell('Visibility',titleCase(project.visibility));row.append(main,status,due,visibility);if(['company','university'].includes(state.dashboard.profile?.role)&&project.owner_user_id===state.dashboard.user.id&&!['complete','archived'].includes(project.status))row.append(endProjectControl(project));root.append(row);}}
 function cell(label,value){const div=document.createElement('div');div.className='list-cell';const small=document.createElement('small');small.textContent=label;const strong=document.createElement('strong');strong.textContent=value;div.append(small,strong);return div;}
 // Packet-first intake (GTM Move 1): a Covenda-scoped packet the company accepts (funds it) or declines.
 function packetCard(project){

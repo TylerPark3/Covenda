@@ -22,6 +22,8 @@
 // URL and stays out of the data path.
 
 import { createClient } from '@supabase/supabase-js';
+
+import { checkLimit, limitResponse, recordError } from './limits.js';
 import { issueSignedToken, presignUrl } from '@vercel/blob';
 
 // Short. A signed URL that outlives the session it was minted for is a public URL with extra
@@ -145,6 +147,9 @@ export default async function handler(req, res) {
     const user = await userFrom(req, supabase);
     if (!user) return res.status(401).json({ ok: false, error: 'Sign in first.' });
 
+    const limit = await checkLimit('media-sign', user.id, { env, client: supabase });
+    if (!limit.allowed) return limitResponse(res, limit, 'playback requests');
+
     const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
     const verdict = await mayView(supabase, user, body.url, env);
     if (!verdict.ok) return res.status(403).json({ ok: false, error: verdict.reason });
@@ -156,7 +161,7 @@ export default async function handler(req, res) {
   } catch (error) {
     // Named rather than swallowed. The last upload bug cost an hour precisely because a bare
     // catch made every failure look identical.
-    console.error(JSON.stringify({ level: 'error', message: 'Playback signing failed', error: String(error?.message || error) }));
+    await recordError('media', 'error', error?.message || 'unknown', { env });
     return res.status(500).json({ ok: false, error: 'Could not prepare playback. Try reloading.' });
   }
 }
