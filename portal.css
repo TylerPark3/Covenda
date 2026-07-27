@@ -1633,3 +1633,125 @@ body { background: var(--surface); }
 
 /* Screen recording needs a bigger stage than a talking head. */
 .rec-overlay .rec-stage:has(video[data-mode="screen"]) { max-width: 1100px; }
+
+/* ══ NIGHT MODE ════════════════════════════════════════════════════════════════════════
+   Every colour in the portal is now a token, and night mode redefines the tokens rather
+   than overriding components. That matters because the alternative — a second stylesheet of
+   `.dark .thing` rules — drifts the moment anyone adds a component and forgets one.
+
+   Gold does the same job in both themes but not at the same value: #b47b20 on near-black is
+   muddy and fails contrast, so night mode lifts it. A brand colour that only works on white
+   is a brand colour that breaks in half your product. */
+:root {
+  --bg: #fbfaf7;
+  --surface-1: #ffffff;
+  --surface-2: #fbf9f4;
+  --text: #11110f;
+  --text-2: #55524a;
+  --text-3: #7d7870;
+  --edge: #e7e4dd;
+  --edge-strong: #d5d0c5;
+  --accent: #b47b20;
+  --accent-soft: #fbf7ed;
+  --accent-text: #8d5b0f;
+}
+
+:root[data-theme="night"] {
+  --bg: #0e0d0a;
+  --surface-1: #171511;
+  --surface-2: #1d1a15;
+  --text: #f4f1e8;
+  --text-2: #b8b2a4;
+  --text-3: #8b8578;
+  --edge: #2a2620;
+  --edge-strong: #3a352c;
+  /* Lifted and slightly desaturated so it reads as gold rather than mustard on dark. */
+  --accent: #d9a94e;
+  --accent-soft: #241f14;
+  --accent-text: #e6c47a;
+
+  --gold: #d9a94e;
+  --gold-deep: #e6c47a;
+  --gold-pale: #241f14;
+  --gold-light: #6b5423;
+  --ink: #f4f1e8;
+  --muted: #b8b2a4;
+  --soft: #8b8578;
+  --line: #2a2620;
+  --line-strong: #3a352c;
+  --success: #6ec283;
+  --danger: #e2836f;
+  --surface: #0e0d0a;
+  --flow: #7fb0d4; --flow-pale: #14202a;
+  --grow: #6ec283; --grow-pale: #12211a;
+  --proof: #a897d8; --proof-pale: #1c1728;
+  --attn: #d98a5e; --attn-pale: #251a13;
+  --lift-sm: 0 1px 2px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.35);
+  --lift-md: 0 2px 4px rgba(0,0,0,.55), 0 12px 28px rgba(0,0,0,.45);
+}
+
+:root[data-theme="night"] body,
+:root[data-theme="night"] .member-main { background: var(--bg); color: var(--text); }
+:root[data-theme="night"] .panel-card,
+:root[data-theme="night"] .discover-card,
+:root[data-theme="night"] .talent-card,
+:root[data-theme="night"] .batch-card,
+:root[data-theme="night"] .company-form,
+:root[data-theme="night"] .video-library,
+:root[data-theme="night"] .payout-setup,
+:root[data-theme="night"] .coref,
+:root[data-theme="night"] .ats-panel,
+:root[data-theme="night"] .member-nav,
+:root[data-theme="night"] .member-header { background: var(--surface-1); border-color: var(--edge); color: var(--text); }
+:root[data-theme="night"] input,
+:root[data-theme="night"] textarea,
+:root[data-theme="night"] select { background: var(--surface-2); border-color: var(--edge-strong); color: var(--text); }
+:root[data-theme="night"] input::placeholder,
+:root[data-theme="night"] textarea::placeholder { color: var(--text-3); }
+:root[data-theme="night"] .member-dialog,
+:root[data-theme="night"] .verif-dialog { background: var(--surface-1); color: var(--text); }
+:root[data-theme="night"] .member-dialog header,
+:root[data-theme="night"] .member-dialog footer { background: var(--surface-1); border-color: var(--edge); }
+/* The batch application is deliberately white-on-black in light mode; night mode inverts it
+   rather than leaving a blinding rectangle in a dark portal. */
+:root[data-theme="night"] #batchApplyDialog,
+:root[data-theme="night"] #batchApplyDialog .dialog-body,
+:root[data-theme="night"] #batchApplyDialog header,
+:root[data-theme="night"] #batchApplyDialog footer,
+:root[data-theme="night"] #batchApplyDialog [data-ba-step],
+:root[data-theme="night"] #batchApplyDialog .ba-upload,
+:root[data-theme="night"] #batchApplyDialog .batch-exercise { background: var(--surface-1); color: var(--text); border-color: var(--edge); }
+:root[data-theme="night"] #batchApplyDialog .bq-label,
+:root[data-theme="night"] #batchApplyDialog label,
+:root[data-theme="night"] #batchApplyDialog .ex-block p { color: var(--text); }
+
+/* ── The gold detailing ────────────────────────────────────────────────────────────────
+   Restrained on purpose. Gold marks what was EARNED — a verified signal, a cleared bar, an
+   accepted deliverable. If it also decorates borders and buttons at random it stops meaning
+   anything, and the one place it should draw the eye loses its power. */
+.is-earned, .verif-list li.is-held .verif-mark, .journey-list li.is-done .journey-mark {
+  position: relative;
+}
+/* A hairline gold rule under section headings: enough to feel considered, not enough to
+   compete with the text above it. */
+.panel-card > h3::after, .company-form-head h3::after, .pipe-head h3::after {
+  content: ""; display: block; width: 34px; height: 2px; margin-top: 8px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+}
+/* Primary actions get a gold edge rather than a gold fill, so a screen full of buttons does
+   not read as a screen full of alerts. */
+.portal-primary { position: relative; }
+.portal-primary::after {
+  content: ""; position: absolute; inset: auto 0 0 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5), transparent);
+  opacity: 0; transition: opacity .2s ease;
+}
+.portal-primary:hover::after { opacity: 1; }
+
+/* The theme toggle. */
+.theme-toggle {
+  display: grid; place-items: center; width: 38px; height: 38px;
+  border: 1px solid var(--edge-strong); border-radius: 0; background: var(--surface-1);
+  color: var(--text-2); cursor: pointer; font-size: 15px;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent-text); }

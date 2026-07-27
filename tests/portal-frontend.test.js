@@ -88,3 +88,26 @@ test('the assessment records the screen, not the candidate', () => {
   // And a student is told the method is what is scored, before they start working silently.
   assert.match(script, /Reviewers score the method/);
 });
+
+// A second stylesheet of `.dark .thing` rules drifts the moment someone adds a component and
+// forgets one. Night mode redefines tokens instead.
+test('night mode redefines tokens rather than overriding components', () => {
+  assert.match(styles, /:root\[data-theme="night"\]/);
+  assert.match(styles, /--accent: #d9a94e/, 'gold is lifted for dark, not reused');
+  // #b47b20 on near-black is muddy and fails contrast; reusing it would break the brand in
+  // half the product.
+  assert.doesNotMatch(styles, /\[data-theme="night"\][\s\S]{0,400}--accent: #b47b20/);
+  assert.match(html, /id="themeToggle"/);
+});
+
+test('the OS preference is respected until someone chooses', () => {
+  assert.match(script, /prefers-color-scheme: dark/);
+  assert.match(script, /localStorage\.setItem\(KEY/);
+  // Private browsing throws on localStorage; it must not take the portal down.
+  assert.match(script, /catch\{ \/\* private browsing \*\/ \}/);
+});
+
+// Gold marks what was earned. Decorating everything with it would empty it of meaning.
+test('gold is reserved for earned signals, not applied as decoration', () => {
+  assert.match(styles, /Gold marks what was EARNED/);
+});

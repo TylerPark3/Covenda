@@ -2955,7 +2955,9 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 /* ---- A4 Talent Readiness Assessment (free pre-auth diagnostic). ------------
    Sized deliberately larger than the older dialogs: this is a read-out someone
    scans, so the axes get room and the type stays above 13px. ---------------- */
-.hero-quiet-actions { display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: center; }
+/* Sits directly under .prompt-links, which is centered — match it, or a single remaining
+   link orphans itself against the left gutter while everything above it is centred. */
+.hero-quiet-actions { display: flex; flex-wrap: wrap; gap: 8px 28px; align-items: center; justify-content: center; }
 .hero-quiet-actions .quiet-link { margin-top: 28px; }
 
 .readiness-dialog { width: min(720px, calc(100vw - 28px)); }

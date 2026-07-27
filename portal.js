@@ -1,3 +1,19 @@
+// Theme. Stored per browser rather than per account: it is a property of where someone is
+// sitting, not who they are, and syncing it would fight a user who wants dark at night and
+// light in a bright office.
+(function initTheme(){
+  const KEY='covenda-theme';
+  const apply=t=>{ document.documentElement.dataset.theme=t; };
+  const saved=(()=>{ try{ return localStorage.getItem(KEY); }catch{ return null; } })();
+  // Respect the OS when nothing has been chosen; a deliberate choice always wins after that.
+  apply(saved || (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'night' : 'day'));
+  document.getElementById('themeToggle')?.addEventListener('click',()=>{
+    const next=document.documentElement.dataset.theme==='night'?'day':'night';
+    apply(next);
+    try{ localStorage.setItem(KEY,next); }catch{ /* private browsing */ }
+  });
+})();
+
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const ACCESS_KEY = 'covendaMemberAccessToken';
