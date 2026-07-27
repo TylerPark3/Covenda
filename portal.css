@@ -1374,3 +1374,84 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .conversion-survey:hover { text-decoration: underline; text-underline-offset: 3px; }
 .ideal-link { justify-self: start; margin: 0 0 16px; border: 1px solid var(--line-strong); background: #fff; padding: 8px 14px; font: inherit; font-size: 12.5px; font-weight: 650; color: var(--gold-deep); cursor: pointer; }
 .ideal-link:hover { border-color: var(--gold); background: var(--gold-pale); }
+
+/* ══ PORTAL PALETTE ════════════════════════════════════════════════════════════════════
+   Gold on white is Covenda's identity and stays. What was missing is everything BESIDE it:
+   with one accent, every state looked the same, so a warning, a win and a plain fact all
+   read at identical weight. That is what makes a tool feel flat — not the colour, the lack
+   of a second one.
+
+   So: gold keeps its job as the brand and the primary action. These are the states around
+   it — an ink-blue for things in motion, a green for accepted work, a violet for evidence,
+   a clay for anything needing attention. All desaturated enough to sit under gold rather
+   than fight it. */
+:root {
+  --flow: #2f5d7c;         /* in progress, in review — motion */
+  --flow-pale: #eef4f8;
+  --grow: #1f7a4d;         /* accepted, verified, earned */
+  --grow-pale: #edf7f1;
+  --proof: #5b4b8a;        /* evidence, credentials, records */
+  --proof-pale: #f2effa;
+  --attn: #a8542a;         /* needs you — never alarm red unless money is at stake */
+  --attn-pale: #fbf1ec;
+  --surface: #fbfaf7;      /* the page behind cards, so white cards read as raised */
+  --lift-sm: 0 1px 2px rgba(24,20,12,.05), 0 2px 8px rgba(24,20,12,.04);
+  --lift-md: 0 2px 4px rgba(24,20,12,.06), 0 12px 28px rgba(24,20,12,.07);
+  --ease-out: cubic-bezier(.22,.9,.3,1);
+}
+
+body { background: var(--surface); }
+.member-main { background: var(--surface); }
+
+/* Cards lift off the surface instead of being outlined boxes on the same white. */
+.panel-card, .discover-card, .talent-card, .batch-card, .company-form, .video-library, .brief-review {
+  box-shadow: var(--lift-sm);
+  transition: box-shadow .22s var(--ease-out), transform .22s var(--ease-out);
+}
+.discover-card:hover, .talent-card:hover, .batch-card:hover { box-shadow: var(--lift-md); transform: translateY(-2px); }
+
+/* State colour, applied where a state actually exists. */
+.status-pill[data-status="in_progress"], .status-pill[data-status="review"] { border-color: rgba(47,93,124,.3); background: var(--flow-pale); color: var(--flow); }
+.status-pill[data-status="complete"] { border-color: rgba(31,122,77,.3); background: var(--grow-pale); color: var(--grow); }
+.status-pill[data-status="matched"] { border-color: rgba(91,75,138,.3); background: var(--proof-pale); color: var(--proof); }
+.pipe-col[data-stage="reviewing"] { border-color: rgba(47,93,124,.35); background: var(--flow-pale); }
+.pipe-col[data-stage="accepted"] { border-color: rgba(31,122,77,.35); background: var(--grow-pale); }
+.journey-list li.is-done .journey-mark { border-color: rgba(31,122,77,.35); background: var(--grow-pale); color: var(--grow); }
+.readiness[data-state="ready"] { border-color: rgba(31,122,77,.4); background: var(--grow-pale); }
+.readiness[data-state="ready"] .readiness-top strong { color: var(--grow); }
+.cred-meter-track i, .project-progress i { background: linear-gradient(90deg, var(--proof), var(--gold)); }
+.trial-start-panel { border-color: rgba(91,75,138,.3); background: var(--proof-pale); }
+.intro-panel { border-color: rgba(47,93,124,.28); background: var(--flow-pale); }
+
+/* ── Motion that rewards progress ──────────────────────────────────────────────────────
+   The satisfying part of a good tool is that finishing something LOOKS like finishing
+   something. These are one-shot and short: a bar that fills, a tick that lands, a panel
+   that arrives. Nothing loops, nothing pulses for attention, nothing appears where it was
+   not asked for — the goal is a tool people are glad to open, not one engineered to be
+   hard to close. */
+@keyframes riseIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fillBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes markLand { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.12); opacity: 1; } 100% { transform: scale(1); } }
+
+.panel-card, .discover-card, .brief-review { animation: riseIn .32s var(--ease-out) both; }
+.discover-card:nth-child(2) { animation-delay: .04s; }
+.discover-card:nth-child(3) { animation-delay: .08s; }
+.discover-card:nth-child(n+4) { animation-delay: .12s; }
+.cred-meter-track i, .project-progress i, .readiness .readiness-top { transform-origin: left; }
+.cred-meter-track i, .project-progress i { animation: fillBar .7s var(--ease-out) both; }
+.journey-list li.is-done .journey-mark, .verif-list li.is-held .verif-mark { animation: markLand .34s var(--ease-out) both; }
+
+/* The one moment worth celebrating: a step that just became done. */
+.journey-list li.is-next { position: relative; }
+.journey-list li.is-next::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  box-shadow: inset 0 0 0 1px var(--gold);
+}
+
+/* Someone who does not want motion gets none of it. */
+@media (prefers-reduced-motion: reduce) {
+  .panel-card, .discover-card, .brief-review,
+  .cred-meter-track i, .project-progress i,
+  .journey-list li.is-done .journey-mark, .verif-list li.is-held .verif-mark { animation: none; }
+  .discover-card:hover, .talent-card:hover, .batch-card:hover { transform: none; }
+}
