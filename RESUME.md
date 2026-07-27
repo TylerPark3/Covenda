@@ -31,6 +31,11 @@ npx vercel alias set <the-deployment-url-it-printed> covenda.app
   against rows, then mints a 15-minute read-only signed URL. Wired into the student's video
   library, the company's application review, and the operator's batch reviewer.
 
+## Migrations
+
+All applied through `20260728100000_fit_dimensions` (run 27 July). The eight comparison axes,
+student traits, and the score basis on an application all persist.
+
 ## Still on your list
 
 **Yours, not code:**
