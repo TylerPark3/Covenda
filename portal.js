@@ -214,7 +214,7 @@ function renderCompanySegments(role){
     card.append(mark,h,p,row);return card;
   };
   root.append(
-    seg('p-clock','Work that keeps getting pushed back','That task that slips every week — hand it off as a scoped, reviewed project. Covenda carries the scoping; you only approve the result.',[['Post a project',()=>openIntake(),true],['Ask Covenda to scope it',()=>openRequest()]]),
+    seg('p-clock','Work that keeps getting pushed back','That task that slips every week, hand it off as a scoped, reviewed project. Covenda carries the scoping; you only approve the result.',[['Post a project',()=>openIntake(),true],['Ask Covenda to scope it',()=>openRequest()]]),
     seg('p-spark','Find elite talent','Vetted, referral-backed students. Search the talent base, or browse curated elite batches.',[['Browse talent',()=>setView('portfolio'),true],['Elite batches',()=>setView('batches')]]),
   );
   root.hidden=false;
@@ -271,14 +271,14 @@ function conversionControl(project){
   select.addEventListener('change',async()=>{
     select.disabled=true;status.textContent='Saving…';
     try{await portalRequest({method:'POST',body:JSON.stringify({action:'record-conversion',projectId:project.id,outcome:select.value})});
-      project.conversion_outcome=select.value;status.textContent='Saved. Thank you — this shapes who we route to you next.';}
+      project.conversion_outcome=select.value;status.textContent='Saved. Thank you, this shapes who we route to you next.';}
     catch(error){status.textContent=error.message;}
     finally{select.disabled=false;}
   });
   wrap.append(label,status);return wrap;
 }
 function loopNote(iconId,title,copy){const d=document.createElement('div');d.className='loop-note';d.append(icon(iconId));const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=copy;box.append(strong,small);d.append(box);return d;}
-function verifiedCard(project,{full=false}={}){const card=document.createElement('div');card.className='verified-record';const head=document.createElement('div');head.className='verified-head';head.append(icon('p-check'));const badge=document.createElement('span');badge.textContent='Verified work record';head.append(badge);const h=document.createElement('h3');h.textContent=project.title;card.append(head,h);if(full&&project.summary){const s=document.createElement('p');s.className='verified-summary';s.textContent=project.summary;card.append(s);}const p=document.createElement('p');p.textContent=`Reviewer accepted${project.completed_at?` · ${dateLabel(project.completed_at)}`:''}`;card.append(p);const earned=document.createElement('p');earned.className='verified-earned';earned.textContent='Stage 1 cleared — eligible for deeper, higher-access work.';card.append(earned);return card;}
+function verifiedCard(project,{full=false}={}){const card=document.createElement('div');card.className='verified-record';const head=document.createElement('div');head.className='verified-head';head.append(icon('p-check'));const badge=document.createElement('span');badge.textContent='Verified work record';head.append(badge);const h=document.createElement('h3');h.textContent=project.title;card.append(head,h);if(full&&project.summary){const s=document.createElement('p');s.className='verified-summary';s.textContent=project.summary;card.append(s);}const p=document.createElement('p');p.textContent=`Reviewer accepted${project.completed_at?` · ${dateLabel(project.completed_at)}`:''}`;card.append(p);const earned=document.createElement('p');earned.className='verified-earned';earned.textContent='Stage 1 cleared, eligible for deeper, higher-access work.';card.append(earned);return card;}
 function projectActionNode(project){
   const d=state.dashboard;const role=d.profile?.role;const isOwner=project.owner_user_id===d.user.id;const isAssigned=project.assigned_student_user_id===d.user.id;
   const wrap=document.createElement('div');wrap.className='project-actions';
@@ -286,7 +286,7 @@ function projectActionNode(project){
   if(isAssigned&&project.status==='review'){wrap.append(loopNote('p-clock','In review','Your work is with the reviewer. The decision will appear here.'));return wrap;}
   if(isAssigned&&project.status==='complete'){wrap.append(verifiedCard(project));return wrap;}
   if(isOwner&&project.status==='review'){wrap.append(loopNote('p-inbox','Deliverable submitted','A student submitted work for your review.'));wrap.append(actionButton('Review deliverable','p-check',()=>openReview(project)));return wrap;}
-  if(isOwner&&project.status==='complete'){wrap.append(loopNote('p-check','Accepted','You accepted this work — the student now holds a verified record, and the escrow has been released.'));wrap.append(conversionControl(project));return wrap;}
+  if(isOwner&&project.status==='complete'){wrap.append(loopNote('p-check','Accepted','You accepted this work, the student now holds a verified record, and the escrow has been released.'));wrap.append(conversionControl(project));return wrap;}
   // Cancelling is money-moving and irreversible, so it arms on the first click and only
   // sends on the second.
   if(isOwner&&!['complete','archived'].includes(project.status)&&((Number(project.credits_held)||0)+(Number(project.platform_fee_credits)||0))>0){
@@ -352,7 +352,7 @@ function applicantCard(application,project){
   if((application.fit_reasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';application.fit_reasons.slice(0,3).forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});card.append(rs);}
   if((application.skills||[]).length){const ask=new Set((Array.isArray(project?.desired_skills)?project.desired_skills:String(project?.desired_skills||'').split(',')).map(s=>String(s).toLowerCase().trim()).filter(Boolean));const sk=document.createElement('div');sk.className='applicant-skills';application.skills.forEach(s=>sk.append(pill(s,ask.has(String(s).toLowerCase().trim())?'skill-pill is-matched':'skill-pill')));card.append(sk);}
   if(application.note){const n=document.createElement('p');n.className='applicant-note';n.textContent=application.note;card.append(n);}
-  const ref=application.referral||{};if(ref.name||ref.code){const rr=document.createElement('p');rr.className='applicant-referral'+(ref.verified?' is-verified':'');const who=ref.verified?(ref.partner||ref.name):(ref.name||'—');rr.textContent=ref.verified?`Endorsed by ${who} · Covenda-certified`:`Referred by ${who}${ref.code?` (${ref.code})`:''} · referral pending`;card.append(rr);}
+  const ref=application.referral||{};if(ref.name||ref.code){const rr=document.createElement('p');rr.className='applicant-referral'+(ref.verified?' is-verified':'');const who=ref.verified?(ref.partner||ref.name):(ref.name||', ');rr.textContent=ref.verified?`Endorsed by ${who} · Covenda-certified`:`Referred by ${who}${ref.code?` (${ref.code})`:''} · referral pending`;card.append(rr);}
   const links=document.createElement('div');links.className='applicant-links';
   if(application.demonstration){if(/^https?:\/\//i.test(application.demonstration)){const dl=document.createElement('a');dl.href=application.demonstration;dl.target='_blank';dl.rel='noopener';dl.textContent='View work sample';links.append(dl);}else{const p=document.createElement('p');p.className='applicant-note';p.textContent=application.demonstration;card.append(p);}}
   if(application.video_url){const vl=document.createElement('a');vl.href=application.video_url;vl.target='_blank';vl.rel='noopener';vl.textContent='Watch intro video';links.append(vl);}
@@ -384,7 +384,7 @@ function renderMetrics(){
       ];
     })();
   for(const [value,label,target,highlight] of values){
-    const item=document.createElement('button');item.type='button';item.className='metric';item.setAttribute('aria-label',`${value} ${label} — open`);
+    const item=document.createElement('button');item.type='button';item.className='metric';item.setAttribute('aria-label',`${value} ${label}, open`);
     const strong=document.createElement('strong');strong.textContent=value;const span=document.createElement('span');span.textContent=label;item.append(strong,span);
     item.addEventListener('click',()=>{setView(target);pulse(highlight);});
     root.append(item);
@@ -478,7 +478,7 @@ function openSchoolEmailStep(){
   const held=Boolean(state.dashboard?.verification?.signals?.find(s=>s.key==='school_email')?.held);
   const d=verifDialog('Verify your school email',
     held?'This is already confirmed. Verifying a different address replaces the one on file.'
-        :'We send a six-digit code to your university address. This proves you control the address — it is the floor, not the proof.');
+        :'We send a six-digit code to your university address. This proves you control the address, it is the floor, not the proof.');
   const email=verifField('School email','ends in .edu, .ac.uk, or your university’s domain',{type:'email',required:true,placeholder:'you@university.edu',autocomplete:'email'});
   d.body.append(email.label);
 
@@ -522,12 +522,12 @@ function openSchoolEmailStep(){
 
 function openClubStep(){
   const d=verifDialog('Claim your club membership',
-    'Name the club you are a member of. An officer confirms it before it counts — a claim on its own proves nothing, and companies only ever see confirmed memberships.');
+    'Name the club you are a member of. An officer confirms it before it counts, a claim on its own proves nothing, and companies only ever see confirmed memberships.');
   const name=verifField('Club name','e.g. Columbia Robotics Club',{type:'text',required:true,placeholder:'Columbia Robotics Club'});
   const school=verifField('School',null,{type:'text',placeholder:'Columbia University'});
   const site=verifField('Club website','optional if you add Instagram',{type:'url',placeholder:'https://…'});
   const social=verifField('Club Instagram','optional if you add a website',{type:'url',placeholder:'https://instagram.com/…'});
-  const officer=verifField('Officer email','who can confirm you — president, captain, or faculty advisor',{type:'email',placeholder:'president@club.org'});
+  const officer=verifField('Officer email','who can confirm you, president, captain, or faculty advisor',{type:'email',placeholder:'president@club.org'});
   const role=verifField('Your role in the club','optional',{type:'text',placeholder:'Member, project lead, treasurer'});
   d.body.append(name.label,school.label,site.label,social.label,officer.label,role.label);
 
@@ -546,7 +546,7 @@ function openClubStep(){
       const reg=await portalRequest({method:'POST',body:JSON.stringify({action:'register-club',clubName:name.input.value.trim(),school:school.input.value.trim(),websiteUrl:site.input.value.trim(),socialUrl:social.input.value.trim(),email:officer.input.value.trim(),role:role.input.value.trim()})});
       await portalRequest({method:'POST',body:JSON.stringify({action:'claim-club',clubId:reg.club.id})});
       // The claim alone counts for nothing, so hand them the thing that makes it count.
-      d.say('Filed. Now get it confirmed — that is what makes it count.');
+      d.say('Filed. Now get it confirmed, that is what makes it count.');
       await loadDashboard();
       d.body.replaceChildren();
       const done=document.createElement('p');done.className='verif-intro';
@@ -562,7 +562,7 @@ function openClubStep(){
         const copy=document.createElement('button');copy.type='button';copy.className='portal-primary';copy.textContent='Copy the link';
         copy.addEventListener('click',async()=>{
           try{ await navigator.clipboard.writeText(url); copy.textContent='Copied'; }
-          catch{ box.select(); d.say('Select-all and copy — your browser blocked the clipboard.',true); }
+          catch{ box.select(); d.say('Select-all and copy, your browser blocked the clipboard.',true); }
         });
         const mail=document.createElement('button');mail.type='button';mail.className='portal-secondary';mail.textContent='Open in email';
         mail.addEventListener('click',()=>{
@@ -579,12 +579,12 @@ function openClubStep(){
 function openReferralStep(){
   const who=state.dashboard?.profile?.display_name||'me';
   const d=verifDialog('Ask for a named referral',
-    'A referral is one person putting their own name behind your work. We cannot generate one — but we can write the ask, and it is the single strongest signal on your profile.');
+    'A referral is one person putting their own name behind your work. We cannot generate one, but we can write the ask, and it is the single strongest signal on your profile.');
   const draft=
     'Hi [name],\n\n'
     +'I’m applying through Covenda, which places undergraduates on scoped, paid project work with startups. '
     +'Companies there weigh referrals from people who have actually seen someone work, over résumés.\n\n'
-    +'Would you be willing to vouch for me? It takes about two minutes — you confirm who you are, how you know my work, and what you saw me do. '
+    +'Would you be willing to vouch for me? It takes about two minutes, you confirm who you are, how you know my work, and what you saw me do. '
     +'If you’d rather not, no hard feelings at all.\n\n'
     +'Thanks,\n'+who;
   const label=document.createElement('label');
@@ -594,14 +594,14 @@ function openReferralStep(){
   const tips=document.createElement('ul'); tips.className='verif-tips';
   [['Ask someone who saw the work','A supervisor, research PI, club officer, or the founder you shipped for. A friend does not count.'],
    ['One is enough to start','A single named referral outweighs a wall of self-reported skills.'],
-   ['They confirm under their own name','That is what makes it worth anything — anonymous praise is not a referral.']]
+   ['They confirm under their own name','That is what makes it worth anything, anonymous praise is not a referral.']]
     .forEach(([t,body])=>{const li=document.createElement('li');const strong=document.createElement('strong');strong.textContent=t;const small=document.createElement('small');small.textContent=body;li.append(strong,small);tips.append(li);});
   d.body.append(tips);
 
   const copy=document.createElement('button'); copy.type='button'; copy.className='portal-primary'; copy.textContent='Copy the ask';
   copy.addEventListener('click',async()=>{
     try{ await navigator.clipboard.writeText(area.value); copy.textContent='Copied'; d.say('Send it to whoever knows your work best.'); }
-    catch{ area.select(); d.say('Select-all and copy — your browser blocked the clipboard.',true); }
+    catch{ area.select(); d.say('Select-all and copy, your browser blocked the clipboard.',true); }
   });
   const mail=document.createElement('button'); mail.type='button'; mail.className='portal-secondary'; mail.textContent='Open in email';
   mail.addEventListener('click',()=>{ window.location.href='mailto:?subject='+encodeURIComponent('A quick referral ask')+'&body='+encodeURIComponent(area.value); });
@@ -632,7 +632,7 @@ function studentJourney(d){
       done:v.isStudentVerified===true,
       partial:held('school_email'),
       now:v.isStudentVerified?'A club or referral stands behind you.'
-         :held('school_email')?'School email confirmed — that is the floor. A club or referral is what companies weigh.'
+         :held('school_email')?'School email confirmed, that is the floor. A club or referral is what companies weigh.'
          :'Confirm your school email, then claim a club or ask for a referral.',
       cta:v.isStudentVerified?'Review':'Verify', go:()=>openVerificationStep(held('school_email')?'club':'school_email') },
 
@@ -646,7 +646,7 @@ function studentJourney(d){
     { key:'profile', title:'Build the profile companies read',
       done:profileCompletion(profile)>=100,
       now:profileCompletion(profile)>=100?'Complete. Companies see it as written.'
-         :`${profileCompletion(profile)}% complete — headline, context, skills, and a 60-second intro.`,
+         :`${profileCompletion(profile)}% complete, headline, context, skills, and a 60-second intro.`,
       cta:'Open', go:()=>setView('portfolio') },
 
     { key:'apply', title:'Apply to a batch or a project',
@@ -659,7 +659,7 @@ function studentJourney(d){
     { key:'deliver', title:'Do the work and submit it',
       done:submitted.length>0,
       partial:assigned.length>0,
-      now:complete.length?`${complete.length} accepted ${complete.length===1?'deliverable':'deliverables'} — this is the evidence companies weigh.`
+      now:complete.length?`${complete.length} accepted ${complete.length===1?'deliverable':'deliverables'}, this is the evidence companies weigh.`
          :submitted.length?'Submitted and waiting on review.'
          :assigned.length?'You have work assigned. Hit the checkpoints; silence is what costs people the role.'
          :'Nothing assigned yet. This is where evidence gets made.',
@@ -668,7 +668,7 @@ function studentJourney(d){
     { key:'talk', title:'Stay in the conversation',
       done:messages.length>0,
       now:messages.length?`${messages.length} ${messages.length===1?'message':'messages'} on your projects.`
-         :'Questions, scope changes, and check-ins all live on the project thread — not in your inbox.',
+         :'Questions, scope changes, and check-ins all live on the project thread, not in your inbox.',
       cta:'Open', go:()=>setView('messages') },
   ];
 }
@@ -737,7 +737,7 @@ function renderTrialStart(){
     const sum=document.createElement('p');sum.textContent=project.summary||'';
     const facts=document.createElement('ul');facts.className='trial-start-facts';
     const pay=Number(project.credits_listed)||0;
-    [[pay?`${pay.toLocaleString()} credits held for you`:'Unpaid — no payment is attached to this project',pay>0],
+    [[pay?`${pay.toLocaleString()} credits held for you`:'Unpaid, no payment is attached to this project',pay>0],
      ['The clock starts when you start, not now',true],
      [project.target_date?`Target date ${dateLabel(project.target_date)}`:'No target date set',true]]
       .forEach(([text,good])=>{const li=document.createElement('li');li.className=good?'is-good':'is-warn';li.textContent=text;facts.append(li);});
@@ -887,7 +887,7 @@ function renderMilestones(){
     const small=document.createElement('small');
     small.textContent=submitted
       ? (m.on_time===false?'Submitted late':'Submitted on time')
-      : due ? (overdue?'Overdue — tell your reviewer if you need more time':'Due '+new Date(due).toLocaleDateString())
+      : due ? (overdue?'Overdue, tell your reviewer if you need more time':'Due '+new Date(due).toLocaleDateString())
             : 'No date set';
     div.append(strong,small);
     li.append(mark,div); ol.append(li);
@@ -895,7 +895,7 @@ function renderMilestones(){
   host.append(ol);
   // The rule stated where the student will actually read it.
   const note=document.createElement('p'); note.className='verif-note';
-  note.textContent='Running late is fine — say so. Going quiet is what loses the work.';
+  note.textContent='Running late is fine, say so. Going quiet is what loses the work.';
   host.append(note);
   host.hidden=false;
 }
@@ -910,7 +910,7 @@ function cell(label,value){const div=document.createElement('div');div.className
 function packetCard(project){
   const card=document.createElement('article');card.className='packet-card';
   const top=document.createElement('div');top.className='packet-card-top';
-  const eyebrow=document.createElement('p');eyebrow.className='packet-eyebrow';eyebrow.textContent='Stage 1 · Work-trial — scoped by Covenda, no systems access';
+  const eyebrow=document.createElement('p');eyebrow.className='packet-eyebrow';eyebrow.textContent='Stage 1 · Work-trial, scoped by Covenda, no systems access';
   const h=document.createElement('h3');h.textContent=project.title;
   top.append(eyebrow,h);card.append(top);
   const rows=[['Deliverable',project.deliverable],['Acceptance criteria',project.acceptance_criteria],['Target',project.target_date?dateLabel(project.target_date):'Flexible']];
@@ -974,7 +974,7 @@ function renderPipeline(){
     const blurb=document.createElement('small');blurb.textContent=stage.blurb;
     col.append(top,blurb);
     if(!inStage.length){
-      const empty=document.createElement('p');empty.className='pipe-empty';empty.textContent='—';col.append(empty);
+      const empty=document.createElement('p');empty.className='pipe-empty';empty.textContent=', ';col.append(empty);
     }
     inStage.slice(0,12).forEach(app=>{
       const card=document.createElement('button');card.type='button';card.className='pipe-card';
@@ -1040,7 +1040,7 @@ function renderPayout(){
   if(open){
     const card=document.createElement('div');card.className='payout-pending';
     const strong=document.createElement('strong');strong.textContent=`${Number(open.credits).toLocaleString()} credits requested`;
-    const small=document.createElement('small');small.textContent=`${open.method||'—'} · ${open.handle||''} · requested ${dateLabel(open.requested_at)}. Covenda will be in touch to arrange the transfer.`;
+    const small=document.createElement('small');small.textContent=`${open.method||', '} · ${open.handle||''} · requested ${dateLabel(open.requested_at)}. Covenda will be in touch to arrange the transfer.`;
     const cancel=document.createElement('button');cancel.type='button';cancel.className='portal-ghost';cancel.textContent='Cancel this request';
     cancel.addEventListener('click',async()=>{cancel.disabled=true;setDialogMessage('#payoutMessage','Cancelling…');
       try{await portalRequest({method:'POST',body:JSON.stringify({action:'cancel-payout',requestId:open.id})});await loadDashboard();setView('wallet');}
@@ -1065,7 +1065,7 @@ function renderPayout(){
   if(profile.role==='student'&&!profile.identity_verified){
     const gate=document.createElement('div');gate.className='payout-gate';
     const g=document.createElement('strong');g.textContent='Verify your identity to receive payouts';
-    const gs=document.createElement('small');gs.textContent='A quick ID check (photo of your ID + a selfie) confirms you’re a real, 18+ student. Covenda never sees your ID — Stripe handles it securely.';
+    const gs=document.createElement('small');gs.textContent='A quick ID check (photo of your ID + a selfie) confirms you’re a real, 18+ student. Covenda never sees your ID. Stripe handles it securely.';
     const gb=document.createElement('button');gb.type='button';gb.className='portal-primary compact';gb.textContent='Verify identity';
     gb.addEventListener('click',()=>runVerifyIdentity(gb));
     gate.append(g,gs,gb);root.append(gate);return;
@@ -1105,8 +1105,8 @@ function renderWallet(){
   balanceEl.textContent=balance.toLocaleString();
   const intro=$('#walletIntro');
   if(intro)intro.textContent=role==='student'
-    ? '1 credit = $1. Credits arrive when a company accepts your work — you receive the full listed amount, never less. Request a payout whenever you like.'
-    : '1 credit = $1. Posting publicly is free; a hyper-narrow post routes to matched, referred students for 25 credits. Covenda’s fee is 10% of the listed amount, charged on top — the student always receives the full amount you list.';
+    ? '1 credit = $1. Credits arrive when a company accepts your work, you receive the full listed amount, never less. Request a payout whenever you like.'
+    : '1 credit = $1. Posting publicly is free; a hyper-narrow post routes to matched, referred students for 25 credits. Covenda’s fee is 10% of the listed amount, charged on top, the student always receives the full amount you list.';
   const balanceLabel=$('#walletBalanceLabel');
   if(balanceLabel)balanceLabel.textContent=role==='student'?'Earned and available':'Available balance';
   const held=(d.projects||[]).reduce((sum,p)=>sum+(Number(p.credits_held)||0),0);
@@ -1164,7 +1164,7 @@ function renderWalletLedger(){
     const tr=document.createElement('div');tr.className='ledger-row';
     const date=document.createElement('span');date.textContent=dateLabel(row.created_at);
     const type=document.createElement('span');type.append(pill(ledgerLabels[row.entry_type]||titleCase(row.entry_type),'status-pill',row.entry_type));
-    const proj=document.createElement('span');proj.className='ledger-project';proj.textContent=projectTitleFor(row.project_id)||'—';
+    const proj=document.createElement('span');proj.className='ledger-project';proj.textContent=projectTitleFor(row.project_id)||', ';
     const amt=document.createElement('span');amt.className='ledger-amount'+(row.credits<0?' is-negative':' is-positive');amt.textContent=(row.credits>0?'+':'')+row.credits.toLocaleString();
     const bal=document.createElement('span');bal.className='ledger-balance';bal.textContent=row.running.toLocaleString();
     tr.append(date,type,proj,amt,bal);table.append(tr);
@@ -1197,12 +1197,12 @@ async function runBuyCredits(credits,button){
 function handleCheckoutReturn(){
   const params=new URLSearchParams(location.search);
   const wallet=params.get('wallet');const identity=params.get('identity');const connected=params.get('connected');
-  if(connected==='github'){history.replaceState(null,'',location.pathname);setView('profile');setDialogMessage('#profileMessage','GitHub account verified — repos you own now read as a verified account.');return;}
+  if(connected==='github'){history.replaceState(null,'',location.pathname);setView('profile');setDialogMessage('#profileMessage','GitHub account verified, repos you own now read as a verified account.');return;}
   if(!wallet&&!identity)return;
   history.replaceState(null,'',location.pathname);
-  if(wallet==='paid'){setView('wallet');setDialogMessage('#walletMessage','Payment received — your credits will appear here within a few seconds.');}
-  else if(wallet==='cancelled'){setView('wallet');setDialogMessage('#walletMessage','Checkout cancelled — no charge was made.',true);}
-  else if(identity==='submitted'){setView('wallet');setDialogMessage('#payoutMessage','Thanks — your ID was submitted. Your verified badge appears once Stripe approves it (usually under a minute).');}
+  if(wallet==='paid'){setView('wallet');setDialogMessage('#walletMessage','Payment received, your credits will appear here within a few seconds.');}
+  else if(wallet==='cancelled'){setView('wallet');setDialogMessage('#walletMessage','Checkout cancelled, no charge was made.',true);}
+  else if(identity==='submitted'){setView('wallet');setDialogMessage('#payoutMessage','Thanks, your ID was submitted. Your verified badge appears once Stripe approves it (usually under a minute).');}
 }
 
 // Start Stripe Identity: photograph an ID + selfie on Stripe's hosted page. Covenda never
@@ -1326,7 +1326,7 @@ function discoverFilters(){return{query:($('#discoverSearch')?.value||'').trim()
 // P1 hardening: a fit score is shown with its uncertainty band and evidence tier, never as a
 // bare number — a wide band on thin evidence is the honest display.
 function fitPill(score,pres){const s=Math.round(Number(score)||0);const el=document.createElement('span');el.className='fit-pill '+(s>=70?'is-high':s>=40?'is-mid':'is-low');el.textContent=`${s}% fit`;
-  if(pres&&pres.band){const b=document.createElement('small');b.className='fit-band';b.textContent=`${pres.band.low}–${pres.band.high}`;el.append(b);el.title=`${pres.evidenceTier.replace('_','-')} evidence · likely range ${pres.band.low}–${pres.band.high} — the band tightens as verification hardens`;}
+  if(pres&&pres.band){const b=document.createElement('small');b.className='fit-band';b.textContent=`${pres.band.low}–${pres.band.high}`;el.append(b);el.title=`${pres.evidenceTier.replace('_','-')} evidence · likely range ${pres.band.low}–${pres.band.high}, the band tightens as verification hardens`;}
   return el;}
 // A5: explainable fit card — ✓ reasons, △ concerns, a recommended approach, and the honest
 // early-signal + decision-support label. Same block on student Discover and applicant review.
@@ -1337,7 +1337,7 @@ function fitWhyBlock({reasons=[],concerns=[],approach=''}={}){
   reasons.slice(0,4).forEach(t=>{const p=document.createElement('p');p.className='fit-why-line is-good';p.textContent=`✓ ${t}`;box.append(p);});
   concerns.slice(0,2).forEach(t=>{const p=document.createElement('p');p.className='fit-why-line is-gap';p.textContent=`△ ${t}`;box.append(p);});
   if(approach){const p=document.createElement('p');p.className='fit-why-approach';p.textContent=`How to run it: ${approach}`;box.append(p);}
-  const note=document.createElement('p');note.className='fit-why-note';note.textContent='Early compatibility signal — improves as projects complete. Decision support; you decide.';box.append(note);
+  const note=document.createElement('p');note.className='fit-why-note';note.textContent='Early compatibility signal, improves as projects complete. Decision support; you decide.';box.append(note);
   wrap.append(box);return wrap;
 }
 function discoverChip(label,value){const c=document.createElement('div');c.className='discover-chip';const s=document.createElement('small');s.textContent=label;const b=document.createElement('span');b.textContent=value;c.append(s,b);return c;}
@@ -1391,7 +1391,7 @@ const DISCOVER_BANDS=[
   {key:'strong',label:'Strong matches',blurb:'You meet the bar. These are worth your best effort.'},
   {key:'growth',label:'Growth opportunities',blurb:'Close, and what is missing is closeable. The fastest way to level up.'},
   {key:'stretch',label:'Stretch',blurb:'Beyond you today. Worth knowing what they ask for.'},
-  {key:'explore',label:'Worth a look',blurb:'Outside what you said you wanted — sometimes that is the point.'},
+  {key:'explore',label:'Worth a look',blurb:'Outside what you said you wanted, sometimes that is the point.'},
 ];
 function discoverCard(project,isApplied){
   const row=document.createElement('article');row.className='discover-card'+(project.matched?' is-matched':'');
@@ -1402,7 +1402,7 @@ function discoverCard(project,isApplied){
   by.addEventListener('click',e=>{e.stopPropagation();openCompanyProfile(project.owner_user_id,project.posterName);});
   head.append(by);}
   top.append(head,fitPill(project.fitScore,project.fitPresentation));row.append(top);
-  const meta=document.createElement('div');meta.className='discover-meta';const pay=Number(project.credits_listed)||0;meta.append(discoverChip('Payout',pay?`${pay.toLocaleString()} credits`:'—'),discoverChip('Target',project.target_date?dateLabel(project.target_date):'Flexible'));if((project.verticals||[]).length)meta.append(discoverChip('Vertical',project.verticals[0]));row.append(meta);
+  const meta=document.createElement('div');meta.className='discover-meta';const pay=Number(project.credits_listed)||0;meta.append(discoverChip('Payout',pay?`${pay.toLocaleString()} credits`:', '),discoverChip('Target',project.target_date?dateLabel(project.target_date):'Flexible'));if((project.verticals||[]).length)meta.append(discoverChip('Vertical',project.verticals[0]));row.append(meta);
   const p=document.createElement('p');p.className='discover-card-summary';p.textContent=project.summary;row.append(p);
   if((project.fitReasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';project.fitReasons.slice(0,3).forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});row.append(rs);}
   if((project.fitConcerns||[]).length||project.fitApproach)row.append(fitWhyBlock({reasons:project.fitReasons||[],concerns:project.fitConcerns||[],approach:project.fitApproach||''}));
@@ -1550,19 +1550,19 @@ async function toggleBatchRoster(batch,card,button){
 // never inventing named partnerships — and frame them honestly for a pilot stage.
 function batchVertical(batch){return (batch.discipline||batch.name||'this field').trim();}
 function batchStudentProfile(batch){
-  return (batch.student_profile||'').trim()||`Students who can already ship in ${batchVertical(batch)} — not learning it from scratch on the job. We look for a track record you can point to (projects, research, competitions, or real deliverables), a professor or club who'll vouch for you, and the judgment to work with little hand-holding. Drive and follow-through count more than a specific GPA or title.`;
+  return (batch.student_profile||'').trim()||`Students who can already ship in ${batchVertical(batch)}, not learning it from scratch on the job. We look for a track record you can point to (projects, research, competitions, or real deliverables), a professor or club who'll vouch for you, and the judgment to work with little hand-holding. Drive and follow-through count more than a specific GPA or title.`;
 }
 function batchSampleCompanies(batch){
-  return (batch.sample_companies||'').trim()||`The kind of teams this cohort is built for: seed and Series-A startups working in ${batchVertical(batch)}, and small operator-led companies that need senior-quality work without a full-time hire. Exact companies vary each season — admitted students are surfaced directly to the partners hiring that cohort.`;
+  return (batch.sample_companies||'').trim()||`The kind of teams this cohort is built for: seed and Series-A startups working in ${batchVertical(batch)}, and small operator-led companies that need senior-quality work without a full-time hire. Exact companies vary each season, admitted students are surfaced directly to the partners hiring that cohort.`;
 }
 // A small bank of prompts. One is assigned at random when a student opens the application, so
 // the video answer is spontaneous rather than over-rehearsed. {v} = the batch's vertical.
 const BATCH_VIDEO_PROMPTS=[
-  'Walk us through something you built or figured out in {v} that you are genuinely proud of — what was hard about it, and what would you do differently now?',
+  'Walk us through something you built or figured out in {v} that you are genuinely proud of, what was hard about it, and what would you do differently now?',
   'Pick a real problem a small team in {v} is likely facing today. How would you approach it in your first two weeks, with limited context and little hand-holding?',
-  'Teach us one non-obvious thing about {v} — explain it so a smart person outside the field could follow.',
+  'Teach us one non-obvious thing about {v}, explain it so a smart person outside the field could follow.',
   'Tell us about a time you shipped something with an unclear spec. How did you decide what "done" meant, and were you right?',
-  'What is a strong opinion you hold about {v} that a lot of people would disagree with — and what convinced you?',
+  'What is a strong opinion you hold about {v} that a lot of people would disagree with, and what convinced you?',
   'Describe the last thing in {v} you taught yourself without being told to. Why that, and how did you go about it?',
 ];
 function pickBatchPrompt(batch){
@@ -1598,7 +1598,7 @@ function batchInterestQuestions(batch){
   return [{
     id:'why',
     label:`What have you actually built or worked on in ${batchVertical(batch)}?`,
-    hint:'Name the thing. Not an interest — a piece of work.',
+    hint:'Name the thing. Not an interest, a piece of work.',
     type:'text',
     placeholder:'What it was, what you did, what went wrong.',
   }];
@@ -1621,7 +1621,7 @@ function batchVettingBlock(brief){
   const h=document.createElement('h4');h.textContent='How this industry is vetted';wrap.append(h);
   const badge=document.createElement('span');
   badge.className='batch-rail-badge'+(brief.vetting.apiVerified?' is-api':'');
-  badge.textContent=brief.vetting.apiVerified?'Platform-verified evidence':'Human rail — no API can prove this work';
+  badge.textContent=brief.vetting.apiVerified?'Platform-verified evidence':'Human rail, no API can prove this work';
   wrap.append(badge);
   for(const rail of brief.vetting.rails){
     const row=document.createElement('div');row.className='batch-rail';
@@ -1670,7 +1670,7 @@ function batchRequirementsBlock(brief,standing){
     wrap.append(readinessBlock(standing));
   }else if(standing){
     const sum=document.createElement('p');sum.className='batch-standing-line';
-    sum.textContent=standing.metCount+' of '+standing.total+' met'+(standing.meetsThreshold?' — you clear the bar.':' — here is the rest.');
+    sum.textContent=standing.metCount+' of '+standing.total+' met'+(standing.meetsThreshold?', you clear the bar.':', here is the rest.');
     wrap.append(sum);
   }
   const list=document.createElement('ul');list.className='batch-req-list';
@@ -1806,7 +1806,7 @@ function paintBatchQuestion(){
     next.addEventListener('click',()=>{baQIndex+=1;paintBatchQuestion();});
     nav.append(next);
   }else{
-    const done=document.createElement('p');done.className='bq-done';done.textContent='That is the last one — continue when you are ready.';
+    const done=document.createElement('p');done.className='bq-done';done.textContent='That is the last one, continue when you are ready.';
     nav.append(done);
   }
   host.append(nav);
@@ -1905,7 +1905,7 @@ function renderExercise(batch){
   // Said before they start, because a student who thinks the answer is what counts will
   // work silently and score badly for the wrong reason.
   const how=document.createElement('p');how.className='ex-how';
-  how.textContent='Share your screen and talk through what you are doing. Reviewers score the method — a sound approach that runs out of time beats a right answer nobody can follow.';
+  how.textContent='Share your screen and talk through what you are doing. Reviewers score the method, a sound approach that runs out of time beats a right answer nobody can follow.';
   host.append(how);
 
   const state=document.createElement('p');state.className='ex-state';state.setAttribute('aria-live','polite');
@@ -2063,7 +2063,7 @@ function renderBriefDocument(root,brief,fallbackSummary){
   add('Estimated effort',brief.estimatedEffort);
   // Founder time required — disclosed on every generated brief (kills the management-overhead
   // objection at the point of sale; ~30-60 min/week is typical).
-  if(brief.founderTimeMinWeek)add('Founder time required',`~${brief.founderTimeMinWeek} min/week of your review time — bounded checkpoints, not babysitting.`);
+  if(brief.founderTimeMinWeek)add('Founder time required',`~${brief.founderTimeMinWeek} min/week of your review time, bounded checkpoints, not babysitting.`);
   if(brief.followUpQuestions&&brief.followUpQuestions.length){const s=briefSection('To sharpen the scope');s.append(briefBullets(brief.followUpQuestions));root.append(s);}
 }
 function openDiscoverDetail(project,isApplied){
@@ -2101,7 +2101,7 @@ function portfolioAvatar(profile,note){
       const payload={action:'save-profile',role:profile.role,displayName:profile.display_name||'',organizationName:profile.organization_name||'',schoolName:profile.school_name||'',graduationYear:profile.graduation_year||'',headline:profile.headline||'',bio:profile.bio||'',skills:(profile.skills||[]).join(', '),portfolioVisibility:profile.portfolio_visibility==='private'?'private':'members',avatarUrl:url};
       await portalRequest({method:'PATCH',body:JSON.stringify(payload)});
       await loadDashboard();setView('portfolio');
-    }catch(error){btn.classList.remove('is-busy');if(note){note.textContent=error.message||'Upload failed — please try again.';note.classList.add('is-error');}}
+    }catch(error){btn.classList.remove('is-busy');if(note){note.textContent=error.message||'Upload failed, please try again.';note.classList.add('is-error');}}
   });
   return btn;
 }
@@ -2125,7 +2125,7 @@ function githubSkills(s){
 // because they are not the same kind of claim — one can be evidenced, the other cannot.
 function openIdealIntern(project){
   const d=verifDialog('The person you actually need',
-    'This shapes the trial. The memo matters most — a skills list says what to filter on, the memo says what the work is for.');
+    'This shapes the trial. The memo matters most, a skills list says what to filter on, the memo says what the work is for.');
   const traits=verifField('Traits','comma-separated. Not testable from an artifact, but worth saying.',{type:'text',placeholder:'Comfortable with ambiguity, writes clearly'});
   const skills=verifField('Skills','comma-separated. These can be evidenced.',{type:'text',placeholder:'Python, SQL'});
   const memoWrap=document.createElement('label');
@@ -2203,10 +2203,10 @@ function openOutcomeSurvey(project){
     let input;
     if(q.kind==='yesno'){
       input=document.createElement('select');
-      [['','—'],['yes','Yes'],['no','No']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;input.append(o);});
+      [['',', '],['yes','Yes'],['no','No']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;input.append(o);});
     }else if(q.kind==='scale'){
       input=document.createElement('select');
-      [['','—'],['1','1 — not at all'],['2','2'],['3','3'],['4','4'],['5','5 — completely']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;input.append(o);});
+      [['',', '],['1','1, not at all'],['2','2'],['3','3'],['4','4'],['5','5, completely']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;input.append(o);});
     }else if(q.kind==='number'){
       input=document.createElement('input');input.type='number';input.min='0';
     }else{
@@ -2223,7 +2223,7 @@ function openOutcomeSurvey(project){
     save.disabled=true;d.say('Saving…');
     try{
       await portalRequest({method:'POST',body:JSON.stringify({action:'outcome-survey',projectId:project.id,answers})});
-      d.say('Thank you — this is what makes the next shortlist better.');
+      d.say('Thank you, this is what makes the next shortlist better.');
       await loadDashboard();
       setTimeout(()=>d.close(),1100);
     }catch(error){ save.disabled=false; d.say(error.message,true); }
@@ -2318,7 +2318,7 @@ function renderVideoLibrary(root){
 // mail at that domain; it is never rendered as "verified company".
 function openWorkEmailStep(){
   const d=verifDialog('Confirm your work email',
-    'We send a six-digit code to your company address. It confirms you read mail at that domain — it is not a Covenda endorsement of the company.');
+    'We send a six-digit code to your company address. It confirms you read mail at that domain, it is not a Covenda endorsement of the company.');
   const name=verifField('Company name',null,{type:'text',placeholder:'Northwind Robotics'});
   const email=verifField('Work email','not gmail, outlook, or a temporary address',{type:'email',required:true,placeholder:'you@company.com',autocomplete:'email'});
   const cp=state.dashboard?.companyProfile;
@@ -2397,7 +2397,7 @@ const COMPANY_FORM_GROUPS=[
     ['websiteUrl','Website','url','https://…'],
     ['logoUrl','Logo URL','url','https://…'],
     ['location','Location','text','New York, NY'],
-    ['remotePolicy','Remote or in person','text','Hybrid — 2 days in office'],
+    ['remotePolicy','Remote or in person','text','Hybrid, 2 days in office'],
     ['teamSize','Team size','text','8'],
     ['stage','Stage and funding','text','Seed'],
   ]],
@@ -2438,7 +2438,7 @@ function renderCompanyProfileForm(root){
   p.textContent='What students see. Drafts stay private.';
   box.append(h,p);
   const state_=document.createElement('span');state_.className='company-form-state';
-  state_.textContent=cp.published?'Published':'Draft — not visible to students';
+  state_.textContent=cp.published?'Published':'Draft, not visible to students';
   state_.dataset.published=cp.published?'yes':'no';
   head.append(box,state_);sec.append(head);
 
@@ -2540,7 +2540,7 @@ async function openCompanyProfile(ownerUserId,fallbackName){
     line('Compensation',c.compensation_approach);
     line('Work authorization',c.work_authorization);
     line('Hiring timeline',c.hiring_timeline);
-    line('Location',[c.location,c.remote_policy].filter(Boolean).join(' — '));
+    line('Location',[c.location,c.remote_policy].filter(Boolean).join(', '));
     line('Team',[c.team_size&&`${c.team_size} people`,c.stage].filter(Boolean).join(' · '));
     line('Links',c.links);
     if(c.website_url){
@@ -2558,7 +2558,7 @@ async function openCompanyProfile(ownerUserId,fallbackName){
 function briefField(label,value,onSave){
   const wrap=document.createElement('div');wrap.className='brief-field';
   const cap=document.createElement('strong');cap.textContent=label;
-  const val=document.createElement('p');val.textContent=value||'—';
+  const val=document.createElement('p');val.textContent=value||', ';
   const edit=document.createElement('button');edit.type='button';edit.className='brief-edit';edit.textContent='Change';
   wrap.append(cap,val,edit);
   edit.addEventListener('click',()=>{
@@ -2607,8 +2607,8 @@ function renderBriefReview(root,project){
     if(project.root_cause_class){
       const cls=document.createElement('p');cls.className='brief-cause';
       cls.textContent=project.root_cause_class==='structural'
-        ? 'Structural — the process is wrong for the work, so the trial redesigns it.'
-        : 'Behavioural — the process is fine, so the trial instruments it.';
+        ? 'Structural, the process is wrong for the work, so the trial redesigns it.'
+        : 'Behavioural, the process is fine, so the trial instruments it.';
       dg.append(cls);
     }
     sec.append(dg);
@@ -2833,7 +2833,7 @@ function renderCredibility(root,d){
     { ok:ghSkills>0,
       on:`${ghSkills} skill${ghSkills===1?'':'s'} evidenced from real code`,
       off:'No code analysed',
-      note:ghSkills>0?'Drawn from repositories you linked — not self-reported.'
+      note:ghSkills>0?'Drawn from repositories you linked, not self-reported.'
                      :'Self-reported skills carry no weight here. Analysed code does.' },
     { ok:profileCompletion(p)>=100,
       on:'Profile reads complete',
@@ -2896,7 +2896,7 @@ function githubConnectBanner(){
     banner.replaceChildren();banner.dataset.connected=connected?'1':'0';
     const left=document.createElement('div');left.className='gh-connect-copy';
     const badge=document.createElement('span');badge.className='gh-badge '+(connected?'is-verified':'is-linked');badge.textContent=connected?'✓ Verified account':'Linked repos only';
-    const txt=document.createElement('p');txt.textContent=connected?`Connected as @${login}. Repos you own read as verified — proof you can't fake by pasting someone else's link.`:'Connect your own GitHub account so repos you own are ownership-verified, not just linked. Read-only, revocable anytime.';
+    const txt=document.createElement('p');txt.textContent=connected?`Connected as @${login}. Repos you own read as verified, proof you can't fake by pasting someone else's link.`:'Connect your own GitHub account so repos you own are ownership-verified, not just linked. Read-only, revocable anytime.';
     left.append(badge,txt);
     const btn=document.createElement('button');btn.type='button';btn.className=connected?'portal-secondary compact':'portal-primary compact';btn.textContent=connected?'Disconnect':'Verify with GitHub';
     btn.addEventListener('click',async()=>{
@@ -2960,7 +2960,7 @@ function githubAnalysisCard(a){
     const ev=document.createElement('p');ev.className='pow-evidence';ev.textContent=s.evidence||'';sk.append(ev);
     grid.append(sk);
   });
-  if(!(a.skills||[]).length){const none=document.createElement('p');none.className='pow-evidence';none.textContent='No scored skills — the repo may be empty, tiny, or unreadable.';card.append(none);}
+  if(!(a.skills||[]).length){const none=document.createElement('p');none.className='pow-evidence';none.textContent='No scored skills, the repo may be empty, tiny, or unreadable.';card.append(none);}
   card.append(grid);return card;
 }
 
@@ -2974,7 +2974,7 @@ function openProfile({required=false}={}){const form=$('#profileForm');const p=s
     appealBtn.disabled=true;if(status)status.textContent='Submitting…';
     try{
       await portalRequest({method:'PATCH',body:JSON.stringify({action:'appeal-score',subject,evidence})});
-      if(status)status.textContent='Appeal filed — an operator will review it and write a resolution.';
+      if(status)status.textContent='Appeal filed, an operator will review it and write a resolution.';
       if(form.elements.appealSubject)form.elements.appealSubject.value='';
       if(form.elements.appealEvidence)form.elements.appealEvidence.value='';
     }catch(error){if(status)status.textContent=error.message;}
@@ -3022,7 +3022,7 @@ const ONBOARD_SCREENS=[
   {id:'grad',kind:'text',field:'graduationYear',type:'number',headline:'When do you graduate?',sub:'Your expected graduation year.',placeholder:'2027'},
   {id:'headline',kind:'text',field:'headline',type:'text',headline:'One line about you.',sub:'How you want to be introduced.',placeholder:'Researcher who turns messy questions into clear decisions'},
   {id:'skills',kind:'text',field:'skills',type:'text',headline:'What are you good at?',sub:'A few skills, separated by commas.',placeholder:'Research, Excel, writing'},
-  {id:'about',kind:'textarea',field:'bio',headline:'Anything else worth knowing?',sub:'A short intro — optional, but it helps.',placeholder:'What you are learning, building, or looking for next.'},
+  {id:'about',kind:'textarea',field:'bio',headline:'Anything else worth knowing?',sub:'A short intro, optional, but it helps.',placeholder:'What you are learning, building, or looking for next.'},
   {id:'handoff',kind:'handoff',headline:"Let's find your first project.",sub:"Takes about 3 minutes. We'll guide you through it."},
 ];
 let onboardState={step:0,values:{role:'student',verticals:[],workTypes:[]},saving:false};
@@ -3114,7 +3114,7 @@ function renderOnboardProfileScreen({values,controls,body,msg}){
   const file=document.createElement('input');file.type='file';file.accept='image/png,image/jpeg,image/webp,image/gif';file.hidden=true;
   upload.append(uploadLabel,file);
   const caption=document.createElement('p');caption.className='onboard-avatar-note';
-  const restCaption=()=>{caption.textContent=onboardState.values.avatarUrl?'Profile image set — optional, and you can change it later.':'Optional — we generate one from your name until you add a photo.';};
+  const restCaption=()=>{caption.textContent=onboardState.values.avatarUrl?'Profile image set, optional, and you can change it later.':'Optional, we generate one from your name until you add a photo.';};
   restCaption();
   file.addEventListener('change',async()=>{const chosen=file.files[0];file.value='';if(!chosen)return;caption.textContent='Uploading your image…';try{const url=await uploadAvatar(chosen);onboardState.values.avatarUrl=url;persistOnboard();paint();restCaption();}catch(error){caption.textContent=error.message;}});
   const label=document.createElement('label');label.className='onboard-field';const span=document.createElement('span');span.textContent='Display name';const input=document.createElement('input');input.type='text';input.autocomplete='name';input.placeholder='Your name';input.value=values.displayName||'';label.append(span,input);
@@ -3201,13 +3201,13 @@ function renderIntakeCost(){
   const total=document.createElement('div');total.className='cost-total';const dt=document.createElement('dt');dt.textContent='Held from your balance now';const dd=document.createElement('dd');dd.textContent=`${cost.total.toLocaleString()} credits`;total.append(dt,dd);dl.append(total);
   root.append(dl);
   const note=document.createElement('p');note.className='cost-note';
-  if(balance<cost.total){note.classList.add('is-short');note.textContent=`Your balance is ${balance.toLocaleString()} — ${(cost.total-balance).toLocaleString()} short. Top up in Wallet.`;}
+  if(balance<cost.total){note.classList.add('is-short');note.textContent=`Your balance is ${balance.toLocaleString()}, ${(cost.total-balance).toLocaleString()} short. Top up in Wallet.`;}
   else note.textContent=`Balance after posting: ${(balance-cost.total).toLocaleString()}. The student receives all ${cost.listed.toLocaleString()} credits on acceptance.`;
   root.append(note);
 }
 function intakeToggle(list,option,button){const i=list.indexOf(option);if(i>=0)list.splice(i,1);else list.push(option);const now=i<0;button.classList.toggle('is-selected',now);button.setAttribute('aria-pressed',now?'true':'false');}
 function renderIntakeTargets(){const vRoot=$('#intakeVerticals');vRoot.replaceChildren();ONBOARD_VERTICALS.forEach(opt=>{const on=intakeState.verticals.includes(opt);const b=document.createElement('button');b.type='button';b.className='intake-toggle'+(on?' is-selected':'');b.setAttribute('aria-pressed',on?'true':'false');b.textContent=opt;b.addEventListener('click',()=>intakeToggle(intakeState.verticals,opt,b));vRoot.append(b);});const wRoot=$('#intakeWorkTypes');wRoot.replaceChildren();ONBOARD_WORK_TYPES.forEach(opt=>{const on=intakeState.workTypes.includes(opt);const b=document.createElement('button');b.type='button';b.className='intake-toggle'+(on?' is-selected':'');b.setAttribute('aria-pressed',on?'true':'false');b.textContent=opt;b.addEventListener('click',()=>intakeToggle(intakeState.workTypes,opt,b));wRoot.append(b);});}
-function renderIntakeReview(){const root=$('#intakeReview');root.replaceChildren();const form=$('#intakeForm');const title=$('[name="title"]',form).value.trim()||'Untitled project';const rows=[['Title',title],['Verticals',intakeState.verticals.join(', ')||'—'],['Work types',intakeState.workTypes.join(', ')||'—'],['Files',intakeState.attachments.length?`${intakeState.attachments.length} attached`:'None'],['20-min consult',intakeState.consultBooked?'Booked':'Not yet — you can book later']];const dl=document.createElement('dl');dl.className='intake-review-list';rows.forEach(([k,v])=>{const wrap=document.createElement('div');const dt=document.createElement('dt');dt.textContent=k;const dd=document.createElement('dd');dd.textContent=v;wrap.append(dt,dd);dl.append(wrap);});root.append(dl);}
+function renderIntakeReview(){const root=$('#intakeReview');root.replaceChildren();const form=$('#intakeForm');const title=$('[name="title"]',form).value.trim()||'Untitled project';const rows=[['Title',title],['Verticals',intakeState.verticals.join(', ')||'—'],['Work types',intakeState.workTypes.join(', ')||'—'],['Files',intakeState.attachments.length?`${intakeState.attachments.length} attached`:'None'],['20-min consult',intakeState.consultBooked?'Booked':'Not yet, you can book later']];const dl=document.createElement('dl');dl.className='intake-review-list';rows.forEach(([k,v])=>{const wrap=document.createElement('div');const dt=document.createElement('dt');dt.textContent=k;const dd=document.createElement('dd');dd.textContent=v;wrap.append(dt,dd);dl.append(wrap);});root.append(dl);}
 function addIntakeChip(name,status){const chip=document.createElement('div');chip.className='intake-chip';const b=document.createElement('strong');b.textContent=name;const s=document.createElement('small');s.textContent=status;s.setAttribute('aria-live','polite');chip.append(b,s);$('#intakeChips').append(chip);return chip;}
 async function uploadIntakeFile(file){
   // Images are downscaled (bigger max than avatars so they stay legible for the AI brief);
@@ -3228,7 +3228,7 @@ function briefBullets(items){const ul=document.createElement('ul');ul.className=
 function renderIntakeBrief(){const brief=intakeState.brief;const root=$('#intakeBrief');root.replaceChildren();root.hidden=false;
   if(brief.safeToPost===false){const warn=document.createElement('div');warn.className='intake-warn';warn.append(icon('p-close'));const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent='Outside Covenda’s safe boundary';const ul=document.createElement('ul');(brief.safetyFlags||[]).forEach(f=>{const li=document.createElement('li');li.textContent=f;ul.append(li);});const p=document.createElement('p');p.textContent='We can’t post this as-is. Book a 20-minute consult and we’ll find a version that works.';box.append(strong,ul,p);warn.append(box);root.append(warn);return;}
   const titleInput=$('[name="title"]',$('#intakeForm'));if(titleInput&&!titleInput.value.trim()&&brief.title)titleInput.value=brief.title;
-  const head=document.createElement('div');head.className='brief-head';const label=document.createElement('p');label.className='intake-brief-label';label.textContent='AI draft understanding — edit before you post';const reset=document.createElement('button');reset.type='button';reset.className='brief-reset';reset.textContent='Reset to AI draft';head.append(label,reset);root.append(head);
+  const head=document.createElement('div');head.className='brief-head';const label=document.createElement('p');label.className='intake-brief-label';label.textContent='AI draft understanding, edit before you post';const reset=document.createElement('button');reset.type='button';reset.className='brief-reset';reset.textContent='Reset to AI draft';head.append(label,reset);root.append(head);
   const sum=briefSection('Summary');const st=document.createElement('textarea');st.className='brief-textarea';st.value=intakeState.editedSummary||brief.summary||'';const grow=()=>autoGrow(st);st.addEventListener('input',()=>{intakeState.editedSummary=st.value;grow();});sum.append(st);root.append(sum);intakeState.editedSummary=st.value;requestAnimationFrame(grow);
   reset.addEventListener('click',()=>{st.value=brief.summary||'';intakeState.editedSummary=st.value;grow();});
   if(brief.context){const s=briefSection('Context');const p=document.createElement('p');p.className='brief-text';p.textContent=brief.context;s.append(p);root.append(s);}
@@ -3251,7 +3251,7 @@ $$('#intakeTargeting .intake-toggle').forEach(button=>button.addEventListener('c
 $('#intakeForm')?.elements?.creditsListed?.addEventListener('input',renderIntakeCost);
 $('#intakeBookConsult')?.addEventListener('click',()=>{const url=portalCalendlyUrl();if(url)window.open(url,'_blank','noopener');intakeState.consultBooked=true;$('#intakeConsultCard').classList.add('is-booked');renderIntakeReview();});
 $('#intakeConsultLater')?.addEventListener('click',()=>{intakeState.consultBooked=false;$('#intakeConsultCard').classList.remove('is-booked');renderIntakeReview();});
-$('#intakePost')?.addEventListener('click',async()=>{const form=$('#intakeForm');const btn=$('#intakePost');const title=$('[name="title"]',form).value.trim();const problem=$('[name="problem"]',form).value.trim();const summary=(intakeState.editedSummary||problem).trim();if(title.length<3){setDialogMessage('#intakeMessage','Add a project title on the Target step.',true);intakeState.step=3;renderIntakeStep();return;}if(summary.length<10){setDialogMessage('#intakeMessage','The project needs a longer description.',true);return;}if(intakeState.brief&&intakeState.brief.safeToPost===false){setDialogMessage('#intakeMessage','This is outside the safe boundary — please book the consult instead of posting.',true);return;}const cost=projectCreditCost(form.elements.creditsListed?.value,intakeState.targeting);
+$('#intakePost')?.addEventListener('click',async()=>{const form=$('#intakeForm');const btn=$('#intakePost');const title=$('[name="title"]',form).value.trim();const problem=$('[name="problem"]',form).value.trim();const summary=(intakeState.editedSummary||problem).trim();if(title.length<3){setDialogMessage('#intakeMessage','Add a project title on the Target step.',true);intakeState.step=3;renderIntakeStep();return;}if(summary.length<10){setDialogMessage('#intakeMessage','The project needs a longer description.',true);return;}if(intakeState.brief&&intakeState.brief.safeToPost===false){setDialogMessage('#intakeMessage','This is outside the safe boundary. Book the consult instead of posting.',true);return;}const cost=projectCreditCost(form.elements.creditsListed?.value,intakeState.targeting);
   const balance=Number(state.dashboard?.walletBalance)||0;
   if(cost.total>balance){setDialogMessage('#intakeMessage',`This post holds ${cost.total.toLocaleString()} credits but your balance is ${balance.toLocaleString()}. Top up in Wallet first.`,true);return;}
   btn.disabled=true;setDialogMessage('#intakeMessage','Posting your project…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'create-project',title,summary,deliverable:(intakeState.brief?.candidateDeliverables||[]).map(d=>d&&d.title?d.title:d).filter(Boolean).join(' · '),desiredSkills:$('[name="skills"]',form).value,targetDate:$('[name="targetDate"]',form).value,visibility:'members',verticals:intakeState.verticals,workTypes:intakeState.workTypes,attachments:intakeState.attachments,aiBrief:intakeState.brief||undefined,problemText:problem,consultBooked:intakeState.consultBooked,creditsListed:cost.listed,targeting:intakeState.targeting})});$('#intakeDialog').close();await loadDashboard();setView('projects');}catch(error){setDialogMessage('#intakeMessage',error.message,true);}finally{btn.disabled=false;}});
@@ -3266,7 +3266,7 @@ $('#projectForm').addEventListener('submit',async event=>{event.preventDefault()
 $('#applyForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#applyMessage','Sending your interest…');const skills=form.elements.skills.value.split(',').map(s=>s.trim()).filter(Boolean);const referral={name:form.elements.referralName.value.trim(),code:form.elements.referralCode.value.trim()};try{await portalRequest({method:'POST',body:JSON.stringify({action:'apply',projectId:form.elements.projectId.value,note:form.elements.note.value,skills,demonstration:form.elements.demonstration.value.trim(),videoUrl:form.elements.videoUrl.value.trim(),referral})});$('#applyDialog').close();await loadDashboard();setView('activity');}catch(error){setDialogMessage('#applyMessage',error.message,true);}finally{button.disabled=false;}});
 $('#batchApplyForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const e=form.elements;
-  if(e.note.value.trim().length<40){setDialogMessage('#batchApplyMessage','Tell us why this cohort fits you — a few sentences at least.',true);e.note.focus();return;}
+  if(e.note.value.trim().length<40){setDialogMessage('#batchApplyMessage','Tell us why this cohort fits you, a few sentences at least.',true);e.note.focus();return;}
   if(!e.videoUrl.value.trim()){setDialogMessage('#batchApplyMessage','Record your walkthrough, or pick one you already made.',true);e.videoUrl.focus();return;}
   button.disabled=true;setDialogMessage('#batchApplyMessage','Submitting your application…');
   const skills=e.skills.value.split(',').map(s=>s.trim()).filter(Boolean);
@@ -3398,7 +3398,7 @@ $('#reverseAuditFileBtn')?.addEventListener('click',async()=>{
   const status=$('#reverseAuditStatus');const results=$('#reverseAuditResults');const btn=$('#reverseAuditFileBtn');
   if(!file){status.textContent='Choose a file first.';return;}
   const consent=$('#intakeForm')?.elements?.aiConsent;
-  if(consent&&!consent.checked){status.textContent='Tick the AI consent box first — we read the file to draft from it.';return;}
+  if(consent&&!consent.checked){status.textContent='Tick the AI consent box first, we read the file to draft from it.';return;}
   btn.disabled=true;status.textContent='Reading '+file.name+'…';results.replaceChildren();
   try{
     const res=await fetch('/api/project-doc',{
@@ -3423,7 +3423,7 @@ function renderReverseAuditDrafts(audit,results,status){
     status.classList.add('is-error');return;
   }
   status.classList.remove('is-error');
-  status.textContent=`${audit.proposals.length} draft${audit.proposals.length===1?'':'s'} — edit anything, then use one to start the intake.`;
+  status.textContent=`${audit.proposals.length} draft${audit.proposals.length===1?'':'s'}, edit anything, then use one to start the intake.`;
   audit.proposals.forEach(p=>{
     const card=document.createElement('article');card.className='ra-card';
     const h=document.createElement('strong');h.textContent=`DRAFT · ${p.title}`;card.append(h);
@@ -3436,7 +3436,7 @@ function renderReverseAuditDrafts(audit,results,status){
       const ta=$('#intakeForm [name="problem"]');
       ta.value=`${p.summary}\n\nDeliverable: ${p.deliverable}\nDone when: ${p.acceptanceCriteria}\nOut of scope: ${p.boundary}`;
       ta.dispatchEvent(new Event('input',{bubbles:true}));ta.focus();
-      status.textContent='Draft loaded into the description — edit it, then continue to Understand.';
+      status.textContent='Draft loaded into the description, edit it, then continue to Understand.';
     });
     card.append(use);results.append(card);
   });
@@ -3446,7 +3446,7 @@ $('#reverseAuditBtn')?.addEventListener('click',async()=>{
   const url=($('#reverseAuditUrl')?.value||'').trim();
   const status=$('#reverseAuditStatus');const results=$('#reverseAuditResults');const btn=$('#reverseAuditBtn');
   if(!/^https?:\/\/\S+$/i.test(url)){status.textContent='Paste a valid public link first.';status.classList.add('is-error');return;}
-  if(!$('#intakeForm [name="aiConsent"]')?.checked){status.textContent='Tick the AI consent box first — we read your link to draft from it.';status.classList.add('is-error');return;}
+  if(!$('#intakeForm [name="aiConsent"]')?.checked){status.textContent='Tick the AI consent box first. We read your link to draft from it.';status.classList.add('is-error');return;}
   btn.disabled=true;status.classList.remove('is-error');status.textContent='Reading your link and drafting…';results.replaceChildren();
   try{
     const res=await fetch('/api/project-intake',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'reverse-audit',linkUrl:url})});
@@ -3554,7 +3554,7 @@ const videoStudio=(function(){
         }
         video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
         hint.textContent=mode==='screen'
-          ? 'Share the window you are working in. Talk through what you are doing — reviewers score the method, not just the result.'
+          ? 'Share the window you are working in. Talk through what you are doing, reviewers score the method, not just the result.'
           : 'Up to '+maxSeconds+' seconds, unscripted. Reviewers listen for how you think.';
         const start=el('recStart'); start.disabled=false;
         start.addEventListener('click',()=>countIn());
@@ -3584,7 +3584,7 @@ const videoStudio=(function(){
           stopStream();
           video.srcObject=null; video.src=URL.createObjectURL(blob); video.muted=false; video.controls=true;
           timerEl.hidden=true;
-          hint.textContent='Watch it back. Retake as often as you like — only the take you keep is uploaded.';
+          hint.textContent='Watch it back. Retake as often as you like, only the take you keep is uploaded.';
           el('recRetake').hidden=false; el('recUse').hidden=false;
         };
         recorder.start();
@@ -3684,7 +3684,7 @@ const videoStudio=(function(){
           input.value=out.url; mode='pick'; paint(); onChange&&onChange(input.value);
           if(out.libraryError){
             const warn=document.createElement('p'); warn.className='video-note is-warn';
-            warn.textContent='Attached to this application, but not saved to your library — '+out.libraryError;
+            warn.textContent='Attached to this application, but not saved to your library, '+out.libraryError;
             host.append(warn);
           }
         }

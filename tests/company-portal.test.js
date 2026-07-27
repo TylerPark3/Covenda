@@ -7,7 +7,7 @@ const apiJs = readFileSync(new URL('../api/portal.js', import.meta.url), 'utf8')
 // A company profile is only what a student judges the company on once the company says so.
 test('a company profile is a draft until it is explicitly published', () => {
   assert.match(apiJs, /\.eq\('published', true\)/);
-  assert.match(portalJs, /Draft — not visible to students/);
+  assert.match(portalJs, /Draft\s*[,—.]\s*not visible to students/);
 });
 
 // The whole point of the company-verification module: the caveat travels with the signal

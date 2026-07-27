@@ -69,7 +69,7 @@ function scheduleDemoPrefill() {
 async function scheduleDemo() {
   const url = calendlyUrl();
   if (!url) {
-    showToast('Demo booking isn’t connected yet — start a Project Packet and Covenda will reach out.');
+    showToast('Demo booking isn’t connected yet, start a Project Packet and Covenda will reach out.');
     openDialog(companyDialog, companyForm);
     const seed = $('#companyProblemSeed')?.value.trim();
     if (seed && !formValue(companyForm, 'companyProblem')) {
@@ -825,7 +825,7 @@ function renderCompanyReadiness(readiness) {
     const heading = document.createElement('strong');
     const detail = document.createElement('span');
     item.className = check.ready ? 'is-ready' : 'needs-input';
-    marker.append(check.ready ? createIcon('icon-check') : document.createTextNode('—'));
+    marker.append(check.ready ? createIcon('icon-check') : document.createTextNode(', '));
     heading.textContent = check.label;
     detail.textContent = check.detail;
     copy.append(heading, detail);
@@ -910,10 +910,10 @@ function renderProfileCredibility() {
   } else {
     const who = document.createElement('p');
     who.className = 'profile-cred-who';
-    who.textContent = 'No endorsement yet — everyone can still earn credibility.';
+    who.textContent = 'No endorsement yet, everyone can still earn credibility.';
     const note = document.createElement('p');
     note.className = 'profile-cred-note';
-    note.textContent = 'Ask a professor, club, or career center to vouch for you — or build proof through reviewed work.';
+    note.textContent = 'Ask a professor, club, or career center to vouch for you, or build proof through reviewed work.';
     card.append(who, note);
   }
   host.append(card);
@@ -941,7 +941,7 @@ function renderProfileAffiliations() {
     who.append(b);
     const note = document.createElement('p');
     note.className = 'profile-cred-note';
-    note.textContent = 'A club’s track record grows as it places students with companies — its trust indicator ("worked with …") shows here once verified.';
+    note.textContent = 'A club’s track record grows as it places students with companies. Its trust indicator ("worked with …") shows here once verified.';
     card.append(who, note);
   } else {
     const who = document.createElement('p');
@@ -949,7 +949,7 @@ function renderProfileAffiliations() {
     who.textContent = 'No club affiliations yet.';
     const note = document.createElement('p');
     note.className = 'profile-cred-note';
-    note.textContent = 'Join a club or get referred by one — clubs that have worked with companies lend their track record to your profile.';
+    note.textContent = 'Join a club or get referred by one, clubs that have worked with companies lend their track record to your profile.';
     card.append(who, note);
   }
   host.append(card);
@@ -973,7 +973,7 @@ function renderProfileEvidence() {
   dl.className = 'profile-evidence-list';
   const rows = [];
   if (skill) rows.push(['Declared skill', skill + (level ? ' · ' + level : '') + ' (self-reported)']);
-  rows.push(['Reviewed work', 'None yet — join a batch to complete bounded, reviewed projects.']);
+  rows.push(['Reviewed work', 'None yet, join a batch to complete bounded, reviewed projects.']);
   rows.push(['Verified record', 'Earned when an employer reviewer accepts your work.']);
   for (const [k, v] of rows) {
     const wrap = document.createElement('div');
@@ -2396,31 +2396,31 @@ $$('[data-workspace-tab]').forEach(button => button.addEventListener('click', ()
 const workNiches = {
   'Research': {
     icon: 'icon-search',
-    desc: 'Source review, market maps, competitor scans, and customer synthesis — turn scattered signals into a clear read.',
+    desc: 'Source review, market maps, competitor scans, and customer synthesis, turn scattered signals into a clear read.',
     roles: ['Competitor landscape scan', 'Customer-interview synthesis brief'],
     flow: ['Get the question + approved sources', 'Scan, tag, and synthesize the findings', 'Deliver an evidence-backed brief'],
   },
   'Data & spreadsheets': {
     icon: 'icon-data',
-    desc: 'Cleanup, validation, analysis, and clear models — make messy data trustworthy and easy to use.',
+    desc: 'Cleanup, validation, analysis, and clear models, make messy data trustworthy and easy to use.',
     roles: ['Dataset cleanup + validation', 'Financial model build'],
     flow: ['Receive the raw, messy dataset', 'Clean, validate, and model it', 'Hand back a trustworthy sheet'],
   },
   'Operations': {
     icon: 'icon-operations',
-    desc: 'Workflow mapping, documentation, and CRM hygiene — make a recurring process run without you.',
+    desc: 'Workflow mapping, documentation, and CRM hygiene, make a recurring process run without you.',
     roles: ['Onboarding workflow map', 'CRM cleanup pass'],
     flow: ['Map the current process end to end', 'Document and tidy the system', 'Deliver a repeatable playbook'],
   },
   'QA & testing': {
     icon: 'icon-shield',
-    desc: 'Manual testing, test cases, and issue reproduction — catch what breaks before customers do.',
+    desc: 'Manual testing, test cases, and issue reproduction, catch what breaks before customers do.',
     roles: ['Manual test pass + report', 'Bug reproduction set'],
     flow: ['Get the build + test scope', 'Run cases and log every issue', 'Deliver a reproducible report'],
   },
   'Writing & documentation': {
     icon: 'icon-write',
-    desc: 'Knowledge bases, playbooks, and structured briefs — turn know-how into something the team can reuse.',
+    desc: 'Knowledge bases, playbooks, and structured briefs, turn know-how into something the team can reuse.',
     roles: ['Knowledge-base article set', 'Process playbook'],
     flow: ['Gather the source material', 'Structure and draft it', 'Deliver a reusable document'],
   },
@@ -2683,7 +2683,7 @@ function roleCompatibility(role) {
   const sig = studentSignalString();
   const ref = activeReferral();
   const endorsed = !!(ref && ref.code);
-  const worked = false; // no completed reviewed work yet — kept explicit and honest
+  const worked = false; // no completed reviewed work yet - kept explicit and honest
   const skillsTotal = role.skills.length;
   const skillsMatched = role.skills.filter(s => skillMatches(s, sig)).length;
   const skillFrac = skillsTotal ? skillsMatched / skillsTotal : 0;
@@ -2733,8 +2733,8 @@ function renderFitBlock(role) {
   const note = document.createElement('p');
   note.className = 'fit-note';
   note.append(createIcon('icon-shield'), document.createTextNode(c.hasSignals
-    ? 'A score is a signal from your declared skills and interests — not a match or guarantee. Reviewed work earns the verified rungs.'
-    : 'Add your skills and work interests to your profile to sharpen this — a score is a signal, not a match or guarantee.'));
+    ? 'A score is a signal from your declared skills and interests, not a match or guarantee. Reviewed work earns the verified rungs.'
+    : 'Add your skills and work interests to your profile to sharpen this, a score is a signal, not a match or guarantee.'));
   block.append(note);
   window.requestAnimationFrame(() => fills.forEach(([fill, val]) => { fill.style.width = val + '%'; }));
   return block;
@@ -2825,14 +2825,14 @@ function candidateCard(c) {
   const whyList = document.createElement('ul');
   [
     c.function + ' matches the requested function',
-    'Vouched by ' + ref.name + ' (' + ref.role + ') — a staked referral',
-    c.clubRecord ? c.club + ' has a positive track record on Covenda' : 'No club track record yet — individual signal only',
+    'Vouched by ' + ref.name + ' (' + ref.role + '), a staked referral',
+    c.clubRecord ? c.club + ' has a positive track record on Covenda' : 'No club track record yet, individual signal only',
   ].forEach(t => { const li = document.createElement('li'); li.textContent = t; whyList.append(li); });
   why.append(whyH, whyList);
   const ev = document.createElement('div'); ev.className = 'cand-detail-block';
   const evH = document.createElement('h4'); evH.textContent = 'Evidence shape';
   const evList = document.createElement('ul');
-  c.skills.forEach(s => { const li = document.createElement('li'); li.textContent = s + ' — demonstrated in reviewed sample work'; evList.append(li); });
+  c.skills.forEach(s => { const li = document.createElement('li'); li.textContent = s + ', demonstrated in reviewed sample work'; evList.append(li); });
   ev.append(evH, evList);
   const concern = document.createElement('p'); concern.className = 'cand-detail-concern';
   concern.textContent = 'One concern to check: confirm ' + (c.skills[0] || 'the core skill') + ' depth on a bounded Stage 1 work-trial before deeper access. A score is a signal, not a guarantee.';
@@ -2890,7 +2890,7 @@ function openTrace(c) {
   const dialog = $('#traceDialog');
   if (!dialog) return;
   const ref = REFERRERS[c.referrer];
-  $('#traceIntro').textContent = 'How ' + c.handle + ' reached this list — and who else ' + ref.name + ' has vouched for. Illustrative outcomes; a referral is a signal, not a guarantee.';
+  $('#traceIntro').textContent = 'How ' + c.handle + ' reached this list, and who else ' + ref.name + ' has vouched for. Illustrative outcomes; a referral is a signal, not a guarantee.';
   const chain = $('#traceChain');
   chain.textContent = '';
   chain.append(traceNode('Candidate', c.handle, c.function + ' · illustrative fit ' + c.score, true));
@@ -2990,12 +2990,12 @@ function renderReferrerDashboard() {
   note.append(createIcon('icon-lock'));
   const ns = document.createElement('span');
   ns.append(document.createTextNode('An endorsement is an appreciating reputation asset: as your referred students complete reviewed, verified work, your endorsements carry more weight. '));
-  const nb = document.createElement('b'); nb.textContent = 'Verified rungs are earned through reviewed work — never assigned.';
+  const nb = document.createElement('b'); nb.textContent = 'Verified rungs are earned through reviewed work, never assigned.';
   ns.append(nb);
   note.append(ns);
   host.append(note);
   const deferred = document.createElement('p'); deferred.className = 'referrer-deferred';
-  deferred.textContent = 'Cash or revenue-share to referrers is a deferred decision — not part of this pilot.';
+  deferred.textContent = 'Cash or revenue-share to referrers is a deferred decision, not part of this pilot.';
   host.append(deferred);
 
   window.requestAnimationFrame(() => { fill.style.width = weight + '%'; });
@@ -3133,10 +3133,10 @@ const FIT_REDESIGN = [
 ];
 function classifyProblemFit(text) {
   const clean = text.trim();
-  if (clean.length < 12) return { state: 'empty', label: 'Start typing — we’ll show project fit' };
-  if (FIT_BLOCKERS.some(re => re.test(clean))) return { state: 'blocked', label: 'Not eligible — involves restricted access or records' };
-  if (clean.length < 45 || FIT_REDESIGN.some(re => re.test(clean))) return { state: 'redesign', label: 'Needs redesign — add a clear, safe deliverable' };
-  return { state: 'good', label: 'Good first fit — safe to scope' };
+  if (clean.length < 12) return { state: 'empty', label: 'Start typing, we’ll show project fit' };
+  if (FIT_BLOCKERS.some(re => re.test(clean))) return { state: 'blocked', label: 'Not eligible, involves restricted access or records' };
+  if (clean.length < 45 || FIT_REDESIGN.some(re => re.test(clean))) return { state: 'redesign', label: 'Needs redesign, add a clear, safe deliverable' };
+  return { state: 'good', label: 'Good first fit, safe to scope' };
 }
 (() => {
   const seed = $('#companyProblemSeed');
@@ -3545,7 +3545,7 @@ const HOW_TO_APPLY = [
   ['Check where you stand', 'Every requirement below is public. Work out which you already clear before writing anything.'],
   ['Close the nearest gap', 'One artifact or one connected account usually moves two requirements at once.'],
   ['Record a short walkthrough', 'Five minutes on work you did, unscripted. This is the authorship check, and the part that cannot be faked.'],
-  ['Apply', 'A few written answers about why this field. You can apply before you clear everything — the bar is guidance, not a gate.'],
+  ['Apply', 'A few written answers about why this field. You can apply before you clear everything, the bar is guidance, not a gate.'],
   ['Operator review', 'A person reads it and records a reason either way. A miss comes back with the specific gap, not a rejection.'],
 ];
 
@@ -3570,7 +3570,7 @@ function renderBatchDeepDive() {
 
     const railBadge = document.createElement('span');
     railBadge.className = 'pb-badge' + (brief.vetting.apiVerified ? ' is-api' : '');
-    railBadge.textContent = brief.vetting.apiVerified ? 'Machine-checked evidence' : 'Expert-vetted — judgement, scored';
+    railBadge.textContent = brief.vetting.apiVerified ? 'Machine-checked evidence' : 'Expert-vetted, judgement, scored';
     panel.append(railBadge);
 
     // What counts, concretely. The requirements say "two skills evidenced by real artifacts",
@@ -4048,7 +4048,7 @@ function renderReferralBanner() {
   if (!ref || ref.dismissed) { banner.hidden = true; return; }
   const text = $('#referralBannerText');
   if (text) text.textContent = 'Referred by ' + (ref.via || 'a Covenda partner')
-    + '. Your partner endorsement is noted — build your proof profile to carry it into the pilot.';
+    + '. Your partner endorsement is noted, build your proof profile to carry it into the pilot.';
   banner.hidden = false;
 }
 
@@ -4271,7 +4271,7 @@ function downloadCredentialImage(item) {
 
 async function copyCredentialText(item) {
   const milestone = credentialMilestone(item);
-  const shareText = 'I’m building verifiable proof of my work with Covenda — current standing: '
+  const shareText = 'I’m building verifiable proof of my work with Covenda, current standing: '
     + milestone.label + '. Reference ' + item.reference + ' · covenda.app';
   try {
     await navigator.clipboard.writeText(shareText);
@@ -4279,7 +4279,7 @@ async function copyCredentialText(item) {
   } catch {
     const message = $('#credentialMessage');
     if (message) message.textContent = shareText;
-    showToast('Copy is unavailable — the text is shown above.');
+    showToast('Copy is unavailable, the text is shown above.');
   }
 }
 
@@ -4322,7 +4322,7 @@ function renderProofRecord() {
       endorsementEl.hidden = false;
       endorsementEl.replaceChildren(
         createIcon('icon-shield'),
-        document.createTextNode('Endorsed by ' + (ref.via || 'a Covenda partner') + ' — a partner referral head-start.'),
+        document.createTextNode('Endorsed by ' + (ref.via || 'a Covenda partner') + ', a partner referral head-start.'),
       );
     } else {
       endorsementEl.hidden = true;
@@ -5038,7 +5038,7 @@ function initHeroField() {
   draw();
   window.addEventListener('resize', () => { resize(); if (!running) draw(); });
   if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); if (!running) draw(); }).observe(canvas);
-  if (reduce) return; // static frame only — no drift, no conversions, no parallax
+  if (reduce) return; // static frame only - no drift, no conversions, no parallax
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(es => es.forEach(e => (e.isIntersecting ? start() : stop())), { threshold: 0.02 }).observe(canvas);
   } else { start(); }
@@ -5095,14 +5095,14 @@ function initHeroField() {
     var methods = (data && data.methods) || [];
     var live = methods.filter(function (m) { return m.status === 'live'; });
     var rails = methods.filter(function (m) { return m.status === 'human_rail'; });
-    if (!live.length && !rails.length) return; // nothing real to show — stay hidden
+    if (!live.length && !rails.length) return; // nothing real to show - stay hidden
 
     live.forEach(function (m) {
       // Say what the mechanism actually proves, in plain terms.
       var note = m.ownership === 'oauth'
-        ? 'You connect the account, so the work is provably yours — and the timeline shows how it accumulated.'
+        ? 'You connect the account, so the work is provably yours, and the timeline shows how it accumulated.'
         : m.ownership === 'artifact'
-          ? 'The file itself is parsed, not eyeballed — structure and formulas, not a screenshot.'
+          ? 'The file itself is parsed, not eyeballed, structure and formulas, not a screenshot.'
           : 'Scored on the record by two independent raters against published anchors.';
       // Verification differs per vertical, so show a concrete company + what they see
       // rather than one generic sentence that flatters the weak rails and undersells the
@@ -5113,7 +5113,7 @@ function initHeroField() {
     rails.forEach(function (m) {
       var note = m.rail === 'instrumented_trial'
         ? 'No API can confirm outreach really landed, so proof comes from an instrumented trial run through Covenda.'
-        : 'Batch skills cannot be checked remotely, so a supervisor’s structured referral is the primary mechanism — by design.';
+        : 'Batch skills cannot be checked remotely, so a supervisor’s structured referral is the primary mechanism, by design.';
       humanList.append(row(m.label, m.example ? m.example.company + ' sees ' + m.example.sees : note));
     });
 
@@ -5128,7 +5128,7 @@ function initHeroField() {
   if (!section || !body || typeof fetch !== 'function') return;
   fetch('/api/featured-student').then(function (res) { return res.ok ? res.json() : null; }).then(function (data) {
     var s = data && data.featured;
-    if (!s || !s.name) return; // stays hidden — never a placeholder person
+    if (!s || !s.name) return; // stays hidden - never a placeholder person
     var card = document.createElement('article'); card.className = 'spotlight-card';
     var head = document.createElement('div'); head.className = 'spotlight-head';
     var avatar = document.createElement('div'); avatar.className = 'spotlight-avatar';
@@ -5184,7 +5184,7 @@ initScrollReveal();
     const dur = 1200;
     const tick = now => {
       const p = Math.min(1, (now - t0) / dur);
-      const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic — fast rise, gentle landing
+      const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic - fast rise, gentle landing
       el.textContent = (target * eased).toFixed(decimals) + suffix;
       if (p < 1) requestAnimationFrame(tick);
       else el.textContent = raw; // land exactly on the authored value
@@ -5309,7 +5309,7 @@ function renderReadiness(readiness) {
     event.preventDefault();
     const payload = readinessPayload(form);
     if (!payload.goal && !payload.blocked) {
-      message.textContent = 'Describe the goal or what is blocked — the score needs at least one of them.';
+      message.textContent = 'Describe the goal or what is blocked, the score needs at least one of them.';
       message.classList.remove('is-success');
       return;
     }
@@ -5426,7 +5426,7 @@ function renderReadiness(readiness) {
     }).then(function (res) { return res.json().catch(function () { return null; }); })
       .then(function (body) {
         if (body && body.reference) {
-          message.textContent = 'Registered — reference ' + body.reference + '. We will be in touch about verifying this club.';
+          message.textContent = 'Registered, reference ' + body.reference + '. We will be in touch about verifying this club.';
           message.classList.add('is-success');
           form.reset();
         } else {
@@ -5489,7 +5489,7 @@ function renderReadiness(readiness) {
     event.preventDefault();
     var data = new FormData(form);
     if (!picked.verticals.size && !String(data.get('requiredSkills') || '').trim()) {
-      message.textContent = 'Pick a field or name one must-have skill — that is enough to start.';
+      message.textContent = 'Pick a field or name one must-have skill, that is enough to start.';
       return;
     }
     message.textContent = 'Building…';
@@ -5534,7 +5534,7 @@ function renderReadiness(readiness) {
       next.className = 'ib-next';
       next.append(
         Object.assign(document.createElement('h4'), { textContent: 'What happens next' }),
-        Object.assign(document.createElement('p'), { textContent: 'Covenda designs a paid trial from this — real work that is useful to you on its own, and that shows how this person actually operates before either side commits.' })
+        Object.assign(document.createElement('p'), { textContent: 'Covenda designs a paid trial from this, real work that is useful to you on its own, and that shows how this person actually operates before either side commits.' })
       );
       result.append(next);
 

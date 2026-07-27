@@ -123,7 +123,7 @@ test('every explanation line with a claim carries its evidence pointer + one hon
   const opp = { required_skills: 'Python, Rust', verticals: [], work_types: [] };
   const cand = { id: 'a', claims: [claim('Python', 'artifact', 'https://github.com/a/repo')] };
   const s = scoreCandidate(opp, cand);
-  assert.match(s.explanation, /✓ python — artifact evidence: https:\/\/github\.com\/a\/repo/i);
+  assert.match(s.explanation, /✓ python\s*[,—.]\s*artifact evidence: https:\/\/github\.com\/a\/repo/i);
   assert.match(s.explanation, /△ No evidence yet in rust/i); // exactly one honest gap named
   assert.equal(s.scorer_version, MATCH_VERSION);
 });

@@ -21,7 +21,7 @@ test('student-first hero leads with optional joining, five work areas, and a scr
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(hero, /Do work that proves/);
   assert.equal((hero.match(/data-work-type=/g) || []).length, 5);
-  assert.match(hero, /Join now — choose later/);
+  assert.match(hero, /Join now\s*[,—.]\s*choose later/);
   assert.match(hero, /No work area is required/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
@@ -44,11 +44,11 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
 test('the student entry separates signup without a choice from signup with a specific direction', () => {
   const studentHero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(studentHero, /Do work that proves/);
-  assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"[\s\S]*Join now — choose later/);
+  assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"[\s\S]*Join now\s*[,—.]\s*choose later/);
   // The picker is on industry verticals now, matching BATCH_CATALOG. It used to offer work
   // types — research, data, QA — a taxonomy nothing else on the platform spoke, so a
   // student's choice lined up with no batch, no profile field and no matching signal.
-  assert.match(studentHero, /Join now — choose later[\s\S]*Choose your industry/);
+  assert.match(studentHero, /Join now\s*[,—.]\s*choose later[\s\S]*Choose your industry/);
   assert.match(studentHero, /Software &amp; AI/);
   assert.doesNotMatch(studentHero, /QA &amp; testing/);
   for (const vertical of ['Software &amp; AI', 'Accounting &amp; finance', 'Healthcare operations', 'Consumer &amp; retail', 'Professional services']) {
@@ -308,7 +308,7 @@ test('readiness read-out builds nodes with createIcon, not raw icon strings', ()
 });
 
 test('the how-we-verify section exists and advertises only what is actually built', () => {
-  // The section must be present but start hidden — it only appears once /api/proof-methods
+  // The section must be present but start hidden\s*[,—.]\s*it only appears once /api/proof-methods
   // returns real registry data, so a failed fetch shows nothing rather than empty scaffolding.
   assert.match(html, /<section class="verify-section" id="verifyMethods" hidden>/);
   assert.match(html, /id="verifyMachineList"/);
@@ -478,7 +478,7 @@ test('batch selection has real feedback and respects reduced motion', () => {
 });
 
 test('joining the talent pool is name, email and school — not the four-step form', () => {
-  assert.match(html, /data-action="student-quick"[^>]*data-join-mode="open"[^>]*>[\s\S]*Join now — choose later/);
+  assert.match(html, /data-action="student-quick"[^>]*data-join-mode="open"[^>]*>[\s\S]*Join now\s*[,—.]\s*choose later/);
   assert.doesNotMatch(html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '', /Or add full details now/);
 });
 
@@ -508,7 +508,7 @@ test('the reading spine is decorative, scroll-passive and reduced-motion safe', 
 test('the demo walks each vertical separately and stays labelled illustrative', () => {
   assert.match(html, /id="verticalDemo"/);
   assert.match(html, /What this looks like for you/);
-  assert.match(html, /Illustrative walkthrough — no real company/);
+  assert.match(html, /Illustrative walkthrough\s*[,—.]\s*no real company/);
   assert.match(script, /action: 'vertical-demo'/);
   // A tablist has to be operable with arrow keys.
   assert.match(script, /ArrowRight/);

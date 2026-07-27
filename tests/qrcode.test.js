@@ -6,7 +6,7 @@ import { makeQrMatrix, makeQrSvg } from '../qrcode.js';
 
 // How this encoder is verified (see tests/fixtures/DATASHEET.md):
 //
-// 1. GOLDEN MATRICES — tests/fixtures/qr-golden.json. Every entry was rendered by this encoder
+// 1. GOLDEN MATRICES\s*[,—.]\s*tests/fixtures/qr-golden.json. Every entry was rendered by this encoder
 //    and then DECODED BACK by an independent decoder (OpenCV's QRCodeDetector) and asserted to
 //    return the original text before being written. Decodability, not byte-equality with some
 //    other library, is the real correctness criterion: pad-byte choices legitimately differ

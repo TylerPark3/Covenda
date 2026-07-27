@@ -115,12 +115,12 @@
       </section>
 
       <section class="portal-view" data-portal-view="projects">
-        <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every work-trial and verified record in one place. Proof precedes access — clear a Stage 1 trial, and deeper work opens up.</p></div><div class="page-heading-actions"><button class="portal-secondary" id="requestWork" type="button" data-org-only hidden><svg><use href="#p-message"/></svg>Request work</button><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Post a project</button></div></div>
+        <div class="page-heading"><div><p class="eyebrow">Project timeline</p><h1>My projects</h1><p id="projectsIntro">Every work-trial and verified record in one place. Proof precedes access, clear a Stage 1 trial, and deeper work opens up.</p></div><div class="page-heading-actions"><button class="portal-secondary" id="requestWork" type="button" data-org-only hidden><svg><use href="#p-message"/></svg>Request work</button><button class="portal-primary" id="newProject" type="button" hidden><svg><use href="#p-plus"/></svg>Post a project</button></div></div>
         <div class="request-list" id="requestList"></div>
         <div class="work-trial-ladder" aria-label="How work-trials work">
           <div class="wtl-step"><span class="wtl-num">1</span><div><strong>Work-trial</strong><span>A bounded deliverable with no systems access, reviewed against a clear finish line.</span></div></div>
           <svg class="wtl-arrow" aria-hidden="true"><use href="#p-arrow"/></svg>
-          <div class="wtl-step"><span class="wtl-num">2</span><div><strong>Deeper access, earned</strong><span>A strong Stage 1 unlocks more scope and trust — proof precedes access.</span></div></div>
+          <div class="wtl-step"><span class="wtl-num">2</span><div><strong>Deeper access, earned</strong><span>A strong Stage 1 unlocks more scope and trust, proof precedes access.</span></div></div>
         </div>
         <div class="project-list" id="projectList"></div>
       </section>
@@ -158,7 +158,7 @@
       </section>
 
       <section class="portal-view" data-portal-view="batches">
-        <div class="page-heading"><div><p class="eyebrow">Curated cohorts</p><h1>Vetted batches you can join</h1><p id="batchIntro">Vetted, reviewed cohorts in a discipline. Apply once — an operator reviews every application, and admitted students are surfaced to partner companies.</p></div></div>
+        <div class="page-heading"><div><p class="eyebrow">Curated cohorts</p><h1>Vetted batches you can join</h1><p id="batchIntro">Vetted, reviewed cohorts in a discipline. Apply once, an operator reviews every application, and admitted students are surfaced to partner companies.</p></div></div>
         <div class="batch-list" id="batchList"></div>
       </section>
 
@@ -234,12 +234,12 @@
         <label>Skills <small>Separate with commas</small><input name="skills" placeholder="Market research, Excel, operations"></label>
         <label class="visibility-row" data-student-profile><input name="portfolioVisibility" type="checkbox" value="members" checked><span>Let signed-in company members discover my portfolio.</span></label>
         <label class="visibility-row"><input name="emailNotifications" type="checkbox" checked><span>Email me about applications, decisions, and payouts.</span></label>
-        <label class="visibility-row" data-student-profile><input name="spotlightConsent" type="checkbox"><span>Covenda may feature me publicly (photo, skills, projects, reviews) on the homepage and in marketing — Student of the Week. Off by default; withdraw anytime.</span></label>
+        <label class="visibility-row" data-student-profile><input name="spotlightConsent" type="checkbox"><span>Covenda may feature me publicly (photo, skills, projects, reviews) on the homepage and in marketing. Student of the Week. Off by default; withdraw anytime.</span></label>
         <details class="appeal-box" data-student-profile>
           <summary>Contest a score</summary>
-          <p class="appeal-note">Every Covenda score is decision support, not a verdict — and it's contestable. Tell us which score you're challenging and share the new evidence; an operator reviews every appeal and writes a resolution.</p>
+          <p class="appeal-note">Every Covenda score is decision support, not a verdict, and it's contestable. Tell us which score you're challenging and share the new evidence; an operator reviews every appeal and writes a resolution.</p>
           <input name="appealSubject" type="text" maxlength="160" placeholder="Which score? (e.g. fit score on “Churn dashboard”)">
-          <textarea name="appealEvidence" rows="3" placeholder="The new evidence — links, context, what changed"></textarea>
+          <textarea name="appealEvidence" rows="3" placeholder="The new evidence, links, context, what changed"></textarea>
           <div class="appeal-actions"><button type="button" id="appealSubmitBtn" class="ghost-button">Submit appeal</button><span id="appealStatus" role="status"></span></div>
         </details>
         <p class="dialog-message" id="profileMessage" aria-live="polite"></p>
@@ -249,14 +249,14 @@
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="projectDialog">
-    <form method="dialog" id="projectForm"><header><div><p class="eyebrow">New project</p><h2>Start with a useful outcome.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>Project title<input name="title" maxlength="160" required placeholder="Customer research synthesis"></label><label>What needs to get done?<textarea name="summary" rows="5" minlength="10" maxlength="5000" required></textarea></label><label>Useful deliverable<input name="deliverable" maxlength="2000" placeholder="A cited summary with clear recommendations"></label><label>Desired skills <small>Separate with commas</small><input name="desiredSkills" placeholder="Research, spreadsheets, writing"></label><div class="form-grid"><label>Target date<input name="targetDate" type="date"></label><label>Visibility<select name="visibility"><option value="private">Private draft</option><option value="members">Covenda members</option><option value="open">Open opportunity</option></select></label></div><label>Engagement rung <small>Start small — a micro-bounty is the de-risked first bet</small><select name="engagementRung"><option value="">Standard project</option><option value="micro">Micro-bounty — bounded ~5-hour task (~$100–200)</option><option value="project_short">Short project (~2 weeks)</option><option value="project_long">Longer project (~6 weeks)</option></select></label><label>Access stage <small>Stage 2 (deeper access) only opens to a student who finished a Stage 1 with you</small><select name="accessStage"><option value="1">Stage 1 — work-trial, no systems access</option><option value="2">Stage 2 — deeper access (earned)</option></select></label>
-    <fieldset class="form-fieldset"><legend>Who you're looking for <small>Optional — targeting, never filters on protected traits</small></legend>
+    <form method="dialog" id="projectForm"><header><div><p class="eyebrow">New project</p><h2>Start with a useful outcome.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>Project title<input name="title" maxlength="160" required placeholder="Customer research synthesis"></label><label>What needs to get done?<textarea name="summary" rows="5" minlength="10" maxlength="5000" required></textarea></label><label>Useful deliverable<input name="deliverable" maxlength="2000" placeholder="A cited summary with clear recommendations"></label><label>Desired skills <small>Separate with commas</small><input name="desiredSkills" placeholder="Research, spreadsheets, writing"></label><div class="form-grid"><label>Target date<input name="targetDate" type="date"></label><label>Visibility<select name="visibility"><option value="private">Private draft</option><option value="members">Covenda members</option><option value="open">Open opportunity</option></select></label></div><label>Engagement rung <small>Start small, a micro-bounty is the de-risked first bet</small><select name="engagementRung"><option value="">Standard project</option><option value="micro">Micro-bounty, bounded ~5-hour task (~$100–200)</option><option value="project_short">Short project (~2 weeks)</option><option value="project_long">Longer project (~6 weeks)</option></select></label><label>Access stage <small>Stage 2 (deeper access) only opens to a student who finished a Stage 1 with you</small><select name="accessStage"><option value="1">Stage 1, work-trial, no systems access</option><option value="2">Stage 2, deeper access (earned)</option></select></label>
+    <fieldset class="form-fieldset"><legend>Who you're looking for <small>Optional, targeting, never filters on protected traits</small></legend>
       <div class="form-grid">
         <label>Opportunity type<select name="opportunityType"><option value="project">The work itself</option><option value="internship">Internship</option><option value="part_time">Part-time</option></select></label>
         <label>Experience needed<select name="experienceRequirement"><option value="none">No prior experience needed</option><option value="relevant_project">A relevant completed project</option><option value="prior_internship">Prior internship</option><option value="professional">Professional experience</option></select></label>
       </div>
       <div class="form-grid">
-        <label>Referral<select name="referralRequirement"><option value="none">Not required</option><option value="preferred">Preferred — helps a candidate stand out</option><option value="required">Required — must have a staked vouch</option></select></label>
+        <label>Referral<select name="referralRequirement"><option value="none">Not required</option><option value="preferred">Preferred, helps a candidate stand out</option><option value="required">Required, must have a staked vouch</option></select></label>
         <label>Founder time you can give <small>min/week</small><input name="founderTimeBudgetMinWeek" type="number" min="0" max="600" step="5" placeholder="30"></label>
       </div>
       <p class="fieldset-hint">Where should talent come from? <small>Leave all off for the open network.</small></p>
@@ -272,11 +272,11 @@
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="applyDialog">
-    <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="4" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Research, spreadsheets, writing"></label><label>Show your work <small>Optional link — portfolio, repo, sample</small><input name="demonstration" type="url" placeholder="https://…"></label><div class="video-field" data-video-field="apply"><p class="video-field-label">Intro video <small>Optional — 60 seconds, recorded here</small></p><div class="video-picker" id="applyVideoPicker"></div><input name="videoUrl" type="hidden"></div><div class="form-grid"><label>Referred by <small>Optional</small><input name="referralName" placeholder="Prof. Lee"></label><label>Referral code <small>Optional</small><input name="referralCode" placeholder="REF-XXXX"></label></div><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
+    <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="4" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Research, spreadsheets, writing"></label><label>Show your work <small>Optional link, portfolio, repo, sample</small><input name="demonstration" type="url" placeholder="https://…"></label><div class="video-field" data-video-field="apply"><p class="video-field-label">Intro video <small>Optional, 60 seconds, recorded here</small></p><div class="video-picker" id="applyVideoPicker"></div><input name="videoUrl" type="hidden"></div><div class="form-grid"><label>Referred by <small>Optional</small><input name="referralName" placeholder="Prof. Lee"></label><label>Referral code <small>Optional</small><input name="referralCode" placeholder="REF-XXXX"></label></div><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="requestDialog">
-    <form method="dialog" id="requestForm"><header><div><p class="eyebrow">Request work</p><h2>Ask Covenda to package it.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>What do you need?<select name="requestType" required><option value="new_project">A new project</option><option value="more_students">More students on a project</option><option value="scope_change">A scope change</option><option value="revision">A revision</option><option value="consult">A consult</option><option value="specific_student">A specific student</option><option value="question">A question</option></select></label><label>Subject <small>Optional</small><input name="subject" maxlength="200" placeholder="Short summary"></label><label>Details<textarea name="details" rows="5" minlength="10" maxlength="5000" required placeholder="Describe what you need. Covenda will scope and package it with you — public or approved inputs only."></textarea></label><p class="dialog-message" id="requestMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send request<svg><use href="#p-arrow"/></svg></button></footer></form>
+    <form method="dialog" id="requestForm"><header><div><p class="eyebrow">Request work</p><h2>Ask Covenda to package it.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>What do you need?<select name="requestType" required><option value="new_project">A new project</option><option value="more_students">More students on a project</option><option value="scope_change">A scope change</option><option value="revision">A revision</option><option value="consult">A consult</option><option value="specific_student">A specific student</option><option value="question">A question</option></select></label><label>Subject <small>Optional</small><input name="subject" maxlength="200" placeholder="Short summary"></label><label>Details<textarea name="details" rows="5" minlength="10" maxlength="5000" required placeholder="Describe what you need. Covenda will scope and package it with you, public or approved inputs only."></textarea></label><p class="dialog-message" id="requestMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send request<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="batchApplyDialog">
@@ -297,13 +297,13 @@
             <span class="batch-prompt-tag">Your assigned prompt</span>
             <p id="batchVideoPrompt"></p>
           </div>
-          <p class="batch-step-hint">Unscripted, answering the prompt above. Retake as often as you like — only the take you keep is saved.</p>
+          <p class="batch-step-hint">Unscripted, answering the prompt above. Retake as often as you like, only the take you keep is saved.</p>
           <div class="batch-exercise" id="batchExercise" hidden></div>
           <input type="hidden" id="batchExerciseUrl" name="exerciseUrl">
 
           <div class="ba-upload">
             <p class="ba-upload-cap">Your work sample</p>
-            <p class="ba-upload-note">The spreadsheet, model or document itself — not a PDF export or a screenshot. We open the file and read how it was built.</p>
+            <p class="ba-upload-note">The spreadsheet, model or document itself, not a PDF export or a screenshot. We open the file and read how it was built.</p>
             <input type="file" id="batchArtifactInput" accept=".xlsx,.xls,.csv,.pdf,.docx,.pptx">
             <ul class="ba-upload-list" id="batchArtifactList"></ul>
             <p class="ba-upload-status" id="batchArtifactStatus" aria-live="polite"></p>
@@ -324,7 +324,7 @@
         <div class="batch-apply-step" data-ba-step="3">
           <p class="batch-step-kicker">About you</p>
           <label>Why this cohort? <b class="req">Required</b><textarea name="note" rows="4" minlength="40" maxlength="2000" required placeholder="What draws you to this discipline, and what do you want to get out of the cohort?"></textarea></label>
-          <label>Relevant experience <small>What you've built, studied, or worked on</small><textarea name="experience" rows="4" maxlength="2000" placeholder="Coursework, internships, projects, competitions — anything that shows you can do this work."></textarea></label>
+          <label>Relevant experience <small>What you've built, studied, or worked on</small><textarea name="experience" rows="4" maxlength="2000" placeholder="Coursework, internships, projects, competitions, anything that shows you can do this work."></textarea></label>
           <label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Python, financial modeling, research"></label>
           <div class="form-grid">
             <label>Hours per week <small>Optional</small><input name="hoursPerWeek" type="number" min="1" max="60" inputmode="numeric" placeholder="10"></label>
@@ -343,7 +343,7 @@
 
           <div class="ba-referral">
           <p class="ba-referral-cap">Who vouches for you?</p>
-          <p class="ba-referral-note">Optional — but it is the strongest thing on this application.</p>
+          <p class="ba-referral-note">Optional, but it is the strongest thing on this application.</p>
           <label>Their name<input name="referralName" placeholder="Prof. Lee"></label>
           <label>Referral code <small>if they gave you one</small><input name="referralCode" placeholder="REF-XXXX"></label>
         </div>
@@ -368,7 +368,7 @@
           <label>What is not getting done, and why does it matter?<textarea name="problem" rows="10" minlength="10" maxlength="8000" placeholder="e.g. Our competitor pricing sheet is always out of date. We need a public-source scan of the top 8 competitors with pricing tiers and positioning."></textarea></label>
           <label class="intake-consent"><input type="checkbox" name="aiConsent"><span>I consent to Covenda using AI to read what I submit (including files) to draft a project brief. This is an assistive draft; a human finalizes scope.</span></label>
           <details class="reverse-audit">
-            <summary>Not sure where to start? Give us a link or a document — we’ll propose 3 drafts</summary>
+            <summary>Not sure where to start? Give us a link or a document, we’ll propose 3 drafts</summary>
             <p class="ra-hint">Your own material only. We read it and propose three scoped drafts you edit and confirm. Nothing publishes on its own, and an uploaded file is read once and never stored.</p>
             <div class="ra-row">
               <input type="url" id="reverseAuditUrl" placeholder="https://github.com/you/product" aria-label="Your own public link">
@@ -383,7 +383,7 @@
             <p class="ra-status" id="reverseAuditStatus" aria-live="polite"></p>
             <div class="ra-results" id="reverseAuditResults"></div>
           </details>
-          <p class="intake-hint">Describe the work in plain words. The AI drafts a structured brief on the next step — you can edit everything before posting.</p>
+          <p class="intake-hint">Describe the work in plain words. The AI drafts a structured brief on the next step, you can edit everything before posting.</p>
         </section>
         <section class="intake-step" data-intake-step="2">
           <div class="intake-files"><label class="intake-file-btn"><svg><use href="#p-inbox"/></svg>Attach files (PDF, docs, images)<input type="file" id="intakeFileInput" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*" hidden></label><div class="intake-chips" id="intakeChips"></div></div>
@@ -419,7 +419,7 @@
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="submitWorkDialog">
-    <form method="dialog" id="submitWorkForm"><header><div><p class="eyebrow">Submit work</p><h2 id="submitWorkTitle">Send your work for review</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><label>What you did<textarea name="workSummary" rows="4" minlength="10" maxlength="4000" required placeholder="Summarize what you completed and how."></textarea></label><div class="work-files"><p class="work-files-label">Upload your work <small>Video, code, CSV, slides, docs — up to 50MB each</small></p><input type="file" id="workFileInput" multiple accept=".pdf,.csv,.txt,.md,.json,.zip,.docx,.xlsx,.pptx,.png,.jpg,.jpeg,.webm,.mp4,.mov"><ul class="work-file-list" id="workFileList"></ul><p class="work-file-status" id="workFileStatus" aria-live="polite"></p></div><label>Or link to it <small>One per line — if the work lives somewhere else</small><textarea name="workLinks" rows="2" placeholder="https://…"></textarea></label><label>Anything the reviewer should know <small>Optional</small><textarea name="workNotes" rows="2" maxlength="1000" placeholder="Assumptions, open questions, or where to focus."></textarea></label><p class="dialog-message" id="submitWorkMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Submit for review<svg><use href="#p-arrow"/></svg></button></footer></form>
+    <form method="dialog" id="submitWorkForm"><header><div><p class="eyebrow">Submit work</p><h2 id="submitWorkTitle">Send your work for review</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><label>What you did<textarea name="workSummary" rows="4" minlength="10" maxlength="4000" required placeholder="Summarize what you completed and how."></textarea></label><div class="work-files"><p class="work-files-label">Upload your work <small>Video, code, CSV, slides, docs, up to 50MB each</small></p><input type="file" id="workFileInput" multiple accept=".pdf,.csv,.txt,.md,.json,.zip,.docx,.xlsx,.pptx,.png,.jpg,.jpeg,.webm,.mp4,.mov"><ul class="work-file-list" id="workFileList"></ul><p class="work-file-status" id="workFileStatus" aria-live="polite"></p></div><label>Or link to it <small>One per line, if the work lives somewhere else</small><textarea name="workLinks" rows="2" placeholder="https://…"></textarea></label><label>Anything the reviewer should know <small>Optional</small><textarea name="workNotes" rows="2" maxlength="1000" placeholder="Assumptions, open questions, or where to focus."></textarea></label><p class="dialog-message" id="submitWorkMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Submit for review<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="reviewDialog">
