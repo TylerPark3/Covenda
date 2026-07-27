@@ -5990,62 +5990,37 @@ function initBatchWeb() {
 initMemberNav();
 window.requestAnimationFrame(() => openIntro());
 
-// The opening home card traces one requirement through its evidence to a mutual introduction.
+// The opening home card first shows the market problem, then lets a visitor trace
+// Covenda's literal profile → filter → trial → proof workflow.
 (function initProofLens() {
   const lens = document.getElementById('proofLens');
   if (!lens) return;
-  const criteria = Array.from(lens.querySelectorAll('[data-proof-criterion]'));
-  const evidenceRows = Array.from(lens.querySelectorAll('[data-proof-evidence]'));
-  const readoutLabel = document.getElementById('proofReadoutLabel');
-  const readoutValue = document.getElementById('proofReadoutValue');
-  const requestButton = document.getElementById('proofRequestIntro');
-  const requested = document.getElementById('proofRequested');
-  const resetButton = document.getElementById('proofResetIntro');
-  if (!criteria.length || criteria.length !== evidenceRows.length || !readoutLabel ||
-      !readoutValue || !requestButton || !requested || !resetButton) return;
+  const steps = Array.from(lens.querySelectorAll('[data-proof-step]'));
 
-  const proof = {
-    product: { label: 'Shipped React product', value: 'Live product linked' },
-    contribution: { label: 'Clear contribution', value: 'Code contribution confirmed' },
-    hours: { label: '10+ hours weekly', value: 'Availability not yet verified' },
-  };
-
-  function selectProof(key) {
-    const item = proof[key];
-    if (!item) return;
-    lens.dataset.proofKey = key;
-    criteria.forEach(button => {
-      const selected = button.dataset.proofCriterion === key;
-      button.classList.toggle('is-selected', selected);
-      button.setAttribute('aria-pressed', String(selected));
+  function selectStep(index) {
+    steps.forEach((step, stepIndex) => {
+      const selected = stepIndex === index;
+      step.classList.toggle('is-active', selected);
+      step.setAttribute('aria-pressed', String(selected));
     });
-    evidenceRows.forEach(button => {
-      const selected = button.dataset.proofEvidence === key;
-      button.classList.toggle('is-active', selected);
-      button.setAttribute('aria-pressed', String(selected));
-    });
-    readoutLabel.textContent = item.label;
-    readoutValue.textContent = item.value;
-    readoutValue.classList.toggle('is-unverified', key === 'hours');
-    requestButton.hidden = false;
-    requested.hidden = true;
-    lens.dataset.proofState = 'evidence';
   }
 
-  criteria.forEach(button => button.addEventListener('click', () => selectProof(button.dataset.proofCriterion)));
-  evidenceRows.forEach(button => button.addEventListener('click', () => selectProof(button.dataset.proofEvidence)));
-  requestButton.addEventListener('click', () => {
-    requestButton.hidden = true;
-    requested.hidden = false;
-    lens.dataset.proofState = 'requested';
-    resetButton.focus({ preventScroll: true });
+  steps.forEach((step, index) => {
+    step.addEventListener('click', () => selectStep(index));
+    step.addEventListener('pointerenter', () => selectStep(index));
+    step.addEventListener('focus', () => selectStep(index));
   });
-  resetButton.addEventListener('click', () => {
-    requestButton.hidden = false;
-    requested.hidden = true;
-    lens.dataset.proofState = 'evidence';
-    requestButton.focus({ preventScroll: true });
-  });
+
+  if (!('IntersectionObserver' in window)) {
+    lens.classList.add('is-visible');
+    return;
+  }
+  const observer = new IntersectionObserver(entries => {
+    if (!entries.some(entry => entry.isIntersecting)) return;
+    lens.classList.add('is-visible');
+    observer.disconnect();
+  }, { threshold: 0.15 });
+  observer.observe(lens);
 })();
 
 // Company visitors can switch between the two simple product routes without reading a

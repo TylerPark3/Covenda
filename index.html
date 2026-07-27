@@ -131,82 +131,103 @@
 
       <section class="proof-lens-section" id="bridgeStory" aria-labelledby="proofLensTitle">
         <header class="proof-lens-heading">
-          <h2 id="proofLensTitle">Stop screening claims.<br>Inspect the proof.</h2>
-          <p>One brief. A few students. A clear reason to meet.</p>
+          <h2 id="proofLensTitle">Here’s what that means.</h2>
+          <p>Startups need help. Students want startup work. Applications make the match harder.</p>
           <span>Illustrative preview</span>
         </header>
 
-        <div class="proof-lens" id="proofLens" data-proof-key="product" data-proof-state="evidence">
-          <section class="proof-brief" aria-labelledby="proofBriefTitle">
-            <p class="proof-stage-label"><b>1</b>Define the proof</p>
-            <div class="proof-sheet">
-              <h3 id="proofBriefTitle">Frontend intern</h3>
-              <div class="proof-criteria" role="list" aria-label="Choose a requirement to trace">
-                <button type="button" class="is-selected" data-proof-criterion="product" aria-pressed="true">
-                  <span class="proof-check"><svg><use href="#icon-check"/></svg></span>
-                  <strong>Shipped React product</strong>
-                </button>
-                <button type="button" data-proof-criterion="contribution" aria-pressed="false">
-                  <span class="proof-check"><svg><use href="#icon-check"/></svg></span>
-                  <strong>Clear contribution</strong>
-                </button>
-                <button type="button" data-proof-criterion="hours" aria-pressed="false">
-                  <span class="proof-check"><svg><use href="#icon-check"/></svg></span>
-                  <strong>10+ hours weekly</strong>
-                </button>
+        <div class="proof-lens" id="proofLens">
+          <div class="proof-market" aria-label="Startups and students are growing while applications become harder to trust">
+            <section class="proof-market-side proof-market-startups" aria-labelledby="proofStartupTitle">
+              <h3 id="proofStartupTitle">More startups<br>need talent.</h3>
+              <div class="proof-node-field" aria-hidden="true">
+                <span style="--i:0">AI tools</span>
+                <span style="--i:1">Fintech</span>
+                <span style="--i:2">Climate</span>
+                <span style="--i:3">Health tech</span>
+                <span style="--i:4">Commerce</span>
+                <span style="--i:5">Dev tools</span>
               </div>
-            </div>
-          </section>
+              <p><svg aria-hidden="true"><use href="#icon-arrow-right"/></svg> More teams need hands-on help.</p>
+            </section>
 
-          <section class="proof-evidence" aria-labelledby="proofEvidenceTitle">
-            <p class="proof-stage-label"><b>2</b><span id="proofEvidenceTitle">Follow the evidence</span></p>
-            <div class="proof-evidence-rows">
-              <button type="button" class="proof-evidence-row is-active" data-proof-evidence="product" aria-pressed="true">
-                <span class="proof-object-icon"><svg><use href="#icon-grid"/></svg></span>
-                <strong>Live product</strong>
-                <em class="is-linked">Linked</em>
-              </button>
-              <button type="button" class="proof-evidence-row" data-proof-evidence="contribution" aria-pressed="false">
-                <span class="proof-object-icon"><svg><use href="#icon-route"/></svg></span>
-                <strong>Code contribution</strong>
-                <em class="is-confirmed">Confirmed</em>
-              </button>
-              <button type="button" class="proof-evidence-row" data-proof-evidence="hours" aria-pressed="false">
-                <span class="proof-object-icon"><svg><use href="#icon-user"/></svg></span>
-                <strong>Availability</strong>
-                <em class="is-unverified">Unverified</em>
-              </button>
-            </div>
-          </section>
+            <section class="proof-market-noise" aria-labelledby="proofNoiseTitle">
+              <h3 id="proofNoiseTitle">AI makes applications<br>harder to trust.</h3>
+              <div class="proof-application-stack" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+                <div>
+                  <b>Application</b>
+                  <i></i><i></i><i></i><i></i>
+                </div>
+              </div>
+              <p>More applications do not show who can do the work.</p>
+            </section>
 
-          <section class="proof-candidate" aria-labelledby="proofCandidateTitle">
-            <p class="proof-stage-label"><b>3</b>Meet by mutual choice</p>
-            <div class="proof-person">
-              <div class="proof-person-main">
-                <img src="/assets/maya-chen-illustrative.jpg" alt="" width="132" height="132">
-                <div><h3 id="proofCandidateTitle">Maya Chen</h3><p>Frontend product builder</p></div>
+            <section class="proof-market-side proof-market-students" aria-labelledby="proofStudentTitle">
+              <h3 id="proofStudentTitle">More students want<br>startup work.</h3>
+              <div class="proof-student-field" aria-hidden="true">
+                <span style="--i:0"><b>ML</b><em>Maya · Product</em></span>
+                <span style="--i:1"><b>AP</b><em>Arjun · Data</em></span>
+                <span style="--i:2"><b>NK</b><em>Noah · Engineering</em></span>
+                <span style="--i:3"><b>LH</b><em>Leila · Growth</em></span>
               </div>
-              <dl class="proof-readout" aria-live="polite">
-                <div><dt id="proofReadoutLabel">Shipped React product</dt><dd id="proofReadoutValue">Live product linked</dd></div>
-              </dl>
-              <button class="proof-request" id="proofRequestIntro" type="button">Request introduction<svg><use href="#icon-arrow-right"/></svg></button>
-              <div class="proof-requested" id="proofRequested" hidden>
-                <svg><use href="#icon-check"/></svg>
-                <div><strong>Request ready</strong><span>Maya chooses whether to connect.</span></div>
-                <button type="button" id="proofResetIntro">Reset</button>
-              </div>
+              <p><svg aria-hidden="true"><use href="#icon-arrow-right"/></svg> More students want to contribute.</p>
+            </section>
+          </div>
+
+          <p class="proof-market-summary">Both sides are growing. Applications make it harder for them to find each other.</p>
+
+          <section class="proof-product" aria-labelledby="proofProductTitle">
+            <header>
+              <span aria-hidden="true"></span>
+              <h3 id="proofProductTitle">Covenda makes the work visible.</h3>
+              <span aria-hidden="true"></span>
+            </header>
+
+            <div class="proof-product-rail" role="group" aria-label="How Covenda works">
+              <button class="proof-product-step is-active" type="button" data-proof-step="0" aria-pressed="true">
+                <small>1</small>
+                <h4>Build a work profile</h4>
+                <div class="proof-profile-preview" aria-hidden="true">
+                  <span class="proof-avatar">ML</span>
+                  <strong>Maya L.</strong>
+                  <em>Product builder</em>
+                  <i>Projects</i><i>Skills</i><i>Availability</i>
+                </div>
+              </button>
+
+              <button class="proof-product-step" type="button" data-proof-step="1" aria-pressed="false">
+                <small>2</small>
+                <h4>Filter for fit</h4>
+                <div class="proof-filter-preview" aria-hidden="true">
+                  <span><b>Work</b>Product</span>
+                  <span><b>Stage</b>Early-stage</span>
+                  <span><b>Time</b>10+ hrs/week</span>
+                </div>
+              </button>
+
+              <button class="proof-product-step" type="button" data-proof-step="2" aria-pressed="false">
+                <small>3</small>
+                <h4>Try one real project</h4>
+                <div class="proof-trial-preview" aria-hidden="true">
+                  <span>Trial project</span>
+                  <strong>Improve the signup flow</strong>
+                  <i>Clear task · agreed scope</i>
+                </div>
+              </button>
+
+              <button class="proof-product-step proof-product-outcome" type="button" data-proof-step="3" aria-pressed="false">
+                <small><svg aria-hidden="true"><use href="#icon-check"/></svg></small>
+                <h4>The work becomes the proof.</h4>
+                <p>Review the result.<br>Then decide what’s next.</p>
+              </button>
             </div>
           </section>
         </div>
 
-        <div class="proof-difference" aria-label="What makes Covenda different">
-          <span>Not a résumé database.</span>
-          <span>Not a black-box score.</span>
-          <strong>A shortlist you can explain.</strong>
-        </div>
         <div class="proof-lens-actions">
-          <button class="proof-primary-action" type="button" data-audience-option="company">Find student talent</button>
-          <button class="proof-secondary-action" type="button" data-audience-option="student">Build your proof</button>
+          <button class="proof-primary-action" type="button" data-audience-option="company">Find the right student</button>
+          <button class="proof-secondary-action" type="button" data-audience-option="student">Build your work profile</button>
         </div>
       </section>
 
