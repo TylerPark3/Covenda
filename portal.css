@@ -1513,3 +1513,63 @@ body { background: var(--surface); }
 .vet-kind { display: inline-block; margin: 2px 0 4px; font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--soft); }
 .vet-steps small { display: block; color: var(--muted); font-size: 14px; line-height: 1.55; }
 .vet-honest { margin: 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+/* ══ THE BATCH APPLICATION ═════════════════════════════════════════════════════════════
+   White ground, black type, one thing on screen. This is the most important form in the
+   product and it was reading like a settings page: tinted panels, small labels, six
+   competing surfaces. Everything decorative is gone; what is left is the question. */
+#batchApplyDialog { background: #fff; }
+#batchApplyDialog .dialog-body { background: #fff; max-width: 720px; }
+#batchApplyDialog header { border-bottom: 1px solid #ebe8e1; background: #fff; }
+#batchApplyDialog header h2 { font-size: 30px; letter-spacing: -.025em; color: #000; }
+#batchApplyDialog .eyebrow { color: #8a8479; letter-spacing: .1em; }
+
+/* Type sized to be read, not scanned. */
+#batchApplyDialog .batch-step-kicker { margin: 0 0 22px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: #000; }
+#batchApplyDialog .batch-step-hint { font-size: 16px; line-height: 1.65; color: #55524a; }
+#batchApplyDialog label { font-size: 16px; font-weight: 600; color: #000; }
+#batchApplyDialog label small { font-size: 14.5px; font-weight: 400; color: #7d7870; }
+#batchApplyDialog input, #batchApplyDialog textarea, #batchApplyDialog select {
+  font-size: 17px; line-height: 1.6; color: #000;
+  padding: 14px 16px; min-height: 56px;
+  border: 1px solid #d8d4cb; border-radius: 0; background: #fff;
+}
+#batchApplyDialog textarea { min-height: 0; }
+#batchApplyDialog input:focus, #batchApplyDialog textarea:focus, #batchApplyDialog select:focus {
+  border-color: #000; box-shadow: none; outline: 2px solid #000; outline-offset: -2px;
+}
+#batchApplyDialog input::placeholder, #batchApplyDialog textarea::placeholder { color: #a8a39a; }
+
+/* Panels lose their tint — a coloured box on a white page reads as a warning. */
+#batchApplyDialog .batch-apply-detail,
+#batchApplyDialog .batch-prompt-box,
+#batchApplyDialog .batch-vetting,
+#batchApplyDialog .ba-referral { background: #fff; border: 1px solid #ebe8e1; }
+#batchApplyDialog .batch-prompt-box p { font-size: 19px; line-height: 1.5; color: #000; }
+#batchApplyDialog .batch-prompt-tag { color: #8a8479; }
+#batchApplyDialog .ba-referral-cap { font-size: 22px; color: #000; }
+#batchApplyDialog .ba-referral-note { font-size: 15.5px; color: #7d7870; }
+
+/* One question at a time. */
+.bq-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.bq-bar > span { font-size: 14px; font-weight: 650; color: #7d7870; font-variant-numeric: tabular-nums; }
+.bq-dots { display: flex; gap: 6px; }
+.bq-dots i { width: 26px; height: 3px; background: #e4e0d8; }
+.bq-dots i.is-done { background: #000; }
+.bq-dots i.is-current { background: var(--gold); }
+.bq-card { display: grid; gap: 0; }
+.bq-q { display: grid; gap: 12px; }
+.bq-label { font-size: 22px; font-weight: 600; line-height: 1.35; letter-spacing: -.015em; color: #000; }
+.bq-hint { font-size: 15px; line-height: 1.6; color: #7d7870; font-weight: 400; }
+.bq-nav { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+.bq-nav .portal-primary, .bq-nav .portal-secondary { min-height: 48px; padding: 0 22px; font-size: 15.5px; }
+.bq-done { margin: 0; color: #7d7870; font-size: 15px; }
+
+/* Progress rail and footer, quieted to match. */
+#batchApplyDialog .ba-progress { border-bottom-color: #ebe8e1; background: #fff; }
+#batchApplyDialog .ba-progress button { font-size: 15px; }
+#batchApplyDialog .ba-progress li.is-current button { border-bottom-color: #000; color: #000; }
+#batchApplyDialog .ba-progress li.is-done button { color: #55524a; }
+#batchApplyDialog footer { border-top: 1px solid #ebe8e1; background: #fff; }
+#batchApplyDialog .ba-count { font-size: 15px; color: #7d7870; }
+#batchApplyDialog footer button { min-height: 52px; font-size: 16px; }

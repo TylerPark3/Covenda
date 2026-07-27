@@ -1746,23 +1746,81 @@ let batchResumeUrl='';
 function renderBatchResumeChip(name){const chip=$('#batchResumeChip');if(!chip)return;if(!name){chip.hidden=true;chip.textContent='';return;}chip.hidden=false;chip.replaceChildren();const s=document.createElement('span');s.textContent=name;const x=document.createElement('button');x.type='button';x.setAttribute('aria-label','Remove résumé');x.textContent='×';x.addEventListener('click',()=>{batchResumeUrl='';renderBatchResumeChip('');});chip.append(s,x);}
 let currentBatchPrompt='';
 let batchInterestSpec=[];
+// Step 2: questions one at a time.
+//
+// All of them at once is a wall of textareas — a student skims, writes short answers to
+// everything, and the answers get worse the further down the page they are. One question,
+// one answer, then the next. The count is visible so nobody feels trapped.
+let baQIndex = 0;
 function renderBatchInterest(batch){
-  const host=$('#batchInterestQuestions');if(!host)return;host.replaceChildren();
+  const host=$('#batchInterestQuestions');if(!host)return;
   batchInterestSpec=batchInterestQuestions(batch);
-  batchInterestSpec.forEach(q=>{
-    const label=document.createElement('label');label.className='batch-interest-q';
-    const span=document.createElement('span');span.className='batch-interest-label';span.textContent=q.label;label.append(span);
-    // How the answer is judged, said up front — a student should never be guessing whether
-    // we want a right answer or a way of thinking.
-    if(q.hint){const hint=document.createElement('small');hint.className='batch-interest-hint';hint.textContent=q.hint;label.append(hint);}
-    let field;
-    if(q.type==='select'){field=document.createElement('select');const ph=document.createElement('option');ph.value='';ph.textContent='Choose one…';field.append(ph);(q.options||[]).forEach(o=>{const opt=document.createElement('option');opt.value=o;opt.textContent=o;field.append(opt);});}
-    else{field=document.createElement('textarea');field.rows=4;field.maxLength=900;field.placeholder=q.placeholder||'';}
-    field.name='interest_'+q.id;label.append(field);host.append(label);
-  });
+  baQIndex=0;
+  paintBatchQuestion();
 }
-function readBatchInterest(form){
-  return batchInterestSpec.map(q=>({id:q.id,question:q.label,answer:(form.elements['interest_'+q.id]?.value||'').trim()})).filter(a=>a.answer);
+function paintBatchQuestion(){
+  const host=$('#batchInterestQuestions');if(!host)return;
+  host.replaceChildren();
+  const total=batchInterestSpec.length;
+  if(!total)return;
+  baQIndex=Math.max(0,Math.min(baQIndex,total-1));
+  const q=batchInterestSpec[baQIndex];
+
+  const bar=document.createElement('div');bar.className='bq-bar';
+  const count=document.createElement('span');count.textContent=`Question ${baQIndex+1} of ${total}`;
+  const dots=document.createElement('div');dots.className='bq-dots';
+  batchInterestSpec.forEach((_,i)=>{
+    const d=document.createElement('i');
+    d.className=i===baQIndex?'is-current':(answeredAt(i)?'is-done':'');
+    dots.append(d);
+  });
+  bar.append(count,dots);host.append(bar);
+
+  const wrap=document.createElement('div');wrap.className='bq-card';
+  const label=document.createElement('label');label.className='bq-q';
+  const span=document.createElement('span');span.className='bq-label';span.textContent=q.label;label.append(span);
+  // How the answer is judged, said up front — a student should never be guessing whether
+  // we want a right answer or a way of thinking.
+  if(q.hint){const hint=document.createElement('small');hint.className='bq-hint';hint.textContent=q.hint;label.append(hint);}
+  let field;
+  if(q.type==='select'){
+    field=document.createElement('select');
+    const ph=document.createElement('option');ph.value='';ph.textContent='Choose one…';field.append(ph);
+    (q.options||[]).forEach(o=>{const opt=document.createElement('option');opt.value=o;opt.textContent=o;field.append(opt);});
+  }else{
+    field=document.createElement('textarea');field.rows=6;field.maxLength=900;field.placeholder=q.placeholder||'';
+  }
+  field.name='interest_'+q.id;
+  field.value=batchAnswers[q.id]||'';
+  field.addEventListener('input',()=>{batchAnswers[q.id]=field.value;});
+  label.append(field);wrap.append(label);host.append(wrap);
+
+  const nav=document.createElement('div');nav.className='bq-nav';
+  if(baQIndex>0){
+    const back=document.createElement('button');back.type='button';back.className='portal-secondary compact';back.textContent='Previous';
+    back.addEventListener('click',()=>{baQIndex-=1;paintBatchQuestion();});
+    nav.append(back);
+  }
+  if(baQIndex<total-1){
+    const next=document.createElement('button');next.type='button';next.className='portal-primary compact';next.textContent='Next question';
+    next.addEventListener('click',()=>{baQIndex+=1;paintBatchQuestion();});
+    nav.append(next);
+  }else{
+    const done=document.createElement('p');done.className='bq-done';done.textContent='That is the last one — continue when you are ready.';
+    nav.append(done);
+  }
+  host.append(nav);
+  setTimeout(()=>field.focus(),0);
+}
+function answeredAt(i){
+  const q=batchInterestSpec[i];
+  return Boolean(q && (batchAnswers[q.id]||'').trim());
+}
+let batchAnswers={};
+
+function readBatchInterest(){
+  // Read from the answer store, not the form — only one question is mounted at a time.
+  return batchInterestSpec.map(q=>({id:q.id,question:q.label,answer:(batchAnswers[q.id]||'').trim()})).filter(a=>a.answer);
 }
 // The batch application, one step at a time.
 //
@@ -1857,6 +1915,7 @@ function renderVettingSteps(batch){
 
 function openBatchApply(batch){
   baStep=0;
+  batchAnswers={};
   const form=$('#batchApplyForm');if(!form)return;
   form.reset();batchResumeUrl='';renderBatchResumeChip('');
   form.elements.batchId.value=batch.id;
@@ -3099,7 +3158,7 @@ $('#batchApplyForm')?.addEventListener('submit',async event=>{
   button.disabled=true;setDialogMessage('#batchApplyMessage','Submitting your application…');
   const skills=e.skills.value.split(',').map(s=>s.trim()).filter(Boolean);
   try{
-    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(form),resumeUrl:batchResumeUrl,referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
+    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(),resumeUrl:batchResumeUrl,referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
     $('#batchApplyDialog').close();await loadDashboard();setView('batches');
   }catch(error){setDialogMessage('#batchApplyMessage',error.message,true);}finally{button.disabled=false;}
 });

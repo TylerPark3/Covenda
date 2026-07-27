@@ -38,7 +38,10 @@ test('batch experience: expandable cards + application with assigned video promp
   assert.match(script,/BATCH_VIDEO_PROMPTS/);
   assert.match(script,/batchInterestQuestions/);
   assert.match(script,/videoPrompt:currentBatchPrompt/);
-  assert.match(script,/interest:readBatchInterest\(form\)/);
+  // Answers come from the store now, not the form — only one question is mounted at a
+  // time, so reading the form would return the current question and nothing else.
+  assert.match(script,/interest:readBatchInterest\(\)/);
+  assert.match(script,/Read from the answer store, not the form/);
   // Dialog scaffolding for the prompt + interest answers + detail recap.
   assert.match(html,/id="batchVideoPrompt"/);
   assert.match(html,/id="batchInterestQuestions"/);
