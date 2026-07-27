@@ -225,7 +225,7 @@ function renderFocus(){
   const project=state.dashboard.projects.find(item=>!['complete','archived'].includes(item.status))||state.dashboard.projects[0];
   $('#focusTitle').textContent=role==='student'?'Your project tracker':'Project operations';
   if(role==='student')root.append(rungBadge());
-  if(!project){const empty=document.createElement('div');empty.className='empty-line';const h=document.createElement('h3');h.textContent=role==='student'?'No assigned project yet.':'No project posted yet.';const p=document.createElement('p');p.textContent=role==='student'?'Discover reviewed opportunities or complete your profile while Covenda routes a fit.':'Create a private draft first, then make it visible when the scope is ready.';const button=document.createElement('button');button.type='button';button.textContent=role==='student'?'Browse open projects →':'Start a project →';button.addEventListener('click',()=>role==='student'?setView('discover'):openIntake());empty.append(h,p,button);root.append(empty);return;}
+  if(!project){const empty=document.createElement('div');empty.className='empty-line';const h=document.createElement('h3');h.textContent=role==='student'?'No assigned project yet.':'No project posted yet.';const p=document.createElement('p');p.textContent=role==='student'?'Browse open work, or finish your profile while we route a fit.':'Create a private draft first, then make it visible when the scope is ready.';const button=document.createElement('button');button.type='button';button.textContent=role==='student'?'Browse open projects →':'Start a project →';button.addEventListener('click',()=>role==='student'?setView('discover'):openIntake());empty.append(h,p,button);root.append(empty);return;}
   const row=document.createElement('article');row.className='project-focus';const copy=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;const meta=document.createElement('div');meta.className='project-focus-meta';meta.append(pill(statusLabels[project.status]||project.status,'status-pill',project.status));if(project.target_date)meta.append(pill(`Due ${dateLabel(project.target_date)}`));copy.append(h,p,meta);const actions=projectActionNode(project);if(actions)copy.append(actions);const progress=document.createElement('div');progress.className='project-progress';const track=document.createElement('div');const fill=document.createElement('i');fill.style.width=`${statusProgress[project.status]||10}%`;track.append(fill);const label=document.createElement('span');label.textContent=`${statusProgress[project.status]||10}% through workflow`;progress.append(track,label);row.append(copy,progress);root.append(row);
 }
 function pill(label,className='skill-pill',status=''){const span=document.createElement('span');span.className=className;span.textContent=label;if(status)span.dataset.status=status;return span;}
@@ -250,7 +250,7 @@ function conversionControl(project){
   CONVERSION_OPTIONS.forEach(([value,text])=>{const o=document.createElement('option');o.value=value;o.textContent=text;if((project.conversion_outcome||'none')===value)o.selected=true;select.append(o);});
   label.append(span,select);
   const status=document.createElement('small');status.className='conversion-status';
-  status.textContent=project.conversion_recorded_at?`Saved · ${dateLabel(project.conversion_recorded_at)}`:'This helps Covenda place students like this — it is not shared publicly.';
+  status.textContent=project.conversion_recorded_at?`Saved · ${dateLabel(project.conversion_recorded_at)}`:'Helps us place students like this. Never shared publicly.';
   select.addEventListener('change',async()=>{
     select.disabled=true;status.textContent='Saving…';
     try{await portalRequest({method:'POST',body:JSON.stringify({action:'record-conversion',projectId:project.id,outcome:select.value})});
@@ -378,7 +378,7 @@ function renderRequests(){
 }
 function openRequest(){const form=$('#requestForm');if(form)form.reset();setDialogMessage('#requestMessage','');$('#requestDialog').showModal();}
 
-function renderProgress(){const profile=state.dashboard.profile;const score=profileCompletion(profile);$('#profileRing').style.setProperty('--progress',`${score*3.6}deg`);$('strong',$('#profileRing')).textContent=`${score}%`;$('#profileProgressTitle').textContent=score===100?'Your profile is ready':score>=60?'Add the finishing details':'Make a strong first impression';$('#profileProgressCopy').textContent=profile?.role==='student'?'Companies see only portfolios you choose to share.':'A complete organization profile adds context to every project.';}
+function renderProgress(){const profile=state.dashboard.profile;const score=profileCompletion(profile);$('#profileRing').style.setProperty('--progress',`${score*3.6}deg`);$('strong',$('#profileRing')).textContent=`${score}%`;$('#profileProgressTitle').textContent=score===100?'Your profile is ready':score>=60?'Add the finishing details':'Make a strong first impression';$('#profileProgressCopy').textContent=profile?.role==='student'?'Only portfolios you share are visible.':'A complete organization profile adds context to every project.';}
 
 
 // ---- Student: verification standing and live milestones -----------------------------
@@ -503,7 +503,7 @@ function openClubStep(){
       await loadDashboard();
       d.body.replaceChildren();
       const done=document.createElement('p');done.className='verif-intro';
-      done.textContent='Send this link to an officer of the club — a president, captain, or faculty advisor. They confirm in about thirty seconds and do not need a Covenda account.';
+      done.textContent='Send this to a club officer. Thirty seconds, no account needed.';
       d.body.append(done);
       d.foot.replaceChildren();
       try{
@@ -642,8 +642,8 @@ function renderJourney(){
   const box=document.createElement('div');
   const h=document.createElement('h3'); h.textContent='How this works for you';
   const p=document.createElement('p');
-  p.textContent=nextIndex<0?'Every step is behind you. Keep the evidence current and the next role finds you.'
-    :'Six steps, in the order they happen. Each one opens where it gets done.';
+  p.textContent=nextIndex<0?'All done. Keep the evidence current.'
+    :'Six steps, in order. Each opens where it gets done.';
   box.append(h,p);
   const count=document.createElement('span'); count.className='journey-count';
   count.textContent=`${doneCount} of ${steps.length}`;
@@ -742,7 +742,7 @@ function renderVerification(){
   // School email is the floor and must never read as the proof — said here, not just in the API.
   if(!v.isStudentVerified){
     const note=document.createElement('p'); note.className='verif-note';
-    note.textContent='A school email shows you control that address — it is the floor, not the proof. A confirmed club or a named referral is what companies weigh.';
+    note.textContent='A school email is the floor, not the proof. Companies weigh a confirmed club or a named referral.';
     host.append(note);
   }
   host.hidden=false;
@@ -782,7 +782,7 @@ function renderMilestones(){
   host.append(ol);
   // The rule stated where the student will actually read it.
   const note=document.createElement('p'); note.className='verif-note';
-  note.textContent='Running late is fine — say so and nothing escalates. Going quiet is what moves the work to someone else.';
+  note.textContent='Running late is fine — say so. Going quiet is what loses the work.';
   host.append(note);
   host.hidden=false;
 }
@@ -1192,7 +1192,7 @@ function renderDiscover(){
   const savedCountEl=$('#savedCount');if(savedCountEl)savedCountEl.textContent=saved.size;
   $('#discoverSummary').textContent=`${items.length} ${items.length===1?'project':'projects'} shown`;
   root.replaceChildren();
-  if(!items.length){const savedTab=discoverState.tab==='saved';const filtered=!savedTab&&(d.opportunities||[]).length>0;emptyList(root,'p-compass',savedTab?'No saved projects yet.':filtered?'No projects match your filters.':'No open projects yet.',savedTab?'Tap Save on any project to keep it here.':filtered?'Try clearing a filter, or check back as new projects are posted.':'New reviewed opportunities appear here as companies post them. Complete your profile so Covenda can route the right fit.',filtered?{label:'Reset filters',run:()=>$('#filterReset')?.click()}:savedTab?null:{label:'Complete your profile →',run:()=>setView('portfolio')});return;}
+  if(!items.length){const savedTab=discoverState.tab==='saved';const filtered=!savedTab&&(d.opportunities||[]).length>0;emptyList(root,'p-compass',savedTab?'No saved projects yet.':filtered?'No projects match your filters.':'No open projects yet.',savedTab?'Tap Save on any project to keep it here.':filtered?'Try clearing a filter, or check back as new projects are posted.':'New work appears here as companies post it. Finish your profile so we can route it.',filtered?{label:'Reset filters',run:()=>$('#filterReset')?.click()}:savedTab?null:{label:'Complete your profile →',run:()=>setView('portfolio')});return;}
   const applied=new Set((d.applications||[]).map(a=>a.project_id));
   // One sorted list buries everything past the top few, which trains a student to only ever
   // look at what they already qualify for. Bands keep a stretch visible without dressing it
@@ -1265,7 +1265,7 @@ function renderBatchFilter(root){
   if(!withFit.length){
     // Nothing to filter by yet, so say what unlocks it instead of showing a dead control.
     const p=document.createElement('p');p.className='batch-filter-empty';
-    p.textContent='Add skills to your profile and every batch will show how well it lines up with them.';
+    p.textContent='Add skills and every batch shows how it lines up.';
     const go=document.createElement('button');go.type='button';go.className='portal-ghost compact';
     go.textContent='Add your skills';go.addEventListener('click',()=>setView('portfolio'));
     bar.append(p,go);root.append(bar);return;
@@ -1277,7 +1277,7 @@ function renderBatchFilter(root){
   range.addEventListener('input',()=>{ batchMinFit=Number(range.value)||0; out.textContent=batchMinFit?`${batchMinFit}%`:'Any'; renderBatches(); });
   label.append(cap,range,out);
   const note=document.createElement('small');note.className='batch-filter-note';
-  note.textContent='Match reads your listed skills against what each batch is about. It does not affect whether you are admitted.';
+  note.textContent='Reads your listed skills. Does not affect admission.';
   bar.append(label,note);root.append(bar);
 }
 function renderBatches(){
@@ -1296,11 +1296,11 @@ function renderBatches(){
     empty.textContent=`No batch matches your skills at ${batchMinFit}% or above. Lower the bar, or add more skills to your profile.`;
     root.append(empty);return;
   }
-  if(!batches.length){emptyList(root,'p-spark','No batches are open right now.','Curated cohorts open a few times a season. Check back — admitted students are surfaced directly to partner companies.');return;}
+  if(!batches.length){emptyList(root,'p-spark','No batches are open right now.','Cohorts open a few times a season. Check back.');return;}
   for(const batch of batches)root.append(batchCard(batch,appByBatch.get(batch.id)));
 }
 function renderCompanyBatches(root){
-  const intro=$('#batchIntro');if(intro)intro.textContent='Curated, operator-reviewed cohorts of vetted students. Unlock a batch to see its admitted roster and reach out.';
+  const intro=$('#batchIntro');if(intro)intro.textContent='Reviewed cohorts of vetted students. Unlock one to see the roster.';
   const batches=(state.dashboard.batches||[]).filter(b=>b.status==='open'||b.status==='reviewing');
   const unlocked=new Map((state.dashboard.batchAccess||[]).map(a=>[a.batch_id,a]));
   const admitted=state.dashboard.batchAdmitted||{};
@@ -1511,7 +1511,7 @@ function batchRequirementsBlock(brief,standing){
     list.append(li);
   }
   wrap.append(list);
-  const note=document.createElement('p');note.className='batch-req-note';note.textContent='Meeting the bar is a recommendation, not an admission — an operator reviews every application and records why.';
+  const note=document.createElement('p');note.className='batch-req-note';note.textContent='Clearing the bar is a recommendation, not admission. A person reviews every application.';
   wrap.append(note);
   return wrap;
 }
@@ -1716,7 +1716,7 @@ function renderVideoLibrary(root){
   const box=document.createElement('div');
   const h=document.createElement('h3'); h.textContent='Your intro videos';
   const p=document.createElement('p');
-  p.textContent='Record a take here and reuse it. Companies see it only on the applications you attach it to — nothing is public.';
+  p.textContent='Record once, reuse anywhere. Only seen on applications you attach it to.';
   box.append(h,p);
   const add=document.createElement('button'); add.type='button'; add.className='portal-primary compact';
   add.textContent='Record a take';
@@ -1732,7 +1732,7 @@ function renderVideoLibrary(root){
   const takes=videoStudio.library();
   if(!takes.length){
     const empty=document.createElement('p'); empty.className='video-library-empty';
-    empty.textContent='Nothing recorded yet. Sixty seconds on what you have actually built beats a paragraph about yourself — and you can retake it as many times as you like.';
+    empty.textContent='Nothing yet. Sixty seconds on what you built, retaken as often as you like.';
     sec.append(empty); root.append(sec); return;
   }
   const list=document.createElement('div'); list.className='video-library-list';
@@ -1880,7 +1880,7 @@ function renderCompanyProfileForm(root){
   const box=document.createElement('div');
   const h=document.createElement('h3');h.textContent='Your company profile';
   const p=document.createElement('p');
-  p.textContent='What a student sees when they click your name on a project. Publishing is a choice — a half-filled draft is not what you want them judging you on.';
+  p.textContent='What students see when they click your name. Drafts stay private.';
   box.append(h,p);
   const state_=document.createElement('span');state_.className='company-form-state';
   state_.textContent=cp.published?'Published':'Draft — not visible to students';
@@ -1997,7 +1997,7 @@ async function openCompanyProfile(ownerUserId,fallbackName){
 }
 
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
-  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Browse students who opted into discovery — startup-fit, building real evidence. Hire by inviting them to a scoped project.';$('#editProfile').hidden=true;
+  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Students who opted into discovery. Invite them to a scoped project.';$('#editProfile').hidden=true;
   const batches=document.createElement('section');batches.className='talent-batches';
   const bh=document.createElement('div');bh.className='talent-batches-head';
   bh.append(Object.assign(document.createElement('h3'),{textContent:'Vetted batches'}));
@@ -2082,8 +2082,8 @@ function renderCredibility(root,d){
   const h=document.createElement('h3');h.textContent='What a company sees';
   const sub=document.createElement('p');sub.className='cred-meter-sub';
   sub.textContent=met===0
-    ? 'Your profile is live but carries no evidence yet. Here is how it reads to someone opening it today.'
-    : 'How your profile reads to someone opening it today.';
+    ? 'Your profile is live but carries no evidence yet.'
+    : 'How your profile reads today.';
   box.append(h,sub);
   const tag=document.createElement('span');tag.className='cred-meter-tag';
   tag.textContent=`${met} of ${signals.length}`;
@@ -2107,7 +2107,7 @@ function renderCredibility(root,d){
   sec.append(list);
 
   const note=document.createElement('p');note.className='cred-meter-note';
-  note.textContent='Nothing here is scored by us. Each line is a fact about your profile that a company can check for itself.';
+  note.textContent='Every line is a fact a company can check. Nothing here is scored by us.';
   sec.append(note);
   root.append(sec);
 }
@@ -2148,7 +2148,7 @@ function githubConnectBanner(){
 function renderProofOfWork(root,profile){
   const sec=document.createElement('section');sec.className='proof-of-work';
   const h=document.createElement('h3');h.textContent='Proof of work · GitHub';
-  const sub=document.createElement('p');sub.className='pow-sub';sub.textContent='Link a public repo. Covenda reads the code and commit history and scores the skills it actually demonstrates — per skill, with the evidence behind each. Code alone is anchored by your trials and referrals, never proof on its own.';
+  const sub=document.createElement('p');sub.className='pow-sub';sub.textContent='Link a public repo. We read the code and score each skill it demonstrates, with the evidence behind it.'
   sec.append(h,sub,githubConnectBanner());
   const row=document.createElement('div');row.className='pow-row';
   const input=document.createElement('input');input.type='url';input.className='pow-input';input.placeholder='github.com/you/project';input.setAttribute('aria-label','GitHub repository URL');
@@ -2804,7 +2804,7 @@ const videoStudio=(function(){
       }
       if(!canRecord&&mode!=='link'){
         const note=document.createElement('p'); note.className='video-note';
-        note.textContent='This browser cannot record here — use “I already have a link”, or open Covenda in Chrome or Safari.';
+        note.textContent='This browser cannot record. Paste a link, or use Chrome or Safari.';
         host.append(note);
       }
     }

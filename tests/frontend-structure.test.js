@@ -626,7 +626,7 @@ test('the work exchange turns one project into clear value for both sides', () =
   assert.doesNotMatch(html, /Brief, Build, and Review/);
   assert.match(html, /One project\./);
   assert.match(html, /Two sides win\./);
-  assert.match(html, /Covenda turns referred talent and real startup work into a trial both sides can trust/);
+  assert.match(html, /[Rr]eferred talent[\s\S]{0,60}trial both sides can trust/);
   for (const label of [
     'Real startup task',
     'Work the team needs done',
@@ -793,10 +793,10 @@ test('the credibility heading lost the stranded numeral', () => {
 test('the trial/batch distinction is stated, not left to inference', () => {
   assert.match(html, /Trials are the work/);
   assert.match(html, /Batches are the shortlist/);
-  assert.match(html, /Open to anyone — no batch needed/);
+  assert.match(html, /[Nn]o batch needed/);
   assert.match(html, /accepted trial work is the strongest way to clear it/);
   // Which to start with, said outright.
-  assert.match(html, /Start with trials if you have nothing yet/);
+  assert.match(html, /[Nn]o evidence yet\?[\s\S]{0,40}[Ss]tart with trials/);
   assert.match(styles, /\.tb-split/);
 });
 
@@ -824,5 +824,8 @@ test('students can see their verification standing and where work stands', async
   assert.match(portalJs, /function renderMilestones\(\)/);
   // The two rules that only matter if the student actually reads them.
   assert.match(portalJs, /it is the floor, not the proof/);
-  assert.match(portalJs, /Going quiet is what moves the work to someone else/);
+  // The rule, not the sentence — copy tightens, the guarantee does not. Being late must
+  // stay safe and silence must stay the thing that costs you the work.
+  assert.match(portalJs, /Running late is fine/);
+  assert.match(portalJs, /Going quiet is what loses the work/);
 });
