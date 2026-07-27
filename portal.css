@@ -1716,6 +1716,25 @@ body { background: var(--surface); }
 
 /* Concept + reasoning banks. Published on purpose, so no anti-cheat theatre in the styling —
    this reads like a form, because it is one. */
+
+/* Score breakdown. The number, what it was built on, what matched, what did not, and which
+   scoring stage produced it. Gaps are listed rather than hidden: a score that only shows what
+   went right is a score nobody can argue with. */
+.sbd { display:grid; gap:12px; margin:14px 0 0; padding:16px 18px; border:1px solid var(--line); background:var(--surface-2); }
+.sbd-head { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
+.sbd-head strong { font-size:32px; font-weight:650; letter-spacing:-.035em; line-height:1; color:var(--gold-deep); font-variant-numeric:tabular-nums; }
+.sbd-head > span { font-size:15px; color:var(--soft); }
+.sbd-basis { flex-basis:100%; margin-top:4px; font-size:13px; letter-spacing:.02em; color:var(--soft); }
+.sbd-basis.is-thin { color:var(--attn, #b8683c); }
+.sbd-list { display:grid; gap:7px; margin:0; padding:0; list-style:none; }
+.sbd-list li { position:relative; padding-left:20px; font-size:14.5px; line-height:1.45; }
+.sbd-list li::before { position:absolute; left:0; font-weight:700; }
+.sbd-list .is-match { color:var(--ink); }
+.sbd-list .is-match::before { content:"+"; color:var(--gold-deep); }
+.sbd-list .is-gap { color:var(--soft); }
+.sbd-list .is-gap::before { content:"\2212"; color:var(--soft); }
+.sbd-how { margin:2px 0 0; padding-top:10px; border-top:1px solid var(--line); font-size:13px; line-height:1.45; color:var(--soft); }
+
 .ex-file { justify-self:start; margin:4px 0 2px; padding:11px 20px; border:1px solid var(--gold-deep); background:#fff; color:var(--gold-deep); font:inherit; font-size:15.5px; font-weight:650; cursor:pointer; }
 .ex-file:hover:not(:disabled) { background:var(--gold-pale); }
 .ex-file:disabled { cursor:progress; opacity:.7; }

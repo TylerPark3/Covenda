@@ -463,7 +463,12 @@ function applicantCard(application,project){
   if(application.fit)card.append(fitWhyBlock({reasons:application.fit.reasons,concerns:application.fit.concerns,approach:application.fit.recommendedApproach}));
   card.append(head);
   const meta=document.createElement('div');meta.className='activity-meta';meta.append(pill(applicationStatusLabels[application.status]||titleCase(application.status),'status-pill',application.status));if(project)meta.append(pill(project.title,'status-pill'));card.append(meta);
-  if((application.fit_reasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';application.fit_reasons.slice(0,3).forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});card.append(rs);}
+  if(application.fit_score!=null){
+    card.append(scoreBreakdown({
+      score:application.fit_score, precise:application.fit_precise, comparedOn:application.fit_compared_on,
+      reasons:application.fit_reasons||[], concerns:application.fit_concerns||[],
+    }));
+  }
   if((application.skills||[]).length){const ask=new Set((Array.isArray(project?.desired_skills)?project.desired_skills:String(project?.desired_skills||'').split(',')).map(s=>String(s).toLowerCase().trim()).filter(Boolean));const sk=document.createElement('div');sk.className='applicant-skills';application.skills.forEach(s=>sk.append(pill(s,ask.has(String(s).toLowerCase().trim())?'skill-pill is-matched':'skill-pill')));card.append(sk);}
   if(application.note){const n=document.createElement('p');n.className='applicant-note';n.textContent=application.note;card.append(n);}
   const ref=application.referral||{};if(ref.name||ref.code){const rr=document.createElement('p');rr.className='applicant-referral'+(ref.verified?' is-verified':'');const who=ref.verified?(ref.partner||ref.name):(ref.name||', ');rr.textContent=ref.verified?`Endorsed by ${who} · Covenda-certified`:`Referred by ${who}${ref.code?` (${ref.code})`:''} · referral pending`;card.append(rr);}
@@ -2202,6 +2207,58 @@ function renderExercise(batch){
   if(part)part.hidden=false;
 }
 
+
+// How a score was arrived at, shown where the score is shown.
+//
+// The marketing page promises a number you can interrogate. Until now the product showed the
+// number and three reasons, which is not the same thing — a student could not tell whether a
+// 78 came from eight matched axes or from two, and those are different claims.
+//
+// Three things go on the record here:
+//   * the basis      how many axes both sides actually answered, out of eight
+//   * the matches    named, and the gaps named separately rather than folded into "reasons"
+//   * the method     which scoring stage produced it, so nobody has to guess whether a model
+//                    touched the number
+function scoreBreakdown({score, precise, comparedOn, axes=8, reasons=[], concerns=[], stage='rules'}={}){
+  const box=document.createElement('div'); box.className='sbd';
+
+  const head=document.createElement('div'); head.className='sbd-head';
+  const n=document.createElement('strong');
+  n.textContent=Number.isFinite(precise)?precise.toFixed(1):String(score??'—');
+  const cap=document.createElement('span'); cap.textContent='match';
+  head.append(n,cap);
+
+  // The honesty line. A confident number built on almost nothing is the failure this prevents.
+  const basis=document.createElement('small'); basis.className='sbd-basis';
+  const on=Number(comparedOn);
+  basis.textContent=Number.isFinite(on)
+    ? on===0
+      ? `No work-style axes compared yet. Fill in your preferences and this gets sharper.`
+      : `Compared on ${on} of ${axes} axes`
+    : '';
+  if(on===0)basis.classList.add('is-thin');
+  head.append(basis);
+  box.append(head);
+
+  const list=document.createElement('ul'); list.className='sbd-list';
+  reasons.forEach(r=>{const li=document.createElement('li'); li.className='is-match'; li.textContent=r; list.append(li);});
+  // Gaps are listed, not hidden. A score that only shows what went right is a score nobody
+  // can argue with, which is the thing the product is supposed to be against.
+  concerns.filter(c=>!/No major concern/.test(c)).forEach(c=>{
+    const li=document.createElement('li'); li.className='is-gap'; li.textContent=c; list.append(li);
+  });
+  if(list.children.length)box.append(list);
+
+  const how=document.createElement('p'); how.className='sbd-how';
+  how.textContent=stage==='bounded'
+    ? 'Weighted model, adjusted by the outcome model within a capped range.'
+    : stage==='shadow'
+      ? 'Weighted model. An outcome model is running alongside it and is not affecting this number.'
+      : 'Transparent weighted model. No learned model is affecting this number.';
+  box.append(how);
+  return box;
+}
+
 function renderVettingSteps(batch){
   const host=$('#batchVetting');
   if(!host)return;
@@ -2341,7 +2398,12 @@ function openDiscoverDetail(project,isApplied){
   const eyebrow=$('#discoverDetail .eyebrow');if(eyebrow)eyebrow.textContent=project.posterName?('Posted by '+project.posterName):'Project detail';
   renderBriefDocument(body,project.ai_brief,project.summary);
   const head=document.createElement('div');head.className='detail-head';head.append(fitPill(project.fitScore,project.fitPresentation));const pay=Number(project.credits_listed)||0;const payS=document.createElement('span');payS.className='detail-pay';payS.textContent=pay?`${pay.toLocaleString()} credits payout`:'Payout TBD';head.append(payS);body.prepend(head);
-  if((project.fitReasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';project.fitReasons.forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});body.insertBefore(rs,head.nextSibling);}
+  if(project.fitScore!=null){
+    body.insertBefore(scoreBreakdown({
+      score:project.fitScore, precise:project.fitPrecise, comparedOn:project.fitComparedOn,
+      axes:project.fitAxes||8, reasons:project.fitReasons||[], concerns:project.fitConcerns||[],
+    }),head.nextSibling);
+  }
   const footer=$('#discoverDetailFooter');footer.replaceChildren();const apply=document.createElement('button');apply.type='button';apply.className='portal-primary';apply.textContent=isApplied?'Interest already sent':'Apply to this project';apply.disabled=isApplied;apply.addEventListener('click',()=>{$('#discoverDetail').close();openApply(project);});footer.append(apply);
   $('#discoverDetail').showModal();
 }

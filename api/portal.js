@@ -684,6 +684,7 @@ export const FIT_WEIGHTS = { vertical: 28, workType: 23, startupFit: 18, skills:
 
 // Startup environment ↔ student work-style dimensions. Missing data on either side is skipped
 // (never lowers a score). No protected attributes appear here.
+export const AXIS_COUNT = 8;
 const ENV_DIMS = [
   ['env_structure', 'structure'], ['env_autonomy', 'autonomy'], ['env_pace', 'pace'], ['env_stage', 'stage'],
   // Four more axes. With only four, this component could land on five distinct values, which
@@ -858,7 +859,10 @@ export function rankOpportunities(opportunities, profile, context = {}) {
     return Boolean((verticals.length && verticalMatch) || (workTypes.length && workTypeMatch));
   };
   return (opportunities || [])
-    .map(project => { const fit = computeFitScore(project, profile, context); return { ...project, matched: isMatch(project), fitScore: fit.score, fitPresentation: presentScore(fit.score, studentEvidenceTier(profile, context.completedCount)), fitReasons: fit.reasons, fitConcerns: fit.concerns, fitApproach: fit.recommendedApproach }; })
+    .map(project => { const fit = computeFitScore(project, profile, context); return { ...project, matched: isMatch(project), fitScore: fit.score, fitPresentation: presentScore(fit.score, studentEvidenceTier(profile, context.completedCount)), fitReasons: fit.reasons, fitConcerns: fit.concerns, fitApproach: fit.recommendedApproach,
+      // The basis, not just the number. A 78 built on two answered axes is not the claim a 78
+      // built on eight is, and the product should say so where the score is shown.
+      fitPrecise: fit.precise, fitComparedOn: fit.comparedOn, fitAxes: AXIS_COUNT }; })
     .sort((a, b) => b.fitScore - a.fitScore || Number(b.matched) - Number(a.matched));
 }
 
@@ -2126,6 +2130,9 @@ export async function applyToProject(member, input, env = process.env) {
     demonstration: cleanUrl(input.demonstration) || cleanText(input.demonstration, 500) || null,
     referral: cleanReferral(input.referral, verifiedPartnersFromEnv(env)),
     fit_score: fit.score,
+    fit_precise: fit.precise,
+    fit_compared_on: fit.comparedOn,
+    fit_concerns: fit.concerns,
     fit_reasons: fit.reasons,
   };
   // If the rich-application migration hasn't been applied yet, the extra columns don't exist —

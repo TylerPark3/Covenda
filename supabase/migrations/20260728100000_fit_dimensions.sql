@@ -55,3 +55,13 @@ alter table public.member_profiles add constraint member_profiles_traits_check
   check (traits is null or jsonb_typeof(traits) = 'array') not valid;
 
 notify pgrst, 'reload schema';
+
+-- The basis a snapshotted score was built on. Stored alongside the score because a 78 built on
+-- two answered axes is not the same claim as a 78 built on eight, and a reviewer reading an
+-- application months later cannot recover that from the number alone.
+alter table public.project_applications
+  add column if not exists fit_precise numeric,
+  add column if not exists fit_compared_on integer,
+  add column if not exists fit_concerns jsonb not null default '[]'::jsonb;
+
+notify pgrst, 'reload schema';
