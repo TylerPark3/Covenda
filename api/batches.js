@@ -462,6 +462,113 @@ export function questionsFor(slug) {
   return (BATCH_QUESTIONS[slug] || []).map(([kind, question]) => ({ kind, question }));
 }
 
+
+// Concrete evidence that counts, per batch. The requirements list what is needed in the
+// abstract ("two skills evidenced by real artifacts"); a student needs to know whether the
+// thing they actually have qualifies. Anything on this list does.
+export const BATCH_ACCEPTS = {
+  'ai-ml': ['A GitHub repo you own with commits across three or more months',
+            'A model you trained end to end — training code plus the evaluation you ran',
+            'A Kaggle or benchmark entry with the notebook behind it',
+            'A course project you took materially past the assignment',
+            'A paper, preprint or workshop submission you contributed code to',
+            'Research assistant work in a lab, with the repo or the PI to confirm it'],
+  'physical-ai': ['A robotics repo with commit history — ROS, control, perception, or firmware',
+                  'A competition robot you built or programmed (FRC, RoboCup, university team)',
+                  'A simulation project that you then ran on real hardware',
+                  'CAD or mechanical design paired with the code that drove it',
+                  'Lab work on autonomy or controls, with your PI to confirm it'],
+  'infrastructure-data': ['A pipeline or ETL repo you own, with its commit history',
+                          'A dbt project, warehouse schema, or orchestration DAG you built',
+                          'A dataset you collected and cleaned, with the code that did it',
+                          'Infrastructure work from an internship you can describe end to end'],
+  'product-engineering': ['A shipped app or site with a repo you own',
+                          'A meaningful pull request merged into a project you did not start',
+                          'A hackathon build you kept working on afterwards',
+                          'Internship or freelance work with code you can walk through'],
+  'security-reliability': ['A public bug report, CVE, or responsible disclosure you filed',
+                           'A CTF placement with your write-ups',
+                           'A test suite you built for a real project',
+                           'An incident or outage you helped diagnose, with the write-up'],
+
+  'investment-banking': ['A three-statement or DCF model you built in Excel',
+                         'A stock pitch you presented — deck plus the model behind it',
+                         'Investment club or fund work where you owned the analysis',
+                         'A summer analyst or internship deliverable you can defend',
+                         'A case competition placement with your submission'],
+  'private-equity': ['An LBO model you built, including the returns bridge',
+                     'A diligence memo on a real or historical deal',
+                     'Search fund, PE club, or independent sponsor work',
+                     'A case competition where you sized and defended a buyout'],
+  'venture-capital': ['An investment memo on a real company',
+                      'A market map or thesis you researched and wrote',
+                      'Scout, fellowship, or VC club work where you sourced deals',
+                      'A company you founded, joined early, or advised'],
+  'asset-wealth-management': ['A portfolio you manage, with your reasoning documented',
+                              'A paper-trading or brokerage track record you can connect',
+                              'A quant or investing club project with the code or model',
+                              'A research note on an asset class with assumptions stated'],
+  'accounting-audit': ['A reconciliation, close checklist, or audit workpaper you produced',
+                       'Bookkeeping or controller work for a real organisation, even a club',
+                       'An accounting internship deliverable you can walk through',
+                       'A process you fixed, with what was wrong before'],
+
+  'clinical-operations': ['A process map, SOP, or workflow you documented — de-identified',
+                          'Clinic, hospital, or health-startup operations work',
+                          'A quality-improvement project with what changed and why',
+                          'Volunteer or scribe work where you owned a process'],
+  'health-analytics': ['An analysis on de-identified health data, with your code',
+                       'A dashboard or report you built for a clinical team',
+                       'Public-health or epidemiology research you contributed to'],
+  'revenue-cycle': ['A claims, denials, or billing analysis you produced',
+                    'Revenue-cycle or medical-billing work, even part-time',
+                    'A recovery or reconciliation project with the numbers'],
+  'regulatory-quality': ['A compliance or quality artifact you wrote — SOP, CAPA, audit prep',
+                         'Regulatory work in a lab, clinic, or health company',
+                         'A control you designed or documented, with sign-off'],
+  'digital-health-product': ['A product spec, flow, or research synthesis you wrote',
+                             'A health app or tool you built or shaped',
+                             'User research with clinicians or patients you ran'],
+
+  'growth-performance': ['A campaign you ran with the account or dashboard to show it',
+                         'A growth experiment with the result — including one that failed',
+                         'Marketing work for a club, startup, or your own project',
+                         'An analytics build (attribution, funnel, cohort) you own'],
+  'brand-content': ['A content series, brand system, or campaign you made',
+                    'A creative portfolio with the reasoning behind the choices',
+                    'Social or community work with real reach you can show'],
+  'merchandising': ['An assortment, pricing, or category analysis you built',
+                    'Retail or e-commerce work where you owned a category',
+                    'A buying or inventory project with the numbers'],
+  'supply-chain': ['A forecast or inventory model you built',
+                   'Operations work at a DTC brand, warehouse, or manufacturer',
+                   'A logistics or sourcing project with what you changed'],
+  'ecommerce-marketplace': ['A store you built or ran, with its numbers',
+                            'A conversion or funnel analysis you produced',
+                            'Marketplace ops work — supply, demand, or trust and safety'],
+
+  'management-consulting': ['A case competition placement with your deck',
+                            'A consulting club engagement you led or owned a workstream on',
+                            'A pro-bono or nonprofit project with a real recommendation',
+                            'An internship deliverable you can defend under questioning'],
+  'strategy-research': ['A research report or strategy memo you wrote',
+                        'A thesis, capstone, or independent study with sources',
+                        'Research assistant work with your own written output'],
+  'market-intelligence': ['A market map, landscape, or competitive analysis',
+                          'Industry research you produced for a real audience',
+                          'A data-backed piece on a sector you got credible in fast'],
+  'legal-operations': ['A contract review, process, or compliance artifact you produced',
+                       'Legal clinic, paralegal, or in-house internship work',
+                       'A process you tightened, with what was going wrong'],
+  'technical-writing': ['Documentation you wrote for a real project',
+                        'A technical blog, tutorial, or explainer with an audience',
+                        'API or developer docs you own or contributed to'],
+};
+
+export function acceptsFor(slug) {
+  return BATCH_ACCEPTS[slug] || [];
+}
+
 export function batchBySlug(slug) {
   return BATCH_CATALOG.find(b => b.slug === slug) || null;
 }
@@ -496,6 +603,7 @@ export function batchBrief(batch) {
     requirements: (batch.requirements || []).map(r => ({ key: r.key, label: r.label, detail: r.detail || null })),
     whatWeRead: whatWeRead(batch.verticalSlug),
     questions: questionsFor(batch.slug),
+    accepts: acceptsFor(batch.slug),
     companyWorkflow: batch.companyWorkflow || [],
     admissionVersion: BATCH_ADMISSION_VERSION,
   };

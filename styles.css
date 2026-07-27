@@ -2248,7 +2248,6 @@ body[data-audience="student"] .feature-band { display: none; }
 /* The dead air above the section becomes a statement: a big display-serif gold "2". */
 /* Big italic display numeral. line-height:.85 cropped the glyph's ascender under
    background-clip:text; give it a full line box + a little top padding so nothing clips. */
-.cred-big-num { display: block; margin-bottom: clamp(4px, 1vw, 12px); padding-top: .12em; font-family: var(--font-display); font-style: italic; font-weight: 400; font-size: clamp(88px, 11vw, 168px); line-height: 1; letter-spacing: -.04em; background: linear-gradient(96deg, #8A6A2F 0%, #A9822F 42%, #C9A24B 66%, #A9822F 88%); -webkit-background-clip: text; background-clip: text; color: transparent; overflow: visible; }
 .cred-doors { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 28px; }
 .cred-door { padding: clamp(20px, 2.4vw, 28px); border-radius: 0; }
 .cred-tag {
@@ -3138,21 +3137,7 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 
 /* Flow diagram: rails -> bar -> review -> batch. Sized generously; it is the explanation,
    not decoration, so it gets real space. */
-.bd-figure { display: grid; gap: 0; margin: clamp(26px, 3.4vw, 40px) 0 0; }
-.bd-rails { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
-.bd-node { padding: clamp(20px, 2.2vw, 26px); border: 1px solid var(--line-strong); background: rgba(255,255,255,.65); }
-.bd-node b { display: block; font-size: 17px; letter-spacing: -.012em; }
-.bd-node span { display: block; max-width: 54ch; margin-top: 7px; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.62; }
-.bd-bar, .bd-review, .bd-batch { text-align: center; }
-.bd-bar span, .bd-review span, .bd-batch span { margin-left: auto; margin-right: auto; }
-.bd-rail { border-left: 3px solid var(--gold-light); }
-.bd-bar { border-color: var(--gold-deep); background: var(--gold-pale); }
-.bd-review { border-style: dashed; }
-.bd-batch { border-color: var(--success); background: #f4faf5; }
-.bd-arrow { justify-self: center; width: 1px; height: 30px; background: var(--line-strong); position: relative; }
-.bd-arrow::after { content: ""; position: absolute; bottom: 0; left: -3.5px; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 7px solid var(--line-strong); }
 
-.bd-panel .pb-badge { margin-top: 22px; }
 .bd-block { margin-top: clamp(26px, 3.2vw, 40px); }
 .bd-block h4 { margin: 0 0 16px; font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-deep); }
 .bd-reqs, .bd-steps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
@@ -3230,11 +3215,6 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
 .cred-door::before, .bd-panel::before, .club-form::before, .club-ladder::before,
 
 /* The diagram's rail nodes get the same tick, so the batch walkthrough shares the language. */
-.bd-node { position: relative; }
-.bd-rail::before {
-  content: ""; position: absolute; top: -1px; left: -1px; width: 8px; height: 8px;
-  border-top: 1.5px solid var(--gold); border-left: 1.5px solid var(--gold); pointer-events: none;
-}
 
 @media (max-width: 720px) {
   .credibility-ladder::before { background-size: 54px 54px, 54px 54px, 54px 54px; }
@@ -4268,3 +4248,17 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
   .cred-ladder li { border-right-width: 1px; border-bottom-width: 0; }
   .cred-ladder li:last-child { border-bottom-width: 1px; }
 }
+
+/* The credibility heading is a single column now: the two-column split existed only to park
+   the big numeral opposite the title, and without it the heading and its line were stranded
+   at opposite ends of the page. */
+.credibility-ladder .section-heading { display: block; max-width: 66ch; margin-bottom: clamp(18px, 2.4vw, 28px); }
+.credibility-ladder .section-heading h2 { margin: 0; }
+.credibility-ladder .section-heading > p { margin: 12px 0 0; color: var(--muted); }
+
+/* What counts as evidence — the list a student scans to see whether what they already have
+   qualifies. Two columns on a wide panel so it reads as a menu rather than a wall. */
+.bd-accepts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px 26px; margin: 0; padding: 0; list-style: none; }
+.bd-accepts li { display: grid; grid-template-columns: 18px 1fr; gap: 11px; align-items: start; }
+.bd-accepts svg { width: 15px; height: 15px; margin-top: 4px; color: var(--gold-deep); }
+.bd-accepts span { font-size: var(--step-body-sm); line-height: 1.55; color: var(--ink); }

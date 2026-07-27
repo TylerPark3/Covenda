@@ -304,10 +304,10 @@ test('public batch board renders the shipped brief in the full-width walkthrough
   assert.match(script, /action: 'batch-briefs'/);
   assert.match(script, /data-batch-grid/);
   assert.match(script, /What this batch asks of you/);
-  assert.match(script, /How this industry is vetted|batchDiagram/);
+  assert.match(script, /How it gets checked/);
   // Honest labelling survives the trip to the marketing site.
   assert.match(script, /Expert-vetted/);
-  assert.match(script, /recommendation, not an admission|recommendation\. A human decides/);
+  assert.match(script, /the bar is guidance, not a gate/);
   // The orphaned per-card panel must not creep back.
   assert.doesNotMatch(script, /function batchDetailPanel\(/);
   // Requirements tile across the panel instead of stacking in one column.
@@ -325,7 +325,7 @@ test('the board has no second source of truth for the catalogue', () => {
 test('the board groups by vertical and the deep dive names what is inspected', () => {
   assert.match(script, /className = 'batch-group'/);
   assert.match(script, /data\.groups/);
-  assert.match(script, /What we actually read/);
+  assert.match(script, /What counts as evidence here/);
   assert.match(styles, /\.bd-read dt/);
   assert.match(styles, /\.batch-row \{ display: grid/);
 });
@@ -371,14 +371,12 @@ test('batch board selects batches and walks through them full-width', () => {
   assert.match(script, /card\.addEventListener\('keydown'/);
   assert.doesNotMatch(script, /textContent: 'Select'/);
   assert.match(script, /function renderBatchDeepDive\(\)/);
-  assert.match(script, /function batchDiagram\(/);
   assert.match(script, /HOW_TO_APPLY/);
   // The diagram is built from the brief, so it can never name a rail the batch does not use.
-  assert.match(script, /brief\.vetting\.rails\.forEach/);
   // Applying stays possible before the bar is cleared — guidance, not a gate.
   assert.match(script, /bar is guidance, not a gate/);
   assert.match(styles, /\.bd-panel/);
-  assert.match(styles, /\.bd-figure/);
+  assert.match(styles, /\.bd-accepts/);
 });
 
 test('a selection made before the briefs load is not silently dropped', () => {
@@ -699,4 +697,27 @@ test('vertical groups stack down the page, not across it', () => {
   assert.match(styles, /\.batch-grid \{ display: block;/);
   assert.doesNotMatch(styles, /\.batch-grid \{ display: grid/);
   assert.match(styles, /\.batch-row \{ display: grid/);
+});
+
+// The batch panel is read by a STUDENT deciding whether to apply. It used to open with a
+// process diagram (rails, bar, operator review) and carry the company's evaluation
+// walkthrough — both written for someone deciding whether to trust the batch, which is not
+// who is looking.
+test('the batch panel answers what a student needs, not what a company wants', () => {
+  assert.match(script, /What counts as evidence here/);
+  assert.match(script, /What this batch asks of you/);
+  assert.match(script, /How to apply/);
+  // The company-facing process diagram and walkthrough are gone from the student board.
+  assert.doesNotMatch(script, /function batchDiagram\(/);
+  assert.doesNotMatch(script, /How you evaluate this batch/);
+  // Evidence is named concretely enough to self-assess against.
+  assert.match(script, /brief\.accepts/);
+  assert.match(script, /apply anyway and say what it is/);
+  assert.match(styles, /\.bd-accepts/);
+});
+
+test('the credibility heading lost the stranded numeral', () => {
+  assert.doesNotMatch(html, /cred-big-num/);
+  assert.doesNotMatch(styles, /\.cred-big-num/);
+  assert.match(styles, /\.credibility-ladder \.section-heading \{ display: block/);
 });

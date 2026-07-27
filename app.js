@@ -3377,50 +3377,6 @@ function syncBatchPickBar() {
   $('#batchPickCount').textContent = n === 1 ? '1 batch selected' : n + ' batches selected';
 }
 
-function batchDiagram(brief) {
-  const fig = document.createElement('figure');
-  fig.className = 'bd-figure';
-  fig.setAttribute('role', 'group');
-  fig.setAttribute('aria-label',
-    brief.name + ' vetting flow: ' + brief.vetting.rails.map(r => r.label).join(', ')
-    + ' produce evidence, checked against ' + brief.requirements.length
-    + ' published requirements, then reviewed by an operator before admission.');
-  const rails = document.createElement('div');
-  rails.className = 'bd-rails';
-  brief.vetting.rails.forEach(rail => {
-    const node = document.createElement('div');
-    node.className = 'bd-node bd-rail';
-    node.append(
-      Object.assign(document.createElement('b'), { textContent: rail.label }),
-      Object.assign(document.createElement('span'), { textContent: rail.how }),
-    );
-    rails.append(node);
-  });
-  fig.append(rails, Object.assign(document.createElement('div'), { className: 'bd-arrow' }));
-  const bar = document.createElement('div');
-  bar.className = 'bd-node bd-bar';
-  bar.append(
-    Object.assign(document.createElement('b'), { textContent: 'The published bar' }),
-    Object.assign(document.createElement('span'), { textContent: brief.requirements.length + ' requirements, each stated up front' }),
-  );
-  fig.append(bar, Object.assign(document.createElement('div'), { className: 'bd-arrow' }));
-  const review = document.createElement('div');
-  review.className = 'bd-node bd-review';
-  review.append(
-    Object.assign(document.createElement('b'), { textContent: 'Operator review' }),
-    Object.assign(document.createElement('span'), { textContent: 'Clearing the bar is a recommendation. A human decides and records why.' }),
-  );
-  fig.append(review, Object.assign(document.createElement('div'), { className: 'bd-arrow' }));
-  const node = document.createElement('div');
-  node.className = 'bd-node bd-batch';
-  node.append(
-    Object.assign(document.createElement('b'), { textContent: 'The batch' }),
-    Object.assign(document.createElement('span'), { textContent: 'Companies unlock it and see your evidence, not your résumé.' }),
-  );
-  fig.append(node);
-  return fig;
-}
-
 const HOW_TO_APPLY = [
   ['Check where you stand', 'Every requirement below is public. Work out which you already clear before writing anything.'],
   ['Close the nearest gap', 'One artifact or one connected account usually moves two requirements at once.'],
@@ -3446,19 +3402,39 @@ function renderBatchDeepDive() {
       Object.assign(document.createElement('h3'), { textContent: brief.name }),
       Object.assign(document.createElement('p'), { className: 'bd-lede', textContent: brief.description }),
     );
-    panel.append(head, batchDiagram(brief));
+    panel.append(head);
 
     const railBadge = document.createElement('span');
     railBadge.className = 'pb-badge' + (brief.vetting.apiVerified ? ' is-api' : '');
     railBadge.textContent = brief.vetting.apiVerified ? 'Machine-checked evidence' : 'Expert-vetted — judgement, scored';
     panel.append(railBadge);
 
-    // The specifics. "We vet your work" is a claim; naming what is inspected is a mechanism
-    // a student can prepare for and a company can decide whether to trust.
+    // What counts, concretely. The requirements say "two skills evidenced by real artifacts",
+    // which is true and no help to a student working out whether the thing they have qualifies.
+    if ((brief.accepts || []).length) {
+      const accepts = document.createElement('section');
+      accepts.className = 'bd-block';
+      accepts.append(Object.assign(document.createElement('h4'), { textContent: 'What counts as evidence here' }));
+      const ul = document.createElement('ul');
+      ul.className = 'bd-accepts';
+      brief.accepts.forEach(item => {
+        const li = document.createElement('li');
+        li.append(createIcon('icon-check'), Object.assign(document.createElement('span'), { textContent: item }));
+        ul.append(li);
+      });
+      accepts.append(ul);
+      accepts.append(Object.assign(document.createElement('p'), {
+        className: 'bd-qnote',
+        textContent: 'Any one of these can carry a requirement. If you have something not on the list, apply anyway and say what it is.',
+      }));
+      panel.append(accepts);
+    }
+
+    // How the evidence is checked — one line per signal, not a process diagram.
     if ((brief.whatWeRead || []).length) {
       const read = document.createElement('section');
       read.className = 'bd-block';
-      read.append(Object.assign(document.createElement('h4'), { textContent: 'What we actually read' }));
+      read.append(Object.assign(document.createElement('h4'), { textContent: 'How it gets checked' }));
       const dl = document.createElement('dl');
       dl.className = 'bd-read';
       brief.whatWeRead.forEach(item => {
@@ -3469,30 +3445,6 @@ function renderBatchDeepDive() {
       });
       read.append(dl);
       panel.append(read);
-    }
-
-    // The actual screening questions. Generic copy about "demonstrating passion" tells a
-    // student nothing; these are what the field asks, so they can judge the bar themselves.
-    if ((brief.questions || []).length) {
-      const qs = document.createElement('section');
-      qs.className = 'bd-block';
-      qs.append(Object.assign(document.createElement('h4'), { textContent: 'What you will be asked' }));
-      const ul = document.createElement('ul');
-      ul.className = 'bd-questions';
-      brief.questions.forEach(q => {
-        const li = document.createElement('li');
-        li.append(
-          Object.assign(document.createElement('span'), { className: 'bd-qkind is-' + q.kind, textContent: q.kind }),
-          Object.assign(document.createElement('p'), { textContent: q.question }),
-        );
-        ul.append(li);
-      });
-      qs.append(ul);
-      qs.append(Object.assign(document.createElement('p'), {
-        className: 'bd-qnote',
-        textContent: 'Asked in the recorded walkthrough. Technical questions have a right answer and the reasoning is the signal; judgement questions do not, and how you bound the problem is.',
-      }));
-      panel.append(qs);
     }
 
     const reqs = document.createElement('section');
