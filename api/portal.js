@@ -12,6 +12,7 @@ import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normal
 import { classifyCompanyEmail, domainMatchesCompany, companyVerificationStanding } from './company-verification.js';
 import { readinessFor, categoriseOpportunity } from './readiness.js';
 import { recordRevision, briefVersion, evaluateBrief } from './brief-engine.js';
+import { checkIntroduction, applyResponse, normaliseOutcome, referralStatus, OUTCOME_QUESTIONS } from './introductions.js';
 import { buildMilestoneSchedule, evaluateMilestones, reassignmentDecision, founderTimeVariance } from './milestones.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
@@ -326,7 +327,7 @@ export async function loadMemberDashboard(member, env = process.env) {
         { skills: profile.skills || [], verticals: profile.verticals || [], evidencedSkills },
       ),
     }));
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, introductions: await loadIntroductions(member, 'student'), batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -370,7 +371,7 @@ export async function loadMemberDashboard(member, env = process.env) {
   const [companyProfile, companyVerification] = profile.role === 'company'
     ? await Promise.all([loadCompanyProfile(member), loadCompanyStanding(member, profile)])
     : [null, null];
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -1461,6 +1462,98 @@ export async function approveBrief(member, input) {
   }).eq('id', project.id).select('*').single(), null);
 }
 
+// ── Step 5: introductions ─────────────────────────────────────────────────────────────
+// A company can reach a student at any point. The terms go with the ask, always — an
+// introduction that leaves out the money or the hours is how students get strung along.
+export async function requestIntroduction(member, input) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'company') throw new Error('Only company accounts can request an introduction.');
+
+  const verdict = checkIntroduction({
+    roleSummary: input.roleSummary, whyRelevant: input.whyRelevant, compensation: input.compensation,
+    timeCommitment: input.timeCommitment, nextStep: input.nextStep,
+  });
+  if (!verdict.ok) throw new Error(verdict.reason);
+
+  const studentUserId = cleanText(input.studentUserId, 60);
+  if (!studentUserId) throw new Error('Choose a student.');
+  const projectId = cleanText(input.projectId, 50);
+
+  const row = {
+    company_user_id: member.user.id,
+    student_user_id: studentUserId,
+    project_id: PROJECT_ID_PATTERN.test(projectId) ? projectId : null,
+    role_summary: cleanText(input.roleSummary, 500),
+    why_relevant: cleanText(input.whyRelevant, 800),
+    compensation: cleanText(input.compensation, 200),
+    time_commitment: cleanText(input.timeCommitment, 200),
+    next_step: cleanText(input.nextStep, 300),
+    message: cleanText(input.message, 2000) || null,
+  };
+  // Repeated asks to the same student about the same thing are pressure, not outreach —
+  // the unique constraint refuses a second live one, and this says so plainly.
+  const existing = await checked(member.supabase.from('introductions').select('id,status')
+    .eq('company_user_id', member.user.id).eq('student_user_id', studentUserId)
+    .eq('project_id', row.project_id).maybeSingle(), null);
+  if (existing) throw new Error('You have already reached out to this student about this. Wait for their answer.');
+
+  return checked(member.supabase.from('introductions').insert(row).select('*').single(), null);
+}
+
+export async function respondToIntroduction(member, input) {
+  const id = cleanText(input.introductionId, 50);
+  if (!PROJECT_ID_PATTERN.test(id)) throw new Error('Choose a valid introduction.');
+  const intro = await checked(member.supabase.from('introductions').select('*').eq('id', id).maybeSingle(), null);
+  if (!intro || intro.student_user_id !== member.user.id) throw new Error('This introduction is not yours to answer.');
+
+  const patch = applyResponse(intro, cleanText(input.response, 20), cleanText(input.note, 2000));
+  return checked(member.supabase.from('introductions').update({
+    ...patch, responded_at: new Date().toISOString(),
+  }).eq('id', intro.id).select('*').single(), null);
+}
+
+export async function loadIntroductions(member, role) {
+  const column = role === 'student' ? 'student_user_id' : 'company_user_id';
+  return checked(member.supabase.from('introductions').select('*')
+    .eq(column, member.user.id).order('created_at', { ascending: false }).limit(50), []);
+}
+
+// ── Step 6: what actually happened ────────────────────────────────────────────────────
+// conversion_outcome already records the result. This records what the company learned,
+// which is the only thing that will ever tell us whether the matching works.
+export async function recordOutcomeSurvey(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(member.supabase.from('member_projects').select('id,owner_user_id').eq('id', projectId).maybeSingle(), null);
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the company on this project can answer this.');
+
+  const result = normaliseOutcome(input.answers || {});
+  if (!result.ok) throw new Error('Answer whether the shortlist was relevant and whether you would use Covenda again.');
+
+  return checked(member.supabase.from('member_projects').update({
+    outcome_survey: result.answers,
+    outcome_survey_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq('id', project.id).select('*').single(), null);
+}
+
+export const OUTCOME_SURVEY_QUESTIONS = OUTCOME_QUESTIONS;
+
+// ── Step 7: company referrals ─────────────────────────────────────────────────────────
+export async function loadCompanyReferrals(member) {
+  const rows = await checked(member.supabase.from('company_referrals').select('*')
+    .eq('referrer_user_id', member.user.id).order('created_at', { ascending: false }).limit(50), []);
+  return (rows || []).map(r => ({ ...r, standing: referralStatus(r) }));
+}
+
+export async function createCompanyReferral(member) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'company') throw new Error('Only company accounts can refer another company.');
+  const code = 'CR-' + randomToken(6).toUpperCase();
+  return checked(member.supabase.from('company_referrals')
+    .insert({ referrer_user_id: member.user.id, code }).select('*').single(), null);
+}
+
 export async function loadVerificationStanding(member) {
   try {
     const [profile, clubs] = await Promise.all([
@@ -2225,6 +2318,10 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'company-profile') return res.status(200).json({ ok: true, ...(await loadPublicCompanyProfile(member, input.ownerUserId)) });
     if (req.method === 'POST' && input.action === 'revise-brief') return res.status(200).json({ ok: true, project: await reviseBrief(member, input) });
     if (req.method === 'POST' && input.action === 'approve-brief') return res.status(200).json({ ok: true, project: await approveBrief(member, input) });
+    if (req.method === 'POST' && input.action === 'request-introduction') return res.status(201).json({ ok: true, introduction: await requestIntroduction(member, input) });
+    if (req.method === 'POST' && input.action === 'respond-introduction') return res.status(200).json({ ok: true, introduction: await respondToIntroduction(member, input) });
+    if (req.method === 'POST' && input.action === 'outcome-survey') return res.status(200).json({ ok: true, project: await recordOutcomeSurvey(member, input) });
+    if (req.method === 'POST' && input.action === 'create-company-referral') return res.status(201).json({ ok: true, referral: await createCompanyReferral(member) });
     if (req.method === 'POST' && input.action === 'save-video') return res.status(201).json({ ok: true, video: await saveMemberVideo(member, input) });
     if (req.method === 'POST' && input.action === 'delete-video') return res.status(200).json({ ok: true, ...(await deleteMemberVideo(member, input)) });
     if (req.method === 'POST' && input.action === 'register-club') return res.status(201).json({ ok: true, club: await registerClub(member, input) });

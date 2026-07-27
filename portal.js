@@ -195,7 +195,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderPipeline();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
+  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderPipeline();renderIntroductions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -729,6 +729,72 @@ function renderTrialStart(){
       }catch(error){go.disabled=false;msg.textContent=error.message;msg.classList.add('is-error');}
     });
     card.append(t,sum,facts,go,msg);host.append(card);
+  });
+  host.hidden=false;
+}
+
+// ── Introductions ─────────────────────────────────────────────────────────────────────
+// A company reached out. The terms come with the ask, and declining or reporting is as
+// prominent as accepting — a student who feels pressured needs an obvious exit.
+function renderIntroductions(){
+  const host=$('#introPanel');
+  if(!host)return;
+  const d=state.dashboard;
+  const intros=(d?.introductions||[]).filter(i=>i.status==='sent'||i.status==='question');
+  if(d?.profile?.role!=='student'||!intros.length){host.hidden=true;host.replaceChildren();return;}
+  host.replaceChildren();
+  const h=document.createElement('h3');
+  h.textContent=intros.length===1?'A company reached out':intros.length+' companies reached out';
+  host.append(h);
+
+  intros.forEach(intro=>{
+    const card=document.createElement('article');card.className='intro-card';
+    const role=document.createElement('strong');role.textContent=intro.role_summary;card.append(role);
+
+    const terms=document.createElement('dl');terms.className='intro-terms';
+    [['Pay',intro.compensation],['Time',intro.time_commitment],['Next',intro.next_step]].forEach(([k,v])=>{
+      if(!v)return;
+      const dt=document.createElement('dt');dt.textContent=k;
+      const dd=document.createElement('dd');dd.textContent=v;
+      terms.append(dt,dd);
+    });
+    card.append(terms);
+
+    if(intro.why_relevant){
+      const why=document.createElement('p');why.className='intro-why';why.textContent='Why you: '+intro.why_relevant;card.append(why);
+    }
+    if(intro.message){
+      const msg=document.createElement('p');msg.className='intro-msg';msg.textContent=intro.message;card.append(msg);
+    }
+
+    const msgLine=document.createElement('p');msgLine.className='dialog-message';msgLine.setAttribute('aria-live','polite');
+    const act=async(response,note)=>{
+      msgLine.textContent='Sending…';
+      try{
+        await portalRequest({method:'POST',body:JSON.stringify({action:'respond-introduction',introductionId:intro.id,response,note:note||''})});
+        await loadDashboard();
+      }catch(error){ msgLine.textContent=error.message; }
+    };
+
+    const row=document.createElement('div');row.className='intro-actions';
+    const yes=document.createElement('button');yes.type='button';yes.className='portal-primary compact';yes.textContent='Interested';
+    yes.addEventListener('click',()=>act('accepted'));
+    const ask=document.createElement('button');ask.type='button';ask.className='portal-secondary compact';ask.textContent='Ask a question';
+    ask.addEventListener('click',()=>{
+      const q=prompt('What do you want to know?');
+      if(q&&q.trim())act('question',q.trim());
+    });
+    const no=document.createElement('button');no.type='button';no.className='intro-decline';no.textContent='Not for me';
+    no.addEventListener('click',()=>act('declined'));
+    const flag=document.createElement('button');flag.type='button';flag.className='intro-report';flag.textContent='Report';
+    flag.title='Tell Covenda if this felt misleading or inappropriate.';
+    flag.addEventListener('click',()=>{
+      const why=prompt('What was wrong with it? Covenda reads every one of these.');
+      if(why&&why.trim())act('reported',why.trim());
+    });
+    row.append(yes,ask,no,flag);
+    card.append(row,msgLine);
+    host.append(card);
   });
   host.hidden=false;
 }
