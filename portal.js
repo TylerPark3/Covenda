@@ -2143,6 +2143,25 @@ function renderExercise(batch){
   const tp=document.createElement('p');tp.textContent=a.exercise.task;
   task.append(tt,tp);host.append(task);
 
+  // The material itself. The card claimed "we supply everything" and supplied nothing, which
+  // made the whole exercise a description rather than a task.
+  const grab=document.createElement('button');grab.type='button';grab.className='ex-file';
+  grab.textContent='Download the files';
+  grab.addEventListener('click',async()=>{
+    grab.disabled=true;const was=grab.textContent;grab.textContent='Preparing…';
+    try{
+      const r=await fetch(`/api/exercise-file?slug=${encodeURIComponent(batch.slug)}`,{headers:{Authorization:`Bearer ${session().accessToken}`}});
+      if(!r.ok)throw new Error('Could not fetch the files.');
+      const name=(r.headers.get('content-disposition')||'').match(/filename="(.+?)"/)?.[1]||`${batch.slug}.txt`;
+      const url=URL.createObjectURL(await r.blob());
+      const link=document.createElement('a');link.href=url;link.download=name;link.click();
+      URL.revokeObjectURL(url);
+      grab.textContent='Downloaded · get them again';
+    }catch(err){ grab.textContent=err.message||'Download failed.'; }
+    grab.disabled=false;
+  });
+  host.append(grab);
+
   // Said before they start, because a student who thinks the answer is what counts will
   // work silently and score badly for the wrong reason.
   const how=document.createElement('p');how.className='ex-how';

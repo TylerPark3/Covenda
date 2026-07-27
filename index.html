@@ -145,47 +145,42 @@
 
         <div class="compare-scroll">
           <table class="compare-table">
-            <caption class="sr-only">How hiring on other application platforms compares with hiring on Covenda</caption>
+            <caption class="sr-only">How other application platforms compare with Covenda</caption>
             <thead>
               <tr>
-                <th scope="col"><span class="ct-q">The question</span></th>
-                <th scope="col"><span class="ct-them">Other application platforms</span></th>
+                <th scope="col"><span class="ct-q">&nbsp;</span></th>
+                <th scope="col"><span class="ct-them">Everywhere else</span></th>
                 <th scope="col" class="is-us"><span class="ct-us">Covenda</span></th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <th scope="row">What actually arrives</th>
-                <td>A r&eacute;sum&eacute;, a school name, a cover letter. All three now take seconds to generate.</td>
-                <td class="is-us"><b>Work you can watch.</b> Ninety seconds unscripted against a prompt they see for the first time, plus a screen recording of them working through an exercise we set.</td>
-              </tr>
-              <tr>
-                <th scope="row">How they were filtered</th>
-                <td>Keyword match, or the school name, or nothing at all. The bar is not published, so you cannot check it.</td>
-                <td class="is-us"><b>Against a published bar</b> for their specialisation, by two raters who had to agree. You read the bar before you trust the result.</td>
-              </tr>
-              <tr>
-                <th scope="row">How they were matched to you</th>
-                <td>Keyword overlap, or a black-box score you cannot question.</td>
-                <td class="is-us"><b>Eight axes you define, answered by both sides.</b> The score shows which matched, which did not, and how many were compared at all.</td>
-              </tr>
-              <tr>
-                <th scope="row">How the role gets scoped</th>
-                <td>You write a job post and hope the right people read it.</td>
-                <td class="is-us"><b>You describe the person and the problem in your own words.</b> That becomes an introduction, an internship, a part-time or full-time role, or a paid trial first if you would rather see the work before you commit. Your call, not ours.</td>
-              </tr>
-              <tr>
-                <th scope="row">What it costs you</th>
-                <td>Sourcing, first-round screening, and the mis-hire you find out about in month three.</td>
-                <td class="is-us"><b>None of those.</b> The filtering already happened, and where you want it, you can watch someone work before you commit, so the expensive discovery happens in week zero rather than month three.</td>
-              </tr>
-              <tr>
-                <th scope="row">Who decides</th>
-                <td>An algorithm ranks, and you rarely learn why.</td>
-                <td class="is-us"><b>You do.</b> Covenda narrows the field and shows its reasoning. It never decides for you.</td>
-              </tr>
+              <tr><th scope="row">You receive</th><td>A r&eacute;sum&eacute;</td><td class="is-us">Recorded work</td></tr>
+              <tr><th scope="row">Filtered by</th><td>School name</td><td class="is-us">A published bar, two raters</td></tr>
+              <tr><th scope="row">Matched by</th><td>Keywords</td><td class="is-us">Eight axes you set</td></tr>
+              <tr><th scope="row">Score</th><td>Black box</td><td class="is-us">Shows its work</td></tr>
+              <tr><th scope="row">Engagement</th><td>One job post</td><td class="is-us">Intro, internship, role, or paid trial</td></tr>
+              <tr><th scope="row">Who decides</th><td>The algorithm</td><td class="is-us">You</td></tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- The demo. A claim about an auditable score is worth very little next to the score
+             itself, so the same eight axes a company fills in are here, live, with the number
+             and its reasoning moving as you change them. Nothing is sent anywhere. -->
+        <div class="cdemo" id="fitDemo">
+          <div class="cdemo-head">
+            <p class="cdemo-cap">See it work</p>
+            <h3>Set the role. Watch the score explain itself.</h3>
+            <p class="cdemo-sub">This is the real comparison, running here in your browser against one illustrative student. Nothing is sent anywhere.</p>
+          </div>
+          <div class="cdemo-body">
+            <div class="cdemo-controls" id="cdemoControls"></div>
+            <div class="cdemo-out">
+              <div class="cdemo-score"><strong id="cdemoScore">0</strong><span>match</span><small id="cdemoBasis">compared on 0 of 8</small></div>
+              <ul class="cdemo-reasons" id="cdemoReasons"></ul>
+            </div>
+          </div>
+          <p class="cdemo-note">Illustrative student, illustrative role. The weighting is the same one the product uses.</p>
         </div>
 
         <p class="compare-foot"><b>Two things we will not overstate.</b> The compatibility score is a transparent weighted model, not a learned one. The machine-learning re-ranker is built and deliberately switched off until there are enough completed outcomes to train it honestly, because a model fitted on a handful of results is worse than the arithmetic it would replace. And Covenda has not placed a student yet, so everything above describes how the process works, not how well it has worked.</p>

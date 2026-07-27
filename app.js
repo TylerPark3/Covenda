@@ -5981,3 +5981,114 @@ function initBatchWeb() {
 
 initMemberNav();
 window.requestAnimationFrame(() => openIntro());
+
+/* ── Live compatibility demo (home) ──────────────────────────────────────────────────
+   A claim that a score "shows its work" is worth very little next to the score itself, so
+   the same eight axes a company fills in run here, in the browser, against one illustrative
+   student. Nothing is sent anywhere and nothing is stored.
+
+   The weighting mirrors api/portal.js. Kept small and readable on purpose: the point of the
+   demo is that a visitor can see WHY a number moved, which a black box cannot show them. */
+(function fitDemo() {
+  const host = document.getElementById('cdemoControls');
+  if (!host) return;
+
+  const AXES = [
+    { key: 'structure', label: 'How the work is defined', a: ['structured', 'Well-defined'], b: ['ambiguous', 'Figure it out'] },
+    { key: 'autonomy', label: 'Supervision', a: ['guided', 'Guided'], b: ['independent', 'Independent'] },
+    { key: 'pace', label: 'Pace', a: ['steady', 'Steady'], b: ['fast', 'Fast'] },
+    { key: 'collaboration', label: 'Alone or paired', a: ['solo', 'Solo'], b: ['paired', 'Paired'] },
+    { key: 'feedback', label: 'Feedback', a: ['frequent', 'Frequent'], b: ['light', 'Light touch'] },
+    { key: 'communication', label: 'Communication', a: ['async', 'Async'], b: ['sync', 'Live'] },
+    { key: 'scope', label: 'Scope', a: ['depth', 'One thing deeply'], b: ['breadth', 'A bit of everything'] },
+  ];
+
+  // One illustrative student. Fixed, so two visitors comparing notes see the same thing.
+  const STUDENT = {
+    name: 'An illustrative student',
+    style: { structure: 'ambiguous', autonomy: 'independent', pace: 'fast', collaboration: 'paired', feedback: 'light', communication: 'async', scope: 'depth' },
+    skills: ['python', 'sql'],
+    traits: ['ships fast', 'asks questions early'],
+  };
+
+  const role = {};
+  const scoreEl = document.getElementById('cdemoScore');
+  const basisEl = document.getElementById('cdemoBasis');
+  const reasonsEl = document.getElementById('cdemoReasons');
+
+  function render() {
+    const answered = AXES.filter(ax => role[ax.key]);
+    const matched = answered.filter(ax => role[ax.key] === STUDENT.style[ax.key]);
+
+    // Base credit for the things already true of any vetted candidate, then the axes.
+    const base = 46;                                    // vetted, evidenced, available
+    const fit = answered.length ? Math.round(38 * (matched.length / answered.length)) : 0;
+    const total = base + fit;
+
+    scoreEl.textContent = answered.length ? String(total) : '—';
+    // A score built on two answers is not the claim a score built on eight is, and saying so
+    // is the difference between an auditable number and a confident one.
+    basisEl.textContent = `compared on ${answered.length} of ${AXES.length}`;
+
+    reasonsEl.replaceChildren();
+    if (!answered.length) {
+      const li = document.createElement('li');
+      li.className = 'is-empty';
+      li.textContent = 'Answer an axis to see the score and why it moved.';
+      reasonsEl.append(li);
+      return;
+    }
+    matched.forEach(ax => {
+      const li = document.createElement('li');
+      li.className = 'is-match';
+      li.textContent = `${ax.label}: both want ${labelFor(ax, role[ax.key])}`;
+      reasonsEl.append(li);
+    });
+    answered.filter(ax => !matched.includes(ax)).forEach(ax => {
+      const li = document.createElement('li');
+      li.className = 'is-gap';
+      li.textContent = `${ax.label}: you said ${labelFor(ax, role[ax.key])}, they prefer ${labelFor(ax, STUDENT.style[ax.key])}`;
+      reasonsEl.append(li);
+    });
+    const unanswered = AXES.length - answered.length;
+    if (unanswered) {
+      const li = document.createElement('li');
+      li.className = 'is-empty';
+      li.textContent = `${unanswered} axis${unanswered === 1 ? '' : 'es'} not compared. Blanks are skipped, never counted against anyone.`;
+      reasonsEl.append(li);
+    }
+  }
+
+  function labelFor(ax, value) {
+    return ax.a[0] === value ? ax.a[1].toLowerCase() : ax.b[1].toLowerCase();
+  }
+
+  AXES.forEach(ax => {
+    const row = document.createElement('div');
+    row.className = 'cdemo-row';
+    const cap = document.createElement('span');
+    cap.className = 'cdemo-label';
+    cap.textContent = ax.label;
+    const group = document.createElement('div');
+    group.className = 'cdemo-toggle';
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', ax.label);
+    [ax.a, ax.b].forEach(([value, text]) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = text;
+      btn.setAttribute('aria-pressed', 'false');
+      btn.addEventListener('click', () => {
+        // Clicking the selected option clears it, so "no preference" stays reachable.
+        role[ax.key] = role[ax.key] === value ? undefined : value;
+        [...group.children].forEach(c => c.setAttribute('aria-pressed', String(c === btn && role[ax.key] === value)));
+        render();
+      });
+      group.append(btn);
+    });
+    row.append(cap, group);
+    host.append(row);
+  });
+
+  render();
+})();

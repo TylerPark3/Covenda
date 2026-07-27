@@ -2205,8 +2205,8 @@ body:not([data-audience="home"]) .compare-section { display: none; }
 
 /* Wide content scrolls inside its own container so the page body never scrolls sideways. */
 .compare-scroll { margin: 48px 0 0; overflow-x: auto; }
-.compare-table { width: 100%; min-width: 760px; border-collapse: collapse; text-align: left; }
-.compare-table th, .compare-table td { padding: 20px 24px; vertical-align: top; border-bottom: 1px solid var(--line); }
+.compare-table { width: 100%; min-width: 660px; border-collapse: collapse; text-align: left; }
+.compare-table th, .compare-table td { padding: 16px 24px; vertical-align: middle; border-bottom: 1px solid var(--line); }
 .compare-table thead th { padding-bottom: 14px; border-bottom: 1.5px solid var(--line-strong); }
 .ct-q { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
 .ct-them { font-size: 15px; font-weight: 650; letter-spacing: -.01em; color: var(--soft); }
@@ -2216,13 +2216,60 @@ body:not([data-audience="home"]) .compare-section { display: none; }
   width: 22%; font-size: 16px; font-weight: 650; letter-spacing: -.012em; color: var(--ink);
   text-wrap: pretty;
 }
-.compare-table td { width: 39%; font-size: 16.5px; line-height: 1.55; color: var(--soft); text-wrap: pretty; }
+.compare-table td { width: 39%; font-size: 18px; line-height: 1.4; color: var(--soft); }
 .compare-table td b { color: var(--ink); font-weight: 700; }
 
 /* The Covenda column carries the weight: a warm ground, a gold spine, darker text. */
-.compare-table .is-us { background: var(--gold-pale); border-left: 3px solid var(--gold); }
+.compare-table .is-us { background: var(--gold-pale); border-left: 3px solid var(--gold); color: var(--ink); font-weight: 600; }
 .compare-table thead .is-us { background: var(--gold-pale); }
 .compare-table tbody tr:last-child .is-us { border-bottom-color: var(--gold); }
+
+
+/* The live demo. A claim that a score "shows its work" is worth very little next to the score
+   itself, so the real comparison runs here against one illustrative student. */
+.cdemo { max-width: 1100px; margin: 56px auto 0 0; border: 1px solid var(--line-strong); background: #fff; }
+.cdemo-head { padding: 26px 30px 22px; border-bottom: 1px solid var(--line); }
+.cdemo-cap { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-deep); }
+.cdemo-head h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(24px, 2.6vw, 34px); line-height: 1.1; letter-spacing: -.03em; }
+.cdemo-sub { margin: 10px 0 0; max-width: 62ch; font-size: 16px; line-height: 1.5; color: var(--soft); }
+
+.cdemo-body { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr); }
+.cdemo-controls { display: grid; gap: 2px; padding: 22px 30px 26px; }
+.cdemo-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 0; }
+.cdemo-label { font-size: 15.5px; color: var(--soft); }
+.cdemo-toggle { display: flex; flex: none; border: 1px solid var(--line-strong); }
+.cdemo-toggle button {
+  padding: 8px 14px; border: 0; background: #fff; color: var(--soft);
+  font: inherit; font-size: 14.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background-color .14s ease, color .14s ease;
+}
+.cdemo-toggle button + button { border-left: 1px solid var(--line-strong); }
+.cdemo-toggle button:hover { background: var(--gold-pale); color: var(--gold-deep); }
+.cdemo-toggle button[aria-pressed="true"] { background: var(--gold-deep); color: #fff; }
+.cdemo-toggle button:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: -2px; }
+
+.cdemo-out { padding: 26px 30px; border-left: 1px solid var(--line); background: var(--gold-pale); }
+.cdemo-score { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cdemo-score strong { font-size: 58px; font-weight: 650; letter-spacing: -.04em; line-height: 1; color: var(--gold-deep); font-variant-numeric: tabular-nums; }
+.cdemo-score span { font-size: 17px; color: var(--soft); }
+.cdemo-score small { flex-basis: 100%; margin-top: 6px; font-size: 13.5px; letter-spacing: .02em; color: var(--soft); }
+.cdemo-reasons { display: grid; gap: 9px; margin: 22px 0 0; padding: 0; list-style: none; }
+.cdemo-reasons li { position: relative; padding-left: 22px; font-size: 15px; line-height: 1.45; }
+.cdemo-reasons li::before { position: absolute; left: 0; font-weight: 700; }
+.cdemo-reasons .is-match { color: var(--ink); }
+.cdemo-reasons .is-match::before { content: "+"; color: var(--gold-deep); }
+.cdemo-reasons .is-gap { color: var(--soft); }
+.cdemo-reasons .is-gap::before { content: "\2212"; color: var(--soft); }
+.cdemo-reasons .is-empty { color: var(--soft); font-style: italic; }
+.cdemo-reasons .is-empty::before { content: ""; }
+.cdemo-note { margin: 0; padding: 14px 30px 20px; font-size: 13.5px; color: var(--soft); border-top: 1px solid var(--line); }
+
+@media (max-width: 860px) {
+  .cdemo-body { grid-template-columns: 1fr; }
+  .cdemo-out { border-left: 0; border-top: 1px solid var(--line); }
+  .cdemo-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .cdemo-toggle { align-self: start; }
+}
 
 .compare-foot {
   max-width: 90ch; margin: 34px auto 0 0; padding-left: 16px;
