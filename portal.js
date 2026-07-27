@@ -1568,7 +1568,7 @@ function renderBatchFilter(root){
   range.addEventListener('input',()=>{ batchMinFit=Number(range.value)||0; out.textContent=batchMinFit?`${batchMinFit}%`:'Any'; renderBatches(); });
   label.append(cap,range,out);
   const note=document.createElement('small');note.className='batch-filter-note';
-  note.textContent='From your listed skills. Not part of admission.';
+  note.textContent='Sorts and filters this list against your skills. Admission is decided by the vetting process, not by this.';
   bar.append(label,note);root.append(bar);
 }
 function renderBatches(){
