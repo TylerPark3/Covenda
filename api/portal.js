@@ -1162,6 +1162,20 @@ export function markMilestoneSubmitted(milestones, now = new Date().toISOString(
 // row, attempts are counted, and the row is consumed on success — none of which can be
 // enforced from the client.
 
+// An API key with a stray character in it — a smart quote, a box-drawing dash pasted out of
+// a terminal, a trailing newline — throws deep inside fetch when the Authorization header is
+// built, and surfaces as the entire portal being unavailable. Catching it here means the
+// message names the actual cause instead of a 503.
+function usableApiKey(key, label) {
+  const raw = String(key || '').trim();
+  if (!raw) return { ok: false, reason: `${label} is not set on this deployment.` };
+  const bad = [...raw].findIndex(ch => ch.charCodeAt(0) > 255 || ch.charCodeAt(0) < 32);
+  if (bad !== -1) {
+    return { ok: false, reason: `${label} has an invalid character at position ${bad + 1}. It was probably copied with formatting — re-paste just the key, nothing before or after.` };
+  }
+  return { ok: true, key: raw };
+}
+
 export async function requestSchoolVerification(member, input, { env = process.env } = {}) {
   const email = normaliseEmail(input.schoolEmail);
   const check = checkSchoolEmail(email);
@@ -1176,17 +1190,20 @@ export async function requestSchoolVerification(member, input, { env = process.e
   const code = generateCode();
   await checked(member.supabase.from('school_email_codes').insert({ user_id: member.user.id, email, code }).select('id').single(), null);
 
-  const apiKey = env.RESEND_API_KEY;
+  const keyCheck = usableApiKey(env.RESEND_API_KEY, 'RESEND_API_KEY');
   const from = env.COVENDA_NOTIFICATION_FROM;
   // A student cannot act on "email is not configured" — that is our problem, not theirs. Say
   // what it means for them and point at the two paths that do work, both of which count for
   // more than a school email anyway.
-  if (!apiKey || !from) {
+  if (!keyCheck.ok || !from) {
     throw new PortalOperationalError(
       'VERIFY_EMAIL_NOT_CONFIGURED',
-      'School-email codes are not switched on yet. Claim a club or ask for a named referral instead — either one counts for more than a school email.',
+      keyCheck.ok
+        ? 'School-email codes are not switched on yet. Claim a club or ask for a named referral instead — either one counts for more than a school email.'
+        : keyCheck.reason,
     );
   }
+  const apiKey = keyCheck.key;
   const { Resend } = await import('resend');
   const { error } = await new Resend(apiKey).emails.send({
     from,
@@ -1309,14 +1326,17 @@ export async function requestCompanyVerification(member, input, { env = process.
   await checked(member.supabase.from('company_email_codes')
     .insert({ user_id: member.user.id, email, domain: verdict.registrable, code }).select('id').single(), null);
 
-  const apiKey = env.RESEND_API_KEY;
   const from = env.COVENDA_NOTIFICATION_FROM;
-  if (!apiKey || !from) {
+  const keyCheck = usableApiKey(env.RESEND_API_KEY, 'RESEND_API_KEY');
+  if (!keyCheck.ok || !from) {
     throw new PortalOperationalError(
       'VERIFY_EMAIL_NOT_CONFIGURED',
-      'Work-email codes are not switched on yet. Covenda will confirm your company by hand in the meantime — nothing is blocked.',
+      keyCheck.ok
+        ? 'Work-email codes are not switched on yet. Covenda will confirm your company by hand in the meantime — nothing is blocked.'
+        : keyCheck.reason,
     );
   }
+  const apiKey = keyCheck.key;
   const { Resend } = await import('resend');
   const { error } = await new Resend(apiKey).emails.send({
     from,
