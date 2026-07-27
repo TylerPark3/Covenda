@@ -702,7 +702,8 @@ test('verification reads as two instruments, not a fallback', () => {
   assert.match(html, /Experts judge/);
   assert.match(html, /Machine-checked · objective/);
   assert.match(html, /Expert-vetted · judgement/);
-  assert.match(html, /the strongest evidence is where they overlap/);
+  assert.match(html, /Not a trade-off/);
+  assert.match(html, /[Ww]e run both/);
   assert.doesNotMatch(html, /Where that isn’t possible/);
   assert.doesNotMatch(html, /We verify what can be/);
   // Judgement is measured, not vibes — and the honesty line survives the reframe.

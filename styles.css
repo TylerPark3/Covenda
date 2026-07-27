@@ -495,15 +495,12 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 .hero-company { display: none; }
 /* Company hero: two clear segments — delegate work, and find talent. */
 /* Delegate card wider than the talent card, so the problem composer has room to breathe. */
-.company-jobs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: clamp(30px, 4vw, 46px) 0 0; width: min(100%, var(--content)); text-align: left; align-items: stretch; border: 1px solid var(--line); }
-@media (max-width: 800px) {
-  .company-jobs { grid-template-columns: 1fr; }
-  .company-job + .company-job { border-left: 0; border-top: 1px solid var(--line); }
-}
-.company-job { display: flex; flex-direction: column; min-width: 0; padding: clamp(24px, 3vw, 40px); border: 0; border-radius: 0; background: #fff; }
-/* The single rule down the centre is where the two halves meet. */
-.company-job + .company-job { border-left: 1px solid var(--line); }
-.company-job-talent { background: linear-gradient(180deg, var(--gold-pale), #fff 62%); }
+/* Two separate cards, even halves, with real air between them — the right-hand one sits
+   flush to the right edge rather than butting against its neighbour. */
+.company-jobs { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 4.5vw, 72px); margin: clamp(30px, 4vw, 46px) 0 0; width: min(100%, var(--content)); text-align: left; align-items: stretch; }
+@media (max-width: 800px) { .company-jobs { grid-template-columns: 1fr; gap: 20px; } }
+.company-job { display: flex; flex-direction: column; min-width: 0; padding: clamp(24px, 3vw, 40px); border: 1px solid var(--line); border-radius: 0; background: #fff; }
+.company-job-talent { border-color: var(--gold-light); background: linear-gradient(180deg, var(--gold-pale), #fff 62%); }
 .company-job-eyebrow { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--gold-deep); font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .company-job-eyebrow svg { width: 15px; height: 15px; }
 .company-job h2 { margin: 12px 0 0; font-size: clamp(22px, 2.4vw, 30px); line-height: 1.08; letter-spacing: -.03em; }
