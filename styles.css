@@ -2224,7 +2224,9 @@ body[data-audience="company"] .compare-section { display: block; }
 .compare-table td b { color: var(--ink); font-weight: 700; }
 
 /* The Covenda column carries the weight: a warm ground, a gold spine, darker text. */
-.compare-table .is-us { background: var(--gold-pale); border-left: 3px solid var(--gold); color: var(--ink); font-weight: 600; }
+/* The Covenda column reads gold, matching its header. --gold-deep rather than --gold: the
+   lighter value on the cream ground drops under the contrast floor for body-size text. */
+.compare-table .is-us { background: var(--gold-pale); border-left: 3px solid var(--gold); color: var(--gold-deep); font-weight: 600; }
 .compare-table thead .is-us { background: var(--gold-pale); }
 .compare-table tbody tr:last-child .is-us { border-bottom-color: var(--gold); }
 
