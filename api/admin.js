@@ -888,7 +888,7 @@ export async function loadPlatformRoster(supabase) {
 
   const [profiles, clubs, members, batchApps, projects, confirmations] = await Promise.all([
     grab(supabase.from('member_profiles').select('user_id,role,display_name,school_name,organization_name,headline,created_at,updated_at,school_email_verified_at,work_email_verified_at,work_email_domain,identity_verified,verticals,skills')),
-    grab(supabase.from('clubs').select('id,name,school,vertical_slug,status,contact_email,created_at')),
+    grab(supabase.from('clubs').select('id,name,school,vertical_slug,status,contact_email,website_url,social_url,created_at')),
     grab(supabase.from('club_members').select('id,club_id,student_user_id,status')),
     grab(supabase.from('batch_applications').select('batch_id,student_user_id,status')),
     grab(supabase.from('member_projects').select('id,owner_user_id,assigned_student_user_id,status,credits_listed,credits_held,created_at,completed_at')),
@@ -940,6 +940,7 @@ export async function loadPlatformRoster(supabase) {
     return {
       id: c.id, name: c.name, school: c.school || null, vertical: c.vertical_slug || null,
       status: c.status, contact: c.contact_email || null, createdAt: c.created_at,
+      link: c.website_url || c.social_url || null,
       claimed: mems.length,
       confirmed: confirmed.length,
       admitted: admitted.length,

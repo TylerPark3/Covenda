@@ -63,7 +63,7 @@ async function checkAuthReadiness() {
     const response=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'auth-readiness'})});
     const result=await response.json().catch(()=>({}));
     if(!response.ok||!result.ok||result.googleConfigured===null)return;
-    if(result.googleConfigured===false){button.disabled=true;$('span',button).textContent='Google sign-in setup pending';note.textContent='Email sign-in is available now. A Covenda owner still needs to enable Google in the connected Supabase project.';note.hidden=false;}
+    if(result.googleConfigured===false){button.disabled=true;$('span',button).textContent='Google sign-in setup pending';note.textContent='Email sign-in works. Google needs enabling in Supabase first.';note.hidden=false;}
   } catch { /* Keep both sign-in options visible when readiness cannot be checked. */ }
 }
 
@@ -502,26 +502,32 @@ function openClubStep(){
     'Name the club you are a member of. An officer confirms it before it counts — a claim on its own proves nothing, and companies only ever see confirmed memberships.');
   const name=verifField('Club name','e.g. Columbia Robotics Club',{type:'text',required:true,placeholder:'Columbia Robotics Club'});
   const school=verifField('School',null,{type:'text',placeholder:'Columbia University'});
+  const site=verifField('Club website','optional if you add Instagram',{type:'url',placeholder:'https://…'});
+  const social=verifField('Club Instagram','optional if you add a website',{type:'url',placeholder:'https://instagram.com/…'});
   const officer=verifField('Officer email','who can confirm you — president, captain, or faculty advisor',{type:'email',placeholder:'president@club.org'});
   const role=verifField('Your role in the club','optional',{type:'text',placeholder:'Member, project lead, treasurer'});
-  d.body.append(name.label,school.label,officer.label,role.label);
+  d.body.append(name.label,school.label,site.label,social.label,officer.label,role.label);
 
   const submit=document.createElement('button'); submit.type='button'; submit.className='portal-primary'; submit.textContent='File my claim';
   d.foot.append(submit);
   submit.addEventListener('click',async()=>{
     if(name.input.value.trim().length<2){d.say('Enter the club name.',true); name.input.focus(); return;}
+    // One of the two is required — a club nobody can look up is a club nobody can confirm.
+    if(!site.input.value.trim()&&!social.input.value.trim()){
+      d.say('Add the club’s website or Instagram. We need somewhere to check it is real.',true); site.input.focus(); return;
+    }
     submit.disabled=true; d.say('Filing…');
     try{
       // Registering first means a club nobody has entered yet still gets a record to claim
       // against; a repeat registration updates rather than forks it.
-      const reg=await portalRequest({method:'POST',body:JSON.stringify({action:'register-club',clubName:name.input.value.trim(),school:school.input.value.trim(),email:officer.input.value.trim(),role:role.input.value.trim()})});
+      const reg=await portalRequest({method:'POST',body:JSON.stringify({action:'register-club',clubName:name.input.value.trim(),school:school.input.value.trim(),websiteUrl:site.input.value.trim(),socialUrl:social.input.value.trim(),email:officer.input.value.trim(),role:role.input.value.trim()})});
       await portalRequest({method:'POST',body:JSON.stringify({action:'claim-club',clubId:reg.club.id})});
       // The claim alone counts for nothing, so hand them the thing that makes it count.
       d.say('Filed. Now get it confirmed — that is what makes it count.');
       await loadDashboard();
       d.body.replaceChildren();
       const done=document.createElement('p');done.className='verif-intro';
-      done.textContent='Send this to a club officer. Thirty seconds, no account needed.';
+      done.textContent='Send to a club officer. Thirty seconds, no account.';
       d.body.append(done);
       d.foot.replaceChildren();
       try{
@@ -964,7 +970,7 @@ function renderPayout(){
   // when off, don't surface a verify button that leads nowhere; show a neutral note instead.
   if(profile.role==='student'&&!profile.identity_verified&&!d.identityEnabled){
     const note=document.createElement('p');note.className='payout-empty';
-    note.textContent='Withdrawals are opening soon — we’ll let you know the moment you can cash out your earnings.';
+    note.textContent='Withdrawals open soon. We’ll tell you the moment you can cash out.';
     root.append(note);return;
   }
   if(profile.role==='student'&&!profile.identity_verified){
@@ -993,7 +999,7 @@ function renderPayout(){
   const handle=document.createElement('label');handle.className='payout-field';
   const handleLabel=document.createElement('span');handleLabel.textContent='Email or handle';
   const handleInput=document.createElement('input');handleInput.type='text';handleInput.placeholder='you@example.com';
-  const handleHelp=document.createElement('small');handleHelp.textContent='Never enter a bank or card number — Covenda arranges the transfer with you directly.';
+  const handleHelp=document.createElement('small');handleHelp.textContent='Never enter a bank or card number. We arrange the transfer directly.';
   handle.append(handleLabel,handleInput,handleHelp);
   const submit=document.createElement('button');submit.type='button';submit.className='portal-primary compact';submit.textContent='Request payout';
   submit.addEventListener('click',async()=>{
@@ -1269,7 +1275,7 @@ function renderDiscover(){
   const savedCountEl=$('#savedCount');if(savedCountEl)savedCountEl.textContent=saved.size;
   $('#discoverSummary').textContent=`${items.length} ${items.length===1?'project':'projects'} shown`;
   root.replaceChildren();
-  if(!items.length){const savedTab=discoverState.tab==='saved';const filtered=!savedTab&&(d.opportunities||[]).length>0;emptyList(root,'p-compass',savedTab?'No saved projects yet.':filtered?'No projects match your filters.':'No open projects yet.',savedTab?'Tap Save on any project to keep it here.':filtered?'Try clearing a filter, or check back as new projects are posted.':'New work appears here as companies post it. Finish your profile so we can route it.',filtered?{label:'Reset filters',run:()=>$('#filterReset')?.click()}:savedTab?null:{label:'Complete your profile →',run:()=>setView('portfolio')});return;}
+  if(!items.length){const savedTab=discoverState.tab==='saved';const filtered=!savedTab&&(d.opportunities||[]).length>0;emptyList(root,'p-compass',savedTab?'No saved projects yet.':filtered?'No projects match your filters.':'No open projects yet.',savedTab?'Tap Save on any project to keep it here.':filtered?'Try clearing a filter, or check back as new projects are posted.':'New work appears as companies post it. Finish your profile so we can route it.',filtered?{label:'Reset filters',run:()=>$('#filterReset')?.click()}:savedTab?null:{label:'Complete your profile →',run:()=>setView('portfolio')});return;}
   const applied=new Set((d.applications||[]).map(a=>a.project_id));
   // One sorted list buries everything past the top few, which trains a student to only ever
   // look at what they already qualify for. Bands keep a stretch visible without dressing it
@@ -1354,7 +1360,7 @@ function renderBatchFilter(root){
   range.addEventListener('input',()=>{ batchMinFit=Number(range.value)||0; out.textContent=batchMinFit?`${batchMinFit}%`:'Any'; renderBatches(); });
   label.append(cap,range,out);
   const note=document.createElement('small');note.className='batch-filter-note';
-  note.textContent='Reads your listed skills. Does not affect admission.';
+  note.textContent='From your listed skills. Not part of admission.';
   bar.append(label,note);root.append(bar);
 }
 function renderBatches(){
@@ -1440,7 +1446,7 @@ async function toggleBatchRoster(batch,card,button){
     let roster=batchRosters.get(batch.id);
     if(!roster){const result=await portalRequest({method:'POST',body:JSON.stringify({action:'batch-roster',batchId:batch.id})});roster=result.roster||[];batchRosters.set(batch.id,roster);}
     host.replaceChildren();
-    if(!roster.length){const p=document.createElement('p');p.className='batch-roster-empty';p.textContent='No students have been admitted to this batch yet. Check back after the operator finishes review.';host.append(p);}
+    if(!roster.length){const p=document.createElement('p');p.className='batch-roster-empty';p.textContent='Nobody admitted yet. Check back after review.';host.append(p);}
     else{const grid=document.createElement('div');grid.className='batch-roster-grid';roster.forEach(s=>grid.append(talentCard(s)));host.append(grid);}
     host.hidden=false;button.textContent='Hide roster';
   }catch(error){button.textContent=error.message;setTimeout(()=>{button.textContent=original;},3200);}
@@ -1588,7 +1594,7 @@ function batchRequirementsBlock(brief,standing){
     list.append(li);
   }
   wrap.append(list);
-  const note=document.createElement('p');note.className='batch-req-note';note.textContent='Clearing the bar is a recommendation, not admission. A person reviews every application.';
+  const note=document.createElement('p');note.className='batch-req-note';note.textContent='Clearing the bar is a recommendation. A person reviews every application.';
   wrap.append(note);
   return wrap;
 }
@@ -1846,7 +1852,7 @@ function renderVideoLibrary(root){
   const box=document.createElement('div');
   const h=document.createElement('h3'); h.textContent='Your intro videos';
   const p=document.createElement('p');
-  p.textContent='Record once, reuse anywhere. Only seen on applications you attach it to.';
+  p.textContent='Record once, reuse anywhere. Seen only where you attach it.';
   box.append(h,p);
   const add=document.createElement('button'); add.type='button'; add.className='portal-primary compact';
   add.textContent='Record a take';
@@ -1862,7 +1868,7 @@ function renderVideoLibrary(root){
   const takes=videoStudio.library();
   if(!takes.length){
     const empty=document.createElement('p'); empty.className='video-library-empty';
-    empty.textContent='Nothing yet. Sixty seconds on what you built, retaken as often as you like.';
+    empty.textContent='Nothing yet. Sixty seconds on what you built.';
     sec.append(empty); root.append(sec); return;
   }
   const list=document.createElement('div'); list.className='video-library-list';
@@ -2010,7 +2016,7 @@ function renderCompanyProfileForm(root){
   const box=document.createElement('div');
   const h=document.createElement('h3');h.textContent='Your company profile';
   const p=document.createElement('p');
-  p.textContent='What students see when they click your name. Drafts stay private.';
+  p.textContent='What students see. Drafts stay private.';
   box.append(h,p);
   const state_=document.createElement('span');state_.className='company-form-state';
   state_.textContent=cp.published?'Published':'Draft — not visible to students';
@@ -2161,7 +2167,7 @@ function renderBriefReview(root,project){
   const box=document.createElement('div');
   const h=document.createElement('h3');h.textContent='Your proposed trial';
   const p=document.createElement('p');
-  p.textContent=project.brief_approved_at?'Approved. Edit anything and it returns here for approval.':'A draft. Nothing goes out until you approve it.';
+  p.textContent=project.brief_approved_at?'Approved. Any edit returns it here.':'Nothing goes out until you approve it.';
   box.append(h,p);
   const ver=document.createElement('span');ver.className='brief-version';ver.textContent='v'+(project.brief_version||1);
   head.append(box,ver);sec.append(head);
@@ -2174,7 +2180,7 @@ function renderBriefReview(root,project){
     dg.append(t);
     if(project.stated_problem&&project.likely_problem&&project.stated_problem!==project.likely_problem){
       const note=document.createElement('p');note.className='brief-diverge';
-      note.textContent='You said one thing; the evidence points somewhere else. You can overrule us.';
+      note.textContent='The evidence points elsewhere. You can overrule us.';
       dg.append(note);
     }
     dg.append(briefField('You said',project.stated_problem,(v,r)=>saveBriefEdit(project,'statedProblem',v,r)));
@@ -2203,7 +2209,7 @@ function renderBriefReview(root,project){
       const name=document.createElement('strong');name.textContent=sig.trait;
       li.append(name);
       if(sig.discriminates===false){
-        const off=document.createElement('small');off.textContent='This brief does not test it. Said plainly rather than implied.';li.append(off);
+        const off=document.createElement('small');off.textContent='This brief does not test it.';li.append(off);
       }else{
         const el=document.createElement('small');el.textContent=sig.element;li.append(el);
         const w=document.createElement('small');w.className='brief-weak';w.textContent='Weak: '+sig.weakLooksLike;
@@ -2237,7 +2243,7 @@ async function saveBriefEdit(project,field,value,reason){
 }
 
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
-  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Students who opted into discovery. Invite them to a scoped project.';$('#editProfile').hidden=true;
+  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Students who opted into discovery.';$('#editProfile').hidden=true;
   const batches=document.createElement('section');batches.className='talent-batches';
   const bh=document.createElement('div');bh.className='talent-batches-head';
   bh.append(Object.assign(document.createElement('h3'),{textContent:'Vetted batches'}));
@@ -2347,7 +2353,7 @@ function renderCredibility(root,d){
   sec.append(list);
 
   const note=document.createElement('p');note.className='cred-meter-note';
-  note.textContent='Every line is a fact a company can check. Nothing here is scored by us.';
+  note.textContent='Every line is a fact a company can check.';
   sec.append(note);
   root.append(sec);
 }
@@ -2388,7 +2394,7 @@ function githubConnectBanner(){
 function renderProofOfWork(root,profile){
   const sec=document.createElement('section');sec.className='proof-of-work';
   const h=document.createElement('h3');h.textContent='Proof of work · GitHub';
-  const sub=document.createElement('p');sub.className='pow-sub';sub.textContent='Link a public repo. We read the code and score each skill it demonstrates, with the evidence behind it.'
+  const sub=document.createElement('p');sub.className='pow-sub';sub.textContent='Link a public repo. We score each skill it demonstrates, with the evidence.'
   sec.append(h,sub,githubConnectBanner());
   const row=document.createElement('div');row.className='pow-row';
   const input=document.createElement('input');input.type='url';input.className='pow-input';input.placeholder='github.com/you/project';input.setAttribute('aria-label','GitHub repository URL');
@@ -2699,7 +2705,7 @@ function briefBullets(items){const ul=document.createElement('ul');ul.className=
 // is an auto-growing (never clipped) editable textarea; deliverables are titled cards with
 // acceptance criteria; consult notes are a bulleted list, not a run-on.
 function renderIntakeBrief(){const brief=intakeState.brief;const root=$('#intakeBrief');root.replaceChildren();root.hidden=false;
-  if(brief.safeToPost===false){const warn=document.createElement('div');warn.className='intake-warn';warn.append(icon('p-close'));const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent='Outside Covenda’s safe boundary';const ul=document.createElement('ul');(brief.safetyFlags||[]).forEach(f=>{const li=document.createElement('li');li.textContent=f;ul.append(li);});const p=document.createElement('p');p.textContent='Covenda can’t post this as-is. Book the 20-minute consult and we’ll find a safe, useful version.';box.append(strong,ul,p);warn.append(box);root.append(warn);return;}
+  if(brief.safeToPost===false){const warn=document.createElement('div');warn.className='intake-warn';warn.append(icon('p-close'));const box=document.createElement('div');const strong=document.createElement('strong');strong.textContent='Outside Covenda’s safe boundary';const ul=document.createElement('ul');(brief.safetyFlags||[]).forEach(f=>{const li=document.createElement('li');li.textContent=f;ul.append(li);});const p=document.createElement('p');p.textContent='We can’t post this as-is. Book a 20-minute consult and we’ll find a version that works.';box.append(strong,ul,p);warn.append(box);root.append(warn);return;}
   const titleInput=$('[name="title"]',$('#intakeForm'));if(titleInput&&!titleInput.value.trim()&&brief.title)titleInput.value=brief.title;
   const head=document.createElement('div');head.className='brief-head';const label=document.createElement('p');label.className='intake-brief-label';label.textContent='AI draft understanding — edit before you post';const reset=document.createElement('button');reset.type='button';reset.className='brief-reset';reset.textContent='Reset to AI draft';head.append(label,reset);root.append(head);
   const sum=briefSection('Summary');const st=document.createElement('textarea');st.className='brief-textarea';st.value=intakeState.editedSummary||brief.summary||'';const grow=()=>autoGrow(st);st.addEventListener('input',()=>{intakeState.editedSummary=st.value;grow();});sum.append(st);root.append(sum);intakeState.editedSummary=st.value;requestAnimationFrame(grow);
@@ -2909,7 +2915,7 @@ $('#reverseAuditBtn')?.addEventListener('click',async()=>{
   const url=($('#reverseAuditUrl')?.value||'').trim();
   const status=$('#reverseAuditStatus');const results=$('#reverseAuditResults');const btn=$('#reverseAuditBtn');
   if(!/^https?:\/\/\S+$/i.test(url)){status.textContent='Paste a valid public link first.';status.classList.add('is-error');return;}
-  if(!$('#intakeForm [name="aiConsent"]')?.checked){status.textContent='Tick the AI consent box above first — the audit uses AI to read your link.';status.classList.add('is-error');return;}
+  if(!$('#intakeForm [name="aiConsent"]')?.checked){status.textContent='Tick the AI consent box first — we read your link to draft from it.';status.classList.add('is-error');return;}
   btn.disabled=true;status.classList.remove('is-error');status.textContent='Reading your link and drafting…';results.replaceChildren();
   try{
     const res=await fetch('/api/project-intake',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'reverse-audit',linkUrl:url})});
@@ -2971,11 +2977,11 @@ const videoStudio=(function(){
         try{
           stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
         }catch{
-          hint.textContent='Camera or microphone was blocked. Allow access in your browser, or paste a link instead.';
+          hint.textContent='Camera or mic was blocked. Allow access, or paste a link.';
           return;
         }
         video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
-        hint.textContent='Up to '+maxSeconds+' seconds. Unscripted is the point — reviewers are listening for how you think.';
+        hint.textContent='Up to '+maxSeconds+' seconds, unscripted. Reviewers listen for how you think.';
         const start=el('recStart'); start.disabled=false;
         start.addEventListener('click',()=>countIn());
       })();
@@ -3004,7 +3010,7 @@ const videoStudio=(function(){
           stopStream();
           video.srcObject=null; video.src=URL.createObjectURL(blob); video.muted=false; video.controls=true;
           timerEl.hidden=true;
-          hint.textContent='Watch it back. Retake as many times as you like — only the take you keep is uploaded.';
+          hint.textContent='Watch it back. Retake as often as you like — only the take you keep is uploaded.';
           el('recRetake').hidden=false; el('recUse').hidden=false;
         };
         recorder.start();

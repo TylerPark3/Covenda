@@ -1491,6 +1491,10 @@ function clubSlug(name, school) {
 export async function registerClub(member, input) {
   const name = cleanText(input.clubName, 160);
   if (name.length < 2) throw new Error('Enter the club name.');
+  // A club nobody can look up is a club nobody can confirm.
+  if (!cleanUrl(input.websiteUrl) && !cleanUrl(input.socialUrl)) {
+    throw new Error('Add the club’s website or Instagram. We need somewhere to check it is real.');
+  }
   const row = {
     slug: clubSlug(name, cleanText(input.school, 80)),
     name,
@@ -1498,6 +1502,10 @@ export async function registerClub(member, input) {
     vertical_slug: cleanText(input.verticalSlug, 60) || null,
     contact_email: cleanEmail(input.email) || null,
     contact_role: cleanText(input.role, 80) || null,
+    // The cheapest real evidence a club exists. For most student clubs the Instagram IS the
+    // presence, so it is a peer of the website rather than a fallback.
+    website_url: cleanUrl(input.websiteUrl) || null,
+    social_url: cleanUrl(input.socialUrl) || null,
     member_estimate: Number.isFinite(Number(input.memberCount)) ? Math.max(0, Math.round(Number(input.memberCount))) : null,
     created_by: member.user.id,
   };

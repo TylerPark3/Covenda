@@ -792,6 +792,7 @@ if (authError) showLogin(authError,true); else if (token()) loadInbox().catch(er
     clubs:[
       {label:'Club',get:r=>r.name},
       {label:'School',get:r=>r.school},
+      {label:'Link',get:r=>r.link?r.link.replace(/^https?:\/\//,'').slice(0,40):''},
       {label:'Confirmed',get:r=>({pill:String(r.confirmed),tone:r.confirmed?'good':''})},
       {label:'Claimed',get:r=>r.claimed},
       {label:'Officer confirmed',get:r=>r.lastOfficer||(r.officerConfirmed?`${r.officerConfirmed}`:'—')},
