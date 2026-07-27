@@ -373,6 +373,14 @@
             <p class="company-job-eyebrow"><svg><use href="#icon-spark"/></svg>Hire vetted students</p>
             <h2>Hire from a vetted batch</h2>
             <p>Vouched undergraduates — startup-fit and reviewed before you ever meet them.</p>
+
+            <!-- The filter, made physical. Hover and the crowd thins to the few who cleared
+                 the bar. Decorative and aria-hidden — the list beneath says the same thing in
+                 words, and this is only the picture of it. -->
+            <figure class="sift" id="siftFigure">
+              <canvas id="siftCanvas" aria-hidden="true"></canvas>
+              <figcaption><span class="sift-hint">Hover to filter</span><span class="sift-count" id="siftCount"></span></figcaption>
+            </figure>
             <ul class="company-job-points">
               <li><svg><use href="#icon-shield"/></svg>Vouched by a professor, club, or pro — not an open marketplace</li>
               <li><svg><use href="#icon-search"/></svg>Judged on proof of work — reviewed projects, GitHub</li>

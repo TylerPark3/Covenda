@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { briefFeeConfig, generateProjectBrief, IntakeConfigError, normalizeBrief } from '../api/project-intake.js';
+import { briefFeeConfig, generateProjectBrief, generateReverseAudit, IntakeConfigError, normalizeBrief } from '../api/project-intake.js';
 import { uploadPolicy, validateUpload } from '../api/project-upload.js';
 
 function anthropicResponse(object) {
@@ -201,5 +201,26 @@ test('generateReverseAudit fetches with web_fetch, resumes pause_turn, and parse
   assert.equal(bodies[0].tools[0].type, 'web_fetch_20260209'); // the model can actually read the link
   assert.match(bodies[0].messages[0].content, /opted in/i);
   assert.equal(bodies.length, 2); // pause_turn was resumed once
-  await assert.rejects(generateReverseAudit({ linkUrl: 'not-a-url', env: { ANTHROPIC_API_KEY: 'k' }, fetchImpl }), /valid public link/);
+  // Neither a link nor a document is the only true refusal now — a document alone is valid.
+  await assert.rejects(generateReverseAudit({ linkUrl: 'not-a-url', env: { ANTHROPIC_API_KEY: 'k' }, fetchImpl }), /public link of your own, or the text of a document/);
+});
+
+// A company that has already written down what keeps slipping should not also need public
+// code. The document path takes that text directly.
+test('reverse audit accepts a document instead of a link, and does not go fetching', async () => {
+  let sent = null;
+  const fetchImpl = async (_url, init) => {
+    sent = JSON.parse(init.body);
+    return { ok: true, json: async () => ({ stop_reason: 'end_turn', content: [{ type: 'text', text: JSON.stringify({ proposals: [] }) }] }) };
+  };
+  await generateReverseAudit({
+    documentText: 'Month-end close slips a week. Vendor invoices sit across three inboxes and nobody owns them.',
+    env: { ANTHROPIC_API_KEY: 'k' }, fetchImpl,
+  });
+  assert.ok(sent, 'the model should have been called');
+  // No web_fetch tool on this path: there is nothing to fetch, and offering it invites the
+  // model to look beyond what the founder actually shared.
+  assert.equal(sent.tools, undefined);
+  assert.match(sent.messages[0].content, /Do not fetch anything/);
+  assert.match(sent.messages[0].content, /Month-end close slips/);
 });

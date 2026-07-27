@@ -292,16 +292,16 @@ export async function loadMemberDashboard(member, env = process.env) {
       : [];
     const verifiedCount = projects.filter(project => project.status === 'complete').length;
     const positiveOutcomes = projects.filter(project => project.conversion_outcome && project.conversion_outcome !== 'none').length;
-    const rankedOpportunities = rankOpportunities(opportunities, profile, { completedCount: verifiedCount, positiveOutcomes });
+    const rankedOpportunities = await attachPosters(supabase, rankOpportunities(opportunities, profile, { completedCount: verifiedCount, positiveOutcomes }));
     const matchedCount = rankedOpportunities.filter(project => project.matched).length;
     // Students hold credits too once escrow is released, so they get a balance (the
     // Wallet view itself stays company/university only).
-    const [walletBalance, creditLedger, payoutRequests, batches, batchApplications] = await Promise.all([
-      creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member), loadBatches(member), loadBatchApplications(member),
+    const [walletBalance, creditLedger, payoutRequests, batches, batchApplications, videos] = await Promise.all([
+      creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member), loadBatches(member), loadBatchApplications(member), loadMemberVideos(member),
     ]);
     const batchStanding = await loadBatchStanding(member);
     const verification = await loadVerificationStanding(member);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches, batchApplications, batchStanding, verification, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches, batchApplications, batchStanding, verification, videos, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -1144,6 +1144,70 @@ export async function confirmSchoolVerification(member, input) {
 }
 
 // The three signals side by side, so what is MISSING is as visible as what is held.
+// ── Intro videos ──────────────────────────────────────────────────────────────────────
+// Recorded in the portal, kept on the student's account, and re-used at application time.
+// Asking for "a Loom or YouTube link" assumed a video already exists somewhere; it almost
+// never does. Record once, reuse everywhere.
+export const VIDEO_LIBRARY_LIMIT = 12;
+
+export async function saveMemberVideo(member, input) {
+  const url = cleanUrl(input.url);
+  if (!url) throw new Error('That recording did not produce a usable link.');
+  const row = {
+    user_id: member.user.id,
+    url,
+    label: cleanText(input.label, 120) || null,
+    prompt: cleanText(input.prompt, 400) || null,
+    duration_seconds: Number.isFinite(Number(input.durationSeconds))
+      ? Math.max(0, Math.round(Number(input.durationSeconds))) : null,
+  };
+  const saved = await checked(member.supabase.from('member_videos').insert(row).select('*').single(), null);
+  // Keep the library small enough to pick from at a glance; oldest takes fall off.
+  const all = await loadMemberVideos(member);
+  const stale = all.slice(VIDEO_LIBRARY_LIMIT);
+  if (stale.length) {
+    await member.supabase.from('member_videos').delete().in('id', stale.map(v => v.id));
+  }
+  return saved;
+}
+
+export async function loadMemberVideos(member) {
+  return checked(
+    member.supabase.from('member_videos').select('*').eq('user_id', member.user.id)
+      .order('created_at', { ascending: false }).limit(50),
+    [],
+  );
+}
+
+export async function deleteMemberVideo(member, input) {
+  const id = cleanText(input.videoId, 50);
+  if (!PROJECT_ID_PATTERN.test(id)) throw new Error('Choose a valid recording.');
+  await checked(member.supabase.from('member_videos').delete().eq('id', id).eq('user_id', member.user.id), null);
+  return { deleted: true };
+}
+
+// Who is behind an open project. Discover listed titles with no company attached, so every
+// card read as though it came from Covenda itself. Falls back to the display name, and then to
+// an honest placeholder rather than inventing one.
+export async function attachPosters(supabase, projects) {
+  const list = projects || [];
+  const ownerIds = [...new Set(list.map(p => p.owner_user_id).filter(Boolean))];
+  if (!ownerIds.length) return list;
+  const owners = await checked(
+    supabase.from('member_profiles').select('user_id,display_name,organization_name,headline').in('user_id', ownerIds),
+    [],
+  );
+  const byId = new Map((owners || []).map(o => [o.user_id, o]));
+  return list.map(project => {
+    const owner = byId.get(project.owner_user_id);
+    return {
+      ...project,
+      posterName: owner?.organization_name || owner?.display_name || 'Covenda partner',
+      posterHeadline: owner?.headline || null,
+    };
+  });
+}
+
 export async function loadVerificationStanding(member) {
   try {
     const [profile, clubs] = await Promise.all([
@@ -1787,6 +1851,8 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'POST' && input.action === 'verify-school-email') return res.status(200).json({ ok: true, ...(await requestSchoolVerification(member, input, dependencies)) });
     if (req.method === 'POST' && input.action === 'confirm-school-email') return res.status(200).json({ ok: true, ...(await confirmSchoolVerification(member, input)) });
+    if (req.method === 'POST' && input.action === 'save-video') return res.status(201).json({ ok: true, video: await saveMemberVideo(member, input) });
+    if (req.method === 'POST' && input.action === 'delete-video') return res.status(200).json({ ok: true, ...(await deleteMemberVideo(member, input)) });
     if (req.method === 'POST' && input.action === 'register-club') return res.status(201).json({ ok: true, club: await registerClub(member, input) });
     if (req.method === 'POST' && input.action === 'claim-club') return res.status(201).json({ ok: true, membership: await claimClubMembership(member, input) });
     if (req.method === 'POST' && input.action === 'club-standing') return res.status(200).json({ ok: true, ...(await clubStanding(member, cleanText(input.clubId, 50))) });

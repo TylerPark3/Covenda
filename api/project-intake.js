@@ -237,7 +237,7 @@ const REVERSE_AUDIT_SCHEMA = {
   },
 };
 
-const REVERSE_AUDIT_SYSTEM = `You are Covenda's reverse-audit analyst. A founder has OPTED IN by pasting their own public link (repo, Figma, or product page). Fetch and read that link, then propose exactly up to THREE scoped draft opportunities a vetted student could complete as a bounded work-trial.
+const REVERSE_AUDIT_SYSTEM = `You are Covenda's reverse-audit analyst. A founder has OPTED IN by giving you EITHER their own public link (repo, Figma, product page) OR the text of their own document — a planning doc, a list of what keeps slipping, retro notes. Work from whichever you are given; when it is a document, do not fetch anything, and ground every proposal in what the document actually says. Fetch and read that link, then propose exactly up to THREE scoped draft opportunities a vetted student could complete as a bounded work-trial.
 
 Rules:
 - Ground every proposal in something OBSERVABLE at the link (a real file, page, gap, or rough edge). Never invent facts about the company.
@@ -267,18 +267,28 @@ export function normalizeReverseAudit(input) {
   };
 }
 
-export async function generateReverseAudit({ linkUrl, env = process.env, fetchImpl = fetch }) {
+export async function generateReverseAudit({ linkUrl, documentText, env = process.env, fetchImpl = fetch }) {
   const url = typeof linkUrl === 'string' ? linkUrl.trim() : '';
-  if (!/^https?:\/\/\S+$/i.test(url)) throw new Error('Paste a valid public link (your repo, Figma, or product page).');
+  // A pasted or uploaded document is the other way in. Most companies have already written
+  // this down somewhere; requiring a public repo excluded everyone who is not technical.
+  const doc = typeof documentText === 'string' ? documentText.trim().slice(0, 40_000) : '';
+  if (!doc && !/^https?:\/\/\S+$/i.test(url)) {
+    throw new Error('Paste a public link of your own, or the text of a document describing what keeps slipping.');
+  }
   const key = env.ANTHROPIC_API_KEY;
   if (!key) throw new IntakeConfigError('AI project understanding is not configured yet. Add ANTHROPIC_API_KEY in Vercel to enable it.');
+  const prompt = doc
+    ? `The founder opted in and supplied their own document. Do not fetch anything — work only from this text.\n\n--- DOCUMENT ---\n${doc}\n--- END ---\n\nPropose up to 3 scoped draft opportunities as JSON, each grounded in something the document actually says.`
+    : `The founder opted in and pasted their own public link: ${url}\n\nFetch it, read what is actually there, and propose up to 3 scoped draft opportunities as JSON.`;
   const base = {
     model: MODEL,
     max_tokens: 4096,
     system: REVERSE_AUDIT_SYSTEM,
-    tools: [{ type: 'web_fetch_20260209', name: 'web_fetch', max_uses: 4 }],
+    // No web_fetch on the document path: there is nothing to fetch, and offering the tool
+    // invites the model to go looking beyond what the founder actually shared.
+    ...(doc ? {} : { tools: [{ type: 'web_fetch_20260209', name: 'web_fetch', max_uses: 4 }] }),
     output_config: { format: { type: 'json_schema', schema: REVERSE_AUDIT_SCHEMA } },
-    messages: [{ role: 'user', content: `The founder opted in and pasted their own public link: ${url}\n\nFetch it, read what is actually there, and propose up to 3 scoped draft opportunities as JSON.` }],
+    messages: [{ role: 'user', content: prompt }],
   };
   const call = payload => fetchImpl('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -335,7 +345,7 @@ export default async function handler(req, res, dependencies = {}) {
     // Reverse-audit mode (opt-in): the founder pasted their OWN public link — return up to
     // 3 draft opportunities instead of one brief. Same metering, same safety posture.
     if (body.action === 'reverse-audit') {
-      const audit = await generateReverseAudit({ linkUrl: body.linkUrl, env, fetchImpl: dependencies.fetchImpl || fetch });
+      const audit = await generateReverseAudit({ linkUrl: body.linkUrl, documentText: body.documentText, env, fetchImpl: dependencies.fetchImpl || fetch });
       let auditCharged = 0;
       if (metering && fee > 0) {
         const { error } = await member.supabase.from('credit_ledger').insert({ user_id: member.user.id, entry_type: 'ai_brief', credits: -fee, note: `AI reverse-audit · ${fee} credits` });

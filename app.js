@@ -5821,5 +5821,104 @@ function initBatchWeb() {
   }, 4600);
 })();
 
+
+// The batch filter, made physical. A crowd of pale dots with a few gold ones; hovering sweeps
+// the pale ones away from the cursor outward until only the gold remain, then they drift back
+// when you leave. That is the batch in one gesture — most of a pool is not the product.
+//
+// Deliberately quiet: small, low-contrast, and it only animates while pointed at or on screen.
+(function initSift() {
+  const canvas = document.getElementById('siftCanvas');
+  const figure = document.getElementById('siftFigure');
+  const count = document.getElementById('siftCount');
+  if (!canvas || !figure) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const GOLD = '176,120,30';
+  const PALE = '150,146,134';
+  let W = 0, H = 0, dots = [], raf = 0, running = false, sift = 0, target = 0;
+
+  function build() {
+    const n = Math.max(70, Math.min(220, Math.round((W * H) / 900)));
+    dots = Array.from({ length: n }, () => ({
+      hx: Math.random(), hy: Math.random(),          // home position, 0..1
+      ox: (Math.random() - 0.5), oy: (Math.random() - 0.5), // scatter direction when filtered
+      r: 1.3 + Math.random() * 1.5,
+      gold: Math.random() < 0.09,
+      phase: Math.random() * Math.PI * 2,
+    }));
+    if (count) {
+      const gold = dots.filter(d => d.gold).length;
+      count.textContent = `${gold} of ${dots.length} clear the bar`;
+    }
+  }
+
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    canvas.width = Math.max(1, Math.round(W * dpr));
+    canvas.height = Math.max(1, Math.round(H * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    build();
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    for (const d of dots) {
+      // Pale dots are pushed outward and faded as `sift` rises; gold ones stay and firm up.
+      const push = d.gold ? 0 : sift;
+      const x = d.hx * W + d.ox * push * W * 0.9;
+      const y = d.hy * H + d.oy * push * H * 0.9;
+      if (d.gold) {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 0.002 + d.phase);
+        ctx.fillStyle = `rgba(${GOLD},${0.55 + 0.35 * sift + 0.1 * pulse})`;
+        ctx.beginPath(); ctx.arc(x, y, d.r + 0.7 + sift * 1.2, 0, Math.PI * 2); ctx.fill();
+      } else {
+        const alpha = 0.34 * (1 - sift);
+        if (alpha <= 0.01) continue;
+        ctx.fillStyle = `rgba(${PALE},${alpha})`;
+        ctx.beginPath(); ctx.arc(x, y, d.r, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+
+  function frame(t) {
+    sift += (target - sift) * 0.06;
+    draw(t);
+    // Settle and stop rather than spinning forever once nothing is moving.
+    if (Math.abs(target - sift) < 0.002 && (target === 0 || target === 1)) {
+      sift = target;
+      draw(t);
+      if (target === 0) { running = false; raf = 0; return; }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  function run() { if (running || reduce) return; running = true; raf = requestAnimationFrame(frame); }
+
+  resize();
+  draw(0);
+  window.addEventListener('resize', () => { resize(); draw(0); });
+  if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); draw(0); }).observe(canvas);
+  if (reduce) { sift = 1; draw(0); return; } // show the filtered end state, which is the point
+
+  const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  if (fine) {
+    figure.addEventListener('pointerenter', () => { target = 1; run(); });
+    figure.addEventListener('pointerleave', () => { target = 0; run(); });
+  } else {
+    // No hover on touch: run the sweep once when it scrolls into view so the idea still lands.
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(entries => entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        target = 1; run(); io.disconnect();
+      }), { threshold: 0.4 });
+      io.observe(figure);
+    }
+  }
+})();
+
 initMemberNav();
 window.requestAnimationFrame(() => openIntro());

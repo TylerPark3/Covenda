@@ -82,7 +82,7 @@
         <button type="button" data-view="messages" data-roles="student company university"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
         <button type="button" data-view="wallet" data-roles="student company university"><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
       </nav>
-      <div class="member-identity"><span id="memberInitial">C</span><div><strong id="memberNavName">Member</strong><small id="memberNavRole">Covenda</small></div></div>
+      <button class="member-identity" type="button" data-view="portfolio" id="memberIdentity"><span id="memberInitial">C</span><div><strong id="memberNavName">Member</strong><small id="memberNavRole">Covenda</small></div></button>
       <button class="member-signout" id="memberSignout" type="button"><svg><use href="#p-exit"/></svg>Sign out</button>
     </aside>
 
@@ -268,7 +268,7 @@
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="applyDialog">
-    <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="4" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Research, spreadsheets, writing"></label><label>Show your work <small>Optional link — portfolio, repo, sample</small><input name="demonstration" type="url" placeholder="https://…"></label><label>Intro video <small>Optional link — Loom, YouTube, Drive</small><input name="videoUrl" type="url" placeholder="https://…"></label><div class="form-grid"><label>Referred by <small>Optional</small><input name="referralName" placeholder="Prof. Lee"></label><label>Referral code <small>Optional</small><input name="referralCode" placeholder="REF-XXXX"></label></div><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
+    <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="4" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Research, spreadsheets, writing"></label><label>Show your work <small>Optional link — portfolio, repo, sample</small><input name="demonstration" type="url" placeholder="https://…"></label><div class="video-field" data-video-field="apply"><p class="video-field-label">Intro video <small>Optional — 60 seconds, recorded here</small></p><div class="video-picker" id="applyVideoPicker"></div><input name="videoUrl" type="hidden"></div><div class="form-grid"><label>Referred by <small>Optional</small><input name="referralName" placeholder="Prof. Lee"></label><label>Referral code <small>Optional</small><input name="referralCode" placeholder="REF-XXXX"></label></div><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="requestDialog">
@@ -286,13 +286,17 @@
         </div>
 
         <div class="batch-apply-step">
-          <p class="batch-step-kicker">Step 1 · Your ~5-minute video <b class="req">Required</b></p>
+          <p class="batch-step-kicker">Step 1 · Your 90-second walkthrough <b class="req">Required</b></p>
           <div class="batch-prompt-box">
             <span class="batch-prompt-tag">Your assigned prompt</span>
             <p id="batchVideoPrompt"></p>
           </div>
-          <p class="batch-step-hint">Record a short, unscripted video (Loom, YouTube unlisted, or Drive) answering the prompt above — about five minutes. Paste the shareable link here.</p>
-          <div class="batch-video"><div class="batch-video-head"><span>Your walkthrough <b class="req">Required</b></span><small>Answer the prompt above. Up to 90 seconds, unscripted.</small></div><div class="batch-video-actions"><button type="button" class="portal-primary" id="batchRecordBtn">Record it here</button><span class="batch-video-or">or paste a link</span></div><input name="videoUrl" type="url" placeholder="https://… (Loom, Drive, YouTube)" required id="batchVideoUrl"><p class="batch-video-state" id="batchVideoState" aria-live="polite"></p></div>
+          <p class="batch-step-hint">Record it here, unscripted, answering the prompt above. Reviewers watch the first ninety seconds — that is what the recorder gives you. Retake as many times as you like; only the take you keep is saved.</p>
+          <div class="video-field" data-video-field="batch">
+            <div class="video-picker" id="batchVideoPicker"></div>
+            <input name="videoUrl" type="hidden" required id="batchVideoUrl">
+            <p class="batch-video-state" id="batchVideoState" aria-live="polite"></p>
+          </div>
         </div>
 
         <div class="batch-apply-step">

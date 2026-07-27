@@ -385,6 +385,152 @@ function renderProgress(){const profile=state.dashboard.profile;const score=prof
 // Both are computed server-side and were invisible in the portal — a student had no way to
 // see how verified they were, or where their current work stood against its schedule.
 
+// ── Verification steps ────────────────────────────────────────────────────────────────
+// Each row of the verification panel opens the thing that actually satisfies it. School email
+// sends a code; a club claim files against a real organisation and waits for an officer; a
+// referral is a request you send to a human, so all we can do is write it for you.
+const VERIF_STEPS={
+  school_email:{ cta:'Verify', title:'Verify your school email' },
+  club:{ cta:'Claim', title:'Claim your club membership' },
+  referral:{ cta:'Request', title:'Ask for a named referral' },
+};
+
+function verifDialog(title,intro){
+  const dlg=document.createElement('dialog'); dlg.className='verif-dialog';
+  const shell=document.createElement('form'); shell.method='dialog'; shell.className='verif-form';
+  const head=document.createElement('header');
+  const box=document.createElement('div');
+  const eyebrow=document.createElement('p'); eyebrow.className='eyebrow'; eyebrow.textContent='Verification';
+  const h=document.createElement('h2'); h.textContent=title;
+  box.append(eyebrow,h);
+  const close=document.createElement('button'); close.type='button'; close.setAttribute('aria-label','Close'); close.append(icon('p-close'));
+  close.addEventListener('click',()=>{dlg.close();dlg.remove();});
+  head.append(box,close);
+  const body=document.createElement('div'); body.className='dialog-body';
+  if(intro){const p=document.createElement('p'); p.className='verif-intro'; p.textContent=intro; body.append(p);}
+  const msg=document.createElement('p'); msg.className='dialog-message'; msg.setAttribute('aria-live','polite');
+  const foot=document.createElement('footer');
+  shell.append(head,body,msg,foot);
+  dlg.append(shell);
+  dlg.addEventListener('cancel',()=>{dlg.close();dlg.remove();});
+  document.body.append(dlg);
+  const say=(text,bad)=>{msg.textContent=text||''; msg.classList.toggle('is-error',Boolean(bad));};
+  return { dlg, body, foot, say, open:()=>dlg.showModal(), close:()=>{dlg.close();dlg.remove();} };
+}
+function verifField(labelText,hintText,attrs={}){
+  const label=document.createElement('label');
+  const span=document.createElement('span'); span.textContent=labelText;
+  if(hintText){const small=document.createElement('small'); small.textContent=hintText; span.append(' ',small);}
+  const input=document.createElement('input');
+  Object.entries(attrs).forEach(([k,v])=>{input[k]=v;});
+  label.append(span,input);
+  return { label, input };
+}
+
+function openVerificationStep(key){
+  if(key==='school_email')return openSchoolEmailStep();
+  if(key==='club')return openClubStep();
+  return openReferralStep();
+}
+
+function openSchoolEmailStep(){
+  const held=Boolean(state.dashboard?.verification?.signals?.find(s=>s.key==='school_email')?.held);
+  const d=verifDialog('Verify your school email',
+    held?'This is already confirmed. Verifying a different address replaces the one on file.'
+        :'We send a six-digit code to your university address. This proves you control the address — it is the floor, not the proof.');
+  const email=verifField('School email','ends in .edu, .ac.uk, or your university’s domain',{type:'email',required:true,placeholder:'you@university.edu',autocomplete:'email'});
+  d.body.append(email.label);
+
+  const send=document.createElement('button'); send.type='button'; send.className='portal-primary'; send.textContent='Send me a code';
+  d.foot.append(send);
+  send.addEventListener('click',async()=>{
+    const value=email.input.value.trim();
+    if(!value){d.say('Enter your school email.',true); email.input.focus(); return;}
+    send.disabled=true; d.say('Sending…');
+    try{
+      await portalRequest({method:'POST',body:JSON.stringify({action:'verify-school-email',schoolEmail:value})});
+      d.say('Code sent. It expires in 20 minutes.');
+      email.input.disabled=true; send.remove();
+      const code=verifField('Six-digit code','from the email we just sent',{type:'text',inputMode:'numeric',maxLength:6,placeholder:'000000',autocomplete:'one-time-code'});
+      d.body.append(code.label); code.input.focus();
+      const confirm=document.createElement('button'); confirm.type='button'; confirm.className='portal-primary'; confirm.textContent='Confirm';
+      d.foot.append(confirm);
+      confirm.addEventListener('click',async()=>{
+        const entered=code.input.value.trim();
+        if(entered.length<6){d.say('Enter all six digits.',true); return;}
+        confirm.disabled=true; d.say('Checking…');
+        try{
+          await portalRequest({method:'POST',body:JSON.stringify({action:'confirm-school-email',code:entered})});
+          d.say('Verified.');
+          await loadDashboard();
+          setTimeout(()=>d.close(),700);
+        }catch(error){ confirm.disabled=false; d.say(error.message,true); }
+      });
+    }catch(error){ send.disabled=false; d.say(error.message,true); }
+  });
+  d.open(); email.input.focus();
+}
+
+function openClubStep(){
+  const d=verifDialog('Claim your club membership',
+    'Name the club you are a member of. An officer confirms it before it counts — a claim on its own proves nothing, and companies only ever see confirmed memberships.');
+  const name=verifField('Club name','e.g. Columbia Robotics Club',{type:'text',required:true,placeholder:'Columbia Robotics Club'});
+  const school=verifField('School',null,{type:'text',placeholder:'Columbia University'});
+  const officer=verifField('Officer email','who can confirm you — president, captain, or faculty advisor',{type:'email',placeholder:'president@club.org'});
+  const role=verifField('Your role in the club','optional',{type:'text',placeholder:'Member, project lead, treasurer'});
+  d.body.append(name.label,school.label,officer.label,role.label);
+
+  const submit=document.createElement('button'); submit.type='button'; submit.className='portal-primary'; submit.textContent='File my claim';
+  d.foot.append(submit);
+  submit.addEventListener('click',async()=>{
+    if(name.input.value.trim().length<2){d.say('Enter the club name.',true); name.input.focus(); return;}
+    submit.disabled=true; d.say('Filing…');
+    try{
+      // Registering first means a club nobody has entered yet still gets a record to claim
+      // against; a repeat registration updates rather than forks it.
+      const reg=await portalRequest({method:'POST',body:JSON.stringify({action:'register-club',clubName:name.input.value.trim(),school:school.input.value.trim(),email:officer.input.value.trim(),role:role.input.value.trim()})});
+      await portalRequest({method:'POST',body:JSON.stringify({action:'claim-club',clubId:reg.club.id})});
+      d.say('Filed. It shows as confirmed once an officer of the club verifies you.');
+      await loadDashboard();
+      setTimeout(()=>d.close(),1400);
+    }catch(error){ submit.disabled=false; d.say(error.message,true); }
+  });
+  d.open(); name.input.focus();
+}
+
+function openReferralStep(){
+  const who=state.dashboard?.profile?.display_name||'me';
+  const d=verifDialog('Ask for a named referral',
+    'A referral is one person putting their own name behind your work. We cannot generate one — but we can write the ask, and it is the single strongest signal on your profile.');
+  const draft=
+    'Hi [name],\n\n'
+    +'I’m applying through Covenda, which places undergraduates on scoped, paid project work with startups. '
+    +'Companies there weigh referrals from people who have actually seen someone work, over résumés.\n\n'
+    +'Would you be willing to vouch for me? It takes about two minutes — you confirm who you are, how you know my work, and what you saw me do. '
+    +'If you’d rather not, no hard feelings at all.\n\n'
+    +'Thanks,\n'+who;
+  const label=document.createElement('label');
+  const cap=document.createElement('span'); cap.textContent='Copy this, edit it, send it';
+  const area=document.createElement('textarea'); area.rows=11; area.value=draft;
+  label.append(cap,area); d.body.append(label);
+  const tips=document.createElement('ul'); tips.className='verif-tips';
+  [['Ask someone who saw the work','A supervisor, research PI, club officer, or the founder you shipped for. A friend does not count.'],
+   ['One is enough to start','A single named referral outweighs a wall of self-reported skills.'],
+   ['They confirm under their own name','That is what makes it worth anything — anonymous praise is not a referral.']]
+    .forEach(([t,body])=>{const li=document.createElement('li');const strong=document.createElement('strong');strong.textContent=t;const small=document.createElement('small');small.textContent=body;li.append(strong,small);tips.append(li);});
+  d.body.append(tips);
+
+  const copy=document.createElement('button'); copy.type='button'; copy.className='portal-primary'; copy.textContent='Copy the ask';
+  copy.addEventListener('click',async()=>{
+    try{ await navigator.clipboard.writeText(area.value); copy.textContent='Copied'; d.say('Send it to whoever knows your work best.'); }
+    catch{ area.select(); d.say('Select-all and copy — your browser blocked the clipboard.',true); }
+  });
+  const mail=document.createElement('button'); mail.type='button'; mail.className='portal-secondary'; mail.textContent='Open in email';
+  mail.addEventListener('click',()=>{ window.location.href='mailto:?subject='+encodeURIComponent('A quick referral ask')+'&body='+encodeURIComponent(area.value); });
+  d.foot.append(copy,mail);
+  d.open();
+}
+
 function renderVerification(){
   const host=$('#verificationPanel');
   const v=state.dashboard?.verification;
@@ -396,16 +542,23 @@ function renderVerification(){
   const sum=document.createElement('p'); sum.textContent=v.summary;
   head.append(h,sum); host.append(head);
 
+  // Every row is a door. A checklist you cannot act on is just a list of things you lack.
   const list=document.createElement('ul'); list.className='verif-list';
   v.signals.forEach(sig=>{
+    const step=VERIF_STEPS[sig.key]||{};
     const li=document.createElement('li'); li.className=sig.held?'is-held':'';
+    const row=document.createElement('button'); row.type='button'; row.className='verif-row';
     const mark=document.createElement('span'); mark.className='verif-mark';
     if(sig.held) mark.append(icon('p-verified')); else mark.textContent='○';
     const div=document.createElement('div');
     const strong=document.createElement('strong'); strong.textContent=sig.label;
     const small=document.createElement('small'); small.textContent=sig.proves;
     div.append(strong,small);
-    li.append(mark,div); list.append(li);
+    const go=document.createElement('span'); go.className='verif-go';
+    go.textContent=sig.held?'Manage':(step.cta||'Start');
+    row.append(mark,div,go);
+    row.addEventListener('click',()=>openVerificationStep(sig.key));
+    li.append(row); list.append(li);
   });
   host.append(list);
   // School email is the floor and must never read as the proof — said here, not just in the API.
@@ -867,7 +1020,10 @@ function renderDiscover(){
 }
 function discoverCard(project,isApplied){
   const row=document.createElement('article');row.className='discover-card'+(project.matched?' is-matched':'');
-  const top=document.createElement('div');top.className='discover-card-top';const h=document.createElement('h3');h.textContent=project.title;top.append(h,fitPill(project.fitScore,project.fitPresentation));row.append(top);
+  const top=document.createElement('div');top.className='discover-card-top';const head=document.createElement('div');head.className='discover-card-head';const h=document.createElement('h3');h.textContent=project.title;head.append(h);
+  // Who is hiring. Without this every card read as though Covenda posted it.
+  if(project.posterName){const by=document.createElement('p');by.className='discover-poster';const mark=document.createElement('span');mark.className='discover-poster-mark';mark.textContent=String(project.posterName).trim().charAt(0).toUpperCase()||'C';const name=document.createElement('strong');name.textContent=project.posterName;by.append(mark,name);if(project.posterHeadline){const sep=document.createElement('small');sep.textContent=project.posterHeadline;by.append(sep);}head.append(by);}
+  top.append(head,fitPill(project.fitScore,project.fitPresentation));row.append(top);
   const meta=document.createElement('div');meta.className='discover-meta';const pay=Number(project.credits_listed)||0;meta.append(discoverChip('Payout',pay?`${pay.toLocaleString()} credits`:'—'),discoverChip('Target',project.target_date?dateLabel(project.target_date):'Flexible'));if((project.verticals||[]).length)meta.append(discoverChip('Vertical',project.verticals[0]));row.append(meta);
   const p=document.createElement('p');p.className='discover-card-summary';p.textContent=project.summary;row.append(p);
   if((project.fitReasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';project.fitReasons.slice(0,3).forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});row.append(rs);}
@@ -1103,7 +1259,7 @@ function batchCard(batch,application){
     else detail.append(batchWorkflowBlock(brief));
   }
   detail.append(batchDetailSection('Where admitted students go',batchSampleCompanies(batch)));
-  detail.append(batchDetailSection('How the application works',`Two parts, about 15 minutes total: a short ~5-minute video answering a prompt we assign you when you start (so it stays spontaneous), and a few written questions about your interest in ${batchVertical(batch)}. An operator reviews every application by hand.`));
+  detail.append(batchDetailSection('How the application works',`Two parts, about 10 minutes total: a 90-second video answering a prompt we assign you when you start (so it stays spontaneous), and a few written questions about your interest in ${batchVertical(batch)}. An operator reviews every application by hand.`));
 
   const actions=document.createElement('div');actions.className='discover-actions batch-actions';
   const expand=document.createElement('button');expand.type='button';expand.className='portal-ghost compact batch-expand';expand.setAttribute('aria-expanded','false');
@@ -1151,6 +1307,11 @@ function openBatchApply(batch){
   const samples=$('#batchApplySamples');if(samples)samples.textContent=batchSampleCompanies(batch);
   currentBatchPrompt=pickBatchPrompt(batch); // a fresh random prompt each time the form opens
   const promptEl=$('#batchVideoPrompt');if(promptEl)promptEl.textContent=currentBatchPrompt;
+  const batchVideoInput=$('#batchVideoUrl');
+  if(batchVideoInput){batchVideoInput.value='';
+    // Requiredness lives on the hidden input, so the picker has to clear the message itself.
+    videoStudio.mountPicker($('#batchVideoPicker'),batchVideoInput,{prompt:currentBatchPrompt,maxSeconds:90,label:(batch&&batch.name?batch.name+' · walkthrough':'Batch walkthrough'),
+      onChange:url=>{const st=$('#batchVideoState');if(st)st.textContent=url?'Attached to this application.':'';}});}
   renderBatchInterest(batch);
   setDialogMessage('#batchApplyMessage','');
   $('#batchApplyDialog').showModal();
@@ -1172,6 +1333,8 @@ function renderBriefDocument(root,brief,fallbackSummary){
 }
 function openDiscoverDetail(project,isApplied){
   $('#discoverDetailTitle').textContent=project.title;const body=$('#discoverDetailBody');
+  // The company name belongs at the top of the detail too, not only on the card.
+  const eyebrow=$('#discoverDetail .eyebrow');if(eyebrow)eyebrow.textContent=project.posterName?('Posted by '+project.posterName):'Project detail';
   renderBriefDocument(body,project.ai_brief,project.summary);
   const head=document.createElement('div');head.className='detail-head';head.append(fitPill(project.fitScore,project.fitPresentation));const pay=Number(project.credits_listed)||0;const payS=document.createElement('span');payS.className='detail-pay';payS.textContent=pay?`${pay.toLocaleString()} credits payout`:'Payout TBD';head.append(payS);body.prepend(head);
   if((project.fitReasons||[]).length){const rs=document.createElement('div');rs.className='fit-reasons';project.fitReasons.forEach(r=>{const s=document.createElement('span');s.textContent=r;rs.append(s);});body.insertBefore(rs,head.nextSibling);}
@@ -1247,6 +1410,57 @@ function renderTalentCards(){
   if(!filtered.length){emptyList(root,'p-user',dir.length?'No students match your filters.':'No students in the directory yet.',dir.length?'Try clearing a filter.':'Students appear here after they finish onboarding and opt into discovery.');return;}
   for(const s of filtered)root.append(talentCard(s));
 }
+
+// Your intro takes live on your account, not in an application. Record here once, and every
+// application after that is a two-click pick instead of a scramble for a share link.
+function renderVideoLibrary(root){
+  const sec=document.createElement('section'); sec.className='video-library';
+  const head=document.createElement('div'); head.className='video-library-head';
+  const box=document.createElement('div');
+  const h=document.createElement('h3'); h.textContent='Your intro videos';
+  const p=document.createElement('p');
+  p.textContent='Record a take here and reuse it. Companies see it only on the applications you attach it to — nothing is public.';
+  box.append(h,p);
+  const add=document.createElement('button'); add.type='button'; add.className='portal-primary compact';
+  add.textContent='Record a take';
+  if(!videoStudio.canRecord){ add.disabled=true; add.title='This browser cannot record video.'; }
+  add.addEventListener('click',async()=>{
+    add.disabled=true;
+    const out=await videoStudio.record({maxSeconds:60,label:'Intro'});
+    add.disabled=false;
+    if(out&&out.url)renderPortfolio();
+  });
+  head.append(box,add); sec.append(head);
+
+  const takes=videoStudio.library();
+  if(!takes.length){
+    const empty=document.createElement('p'); empty.className='video-library-empty';
+    empty.textContent='Nothing recorded yet. Sixty seconds on what you have actually built beats a paragraph about yourself — and you can retake it as many times as you like.';
+    sec.append(empty); root.append(sec); return;
+  }
+  const list=document.createElement('div'); list.className='video-library-list';
+  takes.forEach(v=>{
+    const card=document.createElement('article'); card.className='video-library-item';
+    const player=document.createElement('video'); player.src=v.url; player.controls=true; player.preload='none'; player.playsInline=true;
+    const meta=document.createElement('div');
+    const t=document.createElement('strong'); t.textContent=v.label||'Intro take';
+    const when=document.createElement('small');
+    when.textContent=[Number(v.duration_seconds)?Math.floor(v.duration_seconds/60)+':'+String(v.duration_seconds%60).padStart(2,'0'):'',v.created_at?dateLabel(v.created_at):''].filter(Boolean).join(' · ');
+    meta.append(t,when);
+    if(v.prompt){const pr=document.createElement('small'); pr.className='video-library-prompt'; pr.textContent='Prompt: '+v.prompt; meta.append(pr);}
+    const del=document.createElement('button'); del.type='button'; del.className='video-delete'; del.textContent='Delete';
+    del.addEventListener('click',async()=>{
+      del.disabled=true; del.textContent='Deleting…';
+      try{
+        await portalRequest({method:'POST',body:JSON.stringify({action:'delete-video',videoId:v.id})});
+        state.dashboard.videos=(state.dashboard.videos||[]).filter(x=>x.id!==v.id);
+        renderPortfolio();
+      }catch(error){ del.disabled=false; del.textContent='Delete'; alert(error.message); }
+    });
+    card.append(player,meta,del); list.append(card);
+  });
+  sec.append(list); root.append(sec);
+}
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
   $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Browse students who opted into discovery — startup-fit, building real evidence. Hire by inviting them to a scoped project.';$('#editProfile').hidden=true;
   const batches=document.createElement('section');batches.className='talent-batches';
@@ -1279,7 +1493,7 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   bar.append(search,vsel,skl,msel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderProofOfWork(root,profile);}}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderVideoLibrary(root);renderProofOfWork(root,profile);}}
 
 // Live credibility meter — a checklist of REAL, earned signals (identity, completeness, proven
 // GitHub skills, completed reviewed work-trials). Not a black-box score; each rung is concrete
@@ -1429,7 +1643,7 @@ function consumeProjectSeed(){
   }
   // No profile yet (brand-new signup mid-onboarding): keep the brief until a company profile exists.
 }
-function openApply(project){state.applyProject=project;const form=$('#applyForm');form.reset();form.elements.projectId.value=project.id;$('#applyTitle').textContent=`Apply to ${project.title}.`;$('#applySummary').textContent=project.summary;const ds=project.desired_skills;if(form.elements.skills)form.elements.skills.value=Array.isArray(ds)?ds.join(', '):(ds||'');setDialogMessage('#applyMessage','');$('#applyDialog').showModal();}
+function openApply(project){state.applyProject=project;const form=$('#applyForm');form.reset();form.elements.projectId.value=project.id;$('#applyTitle').textContent=`Apply to ${project.title}.`;$('#applySummary').textContent=project.summary;const ds=project.desired_skills;if(form.elements.skills)form.elements.skills.value=Array.isArray(ds)?ds.join(', '):(ds||'');setDialogMessage('#applyMessage','');form.elements.videoUrl.value='';videoStudio.mountPicker($('#applyVideoPicker'),form.elements.videoUrl,{maxSeconds:60,label:'Intro · '+project.title});$('#applyDialog').showModal();}
 function openSubmitWork(project){const form=$('#submitWorkForm');form.reset();form.elements.projectId.value=project.id;$('#submitWorkTitle').textContent=`Submit your work · ${project.title}`;setDialogMessage('#submitWorkMessage','');$('#submitWorkDialog').showModal();}
 function openReview(project){const form=$('#reviewForm');form.reset();form.elements.projectId.value=project.id;$('#reviewTitle').textContent=`Review · ${project.title}`;$('#reviewDeliverable').textContent=project.deliverable||'No deliverable text was provided.';const held=Number(project.credits_held)||0;
   $('#reviewSubmittedAt').textContent=[
@@ -1696,7 +1910,7 @@ $('#applyForm').addEventListener('submit',async event=>{event.preventDefault();c
 $('#batchApplyForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const e=form.elements;
   if(e.note.value.trim().length<40){setDialogMessage('#batchApplyMessage','Tell us why this cohort fits you — a few sentences at least.',true);e.note.focus();return;}
-  if(!e.videoUrl.value.trim()){setDialogMessage('#batchApplyMessage','Add the link to your ~5-minute video answering the prompt above.',true);e.videoUrl.focus();return;}
+  if(!e.videoUrl.value.trim()){setDialogMessage('#batchApplyMessage','Record your walkthrough, or pick one you already made.',true);e.videoUrl.focus();return;}
   button.disabled=true;setDialogMessage('#batchApplyMessage','Submitting your application…');
   const skills=e.skills.value.split(',').map(s=>s.trim()).filter(Boolean);
   try{
@@ -1804,120 +2018,198 @@ $('#reverseAuditBtn')?.addEventListener('click',async()=>{
 // back — the single biggest drop-off in the flow. Records here and uploads to the same
 // /api/video-upload the marketing site uses, then fills the URL field so the rest of the
 // form is unchanged. Paste-a-link stays for anyone whose browser or camera says no.
-(function initBatchRecorder(){
-  const btn=document.getElementById('batchRecordBtn');
-  const urlField=document.getElementById('batchVideoUrl');
-  const state=document.getElementById('batchVideoState');
-  if(!btn||!urlField||!state)return;
+// ── Video studio ──────────────────────────────────────────────────────────────────────
+// The old ask was "paste a Loom / YouTube / Drive link", which quietly assumed the student
+// already had a video of themselves talking sitting on a share link somewhere. Practically
+// nobody does, so the field read as a wall. This inverts it: you record a take in the portal,
+// it is saved to your account, and every later application picks from what you already made.
+//
+// A pasted link still works — it is the fallback, not the default.
+const videoStudio=(function(){
   const canRecord=!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)&&typeof MediaRecorder!=='undefined';
-  if(!canRecord){btn.hidden=true;state.textContent='This browser cannot record here — paste a link instead.';return;}
-
-  const MAX=90;
-  let overlay=null,stream=null,recorder=null,chunks=[],timer=null,secs=0,blob=null;
   const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
 
-  function stopStream(){ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
-  function close(){ clearInterval(timer); stopStream(); overlay?.close(); overlay?.remove(); overlay=null; }
+  // Opens the recorder and resolves with {url,durationSeconds} once a take is kept, or null
+  // if the student backs out. Uploads then registers the take in their library.
+  function record({prompt='',maxSeconds=90,label=''}={}){
+    return new Promise(resolve=>{
+      let overlay=null,stream=null,recorder=null,chunks=[],timer=null,secs=0,blob=null,kept=0,settled=false;
+      const done=value=>{ if(settled)return; settled=true; cleanup(); resolve(value); };
+      function stopStream(){ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
+      function cleanup(){ clearInterval(timer); stopStream(); if(overlay){overlay.close();overlay.remove();overlay=null;} }
+      const el=id=>overlay.querySelector('#'+id);
 
-  async function open(){
-    overlay=document.createElement('dialog');
-    overlay.className='rec-overlay';
-    overlay.innerHTML=
-      '<div class="rec-shell">'
-      +'<div class="rec-stage"><video id="recPreview" playsinline muted></video><span class="rec-count" id="recCount" hidden></span>'
-      +'<span class="rec-timer" id="recTimer" hidden>0:00</span></div>'
-      +'<p class="rec-hint" id="recHint">Camera starting…</p>'
-      +'<div class="rec-actions">'
-      +'<button type="button" class="portal-primary" id="recStart" disabled>Start recording</button>'
-      +'<button type="button" class="portal-ghost" id="recRetake" hidden>Retake</button>'
-      +'<button type="button" class="portal-primary" id="recUse" hidden>Use this take</button>'
-      +'<button type="button" class="portal-ghost" id="recCancel">Cancel</button>'
-      +'</div></div>';
-    document.body.append(overlay);
-    overlay.showModal();
-    overlay.addEventListener('cancel',close);
-    document.getElementById('recCancel').addEventListener('click',close);
+      overlay=document.createElement('dialog');
+      overlay.className='rec-overlay';
+      overlay.innerHTML=
+        '<div class="rec-shell">'
+        +(prompt?'<div class="rec-prompt"><span>Your prompt</span><p>'+prompt.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</p></div>':'')
+        +'<div class="rec-stage"><video id="recPreview" playsinline muted></video><span class="rec-count" id="recCount" hidden></span>'
+        +'<span class="rec-timer" id="recTimer" hidden>0:00</span></div>'
+        +'<p class="rec-hint" id="recHint">Camera starting…</p>'
+        +'<div class="rec-actions">'
+        +'<button type="button" class="portal-primary" id="recStart" disabled>Start recording</button>'
+        +'<button type="button" class="portal-ghost" id="recRetake" hidden>Retake</button>'
+        +'<button type="button" class="portal-primary" id="recUse" hidden>Use this take</button>'
+        +'<button type="button" class="portal-ghost" id="recCancel">Cancel</button>'
+        +'</div></div>';
+      document.body.append(overlay);
+      overlay.showModal();
+      overlay.addEventListener('cancel',e=>{e.preventDefault();done(null);});
+      el('recCancel').addEventListener('click',()=>done(null));
 
-    const video=document.getElementById('recPreview');
-    const hint=document.getElementById('recHint');
-    try{
-      stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
-    }catch{
-      hint.textContent='Camera or microphone was blocked. Paste a link instead.';
-      return;
-    }
-    video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
-    hint.textContent='Up to '+MAX+' seconds. Speak to the prompt — unscripted is the point.';
-    const start=document.getElementById('recStart');
-    start.disabled=false;
-    start.addEventListener('click',()=>begin(video));
-  }
+      const video=el('recPreview');
+      const hint=el('recHint');
+      (async()=>{
+        try{
+          stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
+        }catch{
+          hint.textContent='Camera or microphone was blocked. Allow access in your browser, or paste a link instead.';
+          return;
+        }
+        video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
+        hint.textContent='Up to '+maxSeconds+' seconds. Unscripted is the point — reviewers are listening for how you think.';
+        const start=el('recStart'); start.disabled=false;
+        start.addEventListener('click',()=>countIn());
+      })();
 
-  function begin(video){
-    const count=document.getElementById('recCount');
-    const start=document.getElementById('recStart');
-    start.hidden=true;
-    let n=3; count.hidden=false; count.textContent=n;
-    const pre=setInterval(()=>{
-      n-=1;
-      if(n>0){count.textContent=n;return;}
-      clearInterval(pre); count.hidden=true; record(video);
-    },900);
-  }
-
-  function record(video){
-    const timerEl=document.getElementById('recTimer');
-    const hint=document.getElementById('recHint');
-    const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9'
-      :MediaRecorder.isTypeSupported('video/webm')?'video/webm':'';
-    chunks=[]; secs=0;
-    recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
-    recorder.ondataavailable=e=>{ if(e.data&&e.data.size)chunks.push(e.data); };
-    recorder.onstop=()=>{
-      clearInterval(timer);
-      blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
-      stopStream();
-      video.srcObject=null; video.src=URL.createObjectURL(blob); video.muted=false; video.controls=true;
-      timerEl.hidden=true;
-      hint.textContent='Watch it back. Retake as many times as you like — only the take you keep is uploaded.';
-      document.getElementById('recRetake').hidden=false;
-      document.getElementById('recUse').hidden=false;
-    };
-    recorder.start();
-    timerEl.hidden=false; timerEl.textContent='0:00';
-    hint.textContent='Recording…';
-    const stopBtn=document.getElementById('recStart');
-    stopBtn.hidden=false; stopBtn.textContent='Stop'; stopBtn.disabled=false;
-    stopBtn.onclick=()=>{ if(recorder&&recorder.state==='recording')recorder.stop(); stopBtn.hidden=true; };
-    timer=setInterval(()=>{
-      secs+=1; timerEl.textContent=fmt(secs);
-      if(secs>=MAX&&recorder.state==='recording'){recorder.stop();stopBtn.hidden=true;}
-    },1000);
-
-    document.getElementById('recRetake').onclick=async()=>{
-      document.getElementById('recRetake').hidden=true;
-      document.getElementById('recUse').hidden=true;
-      video.controls=false; video.src=''; blob=null;
-      stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
-      video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
-      begin(video);
-    };
-    document.getElementById('recUse').onclick=async()=>{
-      const use=document.getElementById('recUse');
-      use.disabled=true; use.textContent='Uploading…';
-      try{
-        const res=await fetch('/api/video-upload',{method:'POST',headers:{'Content-Type':blob.type||'video/webm'},body:blob});
-        const body=await res.json();
-        if(!res.ok||!body.url)throw new Error(body.error||'Upload failed.');
-        urlField.value=body.url;
-        state.textContent='Recorded and attached. You can still replace it with a link.';
-        close();
-      }catch(err){
-        use.disabled=false; use.textContent='Use this take';
-        document.getElementById('recHint').textContent=err.message||'That upload did not go through. Try again, or paste a link.';
+      function countIn(){
+        const count=el('recCount'),start=el('recStart');
+        start.hidden=true;
+        let n=3; count.hidden=false; count.textContent=n;
+        const pre=setInterval(()=>{
+          n-=1;
+          if(n>0){count.textContent=n;return;}
+          clearInterval(pre); count.hidden=true; run();
+        },900);
       }
-    };
+
+      function run(){
+        const timerEl=el('recTimer');
+        const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9'
+          :MediaRecorder.isTypeSupported('video/webm')?'video/webm':'';
+        chunks=[]; secs=0;
+        recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+        recorder.ondataavailable=e=>{ if(e.data&&e.data.size)chunks.push(e.data); };
+        recorder.onstop=()=>{
+          clearInterval(timer); kept=secs;
+          blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
+          stopStream();
+          video.srcObject=null; video.src=URL.createObjectURL(blob); video.muted=false; video.controls=true;
+          timerEl.hidden=true;
+          hint.textContent='Watch it back. Retake as many times as you like — only the take you keep is uploaded.';
+          el('recRetake').hidden=false; el('recUse').hidden=false;
+        };
+        recorder.start();
+        timerEl.hidden=false; timerEl.textContent='0:00';
+        hint.textContent='Recording…';
+        const stopBtn=el('recStart');
+        stopBtn.hidden=false; stopBtn.textContent='Stop'; stopBtn.disabled=false;
+        stopBtn.onclick=()=>{ if(recorder&&recorder.state==='recording')recorder.stop(); stopBtn.hidden=true; };
+        timer=setInterval(()=>{
+          secs+=1; timerEl.textContent=fmt(secs);
+          if(secs>=maxSeconds&&recorder.state==='recording'){recorder.stop();stopBtn.hidden=true;}
+        },1000);
+
+        el('recRetake').onclick=async()=>{
+          el('recRetake').hidden=true; el('recUse').hidden=true;
+          video.controls=false; video.src=''; blob=null;
+          try{
+            stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
+          }catch{ hint.textContent='Camera access was lost. Close and try again.'; return; }
+          video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
+          countIn();
+        };
+        el('recUse').onclick=async()=>{
+          const use=el('recUse');
+          use.disabled=true; use.textContent='Saving…';
+          try{
+            const res=await fetch('/api/video-upload',{method:'POST',headers:{'Content-Type':blob.type||'video/webm'},body:blob});
+            const body=await res.json();
+            if(!res.ok||!body.url)throw new Error(body.error||'Upload failed.');
+            // Register it on the account so the next application can just pick it.
+            let saved=null;
+            try{
+              const out=await portalRequest({method:'POST',body:JSON.stringify({action:'save-video',url:body.url,prompt,label,durationSeconds:kept})});
+              saved=out.video||null;
+              if(saved)state.dashboard.videos=[saved,...(state.dashboard.videos||[])];
+            }catch{ /* the take still works for this application even if the library write fails */ }
+            done({url:body.url,durationSeconds:kept,video:saved});
+          }catch(err){
+            use.disabled=false; use.textContent='Use this take';
+            hint.textContent=err.message||'That upload did not go through. Try again, or paste a link.';
+          }
+        };
+      }
+    });
   }
 
-  btn.addEventListener('click',open);
+  function library(){ return (state.dashboard&&state.dashboard.videos)||[]; }
+
+  // The picker: your saved takes as selectable cards, a record button, and a link fallback
+  // tucked behind a toggle so it never reads as the expected path.
+  function mountPicker(host,input,{prompt='',maxSeconds=90,label='',onChange=null}={}){
+    if(!host||!input)return;
+    let mode=input.value&&!library().some(v=>v.url===input.value)?'link':'pick';
+    function paint(){
+      host.replaceChildren();
+      const takes=library();
+      if(takes.length){
+        const list=document.createElement('div'); list.className='video-takes';
+        takes.forEach((v,i)=>{
+          const card=document.createElement('button');
+          card.type='button';
+          card.className='video-take'+(input.value===v.url?' is-picked':'');
+          const thumb=document.createElement('span'); thumb.className='video-take-play'; thumb.textContent='▸';
+          const body=document.createElement('span'); body.className='video-take-body';
+          const t=document.createElement('strong');
+          t.textContent=v.label||(v.prompt?'Answer · '+String(v.prompt).slice(0,44)+(String(v.prompt).length>44?'…':''):'Take '+(takes.length-i));
+          const meta=document.createElement('small');
+          const when=v.created_at?dateLabel(v.created_at):'';
+          const len=Number(v.duration_seconds)?fmt(Number(v.duration_seconds)):'';
+          meta.textContent=[len,when].filter(Boolean).join(' · ')||'Recorded in Covenda';
+          body.append(t,meta);
+          const mark=document.createElement('span'); mark.className='video-take-mark'; mark.textContent=input.value===v.url?'Selected':'Use';
+          card.append(thumb,body,mark);
+          card.addEventListener('click',()=>{
+            input.value=input.value===v.url?'':v.url;
+            mode='pick'; paint(); onChange&&onChange(input.value);
+          });
+          list.append(card);
+        });
+        host.append(list);
+      }
+      const row=document.createElement('div'); row.className='video-picker-actions';
+      const rec=document.createElement('button'); rec.type='button'; rec.className='portal-primary compact';
+      rec.textContent=takes.length?'Record a new one':'Record it here';
+      if(!canRecord){ rec.disabled=true; rec.title='This browser cannot record video.'; }
+      rec.addEventListener('click',async()=>{
+        rec.disabled=true;
+        const out=await record({prompt,maxSeconds,label});
+        rec.disabled=false;
+        if(out&&out.url){ input.value=out.url; mode='pick'; paint(); onChange&&onChange(input.value); }
+      });
+      const alt=document.createElement('button'); alt.type='button'; alt.className='video-link-toggle';
+      alt.textContent=mode==='link'?'Record one instead':'I already have a link';
+      alt.addEventListener('click',()=>{ mode=mode==='link'?'pick':'link'; paint(); });
+      row.append(rec,alt); host.append(row);
+
+      if(mode==='link'){
+        const wrap=document.createElement('label'); wrap.className='video-link-field';
+        const cap=document.createElement('span'); cap.textContent='Paste a shareable link';
+        const box=document.createElement('input'); box.type='url'; box.placeholder='https://…'; box.value=input.value||'';
+        box.addEventListener('input',()=>{ input.value=box.value.trim(); onChange&&onChange(input.value); });
+        wrap.append(cap,box); host.append(wrap);
+      }
+      if(!canRecord&&mode!=='link'){
+        const note=document.createElement('p'); note.className='video-note';
+        note.textContent='This browser cannot record here — use “I already have a link”, or open Covenda in Chrome or Safari.';
+        host.append(note);
+      }
+    }
+    paint();
+    return { refresh:paint };
+  }
+
+  return { record, mountPicker, canRecord, library };
 })();
