@@ -156,7 +156,30 @@ function renderDashboard() {
   const { profile,projects,opportunities,applications,intakes=[],messages=[] }=state.dashboard;
   renderIdentity(profile);
   const role=profile?.role;
+  // Every nav item declares the roles it is for. Before this only Discover was gated, so a
+  // student saw Submissions (an operator inbox) and companies saw views built for students.
   $$('[data-student-only]').forEach(el=>el.hidden=role!=='student');
+  $$('nav [data-roles]').forEach(el=>{
+    const roles=(el.dataset.roles||'').split(/\s+/).filter(Boolean);
+    el.hidden = roles.length ? !roles.includes(role) : false;
+  });
+  // The same view means different things to different people, so it is named for the reader
+  // rather than for the data model.
+  const NAV_LABELS = {
+    student: { projects: 'My work', batches: 'Batches', portfolio: 'My profile', messages: 'Chats', wallet: 'Earnings', discover: 'Explore' },
+    company: { projects: 'Projects', batches: 'Talent batches', portfolio: 'Talent', messages: 'Messages', wallet: 'Wallet' },
+    university: { projects: 'Projects', messages: 'Messages', wallet: 'Wallet' },
+  };
+  const labels = NAV_LABELS[role] || {};
+  $$('nav [data-view]').forEach(el=>{
+    const key = el.dataset.view;
+    const span = $('span', el);
+    if (span && labels[key]) span.textContent = labels[key];
+  });
+  // If the current view is no longer available to this role, fall back rather than showing
+  // an empty pane.
+  const active = $('nav [data-view].is-active');
+  if (active && active.hidden) setView('overview');
   $$('[data-org-only]').forEach(el=>el.hidden=!['company','university'].includes(role));
   $('#portfolioNavLabel').textContent=role==='company'?'Talent':'Your proof of work';
   $('#projectCount').textContent=projects.length;
@@ -172,7 +195,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
+  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -356,6 +379,82 @@ function renderRequests(){
 function openRequest(){const form=$('#requestForm');if(form)form.reset();setDialogMessage('#requestMessage','');$('#requestDialog').showModal();}
 
 function renderProgress(){const profile=state.dashboard.profile;const score=profileCompletion(profile);$('#profileRing').style.setProperty('--progress',`${score*3.6}deg`);$('strong',$('#profileRing')).textContent=`${score}%`;$('#profileProgressTitle').textContent=score===100?'Your profile is ready':score>=60?'Add the finishing details':'Make a strong first impression';$('#profileProgressCopy').textContent=profile?.role==='student'?'Companies see only portfolios you choose to share.':'A complete organization profile adds context to every project.';}
+
+
+// ---- Student: verification standing and live milestones -----------------------------
+// Both are computed server-side and were invisible in the portal — a student had no way to
+// see how verified they were, or where their current work stood against its schedule.
+
+function renderVerification(){
+  const host=$('#verificationPanel');
+  const v=state.dashboard?.verification;
+  if(!host) return;
+  if(state.dashboard?.profile?.role!=='student'||!v){ host.hidden=true; return; }
+  host.replaceChildren();
+  const head=document.createElement('div'); head.className='verif-head';
+  const h=document.createElement('h3'); h.textContent='Your verification';
+  const sum=document.createElement('p'); sum.textContent=v.summary;
+  head.append(h,sum); host.append(head);
+
+  const list=document.createElement('ul'); list.className='verif-list';
+  v.signals.forEach(sig=>{
+    const li=document.createElement('li'); li.className=sig.held?'is-held':'';
+    const mark=document.createElement('span'); mark.className='verif-mark';
+    if(sig.held) mark.append(icon('p-verified')); else mark.textContent='○';
+    const div=document.createElement('div');
+    const strong=document.createElement('strong'); strong.textContent=sig.label;
+    const small=document.createElement('small'); small.textContent=sig.proves;
+    div.append(strong,small);
+    li.append(mark,div); list.append(li);
+  });
+  host.append(list);
+  // School email is the floor and must never read as the proof — said here, not just in the API.
+  if(!v.isStudentVerified){
+    const note=document.createElement('p'); note.className='verif-note';
+    note.textContent='A school email shows you control that address — it is the floor, not the proof. A confirmed club or a named referral is what companies weigh.';
+    host.append(note);
+  }
+  host.hidden=false;
+}
+
+function renderMilestones(){
+  const host=$('#milestonePanel');
+  if(!host) return;
+  const d=state.dashboard;
+  const project=(d?.projects||[]).find(p=>p.status==='in_progress'&&Array.isArray(p.milestones)&&p.milestones.length);
+  if(d?.profile?.role!=='student'||!project){ host.hidden=true; return; }
+  host.replaceChildren();
+  const h=document.createElement('h3'); h.textContent='Where your work stands';
+  const sub=document.createElement('p'); sub.className='ms-sub'; sub.textContent=project.title||'Current project';
+  host.append(h,sub);
+
+  const now=Date.now();
+  const ol=document.createElement('ol'); ol.className='ms-list';
+  project.milestones.forEach((m,i)=>{
+    const submitted=Boolean(m.submitted_at);
+    const due=m.due_at?Date.parse(m.due_at):null;
+    const overdue=!submitted&&due&&now>due;
+    const li=document.createElement('li');
+    li.className=submitted?'is-done':overdue?'is-late':'is-open';
+    const mark=document.createElement('span'); mark.className='ms-mark';
+    mark.textContent=submitted?'✓':String(i+1);
+    const div=document.createElement('div');
+    const strong=document.createElement('strong'); strong.textContent=m.title||('Checkpoint '+(i+1));
+    const small=document.createElement('small');
+    small.textContent=submitted
+      ? (m.on_time===false?'Submitted late':'Submitted on time')
+      : due ? (overdue?'Overdue — tell your reviewer if you need more time':'Due '+new Date(due).toLocaleDateString())
+            : 'No date set';
+    div.append(strong,small);
+    li.append(mark,div); ol.append(li);
+  });
+  host.append(ol);
+  // The rule stated where the student will actually read it.
+  const note=document.createElement('p'); note.className='verif-note';
+  note.textContent='Running late is fine — say so and nothing escalates. Going quiet is what moves the work to someone else.';
+  host.append(note);
+  host.hidden=false;
+}
 
 function renderActions(){const root=$('#nextActions');root.replaceChildren();const d=state.dashboard;const actions=[];if(profileCompletion(d.profile)<100)actions.push(['p-user','Complete your member profile','Add a headline, context, and skills.']);if(d.profile?.role==='student'&&!d.applications.length)actions.push(['p-compass','Explore your first opportunity','Open projects are ready to review.']);if(['company','university'].includes(d.profile?.role)&&!d.projects.length)actions.push(['p-plus','Create a private project draft','Start with the outcome and useful deliverable.']);if(!actions.length)actions.push(['p-check','You are caught up','New project activity will appear here.']);for(const [iconId,title,copy] of actions){const li=document.createElement('li');const mark=document.createElement('span');mark.append(icon(iconId));const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=copy;div.append(strong,small);li.append(mark,div);root.append(li);}}
 

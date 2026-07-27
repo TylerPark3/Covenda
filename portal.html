@@ -73,14 +73,14 @@
     <aside class="member-nav">
       <a class="portal-brand" href="/"><img class="brand-mark-img" src="/assets/covenda-mark.svg" alt="" width="29" height="29">Covenda</a>
       <nav aria-label="Member workspace">
-        <button class="is-active" type="button" data-view="overview"><svg><use href="#p-home"/></svg><span>Overview</span></button>
-        <button type="button" data-view="projects"><svg><use href="#p-project"/></svg><span>My projects</span><b id="projectCount">0</b></button>
-        <button type="button" data-view="activity"><svg><use href="#p-inbox"/></svg><span>Submissions</span><b id="intakeCount">0</b></button>
-        <button type="button" data-view="discover" data-student-only><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
-        <button type="button" data-view="batches" id="batchesNav"><svg><use href="#p-spark"/></svg><span>Batches</span><b id="batchCount">0</b></button>
-        <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Your proof of work</span></button>
-        <button type="button" data-view="messages"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
-        <button type="button" data-view="wallet"><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
+        <button class="is-active" type="button" data-view="overview" data-roles="student company university"><svg><use href="#p-home"/></svg><span>Overview</span></button>
+        <button type="button" data-view="projects" data-roles="student company university"><svg><use href="#p-project"/></svg><span>My projects</span><b id="projectCount">0</b></button>
+        <button type="button" data-view="activity" data-roles="company university"><svg><use href="#p-inbox"/></svg><span>Submissions</span><b id="intakeCount">0</b></button>
+        <button type="button" data-view="discover" data-roles="student"><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
+        <button type="button" data-view="batches" id="batchesNav" data-roles="student company"><svg><use href="#p-spark"/></svg><span>Batches</span><b id="batchCount">0</b></button>
+        <button type="button" data-view="portfolio" data-roles="student company"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Your proof of work</span></button>
+        <button type="button" data-view="messages" data-roles="student company university"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
+        <button type="button" data-view="wallet" data-roles="student company university"><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
       </nav>
       <div class="member-identity"><span id="memberInitial">C</span><div><strong id="memberNavName">Member</strong><small id="memberNavRole">Covenda</small></div></div>
       <button class="member-signout" id="memberSignout" type="button"><svg><use href="#p-exit"/></svg>Sign out</button>
@@ -103,6 +103,8 @@
           </div>
           <aside class="overview-rail">
             <section class="profile-progress"><div class="progress-ring" id="profileRing"><strong>0%</strong></div><div><p class="eyebrow">Profile strength</p><h2 id="profileProgressTitle">Make a strong first impression</h2><p id="profileProgressCopy">A complete profile helps Covenda route the right work.</p><button type="button" data-view="portfolio">Edit profile <svg><use href="#p-arrow"/></svg></button></div></section>
+            <section class="panel-card" id="milestonePanel" hidden></section>
+            <section class="panel-card" id="verificationPanel" hidden></section>
             <section class="rail-list"><div class="section-heading"><div><p class="eyebrow">Next up</p><h2>What you can do next</h2></div></div><ul id="nextActions"></ul></section>
           </aside>
         </div>

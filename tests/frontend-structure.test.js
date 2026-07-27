@@ -783,3 +783,30 @@ test('the trial/batch distinction is stated, not left to inference', () => {
   assert.match(html, /Start with trials if you have nothing yet/);
   assert.match(styles, /\.tb-split/);
 });
+
+// The portal nav was identical for every role — a student saw the operator submissions inbox,
+// a company saw views built for students — and every view was named for the data model rather
+// than the reader.
+test('the portal nav is role-gated and named for the reader', async () => {
+  const portalHtml = await readFile(new URL('../portal.html', import.meta.url), 'utf8');
+  const portalJs = await readFile(new URL('../portal.js', import.meta.url), 'utf8');
+  // Each item declares its roles in the markup, next to the thing it gates.
+  assert.ok((portalHtml.match(/data-roles="/g) || []).length >= 8);
+  assert.match(portalJs, /roles\.includes\(role\)/);
+  assert.match(portalJs, /const NAV_LABELS = \{/);
+  assert.match(portalJs, /student: \{ projects: 'My work'/);
+  // A view that vanishes under the current role must not leave an empty pane behind.
+  assert.match(portalJs, /if \(active && active\.hidden\) setView\('overview'\)/);
+});
+
+test('students can see their verification standing and where work stands', async () => {
+  const portalHtml = await readFile(new URL('../portal.html', import.meta.url), 'utf8');
+  const portalJs = await readFile(new URL('../portal.js', import.meta.url), 'utf8');
+  assert.match(portalHtml, /id="verificationPanel"/);
+  assert.match(portalHtml, /id="milestonePanel"/);
+  assert.match(portalJs, /function renderVerification\(\)/);
+  assert.match(portalJs, /function renderMilestones\(\)/);
+  // The two rules that only matter if the student actually reads them.
+  assert.match(portalJs, /it is the floor, not the proof/);
+  assert.match(portalJs, /Going quiet is what moves the work to someone else/);
+});
