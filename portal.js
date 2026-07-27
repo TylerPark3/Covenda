@@ -1586,6 +1586,10 @@ function batchFitOf(batch){
   const c=batch&&batch.compatibility;
   return c&&c.score!==null?c.score:null;
 }
+// The one minimum-match control. There used to be a second on the marketing site: static
+// markup with no handler and no skills data to compute a match against, so it moved and did
+// nothing. Two controls doing the same job in two files is how they drifted apart; this is
+// the only one, and it is the only one that can work, because it needs a signed-in profile.
 function renderBatchFilter(root){
   const d=state.dashboard;
   const withFit=(d.batches||[]).filter(b=>batchFitOf(b)!==null);
