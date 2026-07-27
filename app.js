@@ -5925,6 +5925,79 @@ function initBatchWeb() {
 })();
 
 
+// The public homepage now teaches the product with one traceable signal. Selecting a
+// requirement reveals the exact evidence and status behind the illustrative candidate.
+(function initProofLens() {
+  const lens = document.getElementById('proofLens');
+  if (!lens) return;
+  const criteria = Array.from(lens.querySelectorAll('[data-proof-criterion]'));
+  const evidenceRows = Array.from(lens.querySelectorAll('[data-proof-evidence]'));
+  const readoutLabel = document.getElementById('proofReadoutLabel');
+  const readoutValue = document.getElementById('proofReadoutValue');
+  const requestButton = document.getElementById('proofRequestIntro');
+  const requested = document.getElementById('proofRequested');
+  const resetButton = document.getElementById('proofResetIntro');
+  if (!criteria.length || criteria.length !== evidenceRows.length || !readoutLabel ||
+      !readoutValue || !requestButton || !requested || !resetButton) return;
+
+  const proof = {
+    product: {
+      label: 'Shipped React product',
+      value: 'Live product linked',
+    },
+    contribution: {
+      label: 'Clear contribution',
+      value: 'Code contribution confirmed',
+    },
+    hours: {
+      label: '10+ hours weekly',
+      value: 'Availability not yet verified',
+    },
+  };
+
+  function selectProof(key) {
+    const item = proof[key];
+    if (!item) return;
+    lens.dataset.proofKey = key;
+    criteria.forEach(button => {
+      const selected = button.dataset.proofCriterion === key;
+      button.classList.toggle('is-selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+    evidenceRows.forEach(button => {
+      const selected = button.dataset.proofEvidence === key;
+      button.classList.toggle('is-active', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+    readoutLabel.textContent = item.label;
+    readoutValue.textContent = item.value;
+    readoutValue.classList.toggle('is-unverified', key === 'hours');
+    requestButton.hidden = false;
+    requested.hidden = true;
+    lens.dataset.proofState = 'evidence';
+  }
+
+  criteria.forEach(button => {
+    button.addEventListener('click', () => selectProof(button.dataset.proofCriterion));
+  });
+  evidenceRows.forEach(button => {
+    button.addEventListener('click', () => selectProof(button.dataset.proofEvidence));
+  });
+  requestButton.addEventListener('click', () => {
+    requestButton.hidden = true;
+    requested.hidden = false;
+    lens.dataset.proofState = 'requested';
+    resetButton.focus({ preventScroll: true });
+  });
+  resetButton.addEventListener('click', () => {
+    requestButton.hidden = false;
+    requested.hidden = true;
+    lens.dataset.proofState = 'evidence';
+    requestButton.focus({ preventScroll: true });
+  });
+})();
+
+
 // The homepage preview is intentionally a small, legible product loop rather than a
 // decorative dashboard: define the need, inspect evidence, then request a mutual intro.
 (function initTalentDemo() {
