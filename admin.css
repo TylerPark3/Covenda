@@ -325,3 +325,37 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .harden-input[type="number"] { flex: 0 0 92px; }
 .harden-anchors { margin: 6px 0 0; font-size: 12px; color: #6b6b66; line-height: 1.5; }
 .admin-appeals-section .admin-user-row select { font: inherit; font-size: var(--step-body-sm); padding: 7px 9px; border: 1px solid #d8d8d2; background: #fff; }
+
+/* ── Who is in ─────────────────────────────────────────────────────────────────────────
+   The inbox answers "who filled in a form". This answers "who is in, and is it real".
+   Every population leads with the number that decides whether it counts; signups are the
+   vanity number and are deliberately the smaller line. */
+.admin-roster { display: grid; gap: 18px; padding: 26px 28px; }
+.roster-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.roster-head h2 { margin: 0 0 6px; font-size: 24px; letter-spacing: -.02em; }
+.roster-head p { margin: 0; max-width: 60ch; color: #6b6659; font-size: 13.5px; line-height: 1.6; }
+
+.roster-totals { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); }
+.roster-total { display: grid; gap: 3px; padding: 15px 17px; border: 1px solid #e2ddd1; background: #fff; }
+.roster-total b { font-size: 30px; line-height: 1; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.roster-total span { font-size: 12.5px; font-weight: 650; }
+.roster-total small { color: #8a8479; font-size: 11.5px; }
+
+.roster-tabs { display: flex; gap: 2px; border-bottom: 1px solid #e2ddd1; }
+.roster-tabs button { padding: 9px 16px; border: 0; border-bottom: 2px solid transparent; background: none; font: inherit; font-size: 13.5px; font-weight: 650; color: #6b6659; cursor: pointer; }
+.roster-tabs button.is-active { border-bottom-color: #b47b20; color: #191712; }
+
+.roster-search { width: 100%; max-width: 420px; min-height: 42px; padding: 10px 13px; border: 1px solid #cfc8b8; background: #fff; font: inherit; font-size: 14px; outline: 0; }
+.roster-search:focus { border-color: #b47b20; box-shadow: 0 0 0 3px rgba(180,123,32,.1); }
+
+/* Wide tables scroll inside their own container so the page never scrolls sideways. */
+.roster-scroll { overflow-x: auto; border: 1px solid #e2ddd1; background: #fff; }
+.roster-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.roster-table th, .roster-table td { padding: 10px 13px; text-align: left; border-bottom: 1px solid #efebe1; white-space: nowrap; }
+.roster-table th { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: #8a8479; font-weight: 700; background: #fbf9f4; }
+.roster-table td { font-variant-numeric: tabular-nums; }
+.roster-table tr:last-child td { border-bottom: 0; }
+.roster-pill { display: inline-block; padding: 3px 9px; border: 1px solid #cfc8b8; font-size: 11.5px; font-weight: 650; color: #6b6659; }
+.roster-pill[data-tone="good"] { border-color: rgba(36,117,58,.35); background: #f4faf5; color: #24753a; }
+.roster-pill[data-tone="warn"] { border-color: rgba(180,123,32,.35); background: #fbf7ed; color: #8b5709; }
+.roster-empty { padding: 22px; color: #8a8479; font-size: 13.5px; text-align: center; }

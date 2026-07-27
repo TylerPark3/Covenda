@@ -58,6 +58,7 @@
         <button type="button" data-admin-type="student_interest"><svg><use href="#a-user"/></svg><span>Students</span><b data-admin-count="student_interest">0</b></button>
         <button type="button" data-admin-type="employer_intake"><svg><use href="#a-company"/></svg><span>Companies</span><b data-admin-count="employer_intake">0</b></button>
         <button type="button" data-admin-type="university_partner"><svg><use href="#a-university"/></svg><span>Universities</span><b data-admin-count="university_partner">0</b></button>
+        <button type="button" id="rosterNav" class="admin-roster-nav"><svg><use href="#a-user"/></svg><span>Who's in</span></button>
       </nav>
       <button class="admin-signout" id="adminSignout" type="button"><svg><use href="#a-exit"/></svg>Sign out</button>
     </aside>
@@ -68,6 +69,24 @@
       <button class="admin-refresh" id="adminRefresh" type="button"><svg><use href="#a-refresh"/></svg>Refresh inbox</button>
     </header>
     <main class="admin-main">
+      <section class="admin-roster" id="adminRoster" hidden>
+        <div class="roster-head">
+          <div>
+            <h2>Who is actually on the platform</h2>
+            <p>Not who filled in a form — who is in, and whether it is real. Counts are derived from the rows, never stored.</p>
+          </div>
+          <button class="admin-refresh" type="button" id="rosterRefresh">Refresh</button>
+        </div>
+        <div class="roster-totals" id="rosterTotals"></div>
+        <div class="roster-tabs" role="tablist">
+          <button class="is-active" type="button" data-roster-tab="students" role="tab">Students</button>
+          <button type="button" data-roster-tab="clubs" role="tab">Clubs</button>
+          <button type="button" data-roster-tab="companies" role="tab">Companies</button>
+        </div>
+        <input class="roster-search" id="rosterSearch" type="search" placeholder="Filter by name, school, or domain">
+        <div class="roster-body" id="rosterBody"></div>
+      </section>
+
       <section class="admin-queue">
         <section class="admin-metrics-section" id="adminMetricsSection" hidden>
           <div class="admin-metrics-band" id="adminMetricsBand"></div>

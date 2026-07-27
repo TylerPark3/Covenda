@@ -870,6 +870,123 @@ function logAdminFailure(req, error, failure, startedAt) {
   }));
 }
 
+// Who is actually on the platform.
+//
+// The admin inbox lists SUBMISSIONS — people who filled in a form. That is not the same
+// question as "who is in", and answering the second one meant querying Supabase by hand.
+// This returns the three populations the pilot is judged on, each with the one number that
+// says whether it is real: a student with confirmed verification, a club with confirmed
+// members, a company that has posted funded work.
+//
+// Counts are DERIVED here rather than stored. A stored count is a number that can drift from
+// the rows it claims to summarise, and this is the view used to decide what is working.
+export async function loadPlatformRoster(supabase) {
+  const grab = async (q, fallback = []) => {
+    const { data, error } = await q;
+    return error ? fallback : (data || fallback);
+  };
+
+  const [profiles, clubs, members, batchApps, projects, confirmations] = await Promise.all([
+    grab(supabase.from('member_profiles').select('user_id,role,display_name,school_name,organization_name,headline,created_at,updated_at,school_email_verified_at,work_email_verified_at,work_email_domain,identity_verified,verticals,skills')),
+    grab(supabase.from('clubs').select('id,name,school,vertical_slug,status,contact_email,created_at')),
+    grab(supabase.from('club_members').select('id,club_id,student_user_id,status')),
+    grab(supabase.from('batch_applications').select('batch_id,student_user_id,status')),
+    grab(supabase.from('member_projects').select('id,owner_user_id,assigned_student_user_id,status,credits_listed,credits_held,created_at,completed_at')),
+    grab(supabase.from('club_confirmations').select('club_id,status,officer_name,decided_at')),
+  ]);
+
+  const byUser = new Map(profiles.map(p => [p.user_id, p]));
+  const appsByStudent = new Map();
+  for (const a of batchApps) {
+    const list = appsByStudent.get(a.student_user_id) || [];
+    list.push(a); appsByStudent.set(a.student_user_id, list);
+  }
+  const membershipByStudent = new Map();
+  for (const m of members) {
+    const list = membershipByStudent.get(m.student_user_id) || [];
+    list.push(m); membershipByStudent.set(m.student_user_id, list);
+  }
+  const clubById = new Map(clubs.map(c => [c.id, c]));
+
+  const students = profiles.filter(p => p.role === 'student').map(p => {
+    const apps = appsByStudent.get(p.user_id) || [];
+    const mems = membershipByStudent.get(p.user_id) || [];
+    const confirmedClubs = mems.filter(m => m.status === 'confirmed');
+    const assigned = projects.filter(x => x.assigned_student_user_id === p.user_id);
+    return {
+      userId: p.user_id,
+      name: p.display_name,
+      school: p.school_name || null,
+      joinedAt: p.created_at,
+      schoolEmailVerified: Boolean(p.school_email_verified_at),
+      identityVerified: Boolean(p.identity_verified),
+      clubs: confirmedClubs.map(m => clubById.get(m.club_id)?.name).filter(Boolean),
+      clubsClaimedUnconfirmed: mems.filter(m => m.status === 'claimed').length,
+      batchesApplied: apps.length,
+      batchesAdmitted: apps.filter(a => a.status === 'accepted').length,
+      projectsAssigned: assigned.length,
+      projectsCompleted: assigned.filter(x => x.status === 'complete').length,
+      // The honest headline: verified means a club or a referral, never a school email.
+      verified: confirmedClubs.length > 0,
+    };
+  });
+
+  const clubRows = clubs.map(c => {
+    const mems = members.filter(m => m.club_id === c.id);
+    const confirmed = mems.filter(m => m.status === 'confirmed');
+    const ids = new Set(confirmed.map(m => m.student_user_id));
+    const admitted = batchApps.filter(a => ids.has(a.student_user_id) && a.status === 'accepted');
+    const officers = confirmations.filter(x => x.club_id === c.id && x.status === 'confirmed');
+    return {
+      id: c.id, name: c.name, school: c.school || null, vertical: c.vertical_slug || null,
+      status: c.status, contact: c.contact_email || null, createdAt: c.created_at,
+      claimed: mems.length,
+      confirmed: confirmed.length,
+      admitted: admitted.length,
+      // A club with claims and no officer confirmation is not yet evidence of anything.
+      officerConfirmed: officers.length,
+      lastOfficer: officers.length ? officers[officers.length - 1].officer_name : null,
+    };
+  });
+
+  const companies = profiles.filter(p => p.role === 'company').map(p => {
+    const owned = projects.filter(x => x.owner_user_id === p.user_id);
+    const funded = owned.filter(x => Number(x.credits_held) > 0 || Number(x.credits_listed) > 0);
+    return {
+      userId: p.user_id,
+      name: p.organization_name || p.display_name,
+      contactName: p.display_name,
+      joinedAt: p.created_at,
+      workEmailVerified: Boolean(p.work_email_verified_at),
+      domain: p.work_email_domain || null,
+      projectsPosted: owned.length,
+      projectsFunded: funded.length,
+      projectsLive: owned.filter(x => ['open', 'matched', 'in_progress', 'review'].includes(x.status)).length,
+      projectsCompleted: owned.filter(x => x.status === 'complete').length,
+      creditsHeld: owned.reduce((n, x) => n + (Number(x.credits_held) || 0), 0),
+      // What actually matters: did they put real work up, not did they sign up.
+      active: funded.length > 0,
+    };
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    totals: {
+      students: students.length,
+      studentsVerified: students.filter(s => s.verified).length,
+      clubs: clubRows.length,
+      clubsWithConfirmedMembers: clubRows.filter(c => c.confirmed > 0).length,
+      companies: companies.length,
+      companiesActive: companies.filter(c => c.active).length,
+      projectsLive: projects.filter(p => ['open', 'matched', 'in_progress', 'review'].includes(p.status)).length,
+      projectsCompleted: projects.filter(p => p.status === 'complete').length,
+    },
+    students: students.sort((a, b) => new Date(b.joinedAt || 0) - new Date(a.joinedAt || 0)),
+    clubs: clubRows.sort((a, b) => b.confirmed - a.confirmed),
+    companies: companies.sort((a, b) => new Date(b.joinedAt || 0) - new Date(a.joinedAt || 0)),
+  };
+}
+
 export default async function handler(req, res, dependencies = {}) {
   const startedAt = Date.now();
   res.setHeader('Cache-Control', 'no-store');
@@ -897,6 +1014,9 @@ export default async function handler(req, res, dependencies = {}) {
       // Every other POST action mutates operator data and requires an authenticated operator.
       const operator = await authorizeAdmin(req, dependencies);
       if (!operator) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
+      if (input.action === 'platform-roster') {
+        return res.status(200).json({ ok: true, roster: await loadPlatformRoster(operator.supabase) });
+      }
       if (input.action === 'create-batch') {
         return res.status(201).json({ ok: true, batch: await createBatch(operator.supabase, input, operator.email) });
       }

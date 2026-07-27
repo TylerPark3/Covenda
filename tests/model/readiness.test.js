@@ -78,3 +78,19 @@ test('a low score alone is never described as the student being weak', () => {
   const r = readinessFor({ score: 5, gaps: [] });
   assert.doesNotMatch(JSON.stringify(r), /\b(bad|weak|unqualified|poor) candidate\b/i);
 });
+
+// Opportunities have a score, not structured requirements. Reusing the batch path with empty
+// gaps would have pushed everything unmatched into `stretch`, which is why this is separate.
+test('opportunities band on score, and a stretch stays visible', async () => {
+  const { categoriseOpportunity, groupOpportunities } = await import('../../api/readiness.js');
+  assert.equal(categoriseOpportunity({ score: 88 }), 'strong');
+  assert.equal(categoriseOpportunity({ score: 55 }), 'growth');
+  assert.equal(categoriseOpportunity({ score: 20 }), 'stretch');
+  assert.equal(categoriseOpportunity({ score: 20, matched: false }), 'explore');
+
+  const groups = groupOpportunities([
+    { fitScore: 90, matched: true }, { fitScore: 50, matched: true }, { fitScore: 95, matched: true },
+  ]);
+  assert.deepEqual(groups.map(g => g.key), ['strong', 'growth']);
+  assert.equal(groups[0].items[0].fitScore, 95, 'best first inside a band');
+});

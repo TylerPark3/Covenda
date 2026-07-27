@@ -121,6 +121,29 @@ export const OPPORTUNITY_CATEGORIES = [
   { key: 'explore', label: 'Worth a look', blurb: 'Outside what you said you wanted — sometimes that is the point.' },
 ];
 
+// Opportunities carry a fit score and reasons rather than structured requirements, so they
+// band on the score. Kept separate from categorise() on purpose: inventing empty "gaps" to
+// reuse the batch path would have quietly pushed every unmatched project into `stretch`.
+export function categoriseOpportunity({ score = 0, matched = true } = {}) {
+  const v = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+  if (v >= 70) return 'strong';
+  if (v >= 45) return 'growth';
+  if (!matched) return 'explore';
+  return 'stretch';
+}
+
+export function groupOpportunities(items = []) {
+  const out = OPPORTUNITY_CATEGORIES.map(c => ({ ...c, items: [] }));
+  const index = Object.fromEntries(out.map((c, i) => [c.key, i]));
+  for (const item of items) {
+    const key = categoriseOpportunity({ score: item.fitScore ?? 0, matched: item.matched !== false });
+    out[index[key]].items.push(item);
+  }
+  // Best first inside each band, and empty bands never render as hollow sections.
+  out.forEach(c => c.items.sort((a, b) => (b.fitScore || 0) - (a.fitScore || 0)));
+  return out.filter(c => c.items.length);
+}
+
 export function categorise(item, { score = 0, gaps = [], matched = true } = {}) {
   const r = readinessFor({ score, gaps });
   if (!matched && r.state !== 'ready') return 'explore';

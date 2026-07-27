@@ -10,7 +10,7 @@ import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION, evaluate
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normaliseEmail } from './verification.js';
 import { classifyCompanyEmail, domainMatchesCompany, companyVerificationStanding } from './company-verification.js';
-import { readinessFor } from './readiness.js';
+import { readinessFor, categoriseOpportunity } from './readiness.js';
 import { buildMilestoneSchedule, evaluateMilestones, reassignmentDecision, founderTimeVariance } from './milestones.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
@@ -302,7 +302,10 @@ export async function loadMemberDashboard(member, env = process.env) {
       : [];
     const verifiedCount = projects.filter(project => project.status === 'complete').length;
     const positiveOutcomes = projects.filter(project => project.conversion_outcome && project.conversion_outcome !== 'none').length;
-    const rankedOpportunities = await attachPosters(supabase, rankOpportunities(opportunities, profile, { completedCount: verifiedCount, positiveOutcomes }));
+    const rankedOpportunities = (await attachPosters(supabase, rankOpportunities(opportunities, profile, { completedCount: verifiedCount, positiveOutcomes })))
+      // Banded server-side so the client renders one agreed grouping rather than
+      // re-deriving it and drifting.
+      .map(p => ({ ...p, category: categoriseOpportunity({ score: p.fitScore, matched: p.matched }) }));
     const matchedCount = rankedOpportunities.filter(project => project.matched).length;
     // Students hold credits too once escrow is released, so they get a balance (the
     // Wallet view itself stays company/university only).

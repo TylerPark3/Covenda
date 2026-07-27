@@ -1194,8 +1194,33 @@ function renderDiscover(){
   root.replaceChildren();
   if(!items.length){const savedTab=discoverState.tab==='saved';const filtered=!savedTab&&(d.opportunities||[]).length>0;emptyList(root,'p-compass',savedTab?'No saved projects yet.':filtered?'No projects match your filters.':'No open projects yet.',savedTab?'Tap Save on any project to keep it here.':filtered?'Try clearing a filter, or check back as new projects are posted.':'New reviewed opportunities appear here as companies post them. Complete your profile so Covenda can route the right fit.',filtered?{label:'Reset filters',run:()=>$('#filterReset')?.click()}:savedTab?null:{label:'Complete your profile →',run:()=>setView('portfolio')});return;}
   const applied=new Set((d.applications||[]).map(a=>a.project_id));
+  // One sorted list buries everything past the top few, which trains a student to only ever
+  // look at what they already qualify for. Bands keep a stretch visible without dressing it
+  // up as a match. Sorting tabs (best match) stay one flat list, since that IS the sort.
+  if(discoverState.tab==='all'&&items.some(p=>p.category)){
+    for(const band of DISCOVER_BANDS){
+      const inBand=items.filter(p=>(p.category||'stretch')===band.key);
+      if(!inBand.length)continue;
+      const head=document.createElement('div');head.className='discover-band';
+      const h=document.createElement('h3');h.textContent=band.label;
+      const c=document.createElement('span');c.textContent=inBand.length;
+      const p=document.createElement('p');p.textContent=band.blurb;
+      const top=document.createElement('div');top.className='discover-band-top';top.append(h,c);
+      head.append(top,p);root.append(head);
+      for(const project of inBand)root.append(discoverCard(project,applied.has(project.id)));
+    }
+    return;
+  }
   for(const project of items)root.append(discoverCard(project,applied.has(project.id)));
 }
+// Mirrors OPPORTUNITY_CATEGORIES in api/readiness.js; portal.js is a classic script and
+// cannot import, so the labels live here and the banding decision stays on the server.
+const DISCOVER_BANDS=[
+  {key:'strong',label:'Strong matches',blurb:'You meet the bar. These are worth your best effort.'},
+  {key:'growth',label:'Growth opportunities',blurb:'Close, and what is missing is closeable. The fastest way to level up.'},
+  {key:'stretch',label:'Stretch',blurb:'Beyond you today. Worth knowing what they ask for.'},
+  {key:'explore',label:'Worth a look',blurb:'Outside what you said you wanted — sometimes that is the point.'},
+];
 function discoverCard(project,isApplied){
   const row=document.createElement('article');row.className='discover-card'+(project.matched?' is-matched':'');
   const top=document.createElement('div');top.className='discover-card-top';const head=document.createElement('div');head.className='discover-card-head';const h=document.createElement('h3');h.textContent=project.title;head.append(h);
