@@ -195,7 +195,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
+  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderPipeline();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -840,6 +840,65 @@ async function respondPacket(projectId,decision,button,msg){
     await portalRequest({method:'POST',body:JSON.stringify({action:'respond-packet',projectId,decision})});
     await loadDashboard();setView('projects');
   }catch(error){if(msg){msg.textContent=error.message;msg.classList.add('is-error');}button.disabled=false;button.textContent=original;}
+}
+
+// ── The applicant pipeline ────────────────────────────────────────────────────────────
+// A flat list of applications answers "how many" and not "what do I do next". Grouped by
+// stage, a company sees where everyone actually is and which column is theirs to move.
+const PIPELINE_STAGES=[
+  {key:'submitted',label:'New',blurb:'Waiting on you.'},
+  {key:'reviewing',label:'Reviewing',blurb:'You have opened these.'},
+  {key:'shortlisted',label:'Shortlisted',blurb:'Worth a conversation.'},
+  {key:'accepted',label:'Accepted',blurb:'Approved to start.'},
+  {key:'declined',label:'Declined',blurb:'Closed out.'},
+];
+function renderPipeline(){
+  const host=$('#pipelinePanel');
+  if(!host)return;
+  const d=state.dashboard;
+  if(d?.profile?.role!=='company'){host.hidden=true;host.replaceChildren();return;}
+  const apps=d.applications||[];
+  if(!apps.length){host.hidden=true;host.replaceChildren();return;}
+  host.replaceChildren();
+
+  const head=document.createElement('div');head.className='pipe-head';
+  const h=document.createElement('h3');h.textContent='Your pipeline';
+  const waiting=apps.filter(a=>a.status==='submitted').length;
+  const sub=document.createElement('p');
+  sub.textContent=waiting?`${waiting} waiting on you.`:'Nothing waiting on you right now.';
+  head.append(h,sub);host.append(head);
+
+  const grid=document.createElement('div');grid.className='pipe-grid';
+  PIPELINE_STAGES.forEach(stage=>{
+    const col=document.createElement('div');col.className='pipe-col';col.dataset.stage=stage.key;
+    const inStage=apps.filter(a=>(a.status||'submitted')===stage.key);
+    const top=document.createElement('div');top.className='pipe-col-top';
+    const name=document.createElement('strong');name.textContent=stage.label;
+    const n=document.createElement('span');n.textContent=inStage.length;
+    top.append(name,n);
+    const blurb=document.createElement('small');blurb.textContent=stage.blurb;
+    col.append(top,blurb);
+    if(!inStage.length){
+      const empty=document.createElement('p');empty.className='pipe-empty';empty.textContent='—';col.append(empty);
+    }
+    inStage.slice(0,12).forEach(app=>{
+      const card=document.createElement('button');card.type='button';card.className='pipe-card';
+      const who=document.createElement('strong');
+      who.textContent=app.applicant?.display_name||'Applicant';
+      card.append(who);
+      const meta=document.createElement('small');
+      meta.textContent=[app.applicant?.school_name,app.fit?.presentation?`${app.fit.presentation.value}% fit`:''].filter(Boolean).join(' · ');
+      if(meta.textContent)card.append(meta);
+      card.addEventListener('click',()=>{setView('activity');pulse('#applicationList');});
+      col.append(card);
+    });
+    if(inStage.length>12){
+      const more=document.createElement('small');more.className='pipe-more';more.textContent=`+${inStage.length-12} more`;col.append(more);
+    }
+    grid.append(col);
+  });
+  host.append(grid);
+  host.hidden=false;
 }
 
 function renderActivity(){

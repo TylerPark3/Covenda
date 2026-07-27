@@ -4786,11 +4786,21 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 
 /* The section intro ran the full content width, so the lede under a 60px display heading
    stretched past 100 characters on one line. Centred, and held to a readable measure. */
-.batches-section > .section-heading { text-align: center; }
-.batches-section > .section-heading h2 { margin-inline: auto; max-width: 18ch; text-wrap: balance; }
-.batches-section > .section-heading p { margin-inline: auto; max-width: 62ch; }
+/* .section-heading is a two-column editorial grid, so the kicker, headline and lede were
+   landing in different columns — text-align could never fix that. This section wants one
+   centred stack, so it gets one. */
+.batches-section > .section-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+  margin-bottom: clamp(30px, 4vw, 48px);
+}
+.batches-section > .section-heading > * { margin: 0; max-width: 62ch; }
+.batches-section > .section-heading h2 { max-width: 20ch; text-wrap: balance; }
 .batches-section > .section-heading .feature-kicker { justify-content: center; }
-.tb-note { margin-inline: auto; }
+.tb-note { margin-inline: auto; text-align: center; justify-content: center; }
 
 /* The split takes the section's full content width — it was capped at 1080px, which left it
    floating in the middle of a wider page. */

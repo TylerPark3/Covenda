@@ -1330,3 +1330,23 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .brief-signal .brief-strong { color: var(--success); }
 .brief-signal.is-off strong { color: var(--soft); }
 .brief-approve { display: grid; gap: 8px; justify-items: start; }
+
+/* ── Applicant pipeline ────────────────────────────────────────────────────────────────
+   A flat list answers "how many". Grouped by stage answers "what do I do next", and the
+   first column is always the one waiting on the company. */
+.pipeline-panel { display: grid; gap: 14px; }
+.pipe-head h3 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; }
+.pipe-head p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.pipe-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+.pipe-col { display: grid; align-content: start; gap: 7px; padding: 11px; border: 1px solid var(--line); background: #fff; min-width: 0; }
+.pipe-col[data-stage="submitted"] { border-color: var(--gold); background: var(--gold-pale); }
+.pipe-col-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.pipe-col-top strong { font-size: 12.5px; }
+.pipe-col-top span { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--gold-deep); }
+.pipe-col > small { color: var(--soft); font-size: 11px; line-height: 1.4; }
+.pipe-card { display: grid; gap: 2px; width: 100%; padding: 8px 9px; border: 1px solid var(--line); border-radius: 0; background: #fff; text-align: left; font: inherit; cursor: pointer; min-width: 0; }
+.pipe-card:hover { border-color: var(--gold); background: var(--gold-pale); }
+.pipe-card strong { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pipe-card small { color: var(--soft); font-size: 10.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pipe-empty { margin: 0; color: var(--line-strong); font-size: 13px; }
+.pipe-more { color: var(--soft); font-size: 11px; }
