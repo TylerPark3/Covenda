@@ -195,7 +195,7 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
+  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -498,9 +498,32 @@ function openClubStep(){
       // against; a repeat registration updates rather than forks it.
       const reg=await portalRequest({method:'POST',body:JSON.stringify({action:'register-club',clubName:name.input.value.trim(),school:school.input.value.trim(),email:officer.input.value.trim(),role:role.input.value.trim()})});
       await portalRequest({method:'POST',body:JSON.stringify({action:'claim-club',clubId:reg.club.id})});
-      d.say('Filed. It shows as confirmed once an officer of the club verifies you.');
+      // The claim alone counts for nothing, so hand them the thing that makes it count.
+      d.say('Filed. Now get it confirmed — that is what makes it count.');
       await loadDashboard();
-      setTimeout(()=>d.close(),1400);
+      d.body.replaceChildren();
+      const done=document.createElement('p');done.className='verif-intro';
+      done.textContent='Send this link to an officer of the club — a president, captain, or faculty advisor. They confirm in about thirty seconds and do not need a Covenda account.';
+      d.body.append(done);
+      d.foot.replaceChildren();
+      try{
+        const out=await portalRequest({method:'POST',body:JSON.stringify({action:'club-confirmation-link',clubId:reg.club.id})});
+        const url=location.origin+'/confirm.html?token='+encodeURIComponent(out.token);
+        const box=document.createElement('input');box.className='verif-link';box.readOnly=true;box.value=url;
+        box.addEventListener('focus',()=>box.select());
+        d.body.append(box);
+        const copy=document.createElement('button');copy.type='button';copy.className='portal-primary';copy.textContent='Copy the link';
+        copy.addEventListener('click',async()=>{
+          try{ await navigator.clipboard.writeText(url); copy.textContent='Copied'; }
+          catch{ box.select(); d.say('Select-all and copy — your browser blocked the clipboard.',true); }
+        });
+        const mail=document.createElement('button');mail.type='button';mail.className='portal-secondary';mail.textContent='Open in email';
+        mail.addEventListener('click',()=>{
+          window.location.href='mailto:?subject='+encodeURIComponent('Quick confirmation for Covenda')
+            +'&body='+encodeURIComponent('Hi,\n\nI listed our club on Covenda, which places undergraduates on paid project work. Could you confirm I am a member? It takes about thirty seconds and does not need an account:\n\n'+url+'\n\nThank you.');
+        });
+        d.foot.append(copy,mail);
+      }catch(error){ d.say(error.message,true); }
     }catch(error){ submit.disabled=false; d.say(error.message,true); }
   });
   d.open(); name.input.focus();
@@ -644,6 +667,45 @@ function renderJourney(){
     li.append(row); ol.append(li);
   });
   host.append(ol);
+  host.hidden=false;
+}
+
+// Approved, but not started. The company has committed and the payment is held; nothing is
+// running against the student until they say they are beginning. Doing work for a company
+// that never actually committed is the failure this exists to prevent, so the panel states
+// the commitment in the same breath as the button.
+function renderTrialStart(){
+  const host=$('#trialStartPanel');
+  if(!host)return;
+  const d=state.dashboard;
+  if(d?.profile?.role!=='student'){host.hidden=true;host.replaceChildren();return;}
+  const waiting=(d.projects||[]).filter(p=>p.status==='matched'&&p.assigned_student_user_id===d.profile?.user_id);
+  if(!waiting.length){host.hidden=true;host.replaceChildren();return;}
+  host.replaceChildren();
+  const h=document.createElement('h3');h.textContent=waiting.length===1?'You have been approved':'You have been approved for '+waiting.length+' projects';
+  host.append(h);
+  waiting.forEach(project=>{
+    const card=document.createElement('article');card.className='trial-start';
+    const t=document.createElement('strong');t.textContent=project.title;
+    const sum=document.createElement('p');sum.textContent=project.summary||'';
+    const facts=document.createElement('ul');facts.className='trial-start-facts';
+    const pay=Number(project.credits_listed)||0;
+    [[pay?`${pay.toLocaleString()} credits held for you`:'Unpaid — no payment is attached to this project',pay>0],
+     ['The clock starts when you start, not now',true],
+     [project.target_date?`Target date ${dateLabel(project.target_date)}`:'No target date set',true]]
+      .forEach(([text,good])=>{const li=document.createElement('li');li.className=good?'is-good':'is-warn';li.textContent=text;facts.append(li);});
+    const go=document.createElement('button');go.type='button';go.className='portal-primary';
+    go.textContent='Start this work';
+    const msg=document.createElement('p');msg.className='dialog-message';msg.setAttribute('aria-live','polite');
+    go.addEventListener('click',async()=>{
+      go.disabled=true;msg.textContent='Starting…';
+      try{
+        await portalRequest({method:'POST',body:JSON.stringify({action:'start-trial',projectId:project.id})});
+        await loadDashboard();
+      }catch(error){go.disabled=false;msg.textContent=error.message;msg.classList.add('is-error');}
+    });
+    card.append(t,sum,facts,go,msg);host.append(card);
+  });
   host.hidden=false;
 }
 

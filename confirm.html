@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Confirm a member · Covenda</title>
+  <link rel="stylesheet" href="/type.css">
+  <link rel="stylesheet" href="/styles.css">
+  <style>
+    /* A single-purpose page for someone who has never seen Covenda and will not return.
+       Everything they need to decide, nothing else. */
+    body { display: grid; place-items: center; min-height: 100dvh; padding: 32px 20px; background: #fbf9f4; }
+    .cc { width: min(560px, 100%); padding: clamp(26px, 4vw, 44px); border: 1px solid var(--line-strong); background: #fff; }
+    .cc-brand { display: flex; align-items: center; gap: 9px; margin-bottom: 26px; font-weight: 650; letter-spacing: -.01em; }
+    .cc-brand img { width: 26px; height: 26px; }
+    .cc h1 { margin: 0 0 10px; font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 4vw, 34px); letter-spacing: -.03em; line-height: 1.12; }
+    .cc-lede { margin: 0 0 22px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+    .cc-claim { padding: 16px 18px; margin: 0 0 22px; background: var(--gold-pale); border: 1px solid var(--gold-light); }
+    .cc-claim strong { display: block; font-size: 17px; }
+    .cc-claim span { color: var(--muted); font-size: 14px; }
+    .cc form { display: grid; gap: 14px; }
+    .cc label { display: grid; gap: 6px; font-size: 13px; font-weight: 650; color: #2b2924; }
+    .cc label small { color: var(--soft); font-weight: 500; }
+    .cc input { width: 100%; min-height: 46px; padding: 11px 13px; border: 1px solid var(--line-strong); background: #fff; font: inherit; font-size: 15px; outline: 0; }
+    .cc input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(180,123,32,.1); }
+    .cc-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+    .cc-actions button { min-height: 48px; padding: 0 20px; border: 1px solid var(--line-strong); background: #fff; font: inherit; font-weight: 650; font-size: 15px; cursor: pointer; }
+    .cc-actions .is-primary { border-color: var(--gold-deep); background: var(--gold-deep); color: #fff; }
+    .cc-note { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--line); color: var(--soft); font-size: 13px; line-height: 1.55; }
+    .cc-msg { margin: 14px 0 0; font-size: 14px; }
+    .cc-msg.is-error { color: #a3301f; }
+    .cc-done { display: grid; gap: 10px; }
+  </style>
+</head>
+<body>
+  <main class="cc" id="cc">
+    <div class="cc-brand"><img src="/assets/covenda-mark.svg" alt="" width="26" height="26">Covenda</div>
+    <div id="ccBody"><p class="cc-lede">Loading…</p></div>
+  </main>
+
+  <script>
+  // Classic script, no modules — same constraint as the rest of the site.
+  (function () {
+    var body = document.getElementById('ccBody');
+    var token = new URLSearchParams(location.search).get('token') || '';
+    function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; }
+    function fail(message) { body.replaceChildren(el('h1', null, 'This link cannot be used'), el('p', 'cc-lede', message)); }
+
+    if (!token) { fail('The link is missing its confirmation code. Ask the student to send it again.'); return; }
+
+    fetch('/api/club-confirm?token=' + encodeURIComponent(token))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.ok) return fail(data.error || 'That confirmation link is not valid.');
+        if (!data.usable) return fail(data.reason || 'This link has already been used.');
+
+        body.replaceChildren();
+        body.append(el('h1', null, 'Is this person a member?'));
+        body.append(el('p', 'cc-lede', 'A student has asked you to confirm their membership. This takes about thirty seconds and does not create an account.'));
+
+        var claim = el('div', 'cc-claim');
+        claim.append(el('strong', null, data.studentName));
+        claim.append(el('span', null, 'says they are a current member of ' + (data.club ? data.club.name : 'your club') + (data.club && data.club.school ? ' at ' + data.club.school : '')));
+        body.append(claim);
+
+        var form = document.createElement('form');
+        function field(name, label, hint, type) {
+          var l = el('label'); var s = el('span', null, label);
+          if (hint) { var h = el('small', null, ' ' + hint); s.append(h); }
+          var i = document.createElement('input'); i.name = name; i.type = type || 'text';
+          l.append(s, i); form.append(l); return i;
+        }
+        var nameInput = field('officerName', 'Your name', '— required', 'text');
+        var roleInput = field('officerRole', 'Your role in the club', '— optional', 'text');
+        var emailInput = field('officerEmail', 'Your email', '— optional', 'email');
+
+        var actions = el('div', 'cc-actions');
+        var yes = el('button', 'is-primary', 'Yes, confirm them'); yes.type = 'button';
+        var no = el('button', null, 'No, they are not a member'); no.type = 'button';
+        actions.append(yes, no); form.append(actions);
+        var msg = el('p', 'cc-msg'); msg.setAttribute('aria-live', 'polite'); form.append(msg);
+        body.append(form);
+
+        body.append(el('p', 'cc-note', 'Covenda places undergraduates on paid, reviewed project work. A confirmed membership is one of the signals companies weigh — which is why your name is recorded against it.'));
+
+        function decide(decision) {
+          if (decision === 'confirm' && nameInput.value.trim().length < 2) {
+            msg.textContent = 'Enter your name first.'; msg.className = 'cc-msg is-error'; nameInput.focus(); return;
+          }
+          yes.disabled = true; no.disabled = true;
+          msg.className = 'cc-msg'; msg.textContent = 'Sending…';
+          fetch('/api/club-confirm', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              token: token, decision: decision,
+              officerName: nameInput.value.trim(), officerRole: roleInput.value.trim(), officerEmail: emailInput.value.trim()
+            })
+          }).then(function (r) { return r.json(); }).then(function (out) {
+            if (!out.ok) throw new Error(out.error || 'That did not go through.');
+            var done = el('div', 'cc-done');
+            done.append(el('h1', null, out.confirmed ? 'Confirmed — thank you' : 'Recorded — thank you'));
+            done.append(el('p', 'cc-lede', out.confirmed
+              ? out.student + ' is now a confirmed member of ' + out.club + ' on Covenda. Nothing else is needed from you.'
+              : 'We have recorded that ' + out.student + ' is not a member. Nothing else is needed from you.'));
+            body.replaceChildren(done);
+          }).catch(function (err) {
+            yes.disabled = false; no.disabled = false;
+            msg.textContent = err.message; msg.className = 'cc-msg is-error';
+          });
+        }
+        yes.addEventListener('click', function () { decide('confirm'); });
+        no.addEventListener('click', function () { decide('decline'); });
+      })
+      .catch(function () { fail('We could not reach Covenda. Try again in a moment.'); });
+  })();
+  </script>
+</body>
+</html>

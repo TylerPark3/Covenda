@@ -547,7 +547,10 @@ test('project messages require project membership and store only bounded text', 
   assert.equal(message.author_user_id,'student-1');
 });
 
-test('accepting an application assigns the student, moves the project in progress, and declines siblings', async () => {
+// Accepting APPROVES the student; it does not put them to work. The student's own
+// confirmation starts the trial, so nobody is ever mid-project on something they never
+// agreed to begin.
+test('accepting an application approves the student without starting the work, and declines siblings', async () => {
   let acceptPayload, assignPayload, declinePayload;
   const supabase = queuedSupabase([
     { result: { id: APPLICATION_UUID, project_id: PROJECT_UUID, student_user_id: 'student-9', status: 'submitted' } },
@@ -560,7 +563,7 @@ test('accepting an application assigns the student, moves the project in progres
   assert.equal(accepted.status, 'accepted');
   assert.equal(acceptPayload.status, 'accepted');
   assert.equal(assignPayload.assigned_student_user_id, 'student-9');
-  assert.equal(assignPayload.status, 'in_progress');
+  assert.equal(assignPayload.status, 'matched', 'approved and waiting, not started');
   assert.equal(declinePayload.status, 'declined');
 });
 

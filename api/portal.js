@@ -58,6 +58,14 @@ function cleanText(value, maxLength) {
   return typeof value === 'string' ? value.replace(/\0/g, '').trim().slice(0, maxLength) : '';
 }
 
+// The confirmation token is the only credential on the officer route, so it comes from the
+// CSPRNG rather than Math.random.
+function randomToken(bytes = 32) {
+  const buf = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(buf);
+  return Array.from(buf, b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function cleanEmail(value) {
   const result = cleanText(value, 254).toLowerCase();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(result) ? result : '';
@@ -1419,6 +1427,75 @@ export async function registerClub(member, input) {
   return checked(member.supabase.from('clubs').insert(row).select('*').single(), null);
 }
 
+// ── Club officer confirmation ─────────────────────────────────────────────────────────
+// Officers will not create accounts to vouch for someone — they are volunteers with a term of
+// office, and a signup wall is where this dies. So the student generates a single-use link
+// and sends it to their officer themselves. The officer states who they are and decides.
+export async function createClubConfirmation(member, input) {
+  const clubId = cleanText(input.clubId, 50);
+  if (!PROJECT_ID_PATTERN.test(clubId)) throw new Error('Choose a valid club.');
+  const membership = await checked(member.supabase.from('club_members')
+    .select('id,status').eq('club_id', clubId).eq('student_user_id', member.user.id).maybeSingle(), null);
+  if (!membership) throw new Error('Claim this club first, then send it for confirmation.');
+  if (membership.status === 'confirmed') throw new Error('This membership is already confirmed.');
+
+  // One live token per (student, club): a new request retires the last, so an old link in an
+  // old message cannot still confirm.
+  await member.supabase.from('club_confirmations')
+    .update({ status: 'expired', decided_at: new Date().toISOString() })
+    .eq('student_user_id', member.user.id).eq('club_id', clubId).eq('status', 'pending');
+
+  const token = randomToken(32);
+  const row = await checked(member.supabase.from('club_confirmations')
+    .insert({ token, club_id: clubId, student_user_id: member.user.id, membership_id: membership.id })
+    .select('token,expires_at').single(), null);
+  return { token: row.token, expiresAt: row.expires_at };
+}
+
+// Called from the public confirmation page. No session — the token IS the credential, so it
+// is single-use, expiring, and the officer must put a name to the decision.
+export async function resolveClubConfirmation(supabase, token) {
+  const clean = cleanText(token, 80);
+  if (!clean) return null;
+  const row = await checked(supabase.from('club_confirmations').select('*').eq('token', clean).maybeSingle(), null);
+  if (!row) return null;
+  if (row.status !== 'pending') return { ...row, usable: false, reason: 'This link has already been used.' };
+  if (row.expires_at && Date.parse(row.expires_at) < Date.now()) {
+    return { ...row, usable: false, reason: 'This link has expired. Ask the student to send a new one.' };
+  }
+  const [club, student] = await Promise.all([
+    checked(supabase.from('clubs').select('id,name,school').eq('id', row.club_id).maybeSingle(), null),
+    checked(supabase.from('member_profiles').select('display_name,school_name').eq('user_id', row.student_user_id).maybeSingle(), null),
+  ]);
+  return { ...row, usable: true, club, studentName: student?.display_name || 'This student', studentSchool: student?.school_name || null };
+}
+
+export async function decideClubConfirmation(supabase, input) {
+  const record = await resolveClubConfirmation(supabase, input.token);
+  if (!record) throw new Error('That confirmation link is not valid.');
+  if (!record.usable) throw new Error(record.reason);
+
+  const confirmed = input.decision === 'confirm';
+  const name = cleanText(input.officerName, 120);
+  if (confirmed && name.length < 2) throw new Error('Enter your name. A confirmation nobody has put their name to is worth nothing.');
+
+  const now = new Date().toISOString();
+  await checked(supabase.from('club_confirmations').update({
+    status: confirmed ? 'confirmed' : 'declined',
+    officer_name: name || null,
+    officer_email: cleanEmail(input.officerEmail) || null,
+    officer_role: cleanText(input.officerRole, 80) || null,
+    decided_at: now,
+  }).eq('id', record.id), null);
+
+  await checked(supabase.from('club_members').update({
+    status: confirmed ? 'confirmed' : 'rejected',
+    confirmed_at: confirmed ? now : null,
+  }).eq('id', record.membership_id), null);
+
+  return { confirmed, club: record.club?.name || 'the club', student: record.studentName };
+}
+
 // A student claims membership; it counts for nothing until an officer or operator confirms it.
 // Without that gate anyone could attach themselves to a selective club, which would make the
 // club's own screen — the thing that gives the badge its value — meaningless.
@@ -1663,6 +1740,12 @@ export async function acceptApplication(member, input) {
   );
   if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can accept an applicant.');
   if (!['open', 'matched'].includes(project.status)) throw new Error('This project is not open for accepting an applicant.');
+  if (project.assigned_student_user_id) throw new Error('This project already has an assigned student.');
+  // Never approve someone onto paid work whose payment is not already held.
+  const listed = Number(project.credits_listed) || 0;
+  if (listed > 0 && Number(project.credits_held) < listed) {
+    throw new Error('The payment for this project is not fully held yet, so nobody can be approved to start it. Top up your balance and repost.');
+  }
   // Work-trial ladder: a Stage 2 project (deeper access) can only go to a student who has already
   // completed a Stage 1 work-trial with THIS company — proof precedes access. Projects with no
   // access_stage column/value are Stage 1, so this never changes behaviour until Stage 2 is used.
@@ -1683,13 +1766,15 @@ export async function acceptApplication(member, input) {
   // someone has actually started, and it surfaces a flake while the work can still move.
   // `project` is already a select('*') from above — refetching it cost a round-trip and
   // bought nothing.
-  const milestones = buildMilestoneSchedule(project, { startAt: now });
+  // The student is approved, not started. `matched` + an assigned student is the approved-
+  // and-waiting state; the student's own confirmation moves it to in_progress and starts the
+  // milestone clock. Two reasons: nobody should be doing work they have not agreed to begin,
+  // and a schedule that starts before they do makes them late for a project they never opened.
   await checked(
     member.supabase.from('member_projects').update({
       assigned_student_user_id: application.student_user_id,
-      status: 'in_progress',
+      status: 'matched',
       updated_at: now,
-      ...(milestones.length ? { milestones } : {}),
     }).eq('id', project.id).select('id').single(),
     null,
   );
@@ -1707,6 +1792,26 @@ export async function acceptApplication(member, input) {
     build: ({ to, from, portalUrl }) => applicationDecisionEmail({ to, from, projectTitle: project.title, accepted: true, portalUrl }),
   });
   return accepted;
+}
+
+// The student starts the work, not the company. Until this is called, an approved student has
+// committed to nothing and has no clock running against them.
+export async function startTrial(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(member.supabase.from('member_projects').select('*').eq('id', projectId).maybeSingle(), null);
+  if (!project) throw new Error('This project is no longer available.');
+  if (project.assigned_student_user_id !== member.user.id) throw new Error('Only the approved student can start this work.');
+  if (project.status === 'in_progress') return project;
+  if (project.status !== 'matched') throw new Error('This project is not waiting to be started.');
+
+  const now = new Date().toISOString();
+  const milestones = buildMilestoneSchedule(project, { startAt: now });
+  return checked(member.supabase.from('member_projects').update({
+    status: 'in_progress',
+    updated_at: now,
+    ...(milestones.length ? { milestones } : {}),
+  }).eq('id', project.id).select('*').single(), null);
 }
 
 export async function declineApplication(member, input) {
@@ -2020,6 +2125,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'save-video') return res.status(201).json({ ok: true, video: await saveMemberVideo(member, input) });
     if (req.method === 'POST' && input.action === 'delete-video') return res.status(200).json({ ok: true, ...(await deleteMemberVideo(member, input)) });
     if (req.method === 'POST' && input.action === 'register-club') return res.status(201).json({ ok: true, club: await registerClub(member, input) });
+    if (req.method === 'POST' && input.action === 'club-confirmation-link') return res.status(201).json({ ok: true, ...(await createClubConfirmation(member, input)) });
     if (req.method === 'POST' && input.action === 'claim-club') return res.status(201).json({ ok: true, membership: await claimClubMembership(member, input) });
     if (req.method === 'POST' && input.action === 'club-standing') return res.status(200).json({ ok: true, ...(await clubStanding(member, cleanText(input.clubId, 50))) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
@@ -2036,6 +2142,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
     if (req.method === 'POST' && input.action === 'decline-application') return res.status(200).json({ ok: true, application: await declineApplication(member, input) });
     if (req.method === 'POST' && input.action === 'withdraw-application') return res.status(200).json({ ok: true, result: await deleteApplication(member, input) });
+    if (req.method === 'POST' && input.action === 'start-trial') return res.status(200).json({ ok: true, project: await startTrial(member, input) });
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });
