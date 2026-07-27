@@ -165,7 +165,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .request-resolution { margin:8px 0 0; padding:8px 10px; border-radius: 0; background:var(--gold-pale); color:var(--gold-deep); font-size: 13px; line-height:1.55; }
 .request-time { display:block; margin-top:8px; color:var(--soft); font-size: 14px; }
 /* A5 explainable fit card ("Why this fits"): ✓ reasons, △ concerns, approach, honest label. */
-.fit-why { margin-top:10px; border:1px solid var(--line); border-radius: 0; background:#fffdf9; }
+.fit-why { margin-top:10px; border:1px solid var(--line); border-radius: 0; background:var(--surface-2); }
 .fit-why summary { padding:9px 12px; cursor:pointer; color:var(--gold-deep); font-size: 13px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; list-style:none; }
 .fit-why summary::-webkit-details-marker { display:none; }
 .fit-why summary::after { content:"▾"; float:right; color:var(--soft); }
