@@ -17,11 +17,11 @@ test('HTML ids remain unique', () => {
   assert.deepEqual([...new Set(duplicates)], []);
 });
 
-test('student-first hero offers five work paths and a scroll continuation', () => {
+test('student-first hero leads with joining, four verticals, and a scroll continuation', () => {
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
-  assert.match(hero, /What is your <span class="word-gold">domain expertise<\/span>\?/); // §8 rename
-  assert.equal((hero.match(/class="work-option/g) || []).length, 5);
-  assert.match(hero, /Join the talent/); // §8: one student-account flow (CTA renamed per founder)
+  assert.match(hero, /Do work that proves/);
+  assert.equal((hero.match(/data-work-type=/g) || []).length, 4);
+  assert.match(hero, /Join the talent network/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
 });
@@ -40,19 +40,30 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
   assert.match(styles, /\.intro-statement/);
 });
 
-test('the initial path chooser uses a continuous responsive glass control', () => {
-  // Squared deliberately: the pill/rounded-rectangle look was the thing being removed.
-  assert.match(styles, /\.work-selector[\s\S]*border-radius: 0/);
-  assert.match(styles, /\.work-option\.is-selected[\s\S]*radial-gradient/);
-  // The picker used to force five columns and side-scroll, which squeezed each option to
-  // whatever width was left. It auto-fits on a real minimum now and wraps instead.
-  assert.match(styles, /\.work-selector[\s\S]*grid-template-columns: repeat\(auto-fit, minmax\(196px/);
-  assert.match(html, /<\/div>\s*<button class="gold-button selector-submit"/);
-  assert.match(html, /id="selectorFxCanvas"/);
-  assert.match(html, /class="student-journey"/);
-  assert.match(script, /function initSelectorFx\(\)/);
-  assert.match(script, /function initButtonFeedback\(\)/);
-  assert.match(styles, /\.selector-fx/);
+test('the student entry leads with a compact join action and working vertical specializations', () => {
+  const studentHero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
+  assert.match(studentHero, /Do work that proves/);
+  assert.match(studentHero, /class="gold-button student-join-primary"[\s\S]*Join the talent network/);
+  assert.match(studentHero, /Join the talent network[\s\S]*Choose your vertical/);
+  for (const vertical of ['Product &amp; strategy', 'Software &amp; data', 'Finance &amp; operations', 'Growth &amp; research']) {
+    assert.match(studentHero, new RegExp(vertical));
+  }
+  assert.doesNotMatch(studentHero, /Explore[\s\S]*Profile[\s\S]*Track/);
+  assert.doesNotMatch(studentHero, /selectorFxCanvas|student-journey|narrowFlow/);
+  assert.match(styles, /\.student-vertical-rail[\s\S]*grid-template-columns: repeat\(4/);
+  assert.match(styles, /\.student-join-primary \{[\s\S]*width: min\(100%, 430px\)[\s\S]*border-radius: 0/);
+  assert.match(styles, /@keyframes student-join-confirm/);
+  assert.match(script, /\$\$\('\.work-option, \.student-vertical'\)/);
+  assert.match(studentHero, /id="studentSpecialtyPanel"/);
+  assert.match(studentHero, /id="studentSpecialtyOptions"/);
+  assert.match(script, /const studentSpecialties = \{/);
+  for (const specialty of ['Product discovery', 'Frontend engineering', 'Financial modeling', 'Growth strategy']) {
+    assert.match(script, new RegExp(specialty));
+  }
+  assert.match(script, /function renderStudentSpecialties\(workType\)/);
+  assert.match(script, /function selectStudentSpecialty\(label\)/);
+  assert.match(script, /studentSpecialtyStorageKey/);
+  assert.match(script, /function confirmStudentJoin\(button\)/);
 });
 
 test('audience switch supports student and company site states', () => {
@@ -345,12 +356,16 @@ test('candidate browser is not on the public site', () => {
 
 // The hero field is the geometric motif the rest of the site borrows from. It gained a
 // pointer-reactive layer; the guardrails around it must survive that.
-test('hero field reacts to the pointer without breaking motion or touch guardrails', () => {
-  // The cursor drives camera parallax and finds the seven nearest visible nodes.
-  assert.match(script, /targetX = -\(\(pointer\.x/);
+test('hero field keeps pointer discovery without shifting the 3D field', () => {
+  // The cursor finds nearby nodes, but no longer drives camera parallax.
+  assert.doesNotMatch(script, /targetX = -\(\(pointer\.x/);
   assert.match(script, /\.slice\(0, 7\)/);
   assert.match(script, /ctx\.lineTo\(item\.point\.x, item\.point\.y\)/);
   assert.match(script, /pointerleave/);
+  assert.match(script, /function formGoldBond\(now\)/);
+  assert.match(script, /nextGoldBondAt = now \+ 10000/);
+  assert.match(script, /for \(const bond of goldBonds\)/);
+  assert.match(script, /createRadialGradient\(q\.x, q\.y/);
   // Reduced-motion returns before any listener is attached (the early `if (reduce) return`),
   // and coarse pointers never get a hover handler at all.
   assert.match(script, /\(hover: hover\) and \(pointer: fine\)/);
@@ -440,8 +455,8 @@ test('batch selection has real feedback and respects reduced motion', () => {
 });
 
 test('joining the talent pool is name, email and school — not the four-step form', () => {
-  assert.match(html, /data-action="student-quick"[^>]*>Join the talent/);
-  assert.match(html, /Or add full details now/);
+  assert.match(html, /data-action="student-quick"[^>]*>[\s\S]*Join the talent network/);
+  assert.doesNotMatch(html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '', /Or add full details now/);
 });
 
 // The geometry is interactive, not wallpaper: selecting batches knits a link web, and the
@@ -540,6 +555,20 @@ test('no module-level binding is assigned before it is declared', () => {
   assert.deepEqual(offenders, [], 'temporal dead zone — these would throw at runtime');
 });
 
+// The tree is the vetting system, told top to bottom. It used to describe the model in the
+// abstract ("the talent", "Covenda") without saying how anyone is actually vetted.
+test('the tree explains the vetting system specifically', () => {
+  assert.match(html, /Vetted twice, then proven/);
+  assert.match(html, /Soil · the first vet/);
+  assert.match(html, /Trunk · the second vet/);
+  assert.match(html, /Three ways to prove it/);
+  // The low-barrier rail must be named, since it is the one most fields actually use.
+  assert.match(html, /recorded walkthrough where neither applies/);
+  // Guardrails survive into the diagram.
+  assert.match(html, /never a person score, never a ranking/);
+  assert.match(html, /an operator decides and records why/);
+});
+
 // The gold word is painted with background-clip:text, so any glyph extending past the
 // padding box renders TRANSPARENT — which is why the italic "f" in "proof" looked cut off.
 // The padding must stay wide enough to cover Newsreader's italic overhang.
@@ -598,6 +627,7 @@ test('the work exchange turns one project into clear value for both sides', () =
     assert.match(html, new RegExp(label));
   }
   assert.match(html, /href="#bridgeStory"/);
+  assert.match(html, /data-nav-target="bridgeStory"/);
   assert.match(script, /function initWorkExchange\(\)/);
   assert.match(script, /function setExchangeStep\(nextStep, userInitiated = false, shouldScroll = true\)/);
   assert.match(script, /viewport\.addEventListener\('pointerdown', takeControl/);
@@ -614,6 +644,8 @@ test('the work exchange turns one project into clear value for both sides', () =
   assert.doesNotMatch(html, /id="bridgeCanvas"/);
   assert.doesNotMatch(script, /function initBridge\(\)|function makeCloud\(|function drawCloud\(/);
   assert.doesNotMatch(script, /Columbia Consulting Group/);
+  assert.match(styles, /body\[data-audience="home"\] \.stat-band/);
+  assert.doesNotMatch(html, /The problem isn’t talent/);
 });
 
 test('the qualification rail is shorter and visually distinct from the trial carousel', () => {
@@ -630,6 +662,21 @@ test('the qualification rail is shorter and visually distinct from the trial car
   assert.match(styles, /\.batch-funnel\.is-armed \.bf-stage \{[\s\S]*scale\(\.96\)/);
   assert.match(styles, /\.batch-funnel\.is-playing \.bf-stage-4 \{ transition-delay: \.54s; \}/);
 });
+
+test('only the homepage student path uses the folded-sheet transition', () => {
+  assert.match(html, /id="audienceTransition"/);
+  assert.match(html, /class="home-path" data-audience-option="student" data-student-hero-entry/);
+  assert.match(script, /function transitionAudience\(audience\)/);
+  assert.match(script, /if \(audience !== 'student'\) return/);
+  assert.match(script, /button\.matches\('\[data-student-hero-entry\]'\)/);
+  assert.match(script, /else \{\s*showAudience\(audience\)/);
+  assert.match(script, /document\.body\.classList\.add\('is-audience-transitioning'\)/);
+  assert.match(script, /window\.setTimeout\(\(\) => \{\s*setAudience\(audience\)/);
+  assert.match(styles, /@keyframes audience-sheet-a/);
+  assert.match(styles, /@keyframes audience-sheet-b/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.audience-transition \{ display: none; \}/);
+});
+
 // Machine checks and expert judgement are complementary instruments, not a primary and a
 // fallback. The section used to head "We verify what can be verified" with the human column
 // titled "Where that isn't possible", which framed judgement as a deficiency.

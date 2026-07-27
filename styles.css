@@ -2181,6 +2181,7 @@ body[data-audience="home"] .hero-university { display: none; }
 body[data-audience="home"] .audience-content,
 body[data-audience="home"] .value-band,
 body[data-audience="home"] #why,
+body[data-audience="home"] .stat-band,
 body[data-audience="home"] .batches-section,
 body[data-audience="home"] .final-cta { display: none; }
 /* the core story + "What Covenda is" belong to home, not the student surface */
@@ -2613,12 +2614,37 @@ body[data-audience="university"] .stat-band { display: none; }
   .mf-legs .mf-leg:nth-child(n+2) { display: none; }
   .mf-solo, .mf-pool, .mf-engine, .mf-top { min-width: 0; width: 100%; }
 }
+.covenda-tree { container-type: inline-size; width: 100%; margin: clamp(34px, 4vw, 54px) 0 0; color: var(--ink); }
 /* The tree explains the model to a visitor deciding what Covenda is — a student who has
    already picked their path does not need it, so it stays on home only. */
+body[data-audience="student"] .covenda-tree { display: none; }
+.covenda-tree * { box-sizing: border-box; }
+.ct-inner { padding: clamp(18px, 3cqw, 40px) clamp(12px, 2cqw, 28px) clamp(14px, 2.5cqw, 30px); }
+.ct-head { text-align: center; margin-bottom: .6cqw; }
+.ct-eyebrow { font-family: var(--font-mono); font-size: clamp(9px, .85cqw, 12px); font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--gold-deep); }
+.ct-title { margin: clamp(4px, .5cqw, 10px) 0 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 3.3cqw, 54px); line-height: 1.08; letter-spacing: -.03em; }
+.ct-stage { position: relative; width: 100%; aspect-ratio: 1400 / 1000; margin: 0 auto; }
+.ct-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; }
+.ct-card { position: absolute; width: clamp(164px, 20cqw, 288px); padding: clamp(12px, 1.3cqw, 18px) clamp(13px, 1.4cqw, 19px); border: 1px solid var(--line); border-radius: 0; background: #fffdf8; box-shadow: 0 12px 34px rgba(60,45,10,.09); }
+.ct-k { font-size: clamp(8px, .8cqw, 11px); font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--gold-deep); }
+.ct-t { margin: .4cqw 0 .5cqw; font-family: var(--font-display); font-weight: 400; font-size: clamp(13px, 1.35cqw, 19px); color: var(--ink); }
+.ct-d { font-size: clamp(10px, .98cqw, 13.5px); line-height: 1.5; color: var(--muted); }
+.ct-chips { display: flex; flex-wrap: wrap; gap: clamp(4px, .45cqw, 7px); margin-top: .75cqw; }
+.ct-chip { padding: clamp(3px, .35cqw, 5px) clamp(6px, .7cqw, 10px); border: 1px solid var(--gold-light); border-radius: 0; background: var(--gold-pale); color: var(--gold-deep); font-size: clamp(8px, .8cqw, 11px); white-space: nowrap; }
+.ct-card--canopy { top: 0; left: 0; }
+.ct-card--trunk { top: 38%; right: 0; }
+.ct-card--roots { bottom: 0; left: 0; }
+.ct-card--nutrients { bottom: 0; right: 0; }
+.ct-glow { animation: covendaShimmer 6s ease-in-out infinite; }
 @keyframes covendaShimmer { 0%, 100% { opacity: .48; } 50% { opacity: .6; } }
+@media (prefers-reduced-motion: reduce) { .ct-glow { animation: none; opacity: .52; } }
 /* Narrow: corner-anchored cards would sit on top of the figure, so let the stage flow
    and stack the cards underneath it instead. */
 @media (max-width: 760px) {
+  .ct-stage { position: static; aspect-ratio: auto; display: grid; gap: 12px; }
+  .ct-svg { position: static; width: 100%; height: auto; aspect-ratio: 1400 / 1000; }
+  .ct-card { position: static; width: 100%; }
+  .ct-leader { display: none; }
 }
 
 /* ---- Fix cramped dialogs -------------------------------------------------
@@ -2839,6 +2865,43 @@ body[data-audience="university"] #referrerDashboard { display: block; }
 .referrer-note b { color: var(--ink); font-weight: 600; }
 .referrer-deferred { margin-top: 12px; font-size: 12px; color: var(--soft); font-style: italic; }
 
+/* ---- Covenda tree: grows bottom -> top when it enters view. --------------------------
+   Gated on JS-added classes so no-JS and reduced-motion always see the full tree:
+   .ct-pre arms the hidden initial state; .ct-grow runs the sequence
+   (roots -> trunk -> branches -> glow -> cards). */
+#covendaModel.ct-pre .ct-roots path,
+#covendaModel.ct-pre .ct-branches path { stroke-dasharray: 1; stroke-dashoffset: 1; }
+#covendaModel.ct-pre .ct-trunk { transform: scaleY(0); transform-origin: 700px 566px; }
+#covendaModel.ct-pre .ct-glow, #covendaModel.ct-pre .ct-card { opacity: 0; }
+/* The heading text (eyebrow + title) waits for the tree to finish forming, then fades in. */
+#covendaModel.ct-pre .ct-head { opacity: 0; }
+
+#covendaModel.ct-grow .ct-roots path { animation: ct-draw .9s ease-out forwards; }
+#covendaModel.ct-grow .ct-roots path:nth-child(2), #covendaModel.ct-grow .ct-roots path:nth-child(5) { animation-delay: .25s; }
+#covendaModel.ct-grow .ct-roots path:nth-child(3), #covendaModel.ct-grow .ct-roots path:nth-child(4),
+#covendaModel.ct-grow .ct-roots path:nth-child(6), #covendaModel.ct-grow .ct-roots path:nth-child(7),
+#covendaModel.ct-grow .ct-roots path:nth-child(8), #covendaModel.ct-grow .ct-roots path:nth-child(9) { animation-delay: .5s; }
+#covendaModel.ct-grow .ct-trunk { animation: ct-rise .6s ease-out .8s forwards; }
+#covendaModel.ct-grow .ct-branches path { animation: ct-draw .8s ease-out 1.3s forwards; }
+#covendaModel.ct-grow .ct-branches path:nth-child(n+3) { animation-delay: 1.7s; }
+#covendaModel.ct-grow .ct-branches path:nth-child(n+8) { animation-delay: 2s; }
+#covendaModel.ct-grow .ct-glow { animation: ct-fade .9s ease-out 2s forwards; }
+#covendaModel.ct-grow .ct-card { animation: ct-fade .7s ease-out forwards; }
+#covendaModel.ct-grow .ct-card--nutrients { animation-delay: .5s; }
+#covendaModel.ct-grow .ct-card--roots { animation-delay: .8s; }
+#covendaModel.ct-grow .ct-card--trunk { animation-delay: 1.3s; }
+#covendaModel.ct-grow .ct-card--canopy { animation-delay: 2.1s; }
+/* Heading text arrives last — after roots, trunk, branches, glow and cards have all landed. */
+#covendaModel.ct-grow .ct-head { animation: ct-fade .7s ease-out 2.9s forwards; }
+
+@keyframes ct-draw { to { stroke-dashoffset: 0; } }
+@keyframes ct-rise { to { transform: scaleY(1); } }
+@keyframes ct-fade { to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  #covendaModel.ct-pre .ct-roots path, #covendaModel.ct-pre .ct-branches path { stroke-dasharray: none; stroke-dashoffset: 0; }
+  #covendaModel.ct-pre .ct-trunk { transform: none; }
+  #covendaModel.ct-pre .ct-glow, #covendaModel.ct-pre .ct-card, #covendaModel.ct-pre .ct-head { opacity: 1; }
+}
 
 /* Dedup: the "Why now" stats + founder note + tree, and the "Why Covenda" contrast, are the
    general top-of-funnel pitch. They live on the HOME landing; once a visitor picks a path
@@ -3314,7 +3377,7 @@ body:not([data-audience="home"]) #verifyMethods { display: none; }
    Titles: the display serif ("Real work becomes credible proof" — the founder's reference).
    Everything else: the body sans. Declared here so a new heading inherits the system rather
    than needing its own font-family, which is how the page drifted. */
-h1, h2, h3, .brand, .bf-label, .bd-head h3, .vdemo-company,
+h1, h2, h3, .brand, .ct-title, .bf-label, .bd-head h3, .vdemo-company,
 h4, h5, h6, .feature-kicker, .home-kicker, .company-job-eyebrow,
 /* .site-nav a and .audience-switch button are deliberately ABSENT: the header sets the
    display face on itself, and a direct rule here would beat that inheritance silently. */
@@ -3327,8 +3390,291 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
 .home-path strong { font-family: var(--font-body); font-weight: 650; letter-spacing: -.01em; }
 .home-path small { font-family: var(--font-body); font-weight: 450; }
 
+/* ---- Top bar: even, and each group means one thing ---------------------------------
+   Left = identity. Centre = what Covenda is. Right = who you are, then your account.
+   The rail was three ad-hoc clusters at different heights; it is one baseline now with a
+   single divider between "choose your side" and "your account". */
+.site-header { height: 76px; gap: 32px; }
+.site-header .brand { font-size: 25px; letter-spacing: -.04em; }
+.site-nav { gap: 30px; }
+.site-nav a { font-size: 14px; font-weight: 600; letter-spacing: 0; color: var(--muted); }
+.site-nav a:hover { color: var(--ink); }
+.header-actions { gap: 0; }
+.header-actions .audience-switch { margin-right: 22px; }
+.header-actions .member-login-link { padding-left: 22px; border-left: 1px solid var(--line); }
+.audience-switch { padding: 0; border: 0; background: transparent; box-shadow: none; gap: 4px; }
+.audience-switch button {
+  min-width: 0; min-height: 36px; padding: 8px 13px;
+  border: 1px solid transparent; background: transparent;
+  font-size: 13.5px; font-weight: 600; color: var(--muted);
+}
+.audience-switch button:hover { color: var(--ink); }
+.audience-switch button[aria-pressed="true"] { border-color: var(--line-strong); background: #fff; color: var(--ink); }
+
+/* A folded-paper sweep joins the three public paths. It reads like one sheet turning over,
+   rather than the usual fade/slide transition. */
+.audience-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.audience-transition-sheet {
+  position: absolute;
+  inset: -18%;
+  display: block;
+  background: #fff;
+  transform: translateX(-125%) skewX(-13deg) rotate(-2deg);
+  transform-origin: center;
+}
+.audience-transition-sheet--a {
+  box-shadow: 24px 0 70px rgba(77,55,14,.13);
+}
+.audience-transition-sheet--b {
+  background: #f7edcf;
+  opacity: .94;
+  transform: translateX(-142%) skewX(18deg) rotate(3deg);
+}
+.audience-transition span {
+  position: relative;
+  z-index: 2;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(34px, 6vw, 82px);
+  font-weight: 400;
+  letter-spacing: -.055em;
+  opacity: 0;
+  transform: scale(.88) rotate(-2deg);
+}
+body.is-audience-transitioning { overflow: hidden; }
+body.is-audience-transitioning .audience-transition { visibility: visible; }
+body.is-audience-transitioning .audience-transition-sheet--a {
+  animation: audience-sheet-a .84s cubic-bezier(.72,0,.18,1) both;
+}
+body.is-audience-transitioning .audience-transition-sheet--b {
+  animation: audience-sheet-b .84s cubic-bezier(.72,0,.18,1) both;
+}
+body.is-audience-transitioning .audience-transition span {
+  animation: audience-label .84s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes audience-sheet-a {
+  0% { transform: translateX(-125%) skewX(-13deg) rotate(-2deg); }
+  45%, 58% { transform: translateX(0) skewX(0) rotate(0); }
+  100% { transform: translateX(125%) skewX(13deg) rotate(2deg); }
+}
+@keyframes audience-sheet-b {
+  0% { transform: translateX(-142%) skewX(18deg) rotate(3deg); }
+  45%, 58% { transform: translateX(0) skewX(0) rotate(0); }
+  100% { transform: translateX(142%) skewX(-18deg) rotate(-3deg); }
+}
+@keyframes audience-label {
+  0%, 27%, 78%, 100% { opacity: 0; transform: scale(.88) rotate(-2deg); }
+  45%, 60% { opacity: 1; transform: scale(1) rotate(0); }
+}
+
 /* The hero kicker needs air above it — it was sitting against the header. */
 .home-kicker { margin-bottom: 20px; }
+
+/* Student entry: one clear action, then vertical → specialty. */
+.hero-student { padding-top: clamp(56px, 8vh, 92px); }
+.hero-student .hero-copy { max-width: 1040px; }
+.hero-student .hero-copy p { max-width: 660px; }
+.student-entry {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 1440px);
+  margin: clamp(34px, 5vh, 58px) auto 0;
+}
+.student-join-primary {
+  width: min(100%, 430px);
+  min-height: 60px;
+  padding: 14px 22px;
+  border-radius: 0;
+  font-size: 16px;
+  box-shadow: 7px 7px 0 rgba(180,123,32,.16);
+  transition: transform .26s cubic-bezier(.2,.9,.25,1.35), box-shadow .26s ease, background .18s ease;
+}
+.student-join-primary svg { width: 20px; height: 20px; transition: transform .26s cubic-bezier(.2,.9,.25,1.35); }
+.student-join-primary:hover { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 rgba(180,123,32,.15); }
+.student-join-primary:hover svg { transform: translateX(5px); }
+.student-join-primary:active { transform: translate(5px, 5px) scale(.985); box-shadow: 2px 2px 0 rgba(180,123,32,.18); }
+.student-join-primary.is-confirming { animation: student-join-confirm .38s cubic-bezier(.2,.9,.25,1.35); }
+@keyframes student-join-confirm {
+  0% { transform: translate(0); }
+  42% { transform: translate(6px, 6px) scale(.98); box-shadow: 1px 1px 0 rgba(180,123,32,.18); }
+  100% { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 rgba(180,123,32,.15); }
+}
+.student-vertical-picker {
+  margin: clamp(42px, 6vh, 70px) 0 0;
+  padding: 0;
+  border: 0;
+  text-align: left;
+}
+.student-vertical-picker legend {
+  margin: 0 0 24px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+.student-vertical-rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid var(--line-strong);
+}
+.student-vertical {
+  position: relative;
+  min-height: 74px;
+  padding: 0 24px 28px 0;
+  border: 0;
+  background: transparent;
+  color: #62615c;
+  font-family: var(--font-display);
+  font-size: clamp(21px, 2vw, 32px);
+  font-weight: 400;
+  letter-spacing: -.035em;
+  text-align: left;
+  cursor: pointer;
+  transition: color .2s ease, transform .32s cubic-bezier(.2,.8,.2,1);
+}
+.student-vertical::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform .36s cubic-bezier(.2,.8,.2,1);
+}
+.student-vertical::before {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 36%;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(180,123,32,.32);
+  opacity: 0;
+  transform: scale(.4);
+  transition: opacity .2s ease, transform .32s cubic-bezier(.2,.8,.2,1);
+}
+.student-vertical:hover { color: var(--ink); transform: translateY(-2px); }
+.student-vertical.is-selected { color: var(--ink); }
+.student-vertical.is-selected::after { transform: scaleX(1); }
+.student-vertical.is-selected::before { opacity: 1; transform: scale(1); }
+.student-vertical:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 6px; }
+.student-specialty-panel {
+  display: grid;
+  grid-template-columns: minmax(180px, .7fr) minmax(0, 2fr);
+  gap: 18px clamp(24px, 4vw, 64px);
+  align-items: start;
+  margin-top: 28px;
+  padding: 28px 0 0;
+  border-top: 1px solid var(--line);
+}
+.student-specialty-heading p {
+  margin: 0 0 7px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+.student-specialty-heading strong {
+  font-family: var(--font-display);
+  font-size: clamp(20px, 2vw, 27px);
+  font-weight: 450;
+  letter-spacing: -.035em;
+}
+.student-specialty-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.student-specialty {
+  position: relative;
+  min-height: 48px;
+  padding: 11px 42px 11px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: #fff;
+  color: #555550;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 620;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
+}
+.student-specialty::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  transform: translateY(-50%) rotate(45deg);
+  transition: background .18s ease, border-color .18s ease, transform .24s cubic-bezier(.2,.9,.25,1.35);
+}
+.student-specialty:hover { border-color: var(--gold); color: var(--ink); transform: translateY(-1px); }
+.student-specialty.is-selected { border-color: var(--gold-deep); background: var(--gold-pale); color: var(--ink); }
+.student-specialty.is-selected::after { border-color: var(--gold-deep); background: var(--gold); transform: translateY(-50%) rotate(135deg) scale(1.12); }
+.student-specialty:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 3px; }
+.student-specialty-status {
+  grid-column: 2;
+  margin: -6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.quick-selected-direction {
+  margin: -4px 30px 20px;
+  padding: 11px 13px;
+  border-left: 3px solid var(--gold);
+  background: var(--gold-pale);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+@media (max-width: 780px) {
+  .hero-student { padding-top: 42px; }
+  .hero-student h1 { font-size: clamp(46px, 13vw, 68px); }
+  .student-join-primary { width: min(100%, 320px); min-height: 56px; }
+  .student-vertical-picker { margin-top: 38px; }
+  .student-vertical-rail { grid-template-columns: 1fr 1fr; gap: 0 18px; }
+  .student-vertical { min-height: 70px; padding: 14px 0 18px; font-size: clamp(20px, 6vw, 27px); }
+  .student-specialty-panel { grid-template-columns: 1fr; gap: 18px; }
+  .student-specialty-options { grid-template-columns: 1fr; }
+  .student-specialty-status { grid-column: 1; }
+  .quick-selected-direction { margin-right: 20px; margin-left: 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audience-transition { display: none; }
+  .student-vertical,
+  .student-vertical::before,
+  .student-vertical::after,
+  .student-join-primary,
+  .student-join-primary svg,
+  .student-specialty,
+  .student-specialty::after { transition: none; animation: none; }
+}
 
 /* ---- First explanation: one real task becomes value for both sides. --------------- */
 body:not([data-audience="home"]) .exchange-section { display: none; }
@@ -3783,7 +4129,22 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 /* ---- Tree: refinement, not a redesign. Same layout, same figure — the cards just read
        better. Their type floors were as low as 8px, which is where the "contents" problem
        partly lived. ------------------------------------------------------------------ */
+.ct-card {
+  border-color: var(--line-strong);
+  background: rgba(255,253,248,.97);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 14px 38px rgba(60,45,10,.10);
+  transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+.ct-card:hover { border-color: var(--gold); box-shadow: 0 18px 46px rgba(60,45,10,.15); transform: translateY(-2px); }
 /* A gold rule keys each card to its part of the tree without adding a new element. */
+.ct-card::before { content: ""; position: absolute; top: -1px; left: -1px; width: 3px; height: 34px; background: var(--gold); }
+.ct-card--canopy::before { background: var(--success); }
+.ct-k { font-size: clamp(9.5px, .85cqw, 11.5px); letter-spacing: .12em; }
+.ct-t { margin: .55cqw 0 .6cqw; font-size: clamp(15px, 1.5cqw, 21px); font-weight: 500; letter-spacing: -.015em; }
+.ct-d { font-size: clamp(12px, 1.05cqw, 14.5px); line-height: 1.58; }
+.ct-chip { font-size: clamp(9.5px, .82cqw, 11.5px); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .ct-card, .ct-card:hover { transition: none; transform: none; } }
 
 /* ---- Production hero + banner pass ---------------------------------------------
    Deliberately scoped to the site header and the home hero so the production page
