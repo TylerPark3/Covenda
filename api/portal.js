@@ -395,7 +395,7 @@ export async function loadMemberDashboard(member, env = process.env) {
   const [companyProfile, companyVerification] = profile.role === 'company'
     ? await Promise.all([loadCompanyProfile(member), loadCompanyStanding(member, profile)])
     : [null, null];
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, briefing: await companyBriefing(member), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [] })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -1578,6 +1578,79 @@ export async function saveIdealIntern(member, input) {
     ideal_memo: memo,
     updated_at: new Date().toISOString(),
   }).eq('id', project.id).select('*').single(), null);
+}
+
+// ── Company backend: the answers a founder actually opens the portal for ──────────────
+// The company dashboard reported counts. Counts tell you the size of a pile, not what to do
+// with it. These are the four questions a founder has when they log in, answered from rows
+// rather than from a stored summary that can drift.
+export async function companyBriefing(member) {
+  const [projects, applications] = await Promise.all([
+    checked(member.supabase.from('member_projects').select('*').eq('owner_user_id', member.user.id).limit(200), []),
+    optional(member.supabase.from('project_applications').select('*').limit(500), [], 'project_applications'),
+  ]);
+
+  const mine = new Set((projects || []).map(p => p.id));
+  const apps = (applications || []).filter(a => mine.has(a.project_id));
+  const now = Date.now();
+  const daysSince = t => (!t ? null : Math.floor((now - Date.parse(t)) / 86400000));
+
+  // 1. What is waiting on ME. The only list where inaction has a cost to someone else.
+  const blocking = [];
+  for (const p of projects) {
+    if (p.status === 'review') {
+      blocking.push({ kind: 'deliverable', projectId: p.id, title: p.title,
+        waitingDays: daysSince(p.deliverable_submitted_at),
+        // A student who submitted and heard nothing is the failure this platform exists to
+        // prevent, so it is named first and by name.
+        note: 'A student is waiting on your review.' });
+    }
+    if (p.value_to_company && !p.brief_approved_at) {
+      blocking.push({ kind: 'brief', projectId: p.id, title: p.title, waitingDays: daysSince(p.updated_at),
+        note: 'A proposed trial is waiting for your approval.' });
+    }
+  }
+  const newApps = apps.filter(a => a.status === 'submitted');
+  if (newApps.length) {
+    blocking.push({ kind: 'applications', count: newApps.length, note: `${newApps.length} ${newApps.length === 1 ? 'application' : 'applications'} nobody has opened.` });
+  }
+
+  // 2. What is running without me.
+  const running = projects.filter(p => ['matched', 'in_progress'].includes(p.status))
+    .map(p => ({ projectId: p.id, title: p.title, status: p.status,
+      startedDays: daysSince(p.updated_at),
+      // Approved but not started is a distinct state and worth surfacing — it usually means
+      // the student is hesitating, not that the work has stalled.
+      note: p.status === 'matched' ? 'Approved; the student has not started yet.' : 'In progress.' }));
+
+  // 3. What it has cost and returned. Money first, because it is the number a founder
+  //    actually tracks, and vague spend is how a pilot loses trust.
+  const held = projects.reduce((n, p) => n + (Number(p.credits_held) || 0), 0);
+  const spent = projects.filter(p => p.status === 'complete')
+    .reduce((n, p) => n + (Number(p.credits_listed) || 0), 0);
+  const completed = projects.filter(p => p.status === 'complete').length;
+
+  // 4. What we learned. Empty until outcomes exist, and it says so rather than showing zeros
+  //    that look like failure.
+  const surveys = projects.filter(p => p.outcome_survey).map(p => p.outcome_survey);
+  const learned = surveys.length
+    ? {
+        answered: surveys.length,
+        wouldUseAgain: surveys.filter(s => s.wouldUseAgain).length,
+        avgShortlistRelevance: Math.round(
+          surveys.filter(s => s.shortlistRelevant).reduce((n, s) => n + s.shortlistRelevant, 0)
+          / Math.max(1, surveys.filter(s => s.shortlistRelevant).length) * 10) / 10,
+      }
+    : null;
+
+  return {
+    blocking: blocking.sort((a, b) => (b.waitingDays || 0) - (a.waitingDays || 0)),
+    running,
+    money: { heldInEscrow: held, releasedOnCompletedWork: spent, completedProjects: completed },
+    learned,
+    // Said plainly rather than rendering an empty dashboard that reads as failure.
+    emptyReason: projects.length ? null : 'Nothing posted yet. Describe a problem and we will scope the trial.',
+  };
 }
 
 // ── Step 5: introductions ─────────────────────────────────────────────────────────────
