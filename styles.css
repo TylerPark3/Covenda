@@ -4930,7 +4930,12 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
    Named directly, because every other section on this page is an answer to it. Numbered
    because it IS a sequence — applying got free, so the résumé got filtered on school, so
    the platforms encoded that. Each step causes the next. */
-body:not([data-audience="home"]) .slop-section { display: none; }
+/* Moved off home and onto the company view. The section was always written from the buyer's
+   side — "postings now get hundreds of applications nobody wrote" is a company's problem, not
+   a student's — so it belongs where a company is reading. On that view it sits between the
+   company hero and the why-now band, which is the right order: problem, then evidence. */
+.slop-section { display: none; }
+body[data-audience="company"] .slop-section { display: block; }
 .slop-section { padding: clamp(60px, 8vw, 116px) var(--page-gutter); background: #14120d; color: #ece7da; border-top: 1px solid #262219; }
 .slop-section > * { width: min(100%, var(--content)); margin-inline: auto; }
 .slop-head { text-align: center; }
