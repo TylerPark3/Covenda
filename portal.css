@@ -1189,3 +1189,37 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-filter-note { flex:1 1 260px; color:var(--muted); font-size: 11.5px; line-height:1.45; }
 .batch-filter-empty { margin:0; flex:1 1 auto; color:var(--muted); font-size: 12.5px; }
 .batch-filter-none { margin:14px 2px; color:var(--muted); font-size: 13px; }
+
+/* ── Company profile & verification ───────────────────────────────────────────────────── */
+.verif-caveat { color: var(--soft) !important; font-style: italic; }
+.company-verif { margin-bottom: 20px; }
+
+.company-form { display: grid; gap: 18px; margin-top: 22px; padding: 22px 24px; border: 1px solid var(--line); background: #fff; }
+.company-form-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+.company-form-head h3 { margin: 0 0 5px; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; }
+.company-form-head p { margin: 0; max-width: 58ch; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+.company-form-state { flex: none; padding: 5px 11px; border: 1px solid var(--line-strong); font-size: 11.5px; font-weight: 700; color: var(--soft); }
+.company-form-state[data-published="yes"] { border-color: rgba(36,117,58,.35); background: #f4faf5; color: var(--success); }
+.company-form-body { display: grid; gap: 20px; }
+.company-form-group { min-width: 0; margin: 0; padding: 16px 18px; border: 1px solid var(--line); }
+.company-form-group legend { padding: 0 8px; font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); }
+.company-form-grid { display: grid; gap: 14px 18px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+.company-field { display: grid; gap: 7px; min-width: 0; font-size: 11.5px; font-weight: 650; color: #2b2924; }
+.company-field.is-wide { grid-column: 1 / -1; }
+.company-field small { margin-left: 5px; color: var(--soft); font-weight: 500; }
+.company-field input, .company-field textarea { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 0; background: #fff; color: var(--ink); font: inherit; font-size: 13px; outline: 0; }
+.company-field textarea { min-height: 0; line-height: 1.55; resize: vertical; }
+.company-field input:focus, .company-field textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(180,123,32,.1); }
+.company-form-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* The poster on a Discover card is a way in to the company, so it looks like one. */
+.discover-poster { border: 0; background: none; padding: 2px 0; font: inherit; text-align: left; cursor: pointer; }
+.discover-poster:hover strong { color: var(--gold-deep); text-decoration: underline; text-underline-offset: 3px; }
+.discover-poster:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.company-seal { display: flex; align-items: flex-start; gap: 9px; margin: 0; padding: 11px 13px; background: var(--gold-pale); border: 1px solid var(--gold-light); color: var(--muted); font-size: 12px; line-height: 1.5; }
+.company-seal svg { flex: none; width: 16px; height: 16px; margin-top: 1px; color: var(--gold-deep); }
+.company-line { display: grid; gap: 3px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.company-line strong { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--soft); }
+.company-line p { margin: 0; color: var(--body); font-size: 13.5px; line-height: 1.6; }
+.company-link { display: inline-block; margin-top: 14px; color: var(--gold-deep); font-size: 13px; font-weight: 650; }

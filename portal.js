@@ -1138,7 +1138,10 @@ function discoverCard(project,isApplied){
   const row=document.createElement('article');row.className='discover-card'+(project.matched?' is-matched':'');
   const top=document.createElement('div');top.className='discover-card-top';const head=document.createElement('div');head.className='discover-card-head';const h=document.createElement('h3');h.textContent=project.title;head.append(h);
   // Who is hiring. Without this every card read as though Covenda posted it.
-  if(project.posterName){const by=document.createElement('p');by.className='discover-poster';const mark=document.createElement('span');mark.className='discover-poster-mark';mark.textContent=String(project.posterName).trim().charAt(0).toUpperCase()||'C';const name=document.createElement('strong');name.textContent=project.posterName;by.append(mark,name);if(project.posterHeadline){const sep=document.createElement('small');sep.textContent=project.posterHeadline;by.append(sep);}head.append(by);}
+  if(project.posterName){const by=document.createElement('button');by.type='button';by.className='discover-poster';const mark=document.createElement('span');mark.className='discover-poster-mark';mark.textContent=String(project.posterName).trim().charAt(0).toUpperCase()||'C';const name=document.createElement('strong');name.textContent=project.posterName;by.append(mark,name);if(project.posterHeadline){const sep=document.createElement('small');sep.textContent=project.posterHeadline;by.append(sep);}
+  // Clicking the company opens what they published about themselves.
+  by.addEventListener('click',e=>{e.stopPropagation();openCompanyProfile(project.owner_user_id,project.posterName);});
+  head.append(by);}
   top.append(head,fitPill(project.fitScore,project.fitPresentation));row.append(top);
   const meta=document.createElement('div');meta.className='discover-meta';const pay=Number(project.credits_listed)||0;meta.append(discoverChip('Payout',pay?`${pay.toLocaleString()} credits`:'—'),discoverChip('Target',project.target_date?dateLabel(project.target_date):'Flexible'));if((project.verticals||[]).length)meta.append(discoverChip('Vertical',project.verticals[0]));row.append(meta);
   const p=document.createElement('p');p.className='discover-card-summary';p.textContent=project.summary;row.append(p);
@@ -1632,6 +1635,244 @@ function renderVideoLibrary(root){
   });
   sec.append(list); root.append(sec);
 }
+// ── Company verification + profile ────────────────────────────────────────────────────
+// Mirrors the student side, including the caveat. A confirmed work email means someone reads
+// mail at that domain; it is never rendered as "verified company".
+function openWorkEmailStep(){
+  const d=verifDialog('Confirm your work email',
+    'We send a six-digit code to your company address. It confirms you read mail at that domain — it is not a Covenda endorsement of the company.');
+  const name=verifField('Company name',null,{type:'text',placeholder:'Northwind Robotics'});
+  const email=verifField('Work email','not gmail, outlook, or a temporary address',{type:'email',required:true,placeholder:'you@company.com',autocomplete:'email'});
+  const cp=state.dashboard?.companyProfile;
+  if(cp&&cp.company_name)name.input.value=cp.company_name;
+  d.body.append(name.label,email.label);
+
+  const send=document.createElement('button');send.type='button';send.className='portal-primary';send.textContent='Send me a code';
+  d.foot.append(send);
+  send.addEventListener('click',async()=>{
+    const value=email.input.value.trim();
+    if(!value){d.say('Enter your work email.',true);email.input.focus();return;}
+    send.disabled=true;d.say('Sending…');
+    try{
+      const out=await portalRequest({method:'POST',body:JSON.stringify({action:'verify-work-email',workEmail:value,companyName:name.input.value.trim()})});
+      d.say('Code sent. It expires in 20 minutes.');
+      // A domain unrelated to the trading name is common — worth saying, never worth blocking.
+      if(out.match&&out.match.match===false&&out.match.note){
+        const note=document.createElement('p');note.className='verif-intro';note.textContent=out.match.note;d.body.append(note);
+      }
+      email.input.disabled=true;name.input.disabled=true;send.remove();
+      const code=verifField('Six-digit code','from the email we just sent',{type:'text',inputMode:'numeric',maxLength:6,placeholder:'000000',autocomplete:'one-time-code'});
+      d.body.append(code.label);code.input.focus();
+      const confirm=document.createElement('button');confirm.type='button';confirm.className='portal-primary';confirm.textContent='Confirm';
+      d.foot.append(confirm);
+      confirm.addEventListener('click',async()=>{
+        if(code.input.value.trim().length<6){d.say('Enter all six digits.',true);return;}
+        confirm.disabled=true;d.say('Checking…');
+        try{
+          await portalRequest({method:'POST',body:JSON.stringify({action:'confirm-work-email',code:code.input.value.trim()})});
+          d.say('Confirmed.');await loadDashboard();setTimeout(()=>d.close(),700);
+        }catch(error){confirm.disabled=false;d.say(error.message,true);}
+      });
+    }catch(error){send.disabled=false;d.say(error.message,true);}
+  });
+  d.open();email.input.focus();
+}
+
+function renderCompanyVerification(root){
+  const v=state.dashboard?.companyVerification;
+  if(!v)return;
+  const sec=document.createElement('section');sec.className='panel-card company-verif';
+  const head=document.createElement('div');head.className='verif-head';
+  const h=document.createElement('h3');h.textContent='Your company account';
+  const sum=document.createElement('p');sum.textContent=v.summary;
+  head.append(h,sum);sec.append(head);
+
+  const list=document.createElement('ul');list.className='verif-list';
+  v.signals.forEach(sig=>{
+    const li=document.createElement('li');li.className=sig.held?'is-held':'';
+    const row=document.createElement('button');row.type='button';row.className='verif-row';
+    const mark=document.createElement('span');mark.className='verif-mark';
+    if(sig.held)mark.append(icon('p-verified'));else mark.textContent='○';
+    const div=document.createElement('div');
+    const strong=document.createElement('strong');strong.textContent=sig.label;
+    const small=document.createElement('small');small.textContent=sig.proves;
+    // What it does NOT establish, said in the UI and not only in the API.
+    const caveat=document.createElement('small');caveat.className='verif-caveat';
+    caveat.textContent='Does not prove: '+sig.doesNotProve;
+    div.append(strong,small,caveat);
+    const go=document.createElement('span');go.className='verif-go';
+    go.textContent=sig.held?'Manage':'Confirm';
+    row.append(mark,div,go);
+    if(sig.key==='work_email')row.addEventListener('click',openWorkEmailStep);
+    else row.disabled=true;
+    li.append(row);list.append(li);
+  });
+  sec.append(list);
+  root.append(sec);
+}
+
+// The public profile a student reaches from a posted project. Long, because the plan asks for
+// it to be — but grouped, so it is answerable in passes rather than one wall.
+const COMPANY_FORM_GROUPS=[
+  ['The basics',[
+    ['companyName','Company name','text',null],
+    ['websiteUrl','Website','url','https://…'],
+    ['logoUrl','Logo URL','url','https://…'],
+    ['location','Location','text','New York, NY'],
+    ['remotePolicy','Remote or in person','text','Hybrid — 2 days in office'],
+    ['teamSize','Team size','text','8'],
+    ['stage','Stage and funding','text','Seed'],
+  ]],
+  ['What you build',[
+    ['oneLiner','One line on what you build','text','What it is, in a sentence.'],
+    ['industry','Industry','text','Robotics'],
+    ['idealCustomer','Ideal customer','textarea','Who buys this, and why.'],
+    ['currentPriorities','Current priorities','textarea','What the team is pushing on right now.'],
+  ]],
+  ['Why a student would join',[
+    ['studentGain','What a student gains','textarea','What they will actually learn or be able to show afterwards.'],
+    ['workExamples','What they would work on','textarea','Real examples, not a job description.'],
+    ['workEnvironment','Work environment','textarea','How the team runs day to day.'],
+  ]],
+  ['Technical shape',[
+    ['techStack','Tech stack','list','Python, Postgres, ROS'],
+    ['departments','Departments','list','Engineering, Ops'],
+    ['commonTools','Common tools','list','Linear, Figma'],
+    ['capabilityAreas','Capability areas','list','Perception, controls'],
+  ]],
+  ['Engagement terms',[
+    ['weeklyHours','Weekly hours','text','10–15'],
+    ['engagementTypes','Engagement types','list','Trial project, internship'],
+    ['compensationApproach','Compensation approach','textarea','How you pay, and roughly what.'],
+    ['workAuthorization','Work authorization','text','US work authorization required'],
+    ['hiringTimeline','Typical hiring timeline','text','Two weeks from trial to decision'],
+    ['links','Links','list','https://…, https://…'],
+  ]],
+];
+
+function renderCompanyProfileForm(root){
+  const cp=state.dashboard?.companyProfile||{};
+  const sec=document.createElement('section');sec.className='company-form';
+  const head=document.createElement('div');head.className='company-form-head';
+  const box=document.createElement('div');
+  const h=document.createElement('h3');h.textContent='Your company profile';
+  const p=document.createElement('p');
+  p.textContent='What a student sees when they click your name on a project. Publishing is a choice — a half-filled draft is not what you want them judging you on.';
+  box.append(h,p);
+  const state_=document.createElement('span');state_.className='company-form-state';
+  state_.textContent=cp.published?'Published':'Draft — not visible to students';
+  state_.dataset.published=cp.published?'yes':'no';
+  head.append(box,state_);sec.append(head);
+
+  const form=document.createElement('form');form.className='company-form-body';
+  const val=key=>{
+    const col=key.replace(/[A-Z]/g,c=>'_'+c.toLowerCase());
+    const v=cp[col];
+    return Array.isArray(v)?v.join(', '):(v==null?'':String(v));
+  };
+  COMPANY_FORM_GROUPS.forEach(([title,fields])=>{
+    const group=document.createElement('fieldset');group.className='company-form-group';
+    const legend=document.createElement('legend');legend.textContent=title;group.append(legend);
+    const grid=document.createElement('div');grid.className='company-form-grid';
+    fields.forEach(([key,label,kind,placeholder])=>{
+      const wrap=document.createElement('label');
+      wrap.className='company-field'+(kind==='textarea'?' is-wide':'');
+      const cap=document.createElement('span');cap.textContent=label;
+      if(kind==='list'){const hint=document.createElement('small');hint.textContent='Comma-separated';cap.append(' ',hint);}
+      const input=kind==='textarea'?document.createElement('textarea'):document.createElement('input');
+      if(kind==='textarea')input.rows=3;else input.type=kind==='url'?'url':'text';
+      input.name=key;if(placeholder)input.placeholder=placeholder;
+      input.value=val(key);
+      wrap.append(cap,input);grid.append(wrap);
+    });
+    group.append(grid);form.append(group);
+  });
+
+  const actions=document.createElement('div');actions.className='company-form-actions';
+  const save=document.createElement('button');save.type='submit';save.className='portal-primary';save.textContent='Save';
+  const pub=document.createElement('button');pub.type='button';pub.className='portal-secondary';
+  pub.textContent=cp.published?'Unpublish':'Save and publish';
+  const msg=document.createElement('p');msg.className='dialog-message';msg.setAttribute('aria-live','polite');
+  actions.append(save,pub);form.append(actions,msg);
+
+  const collect=published=>{
+    const out={action:'save-company-profile'};
+    COMPANY_FORM_GROUPS.forEach(([,fields])=>fields.forEach(([key,,kind])=>{
+      const el=form.elements[key];if(!el)return;
+      out[key]=kind==='list'?el.value.split(',').map(v=>v.trim()).filter(Boolean):el.value.trim();
+    }));
+    if(published!==undefined)out.published=published;
+    return out;
+  };
+  const submit=async published=>{
+    save.disabled=true;pub.disabled=true;msg.textContent='Saving…';msg.classList.remove('is-error');
+    try{
+      const out=await portalRequest({method:'POST',body:JSON.stringify(collect(published))});
+      state.dashboard.companyProfile=out.companyProfile;
+      msg.textContent=out.companyProfile.published?'Saved and published.':'Saved as a draft.';
+      renderPortfolio();
+    }catch(error){msg.textContent=error.message;msg.classList.add('is-error');}
+    finally{save.disabled=false;pub.disabled=false;}
+  };
+  form.addEventListener('submit',e=>{e.preventDefault();submit(undefined);});
+  pub.addEventListener('click',()=>submit(!cp.published));
+
+  sec.append(form);root.append(sec);
+}
+
+// Student side: the company behind a project.
+async function openCompanyProfile(ownerUserId,fallbackName){
+  const d=verifDialog(fallbackName||'Company','');
+  d.say('Loading…');
+  try{
+    const out=await portalRequest({method:'POST',body:JSON.stringify({action:'company-profile',ownerUserId})});
+    d.say('');
+    if(!out.profile){
+      const p=document.createElement('p');p.className='verif-intro';p.textContent=out.reason;d.body.append(p);
+      d.open();return;
+    }
+    const c=out.profile;
+    const title=d.dlg.querySelector('h2');if(title)title.textContent=c.company_name;
+    if(out.workEmailConfirmed){
+      const seal=document.createElement('p');seal.className='company-seal';
+      seal.append(icon('p-verified'));
+      const t=document.createElement('span');
+      t.textContent=`Work email confirmed at ${out.domain}. That is not a Covenda endorsement of the company.`;
+      seal.append(t);d.body.append(seal);
+    }
+    const line=(label,value)=>{
+      if(!value||(Array.isArray(value)&&!value.length))return;
+      const row=document.createElement('div');row.className='company-line';
+      const k=document.createElement('strong');k.textContent=label;
+      const v=document.createElement('p');v.textContent=Array.isArray(value)?value.join(' · '):String(value);
+      row.append(k,v);d.body.append(row);
+    };
+    line('What they build',c.one_liner);
+    line('Industry',c.industry);
+    line('Who they sell to',c.ideal_customer);
+    line('Right now',c.current_priorities);
+    line('What you would gain',c.student_gain);
+    line('What you would work on',c.work_examples);
+    line('How the team runs',c.work_environment);
+    line('Stack',c.tech_stack);
+    line('Tools',c.common_tools);
+    line('Capability areas',c.capability_areas);
+    line('Weekly hours',c.weekly_hours);
+    line('Engagement types',c.engagement_types);
+    line('Compensation',c.compensation_approach);
+    line('Work authorization',c.work_authorization);
+    line('Hiring timeline',c.hiring_timeline);
+    line('Location',[c.location,c.remote_policy].filter(Boolean).join(' — '));
+    line('Team',[c.team_size&&`${c.team_size} people`,c.stage].filter(Boolean).join(' · '));
+    line('Links',c.links);
+    if(c.website_url){
+      const a=document.createElement('a');a.className='company-link';a.href=c.website_url;a.target='_blank';a.rel='noopener noreferrer';
+      a.textContent='Visit their site →';d.body.append(a);
+    }
+    d.open();
+  }catch(error){ d.say(error.message,true); d.open(); }
+}
+
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
   $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Browse students who opted into discovery — startup-fit, building real evidence. Hire by inviting them to a scoped project.';$('#editProfile').hidden=true;
   const batches=document.createElement('section');batches.className='talent-batches';
@@ -1664,7 +1905,8 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   bar.append(search,vsel,skl,msel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderVideoLibrary(root);renderProofOfWork(root,profile);}}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderVideoLibrary(root);renderProofOfWork(root,profile);}
+  if(profile?.role==='company'){renderCompanyVerification(root);renderCompanyProfileForm(root);}}
 
 // Live credibility meter — a checklist of REAL, earned signals (identity, completeness, proven
 // GitHub skills, completed reviewed work-trials). Not a black-box score; each rung is concrete

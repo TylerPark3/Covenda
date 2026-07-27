@@ -9,6 +9,7 @@ import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, bat
 import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION, evaluateClubVerification, memberStanding } from './clubs.js';
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normaliseEmail } from './verification.js';
+import { classifyCompanyEmail, domainMatchesCompany, companyVerificationStanding } from './company-verification.js';
 import { buildMilestoneSchedule, evaluateMilestones, reassignmentDecision, founderTimeVariance } from './milestones.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
@@ -353,7 +354,10 @@ export async function loadMemberDashboard(member, env = process.env) {
   const [walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted] = await Promise.all([
     creditBalance(member), loadCreditLedger(member), loadProjectRequests(member), loadBatches(member), loadBatchAccess(member), loadBatchAdmittedCounts(member),
   ]);
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+  const [companyProfile, companyVerification] = profile.role === 'company'
+    ? await Promise.all([loadCompanyProfile(member), loadCompanyStanding(member, profile)])
+    : [null, null];
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -1227,6 +1231,145 @@ export async function attachPosters(supabase, projects) {
   });
 }
 
+// ── Company work email ────────────────────────────────────────────────────────────────
+// Same shape as the student flow, same honesty about what it proves: an address at a domain,
+// not authority to hire or sign for anyone.
+export async function requestCompanyVerification(member, input, { env = process.env } = {}) {
+  const email = normaliseEmail(input.workEmail);
+  const verdict = classifyCompanyEmail(email);
+  if (!verdict.ok) throw new Error(verdict.reason);
+
+  // One live code per person: a new request retires the last, so an old code in an old email
+  // cannot still be used.
+  await member.supabase.from('company_email_codes')
+    .update({ consumed_at: new Date().toISOString() })
+    .eq('user_id', member.user.id).is('consumed_at', null);
+
+  const code = generateCode();
+  await checked(member.supabase.from('company_email_codes')
+    .insert({ user_id: member.user.id, email, domain: verdict.registrable, code }).select('id').single(), null);
+
+  const apiKey = env.RESEND_API_KEY;
+  const from = env.COVENDA_NOTIFICATION_FROM;
+  if (!apiKey || !from) {
+    throw new PortalOperationalError(
+      'VERIFY_EMAIL_NOT_CONFIGURED',
+      'Work-email codes are not switched on yet. Covenda will confirm your company by hand in the meantime — nothing is blocked.',
+    );
+  }
+  const { Resend } = await import('resend');
+  const { error } = await new Resend(apiKey).emails.send({
+    from,
+    to: email,
+    subject: `Covenda verification code: ${code}`,
+    text: `Your Covenda work-email verification code is ${code}. It expires in 20 minutes.\n\nThis confirms you read mail at this domain. It is not a sign-in link.`,
+  });
+  if (error) throw new PortalOperationalError('VERIFY_EMAIL_FAILED', 'Could not send the code. Try again shortly.');
+
+  // Advisory only — a domain unrelated to the trading name is common and never blocking.
+  const match = domainMatchesCompany(email, input.companyName || '');
+  return { sent: true, domain: verdict.registrable, match };
+}
+
+export async function confirmCompanyVerification(member, input) {
+  const record = await checked(member.supabase.from('company_email_codes')
+    .select('*').eq('user_id', member.user.id).is('consumed_at', null)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle(), null);
+
+  const verdict = checkCode(record, input.code, new Date());
+  if (!verdict.ok) throw new Error(verdict.reason);
+
+  const now = new Date().toISOString();
+  await member.supabase.from('company_email_codes').update({ consumed_at: now }).eq('id', record.id);
+  await checked(member.supabase.from('member_profiles').update({
+    work_email_verified_at: now,
+    work_email_domain: record.domain,
+  }).eq('user_id', member.user.id), null);
+  return { verified: true, domain: record.domain };
+}
+
+export async function loadCompanyStanding(member, profile) {
+  try {
+    const domain = profile?.work_email_domain || null;
+    // How many people at this domain have confirmed. Proves only that — and says so.
+    const peers = domain
+      ? await checked(member.supabase.from('member_profiles').select('user_id')
+          .eq('work_email_domain', domain).not('work_email_verified_at', 'is', null), [])
+      : [];
+    return companyVerificationStanding({
+      emailVerifiedAt: profile?.work_email_verified_at || null,
+      domain,
+      teamVerifiedCount: (peers || []).length,
+    });
+  } catch {
+    return companyVerificationStanding({});
+  }
+}
+
+// ── The public company profile ────────────────────────────────────────────────────────
+// What a student reaches by clicking the company name on a posted project. Published is
+// opt-in: a half-filled draft should not be what a student judges the company on.
+const COMPANY_TEXT_FIELDS = [
+  ['companyName', 'company_name', 160], ['logoUrl', 'logo_url', 500], ['websiteUrl', 'website_url', 500],
+  ['location', 'location', 160], ['remotePolicy', 'remote_policy', 120], ['teamSize', 'team_size', 60],
+  ['stage', 'stage', 60], ['oneLiner', 'one_liner', 300], ['industry', 'industry', 120],
+  ['idealCustomer', 'ideal_customer', 400], ['currentPriorities', 'current_priorities', 1200],
+  ['studentGain', 'student_gain', 1200], ['workExamples', 'work_examples', 1200],
+  ['workEnvironment', 'work_environment', 800], ['weeklyHours', 'weekly_hours', 80],
+  ['compensationApproach', 'compensation_approach', 400], ['workAuthorization', 'work_authorization', 400],
+  ['hiringTimeline', 'hiring_timeline', 300],
+];
+const COMPANY_LIST_FIELDS = [
+  ['techStack', 'tech_stack'], ['departments', 'departments'], ['commonTools', 'common_tools'],
+  ['capabilityAreas', 'capability_areas'], ['engagementTypes', 'engagement_types'], ['links', 'links'],
+];
+
+export async function saveCompanyProfile(member, input) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'company') throw new Error('Only company accounts have a company profile.');
+
+  const row = { user_id: member.user.id, updated_at: new Date().toISOString() };
+  for (const [key, column, max] of COMPANY_TEXT_FIELDS) {
+    if (input[key] !== undefined) row[column] = cleanText(input[key], max) || null;
+  }
+  for (const [key, column] of COMPANY_LIST_FIELDS) {
+    if (input[key] !== undefined) {
+      row[column] = (Array.isArray(input[key]) ? input[key] : String(input[key] || '').split(','))
+        .map(v => cleanText(typeof v === 'string' ? v : JSON.stringify(v), 200)).filter(Boolean).slice(0, 40);
+    }
+  }
+  if (!row.company_name) {
+    const existing = await checked(member.supabase.from('company_profiles').select('company_name').eq('user_id', member.user.id).maybeSingle(), null);
+    row.company_name = existing?.company_name || cleanText(input.companyName, 160);
+  }
+  if (!row.company_name) throw new Error('Enter your company name.');
+  if (input.published !== undefined) row.published = Boolean(input.published);
+
+  return checked(member.supabase.from('company_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
+}
+
+export async function loadCompanyProfile(member) {
+  return checked(member.supabase.from('company_profiles').select('*').eq('user_id', member.user.id).maybeSingle(), null);
+}
+
+// A student opening a company from a project. Published only — and the caller must already
+// be a signed-in member, which the route guarantees.
+export async function loadPublicCompanyProfile(member, ownerUserId) {
+  const id = cleanText(ownerUserId, 60);
+  if (!id) throw new Error('Choose a company.');
+  const row = await checked(member.supabase.from('company_profiles')
+    .select('*').eq('user_id', id).eq('published', true).maybeSingle(), null);
+  if (!row) return { profile: null, reason: 'This company has not published a profile yet.' };
+  const owner = await checked(member.supabase.from('member_profiles')
+    .select('work_email_verified_at,work_email_domain').eq('user_id', id).maybeSingle(), null);
+  return {
+    profile: row,
+    // Stated for what it is. A confirmed address is not a Covenda endorsement.
+    workEmailConfirmed: Boolean(owner?.work_email_verified_at),
+    domain: owner?.work_email_domain || null,
+  };
+}
+
 export async function loadVerificationStanding(member) {
   try {
     const [profile, clubs] = await Promise.all([
@@ -1870,6 +2013,10 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'POST' && input.action === 'verify-school-email') return res.status(200).json({ ok: true, ...(await requestSchoolVerification(member, input, dependencies)) });
     if (req.method === 'POST' && input.action === 'confirm-school-email') return res.status(200).json({ ok: true, ...(await confirmSchoolVerification(member, input)) });
+    if (req.method === 'POST' && input.action === 'verify-work-email') return res.status(200).json({ ok: true, ...(await requestCompanyVerification(member, input, dependencies)) });
+    if (req.method === 'POST' && input.action === 'confirm-work-email') return res.status(200).json({ ok: true, ...(await confirmCompanyVerification(member, input)) });
+    if (req.method === 'POST' && input.action === 'save-company-profile') return res.status(200).json({ ok: true, companyProfile: await saveCompanyProfile(member, input) });
+    if (req.method === 'POST' && input.action === 'company-profile') return res.status(200).json({ ok: true, ...(await loadPublicCompanyProfile(member, input.ownerUserId)) });
     if (req.method === 'POST' && input.action === 'save-video') return res.status(201).json({ ok: true, video: await saveMemberVideo(member, input) });
     if (req.method === 'POST' && input.action === 'delete-video') return res.status(200).json({ ok: true, ...(await deleteMemberVideo(member, input)) });
     if (req.method === 'POST' && input.action === 'register-club') return res.status(201).json({ ok: true, club: await registerClub(member, input) });
