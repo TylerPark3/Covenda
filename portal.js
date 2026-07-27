@@ -430,6 +430,15 @@ const VERIF_STEPS={
 function verifDialog(title,intro){
   const dlg=document.createElement('dialog'); dlg.className='verif-dialog';
   const shell=document.createElement('form'); shell.method='dialog'; shell.className='verif-form';
+  // Pressing Enter in any input implicitly submits, and a method="dialog" form submitting
+  // CLOSES the dialog — so typing an email and hitting Enter silently dismissed the whole
+  // thing without ever calling the API. Enter now runs the primary action instead, which is
+  // what someone pressing it is asking for anyway.
+  shell.addEventListener('submit',event=>{
+    event.preventDefault();
+    const primary=shell.querySelector('footer .portal-primary:not([disabled])');
+    if(primary)primary.click();
+  });
   const head=document.createElement('header');
   const box=document.createElement('div');
   const eyebrow=document.createElement('p'); eyebrow.className='eyebrow'; eyebrow.textContent='Verification';
@@ -3059,6 +3068,16 @@ if(authError)showAuth(authError,true);else if(session().accessToken)loadDashboar
 // The document path. The file goes up, the text is extracted server-side, and only the
 // drafts come back — a company planning doc is confidential and should not round-trip
 // through the browser to get read.
+// Same trap as the verification dialogs: Enter in any of the intake's text inputs implicitly
+// submits, and a method="dialog" form submitting closes the dialog — taking everything the
+// founder had typed with it. Enter advances the step instead.
+$('#intakeForm')?.addEventListener('submit',event=>{
+  event.preventDefault();
+  const next=$('#intakeNext'),post=$('#intakePost');
+  if(post&&!post.hidden&&!post.disabled)post.click();
+  else if(next&&!next.hidden&&!next.disabled)next.click();
+});
+
 $('#reverseAuditFileBtn')?.addEventListener('click',async()=>{
   const input=$('#reverseAuditFile');const file=input&&input.files&&input.files[0];
   const status=$('#reverseAuditStatus');const results=$('#reverseAuditResults');const btn=$('#reverseAuditFileBtn');

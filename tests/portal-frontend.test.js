@@ -60,3 +60,15 @@ test('member portal is responsive, reduced-motion safe, and contains no server s
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
   assert.equal(new Set(ids).size,ids.length);
 });
+
+// A method="dialog" form CLOSES its dialog on implicit submit, so pressing Enter in a text
+// input silently dismissed the whole thing — the school-email dialog vanished without ever
+// calling the API, and the company intake would have lost everything typed.
+test('pressing Enter in a dialog runs the action instead of closing the dialog', () => {
+  const portalJs = script;
+  // The dynamically-built verification dialogs.
+  assert.match(portalJs, /shell\.addEventListener\('submit',event=>\{[\s\S]{0,120}preventDefault/);
+  assert.match(portalJs, /footer \.portal-primary:not\(\[disabled\]\)/);
+  // And the company intake, which has text inputs and had no handler at all.
+  assert.match(portalJs, /\$\('#intakeForm'\)\?\.addEventListener\('submit'/);
+});
