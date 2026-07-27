@@ -2207,8 +2207,13 @@ body[data-audience="home"] .compare-section { display: block; }
 /* Wide content scrolls inside its own container so the page body never scrolls sideways. */
 .compare-scroll { margin: 48px 0 0; overflow-x: auto; }
 .compare-table { width: 100%; min-width: 660px; border-collapse: collapse; text-align: left; }
-.compare-table th, .compare-table td { padding: 16px 24px; vertical-align: middle; border-bottom: 1px solid var(--line); }
+/* Two lines only: one under the header row, one dividing the category column from the answers.
+   Row rules were adding five more horizontal lines to a six-row table, which is more grid than
+   content. Without them the rows need their own breathing room, hence the taller padding. */
+.compare-table th, .compare-table td { padding: 20px 24px; vertical-align: middle; border: 0; }
 .compare-table thead th { padding-bottom: 14px; border-bottom: 1.5px solid var(--line-strong); }
+.compare-table tbody th { border-right: 1px solid var(--line-strong); }
+.compare-table thead th:first-child { border-right: 1px solid var(--line-strong); }
 .ct-q { font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
 .ct-them { font-size: 15px; font-weight: 650; letter-spacing: -.01em; color: var(--soft); }
 .ct-us { font-size: 17px; font-weight: 700; letter-spacing: -.015em; color: var(--gold-deep); }
@@ -2225,7 +2230,6 @@ body[data-audience="home"] .compare-section { display: block; }
    lighter value on the cream ground drops under the contrast floor for body-size text. */
 .compare-table .is-us { background: var(--gold-pale); border-left: 3px solid var(--gold); color: var(--gold-deep); font-weight: 600; }
 .compare-table thead .is-us { background: var(--gold-pale); }
-.compare-table tbody tr:last-child .is-us { border-bottom-color: var(--gold); }
 
 
 .company-product-demo {
