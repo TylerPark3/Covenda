@@ -724,3 +724,123 @@ $('#adminBatchForm')?.addEventListener('submit',async event=>{
 
 const authError=captureMagicLink();
 if (authError) showLogin(authError,true); else if (token()) loadInbox().catch(error=>showLogin(error.message,true)); else showLogin();
+
+// ── Who is actually on the platform ───────────────────────────────────────────────────
+// The inbox answers "who filled in a form". This answers "who is in, and is it real" —
+// which previously meant querying Supabase by hand. Every population leads with the number
+// that decides whether it counts: a student with a confirmed club, a club with confirmed
+// members, a company that has posted funded work. Signups are the vanity number and are
+// shown second on purpose.
+(function initRoster(){
+  const nav=document.getElementById('rosterNav');
+  const panel=document.getElementById('adminRoster');
+  const queue=document.querySelector('.admin-queue');
+  if(!nav||!panel)return;
+  let roster=null,tab='students',filter='';
+
+  const el=(t,c,txt)=>{const n=document.createElement(t);if(c)n.className=c;if(txt!=null)n.textContent=txt;return n;};
+
+  function totals(){
+    const host=document.getElementById('rosterTotals');host.replaceChildren();
+    const t=roster.totals;
+    // Real first, signups second — a signup count nobody has verified flatters the pilot.
+    [['Verified students',t.studentsVerified,`${t.students} signed up`],
+     ['Clubs with confirmed members',t.clubsWithConfirmedMembers,`${t.clubs} registered`],
+     ['Companies with funded work',t.companiesActive,`${t.companies} signed up`],
+     ['Projects live',t.projectsLive,`${t.projectsCompleted} completed`]]
+      .forEach(([label,value,sub])=>{
+        const card=el('div','roster-total');
+        card.append(el('b',null,String(value)),el('span',null,label),el('small',null,sub));
+        host.append(card);
+      });
+  }
+
+  function table(cols,rows){
+    const wrap=el('div','roster-scroll');
+    const tbl=document.createElement('table');tbl.className='roster-table';
+    const thead=document.createElement('thead');const hr=document.createElement('tr');
+    cols.forEach(c=>hr.append(el('th',null,c.label)));thead.append(hr);
+    const tbody=document.createElement('tbody');
+    if(!rows.length){
+      const tr=document.createElement('tr');const td=el('td','roster-empty','Nothing here yet.');
+      td.colSpan=cols.length;tr.append(td);tbody.append(tr);
+    }
+    rows.forEach(row=>{
+      const tr=document.createElement('tr');
+      cols.forEach(c=>{
+        const td=document.createElement('td');
+        const v=c.get(row);
+        if(v&&typeof v==='object'&&v.pill){
+          const s=el('span','roster-pill',v.pill);s.dataset.tone=v.tone||'';td.append(s);
+        }else td.textContent=v==null||v===''?'—':String(v);
+        tr.append(td);
+      });
+      tbody.append(tr);
+    });
+    tbl.append(thead,tbody);wrap.append(tbl);return wrap;
+  }
+
+  const COLS={
+    students:[
+      {label:'Student',get:r=>r.name},
+      {label:'School',get:r=>r.school},
+      {label:'Verified',get:r=>({pill:r.verified?'Club confirmed':(r.schoolEmailVerified?'School email only':'No'),tone:r.verified?'good':(r.schoolEmailVerified?'warn':'')})},
+      {label:'Clubs',get:r=>r.clubs.join(', ')||(r.clubsClaimedUnconfirmed?`${r.clubsClaimedUnconfirmed} unconfirmed`:'')},
+      {label:'Batches',get:r=>`${r.batchesAdmitted}/${r.batchesApplied}`},
+      {label:'Projects',get:r=>`${r.projectsCompleted}/${r.projectsAssigned}`},
+    ],
+    clubs:[
+      {label:'Club',get:r=>r.name},
+      {label:'School',get:r=>r.school},
+      {label:'Link',get:r=>r.link?r.link.replace(/^https?:\/\//,'').slice(0,40):''},
+      {label:'Confirmed',get:r=>({pill:String(r.confirmed),tone:r.confirmed?'good':''})},
+      {label:'Claimed',get:r=>r.claimed},
+      {label:'Officer confirmed',get:r=>r.lastOfficer||(r.officerConfirmed?`${r.officerConfirmed}`:'—')},
+      {label:'Admitted to batches',get:r=>r.admitted},
+    ],
+    companies:[
+      {label:'Company',get:r=>r.name},
+      {label:'Contact',get:r=>r.contactName},
+      {label:'Work email',get:r=>({pill:r.workEmailVerified?(r.domain||'Confirmed'):'Unconfirmed',tone:r.workEmailVerified?'good':'warn'})},
+      {label:'Posted',get:r=>r.projectsPosted},
+      {label:'Funded',get:r=>({pill:String(r.projectsFunded),tone:r.projectsFunded?'good':''})},
+      {label:'Credits held',get:r=>r.creditsHeld},
+    ],
+  };
+
+  function paint(){
+    const body=document.getElementById('rosterBody');body.replaceChildren();
+    if(!roster){body.append(el('p','roster-empty','Loading…'));return;}
+    totals();
+    const q=filter.trim().toLowerCase();
+    const rows=(roster[tab]||[]).filter(r=>!q||JSON.stringify(r).toLowerCase().includes(q));
+    body.append(table(COLS[tab],rows));
+  }
+
+  async function load(){
+    try{
+      const out=await adminRequest({method:'POST',body:JSON.stringify({action:'platform-roster'})});
+      roster=out.roster;paint();
+    }catch(error){
+      const body=document.getElementById('rosterBody');
+      body.replaceChildren(el('p','roster-empty',error.message));
+    }
+  }
+
+  nav.addEventListener('click',()=>{
+    document.querySelectorAll('.admin-nav nav button').forEach(b=>b.classList.remove('is-active'));
+    nav.classList.add('is-active');
+    if(queue)queue.hidden=true;
+    panel.hidden=false;
+    if(!roster)load();else paint();
+  });
+  document.querySelectorAll('.admin-nav nav [data-admin-type]').forEach(b=>b.addEventListener('click',()=>{
+    nav.classList.remove('is-active');panel.hidden=true;if(queue)queue.hidden=false;
+  }));
+  document.getElementById('rosterRefresh')?.addEventListener('click',load);
+  document.getElementById('rosterSearch')?.addEventListener('input',e=>{filter=e.target.value;paint();});
+  document.querySelectorAll('[data-roster-tab]').forEach(b=>b.addEventListener('click',()=>{
+    document.querySelectorAll('[data-roster-tab]').forEach(x=>x.classList.remove('is-active'));
+    b.classList.add('is-active');tab=b.dataset.rosterTab;paint();
+  }));
+})();

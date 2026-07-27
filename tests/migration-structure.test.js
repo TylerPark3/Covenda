@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 const migration = readFileSync(
   new URL('../supabase/migrations/20260721051450_create_submission_inbox.sql', import.meta.url),
@@ -60,7 +60,7 @@ const conversionTracking = readFileSync(
 ).toLowerCase();
 
 test('submission migration creates a constrained private operator inbox', () => {
-  assert.match(migration, /create table public\.submissions/);
+  assert.match(migration, /create table if not exists public\.submissions/);
   assert.match(migration, /reference text not null unique/);
   assert.match(migration, /details jsonb not null/);
   assert.match(migration, /constraint submissions_type_allowed check/);
@@ -127,9 +127,9 @@ test('operator follow-up migration adds private bounded workflow fields', () => 
 });
 
 test('member portal migration creates private role-aware projects and applications', () => {
-  assert.match(memberPortal, /create table public\.member_profiles/);
-  assert.match(memberPortal, /create table public\.member_projects/);
-  assert.match(memberPortal, /create table public\.project_applications/);
+  assert.match(memberPortal, /create table if not exists public\.member_profiles/);
+  assert.match(memberPortal, /create table if not exists public\.member_projects/);
+  assert.match(memberPortal, /create table if not exists public\.project_applications/);
   assert.match(memberPortal, /role in \('student', 'company', 'university'\)/);
   assert.match(memberPortal, /alter table public\.member_profiles force row level security/);
   assert.match(memberPortal, /alter table public\.member_projects force row level security/);
@@ -138,11 +138,11 @@ test('member portal migration creates private role-aware projects and applicatio
 });
 
 test('project message migration keeps conversations server-only and indexed', () => {
-  assert.match(projectMessages, /create table public\.project_messages/);
+  assert.match(projectMessages, /create table if not exists public\.project_messages/);
   assert.match(projectMessages, /references public\.member_projects\(id\) on delete cascade/);
   assert.match(projectMessages, /char_length\(body\) between 1 and 4000/);
-  assert.match(projectMessages, /create index project_messages_project_created_idx/);
-  assert.match(projectMessages, /create index project_messages_author_idx/);
+  assert.match(projectMessages, /create index if not exists project_messages_project_created_idx/);
+  assert.match(projectMessages, /create index if not exists project_messages_author_idx/);
   assert.match(projectMessages, /alter table public\.project_messages force row level security/);
   assert.match(projectMessages, /revoke all on table public\.project_messages from public, anon, authenticated/);
   assert.match(projectMessages, /grant select, insert on table public\.project_messages to service_role/);
@@ -264,4 +264,27 @@ test('compatibility Stage-0 migration: evidence-tiered skill_claim, opportunity 
   assert.match(stage0, /revoke all on table public\.matches from public, anon, authenticated/);
   assert.match(stage0, /notify pgrst, 'reload schema';/);
   assert.doesNotMatch(stage0, /drop table/);
+});
+
+// Every migration must survive a re-run. Three of them originally did not, which is why a
+// project that already had the portal tables died on "already exists" — and, worse, why a
+// project MISSING them could not be repaired by replaying the folder. `npm run sql` refuses
+// to bundle anything unsafe, so this keeps that guarantee true at the source.
+test('every migration is safe to run twice', () => {
+  const dir = new URL('../supabase/migrations/', import.meta.url);
+  const offenders = [];
+  for (const file of readdirSync(dir).filter(name => name.endsWith('.sql')).sort()) {
+    const body = readFileSync(new URL(file, dir), 'utf8');
+    const bare = body.match(/^create (table|index|unique index) (?!if not exists)/gim) || [];
+    // A policy cannot take "if not exists", so it must be dropped first instead.
+    const policies = body.match(/^create policy\s+(\S+)/gim) || [];
+    for (const decl of policies) {
+      const name = decl.split(/\s+/)[2];
+      if (!new RegExp(`drop policy if exists\\s+${name}\\b`, 'i').test(body)) {
+        offenders.push(`${file}: policy ${name} is created without a preceding drop`);
+      }
+    }
+    if (bare.length) offenders.push(`${file}: ${bare.length} bare ${bare.length === 1 ? 'create' : 'creates'}`);
+  }
+  assert.deepEqual(offenders, [], 'migrations that cannot be re-run:\n  ' + offenders.join('\n  '));
 });

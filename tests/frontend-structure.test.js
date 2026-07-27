@@ -22,7 +22,7 @@ test('student-first hero leads with optional joining, six broad industries, and 
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(hero, /Do work that proves/);
   assert.equal((hero.match(/data-student-industry=/g) || []).length, 6);
-  assert.match(hero, /Join now — choose later/);
+  assert.match(hero, /Join now, choose later/);
   assert.match(hero, /No industry is required/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
@@ -47,8 +47,8 @@ test('the student entry progressively discloses industry, sector, and work witho
   const studentForm = html.match(/<dialog class="form-dialog" id="studentDialog"[\s\S]*?<\/dialog>/)?.[0] || '';
   const companyForm = html.match(/<dialog class="form-dialog" id="companyDialog"[\s\S]*?<\/dialog>/)?.[0] || '';
   assert.match(studentHero, /Do work that proves/);
-  assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"[\s\S]*Join now — choose later/);
-  assert.match(studentHero, /Join now — choose later[\s\S]*What kind of startup interests you/);
+  assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"[\s\S]*Join now, choose later/);
+  assert.match(studentHero, /Join now, choose later[\s\S]*What kind of startup interests you/);
   for (const industry of ['Technology', 'Finance', 'Health', 'Consumer', 'Business', 'Climate &amp; industry']) {
     assert.match(studentHero, new RegExp(industry));
   }
@@ -90,11 +90,16 @@ test('the student entry progressively discloses industry, sector, and work witho
 test('audience switch supports student and company site states', () => {
   assert.match(html, /data-audience-option="student"/);
   assert.match(html, /data-audience-option="company"/);
-  // Company hero leads with the profile builder — the backlog card was removed, since
-  // "describe the person" is the entry point now and the problem field lives inside it.
-  assert.match(html, /Build the profile/);
+  // The company hero leads with one free-text box. Six structured fields before a founder had
+  // seen a single student was filtering they had no basis to do — the skills, hours and budget
+  // questions come later, once there is a reason to ask them.
+  assert.match(html, /id="companyProblemSeed"/);
+  assert.match(html, /What keeps getting pushed back\?/);
   assert.match(html, /Hire from a vetted batch/);
-  assert.doesNotMatch(html, /Work that keeps getting pushed back/);
+  // The chip pickers and the numeric grid are gone from the entry point.
+  assert.doesNotMatch(html, /id="ibVerticals"/);
+  assert.doesNotMatch(html, /id="ibWorkTypes"/);
+  assert.doesNotMatch(html, /name="requiredSkills"/);
   assert.match(script, /document\.body\.dataset\.audience = audience/);
   assert.match(styles, /body\[data-audience="company"\] \.hero-student/);
   assert.match(script, /covendaAudience/);
@@ -308,7 +313,7 @@ test('readiness read-out builds nodes with createIcon, not raw icon strings', ()
 });
 
 test('the how-we-verify section exists and advertises only what is actually built', () => {
-  // The section must be present but start hidden — it only appears once /api/proof-methods
+  // The section must be present but start hidden\s*[,—.]\s*it only appears once /api/proof-methods
   // returns real registry data, so a failed fetch shows nothing rather than empty scaffolding.
   assert.match(html, /<section class="verify-section" id="verifyMethods" hidden>/);
   assert.match(html, /id="verifyMachineList"/);
@@ -478,7 +483,7 @@ test('batch selection has real feedback and respects reduced motion', () => {
 });
 
 test('joining the talent pool is name, email and school — not the four-step form', () => {
-  assert.match(html, /data-action="student-quick"[^>]*data-join-mode="open"[^>]*>[\s\S]*Join now — choose later/);
+  assert.match(html, /data-action="student-quick"[^>]*data-join-mode="open"[^>]*>[\s\S]*Join now\s*[,—.]\s*choose later/);
   assert.doesNotMatch(html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '', /Or add full details now/);
 });
 
@@ -508,7 +513,7 @@ test('the reading spine is decorative, scroll-passive and reduced-motion safe', 
 test('the demo walks each vertical separately and stays labelled illustrative', () => {
   assert.match(html, /id="verticalDemo"/);
   assert.match(html, /What this looks like for you/);
-  assert.match(html, /Illustrative walkthrough — no real company/);
+  assert.match(html, /Illustrative walkthrough\s*[,—.]\s*no real company/);
   assert.match(script, /action: 'vertical-demo'/);
   // A tablist has to be operable with arrow keys.
   assert.match(script, /ArrowRight/);
@@ -632,7 +637,7 @@ test('the work exchange turns one project into clear value for both sides', () =
   assert.doesNotMatch(html, /Brief, Build, and Review/);
   assert.match(html, /One project\./);
   assert.match(html, /Two sides win\./);
-  assert.match(html, /Covenda turns referred talent and real startup work into a trial both sides can trust/);
+  assert.match(html, /[Rr]eferred talent[\s\S]{0,60}trial both sides can trust/);
   for (const label of [
     'Real startup task',
     'Work the team needs done',
@@ -708,7 +713,8 @@ test('verification reads as two instruments, not a fallback', () => {
   assert.match(html, /Experts judge/);
   assert.match(html, /Machine-checked · objective/);
   assert.match(html, /Expert-vetted · judgement/);
-  assert.match(html, /the strongest evidence is where they overlap/);
+  assert.match(html, /Not a trade-off/);
+  assert.match(html, /[Ww]e run both/);
   assert.doesNotMatch(html, /Where that isn’t possible/);
   assert.doesNotMatch(html, /We verify what can be/);
   // Judgement is measured, not vibes — and the honesty line survives the reframe.
@@ -735,8 +741,9 @@ test('the referral page argues before it asks', () => {
   assert.match(html, /Founders already ask you/);
   assert.match(html, /How it works today/);
   assert.match(html, /The same thing, systematised/);
-  // The actual goal, stated: credibility a stranger will trust.
-  assert.match(html, /build credibility that a founder who has never heard of it will still trust/);
+  // The actual goal, stated: credibility a stranger will trust. The wording is allowed to
+  // tighten — what must survive is that the page says it out loud.
+  assert.match(html, /builds? credibility (that )?a stranger will trust/i);
 });
 
 // Self-rated scales carried no signal and contradicted the platform's own rule that
@@ -798,10 +805,10 @@ test('the credibility heading lost the stranded numeral', () => {
 test('the trial/batch distinction is stated, not left to inference', () => {
   assert.match(html, /Trials are the work/);
   assert.match(html, /Batches are the shortlist/);
-  assert.match(html, /Open to anyone — no batch needed/);
+  assert.match(html, /[Nn]o batch needed/);
   assert.match(html, /accepted trial work is the strongest way to clear it/);
   // Which to start with, said outright.
-  assert.match(html, /Start with trials if you have nothing yet/);
+  assert.match(html, /[Nn]o evidence yet\?[\s\S]{0,40}[Ss]tart with trials/);
   assert.match(styles, /\.tb-split/);
 });
 
@@ -829,5 +836,8 @@ test('students can see their verification standing and where work stands', async
   assert.match(portalJs, /function renderMilestones\(\)/);
   // The two rules that only matter if the student actually reads them.
   assert.match(portalJs, /it is the floor, not the proof/);
-  assert.match(portalJs, /Going quiet is what moves the work to someone else/);
+  // The rule, not the sentence — copy tightens, the guarantee does not. Being late must
+  // stay safe and silence must stay the thing that costs you the work.
+  assert.match(portalJs, /Running late is fine/);
+  assert.match(portalJs, /Going quiet is what loses the work/);
 });

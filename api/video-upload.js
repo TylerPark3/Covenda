@@ -22,6 +22,23 @@ function sameOrigin(req) {
   }
 }
 
+// The Blob store's access mode is a deployment setting, not something this code should
+// assume. Asking for `public` on a private store throws outright — which is exactly how the
+// video recorder broke — so try the configured default and fall back rather than hardcoding.
+//
+// Consequence worth knowing: on a private store the returned URL is not publicly fetchable,
+// so a reviewer needs a signed URL to watch a recording. That is stricter than the previous
+// public-but-unguessable posture and better for student privacy, but it means playback has
+// to go through a signing step.
+async function putEither(key, body, contentType) {
+  try {
+    return await put(key, body, { access: 'public', contentType });
+  } catch (error) {
+    if (!/private access|public access/i.test(String(error?.message || ''))) throw error;
+    return put(key, body, { access: 'private', contentType });
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed.' });
@@ -64,13 +81,15 @@ export default async function handler(req, res) {
 
   const ext = contentType === 'video/mp4' ? 'mp4' : contentType === 'video/quicktime' ? 'mov' : 'webm';
   try {
-    const blob = await put(`video-intros/intro.${ext}`, Buffer.concat(chunks), {
-      access: 'public',
-      contentType,
-      addRandomSuffix: true,
-    });
+    // Unique key built here rather than relying on addRandomSuffix, whose behaviour has
+    // changed across @vercel/blob majors.
+    const key = `video-intros/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
+    const blob = await putEither(key, Buffer.concat(chunks), contentType);
     res.status(200).json({ url: blob.url });
-  } catch {
-    res.status(500).json({ error: 'Upload failed. Please try again, or paste a link.' });
+  } catch (error) {
+    // A bare catch made every failure identical and undebuggable. The real reason goes to
+    // the logs, and a usable version goes to the student.
+    console.error(JSON.stringify({ level: 'error', message: 'Video upload failed', error: String(error?.message || error) }));
+    res.status(500).json({ error: `Upload failed: ${String(error?.message || 'unknown error')}. Paste a link instead if this keeps happening.` });
   }
 }

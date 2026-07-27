@@ -145,13 +145,19 @@ test('missing or malformed data degrades instead of throwing', () => {
 
 // Stage 4 was fully built, fully tested, and imported by NOTHING — the flake defense never
 // ran. These pin the two seams that make it real.
-test('a schedule is laid down the moment a student is assigned', async () => {
+// The schedule now starts when the STUDENT starts, not when the company approves them.
+// A clock that begins at approval makes someone late for work they never agreed to open.
+test('the milestone clock starts when the student starts, in one write', async () => {
   const portal = await readFile(new URL('../../api/portal.js', import.meta.url), 'utf8');
   assert.match(portal, /import \{ buildMilestoneSchedule/);
   assert.match(portal, /const milestones = buildMilestoneSchedule\(project, \{ startAt: now \}\)/);
-  // Written in the same update that assigns the student — not a second write that can fail
-  // on its own and leave a project assigned with no schedule.
-  assert.match(portal, /assigned_student_user_id: application\.student_user_id,[\s\S]{0,220}milestones/);
+  // Written in the same update that moves the project in progress — not a second write that
+  // can fail on its own and leave a running project with no schedule.
+  assert.match(portal, /status: 'in_progress',[\s\S]{0,200}milestones/);
+  // And approving no longer lays a schedule down.
+  const accept = portal.slice(portal.indexOf('export async function acceptApplication'));
+  const acceptBody = accept.slice(0, accept.indexOf('export async function startTrial'));
+  assert.doesNotMatch(acceptBody, /buildMilestoneSchedule/);
 });
 
 test('submitting a deliverable marks the milestone rather than asserting on-time later', async () => {

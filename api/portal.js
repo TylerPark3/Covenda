@@ -6,10 +6,18 @@ import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicatio
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
-import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical } from './batches.js';
+import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility } from './batches.js';
+import { summarise as summariseVetting, processFor } from './vetting.js';
+import { assessmentFor as supplierAssessment } from './assessments.js';
+import { scriptFor } from './session-script.js';
 import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION, evaluateClubVerification, memberStanding } from './clubs.js';
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normaliseEmail } from './verification.js';
+import { classifyCompanyEmail, domainMatchesCompany, companyVerificationStanding } from './company-verification.js';
+import { readinessFor, categoriseOpportunity } from './readiness.js';
+import { recordRevision, briefVersion, evaluateBrief } from './brief-engine.js';
+import { checkIntroduction, applyResponse, normaliseOutcome, referralStatus, OUTCOME_QUESTIONS } from './introductions.js';
+import { checkPayout, creditsToCents, transferIdempotencyKey, payoutsMode } from './payouts.js';
 import { buildMilestoneSchedule, evaluateMilestones, reassignmentDecision, founderTimeVariance } from './milestones.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
@@ -64,6 +72,14 @@ export class PortalOperationalError extends Error {
 
 function cleanText(value, maxLength) {
   return typeof value === 'string' ? value.replace(/\0/g, '').trim().slice(0, maxLength) : '';
+}
+
+// The confirmation token is the only credential on the officer route, so it comes from the
+// CSPRNG rather than Math.random.
+function randomToken(bytes = 32) {
+  const buf = new Uint8Array(bytes);
+  globalThis.crypto.getRandomValues(buf);
+  return Array.from(buf, b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function cleanEmail(value) {
@@ -264,6 +280,25 @@ export async function authorizeMember(req, dependencies = {}) {
   return { user: { id: data.user.id, email: cleanEmail(data.user.email), metadata: data.user.user_metadata || {} }, supabase };
 }
 
+// For optional, additive features whose table may not exist yet. checked() throws on a query
+// error, which is right for the core tables — if member_projects is missing, nothing works
+// and pretending otherwise hides it. But a portal that 503s in its entirety because an
+// introductions table has not been migrated yet is a code/schema skew taking down features
+// that have nothing to do with it. These degrade to empty and log the reason.
+async function optional(query, fallback = [], label = 'optional table') {
+  try {
+    const { data, error } = await query;
+    if (error) {
+      console.warn(JSON.stringify({ level: 'warn', message: 'Optional read skipped', label, error: error.message }));
+      return fallback;
+    }
+    return data ?? fallback;
+  } catch (error) {
+    console.warn(JSON.stringify({ level: 'warn', message: 'Optional read threw', label, error: String(error?.message || error) }));
+    return fallback;
+  }
+}
+
 async function checked(query, fallback = []) {
   const { data, error } = await query;
   if (error) throw error;
@@ -309,7 +344,10 @@ export async function loadMemberDashboard(member, env = process.env) {
       : [];
     const verifiedCount = projects.filter(project => project.status === 'complete').length;
     const positiveOutcomes = projects.filter(project => project.conversion_outcome && project.conversion_outcome !== 'none').length;
-    const rankedOpportunities = await attachPosters(supabase, rankOpportunities(opportunities, profile, { completedCount: verifiedCount, positiveOutcomes }));
+    const rankedOpportunities = (await attachPosters(supabase, rankOpportunities(opportunities, profile, { completedCount: verifiedCount, positiveOutcomes })))
+      // Banded server-side so the client renders one agreed grouping rather than
+      // re-deriving it and drifting.
+      .map(p => ({ ...p, category: categoriseOpportunity({ score: p.fitScore, matched: p.matched }) }));
     const matchedCount = rankedOpportunities.filter(project => project.matched).length;
     // Students hold credits too once escrow is released, so they get a balance (the
     // Wallet view itself stays company/university only).
@@ -318,7 +356,21 @@ export async function loadMemberDashboard(member, env = process.env) {
     ]);
     const batchStanding = await loadBatchStanding(member);
     const verification = await loadVerificationStanding(member);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches, batchApplications, batchStanding, verification, videos, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    // How each open batch lines up with the skills this student actually listed. Browsing
+    // help, not an admission signal — evaluateBatchAdmission remains the only gate.
+    const evidencedSkills = Object.keys(((profile.skill_signals || {}).github || [])
+      .reduce((acc, a) => { (a.skills || []).forEach(sk => { acc[sk.skill] = true; }); return acc; }, {}));
+    const batchesWithFit = (batches || []).map(b => ({
+      ...b,
+      compatibility: batchCompatibility(
+        { ...b, requirements: (BATCH_CATALOG.find(c => c.slug === b.slug) || {}).requirements || [] },
+        { skills: profile.skills || [], verticals: profile.verticals || [], evidencedSkills },
+      ),
+    }));
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    // process under a NEW key rather than overwriting it — the first version clobbered
+    // brief.vetting.rails and broke every consumer of it.
+    batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -359,7 +411,13 @@ export async function loadMemberDashboard(member, env = process.env) {
   const [walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted] = await Promise.all([
     creditBalance(member), loadCreditLedger(member), loadProjectRequests(member), loadBatches(member), loadBatchAccess(member), loadBatchAdmittedCounts(member),
   ]);
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+  const [companyProfile, companyVerification] = profile.role === 'company'
+    ? await Promise.all([loadCompanyProfile(member), loadCompanyStanding(member, profile)])
+    : [null, null];
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, briefing: await companyBriefing(member), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    // process under a NEW key rather than overwriting it — the first version clobbered
+    // brief.vetting.rails and broke every consumer of it.
+    batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -552,10 +610,48 @@ export async function fulfilPayout(member, input, env = process.env) {
   if (!operatorEmails(env).includes(member.user.email || '')) throw new Error('Only a Covenda operator can settle payouts.');
   const id = cleanText(input.requestId, 50);
   if (!PROJECT_ID_PATTERN.test(id)) throw new Error('Choose a valid payout request.');
+  const mode = payoutsMode(env);
+  const request = await checked(member.supabase.from('payout_requests').select('*').eq('id', id).maybeSingle(), null);
+  if (!request) throw new Error('That payout request is no longer available.');
+  if (request.status !== 'requested') throw new Error('This payout request has already been resolved.');
+
+  // Move the money BEFORE the ledger records it as sent. The other order can mark a student
+  // paid and then fail the transfer, which is the one mistake that is expensive to unwind.
+  let transferId = null;
+  if (mode.automated) {
+    const payee = await checked(member.supabase.from('member_profiles')
+      .select('stripe_account_id,stripe_payouts_enabled').eq('user_id', request.user_id).maybeSingle(), null);
+    if (!payee?.stripe_account_id || !payee.stripe_payouts_enabled) {
+      throw new Error('That student has not finished setting up payouts. They need to complete Stripe onboarding first.');
+    }
+    const params = new URLSearchParams({
+      amount: String(creditsToCents(request.credits)),
+      currency: 'usd',
+      destination: payee.stripe_account_id,
+      'metadata[payout_request_id]': request.id,
+    });
+    const response = await fetch('https://api.stripe.com/v1/transfers', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        // Stripe retries; a transfer that runs twice pays twice.
+        'Idempotency-Key': transferIdempotencyKey(request.id),
+      },
+      body: params.toString(),
+    });
+    const json = await response.json();
+    if (!response.ok) throw new Error(json?.error?.message || 'Stripe would not send that transfer.');
+    transferId = json.id;
+  }
+
   const settled = await checked(
     member.supabase.rpc('fulfil_payout_request', { p_request_id: id, p_operator_id: member.user.id, p_note: cleanText(input.note, 500) || null }),
     null,
   );
+  if (transferId) {
+    await member.supabase.from('payout_requests').update({ stripe_transfer_id: transferId }).eq('id', id);
+  }
   return Array.isArray(settled) ? settled[0] : settled;
 }
 
@@ -1043,6 +1139,15 @@ export async function applyToBatch(member, input) {
         })).filter(a => a.answer)
       : [],
     resumeUrl: cleanUrl(input.resumeUrl),
+    // The screen recording of the supplied exercise — the process, not just the result.
+    exerciseUrl: cleanUrl(input.exerciseUrl),
+    // The work sample itself — the spreadsheet or document the vetting process reads.
+    // The client uploads and sends URLs; nothing is stored here that a reviewer
+    // cannot open.
+    workSampleFiles: (Array.isArray(input.workSampleFiles) ? input.workSampleFiles : [])
+      .slice(0, 5)
+      .map(f => ({ name: cleanText(f?.name, 160), url: cleanUrl(f?.url) }))
+      .filter(f => f.name && f.url),
     referral: cleanReferral(input.referral, verifiedPartnersFromEnv(process.env)),
     verticals: profile.verticals || [],
     workTypes: profile.work_types || [],
@@ -1071,11 +1176,18 @@ export async function loadBatchStanding(member) {
       // here so the check reads as "not yet confirmed" rather than a false zero.
       availabilityHoursPerWeek: undefined,
     };
-    return BATCH_CATALOG.map(batch => ({
-      slug: batch.slug,
-      name: batch.name,
-      ...evaluateBatchAdmission(batch, applicant),
-    }));
+    return BATCH_CATALOG.map(batch => {
+      const admission = evaluateBatchAdmission(batch, applicant);
+      // The score says where you stand; readiness says whether that is fixed, and what
+      // closes it. Admission itself is untouched — this only explains it.
+      const met = admission.total ? Math.round((admission.metCount / admission.total) * 100) : 0;
+      return {
+        slug: batch.slug,
+        name: batch.name,
+        ...admission,
+        readiness: readinessFor({ score: met, gaps: admission.checks || [] }),
+      };
+    });
   } catch {
     return [];
   }
@@ -1116,6 +1228,20 @@ export function markMilestoneSubmitted(milestones, now = new Date().toISOString(
 // row, attempts are counted, and the row is consumed on success — none of which can be
 // enforced from the client.
 
+// An API key with a stray character in it — a smart quote, a box-drawing dash pasted out of
+// a terminal, a trailing newline — throws deep inside fetch when the Authorization header is
+// built, and surfaces as the entire portal being unavailable. Catching it here means the
+// message names the actual cause instead of a 503.
+function usableApiKey(key, label) {
+  const raw = String(key || '').trim();
+  if (!raw) return { ok: false, reason: `${label} is not set on this deployment.` };
+  const bad = [...raw].findIndex(ch => ch.charCodeAt(0) > 255 || ch.charCodeAt(0) < 32);
+  if (bad !== -1) {
+    return { ok: false, reason: `${label} has an invalid character at position ${bad + 1}. It was probably copied with formatting — re-paste just the key, nothing before or after.` };
+  }
+  return { ok: true, key: raw };
+}
+
 export async function requestSchoolVerification(member, input, { env = process.env } = {}) {
   const email = normaliseEmail(input.schoolEmail);
   const check = checkSchoolEmail(email);
@@ -1130,9 +1256,20 @@ export async function requestSchoolVerification(member, input, { env = process.e
   const code = generateCode();
   await checked(member.supabase.from('school_email_codes').insert({ user_id: member.user.id, email, code }).select('id').single(), null);
 
-  const apiKey = env.RESEND_API_KEY;
+  const keyCheck = usableApiKey(env.RESEND_API_KEY, 'RESEND_API_KEY');
   const from = env.COVENDA_NOTIFICATION_FROM;
-  if (!apiKey || !from) throw new PortalOperationalError('VERIFY_EMAIL_NOT_CONFIGURED', 'Email is not configured for this deployment yet.');
+  // A student cannot act on "email is not configured" — that is our problem, not theirs. Say
+  // what it means for them and point at the two paths that do work, both of which count for
+  // more than a school email anyway.
+  if (!keyCheck.ok || !from) {
+    throw new PortalOperationalError(
+      'VERIFY_EMAIL_NOT_CONFIGURED',
+      keyCheck.ok
+        ? 'School-email codes are not switched on yet. Claim a club or ask for a named referral instead — either one counts for more than a school email.'
+        : keyCheck.reason,
+    );
+  }
+  const apiKey = keyCheck.key;
   const { Resend } = await import('resend');
   const { error } = await new Resend(apiKey).emails.send({
     from,
@@ -1201,10 +1338,10 @@ export async function saveMemberVideo(member, input) {
 }
 
 export async function loadMemberVideos(member) {
-  return checked(
+  return optional(
     member.supabase.from('member_videos').select('*').eq('user_id', member.user.id)
       .order('created_at', { ascending: false }).limit(50),
-    [],
+    [], 'member_videos',
   );
 }
 
@@ -1237,6 +1374,410 @@ export async function attachPosters(supabase, projects) {
   });
 }
 
+// ── Company work email ────────────────────────────────────────────────────────────────
+// Same shape as the student flow, same honesty about what it proves: an address at a domain,
+// not authority to hire or sign for anyone.
+export async function requestCompanyVerification(member, input, { env = process.env } = {}) {
+  const email = normaliseEmail(input.workEmail);
+  const verdict = classifyCompanyEmail(email);
+  if (!verdict.ok) throw new Error(verdict.reason);
+
+  // One live code per person: a new request retires the last, so an old code in an old email
+  // cannot still be used.
+  await member.supabase.from('company_email_codes')
+    .update({ consumed_at: new Date().toISOString() })
+    .eq('user_id', member.user.id).is('consumed_at', null);
+
+  const code = generateCode();
+  await checked(member.supabase.from('company_email_codes')
+    .insert({ user_id: member.user.id, email, domain: verdict.registrable, code }).select('id').single(), null);
+
+  const from = env.COVENDA_NOTIFICATION_FROM;
+  const keyCheck = usableApiKey(env.RESEND_API_KEY, 'RESEND_API_KEY');
+  if (!keyCheck.ok || !from) {
+    throw new PortalOperationalError(
+      'VERIFY_EMAIL_NOT_CONFIGURED',
+      keyCheck.ok
+        ? 'Work-email codes are not switched on yet. Covenda will confirm your company by hand in the meantime — nothing is blocked.'
+        : keyCheck.reason,
+    );
+  }
+  const apiKey = keyCheck.key;
+  const { Resend } = await import('resend');
+  const { error } = await new Resend(apiKey).emails.send({
+    from,
+    to: email,
+    subject: `Covenda verification code: ${code}`,
+    text: `Your Covenda work-email verification code is ${code}. It expires in 20 minutes.\n\nThis confirms you read mail at this domain. It is not a sign-in link.`,
+  });
+  if (error) throw new PortalOperationalError('VERIFY_EMAIL_FAILED', 'Could not send the code. Try again shortly.');
+
+  // Advisory only — a domain unrelated to the trading name is common and never blocking.
+  const match = domainMatchesCompany(email, input.companyName || '');
+  return { sent: true, domain: verdict.registrable, match };
+}
+
+export async function confirmCompanyVerification(member, input) {
+  const record = await checked(member.supabase.from('company_email_codes')
+    .select('*').eq('user_id', member.user.id).is('consumed_at', null)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle(), null);
+
+  const verdict = checkCode(record, input.code, new Date());
+  if (!verdict.ok) throw new Error(verdict.reason);
+
+  const now = new Date().toISOString();
+  await member.supabase.from('company_email_codes').update({ consumed_at: now }).eq('id', record.id);
+  await checked(member.supabase.from('member_profiles').update({
+    work_email_verified_at: now,
+    work_email_domain: record.domain,
+  }).eq('user_id', member.user.id), null);
+  return { verified: true, domain: record.domain };
+}
+
+export async function loadCompanyStanding(member, profile) {
+  try {
+    const domain = profile?.work_email_domain || null;
+    // How many people at this domain have confirmed. Proves only that — and says so.
+    const peers = domain
+      ? await checked(member.supabase.from('member_profiles').select('user_id')
+          .eq('work_email_domain', domain).not('work_email_verified_at', 'is', null), [])
+      : [];
+    return companyVerificationStanding({
+      emailVerifiedAt: profile?.work_email_verified_at || null,
+      domain,
+      teamVerifiedCount: (peers || []).length,
+    });
+  } catch {
+    return companyVerificationStanding({});
+  }
+}
+
+// ── The public company profile ────────────────────────────────────────────────────────
+// What a student reaches by clicking the company name on a posted project. Published is
+// opt-in: a half-filled draft should not be what a student judges the company on.
+const COMPANY_TEXT_FIELDS = [
+  ['companyName', 'company_name', 160], ['logoUrl', 'logo_url', 500], ['websiteUrl', 'website_url', 500],
+  ['location', 'location', 160], ['remotePolicy', 'remote_policy', 120], ['teamSize', 'team_size', 60],
+  ['stage', 'stage', 60], ['oneLiner', 'one_liner', 300], ['industry', 'industry', 120],
+  ['idealCustomer', 'ideal_customer', 400], ['currentPriorities', 'current_priorities', 1200],
+  ['studentGain', 'student_gain', 1200], ['workExamples', 'work_examples', 1200],
+  ['workEnvironment', 'work_environment', 800], ['weeklyHours', 'weekly_hours', 80],
+  ['compensationApproach', 'compensation_approach', 400], ['workAuthorization', 'work_authorization', 400],
+  ['hiringTimeline', 'hiring_timeline', 300],
+];
+const COMPANY_LIST_FIELDS = [
+  ['techStack', 'tech_stack'], ['departments', 'departments'], ['commonTools', 'common_tools'],
+  ['capabilityAreas', 'capability_areas'], ['engagementTypes', 'engagement_types'], ['links', 'links'],
+];
+
+export async function saveCompanyProfile(member, input) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'company') throw new Error('Only company accounts have a company profile.');
+
+  const row = { user_id: member.user.id, updated_at: new Date().toISOString() };
+  for (const [key, column, max] of COMPANY_TEXT_FIELDS) {
+    if (input[key] !== undefined) row[column] = cleanText(input[key], max) || null;
+  }
+  for (const [key, column] of COMPANY_LIST_FIELDS) {
+    if (input[key] !== undefined) {
+      row[column] = (Array.isArray(input[key]) ? input[key] : String(input[key] || '').split(','))
+        .map(v => cleanText(typeof v === 'string' ? v : JSON.stringify(v), 200)).filter(Boolean).slice(0, 40);
+    }
+  }
+  if (!row.company_name) {
+    const existing = await checked(member.supabase.from('company_profiles').select('company_name').eq('user_id', member.user.id).maybeSingle(), null);
+    row.company_name = existing?.company_name || cleanText(input.companyName, 160);
+  }
+  if (!row.company_name) throw new Error('Enter your company name.');
+  if (input.published !== undefined) row.published = Boolean(input.published);
+
+  return checked(member.supabase.from('company_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
+}
+
+export async function loadCompanyProfile(member) {
+  return optional(member.supabase.from('company_profiles').select('*').eq('user_id', member.user.id).maybeSingle(), null, 'company_profiles');
+}
+
+// A student opening a company from a project. Published only — and the caller must already
+// be a signed-in member, which the route guarantees.
+export async function loadPublicCompanyProfile(member, ownerUserId) {
+  const id = cleanText(ownerUserId, 60);
+  if (!id) throw new Error('Choose a company.');
+  const row = await checked(member.supabase.from('company_profiles')
+    .select('*').eq('user_id', id).eq('published', true).maybeSingle(), null);
+  if (!row) return { profile: null, reason: 'This company has not published a profile yet.' };
+  const owner = await checked(member.supabase.from('member_profiles')
+    .select('work_email_verified_at,work_email_domain').eq('user_id', id).maybeSingle(), null);
+  return {
+    profile: row,
+    // Stated for what it is. A confirmed address is not a Covenda endorsement.
+    workEmailConfirmed: Boolean(owner?.work_email_verified_at),
+    domain: owner?.work_email_domain || null,
+  };
+}
+
+// ── Stage 3: the founder in the loop ──────────────────────────────────────────────────
+// A proposed brief is a draft until the founder says otherwise. They can change scope, add
+// constraints, reject a deliverable, or correct the diagnosis — and every edit is stored
+// with its reason, because those reasons are the best signal we will ever get about what
+// founders actually want. Same rule as human_rationale on matches: no reason, no save.
+const BRIEF_EDITABLE = {
+  statedProblem: 'stated_problem',
+  likelyProblem: 'likely_problem',
+  valueToCompany: 'value_to_company',
+  rootCauseClass: 'root_cause_class',
+};
+
+export async function reviseBrief(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(member.supabase.from('member_projects').select('*').eq('id', projectId).maybeSingle(), null);
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the company that owns this brief can change it.');
+
+  const field = cleanText(input.field, 60);
+  const column = BRIEF_EDITABLE[field];
+  if (!column) throw new Error('That part of the brief cannot be edited here.');
+  const value = cleanText(input.value, 4000);
+  const reason = cleanText(input.reason, 1000);
+
+  // recordRevision throws without a reason; let that message reach the founder unchanged.
+  const history = recordRevision(project.brief_revisions || [], {
+    field, from: project[column], to: value, reason,
+    by: member.user.id, at: new Date().toISOString(),
+  });
+
+  return checked(member.supabase.from('member_projects').update({
+    [column]: value || null,
+    brief_revisions: history,
+    brief_version: briefVersion(history),
+    // Any edit reopens approval — a founder should never be shown as having approved
+    // something they then changed.
+    brief_approved_at: null,
+    updated_at: new Date().toISOString(),
+  }).eq('id', project.id).select('*').single(), null);
+}
+
+export async function approveBrief(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(member.supabase.from('member_projects').select('*').eq('id', projectId).maybeSingle(), null);
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the company that owns this brief can approve it.');
+
+  // Re-check at the gate. A brief edited into uselessness should not ship because it passed
+  // when it was first proposed.
+  const verdict = evaluateBrief({
+    valueToCompany: project.value_to_company,
+    discriminatingSignal: project.discriminating_signal || [],
+    inputsRequired: project.inputs_required || [],
+    founderTimeRequired: project.founder_time_budget_min_week,
+    gradingRubric: (project.grading_rubric || {}).anchors,
+    rubricSkill: (project.grading_rubric || {}).skill,
+    estimatedHours: project.estimated_hours,
+    title: project.title, deliverable: project.deliverable,
+  });
+  if (!verdict.ok) {
+    const err = new Error(verdict.refusal.reasons[0]);
+    err.reasons = verdict.refusal.reasons;
+    throw err;
+  }
+
+  return checked(member.supabase.from('member_projects').update({
+    brief_approved_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq('id', project.id).select('*').single(), null);
+}
+
+// The ideal intern, in the founder's words. Traits and skills are kept apart deliberately:
+// a skill can be evidenced from an artifact, a trait cannot, and putting "self-starter" in
+// the same list as a verified capability would imply they are comparable.
+//
+// The memo is the part the brief engine reads. A skill list says what to filter on; the memo
+// says what the work is FOR, which is what decides whether a trial discriminates usefully.
+export async function saveIdealIntern(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(member.supabase.from('member_projects').select('id,owner_user_id').eq('id', projectId).maybeSingle(), null);
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the company on this project can describe the role.');
+
+  const list = value => (Array.isArray(value) ? value : String(value || '').split(','))
+    .map(v => cleanText(v, 80)).filter(Boolean).slice(0, 12);
+
+  const memo = cleanText(input.memo, 2000);
+  if (memo.length < 20) throw new Error('Say why you need this person — a skills list on its own does not scope a trial.');
+
+  return checked(member.supabase.from('member_projects').update({
+    ideal_traits: list(input.traits),
+    ideal_skills: list(input.skills),
+    ideal_memo: memo,
+    updated_at: new Date().toISOString(),
+  }).eq('id', project.id).select('*').single(), null);
+}
+
+// ── Company backend: the answers a founder actually opens the portal for ──────────────
+// The company dashboard reported counts. Counts tell you the size of a pile, not what to do
+// with it. These are the four questions a founder has when they log in, answered from rows
+// rather than from a stored summary that can drift.
+export async function companyBriefing(member) {
+  const [projects, applications] = await Promise.all([
+    checked(member.supabase.from('member_projects').select('*').eq('owner_user_id', member.user.id).limit(200), []),
+    optional(member.supabase.from('project_applications').select('*').limit(500), [], 'project_applications'),
+  ]);
+
+  const mine = new Set((projects || []).map(p => p.id));
+  const apps = (applications || []).filter(a => mine.has(a.project_id));
+  const now = Date.now();
+  const daysSince = t => (!t ? null : Math.floor((now - Date.parse(t)) / 86400000));
+
+  // 1. What is waiting on ME. The only list where inaction has a cost to someone else.
+  const blocking = [];
+  for (const p of projects) {
+    if (p.status === 'review') {
+      blocking.push({ kind: 'deliverable', projectId: p.id, title: p.title,
+        waitingDays: daysSince(p.deliverable_submitted_at),
+        // A student who submitted and heard nothing is the failure this platform exists to
+        // prevent, so it is named first and by name.
+        note: 'A student is waiting on your review.' });
+    }
+    if (p.value_to_company && !p.brief_approved_at) {
+      blocking.push({ kind: 'brief', projectId: p.id, title: p.title, waitingDays: daysSince(p.updated_at),
+        note: 'A proposed trial is waiting for your approval.' });
+    }
+  }
+  const newApps = apps.filter(a => a.status === 'submitted');
+  if (newApps.length) {
+    blocking.push({ kind: 'applications', count: newApps.length, note: `${newApps.length} ${newApps.length === 1 ? 'application' : 'applications'} nobody has opened.` });
+  }
+
+  // 2. What is running without me.
+  const running = projects.filter(p => ['matched', 'in_progress'].includes(p.status))
+    .map(p => ({ projectId: p.id, title: p.title, status: p.status,
+      startedDays: daysSince(p.updated_at),
+      // Approved but not started is a distinct state and worth surfacing — it usually means
+      // the student is hesitating, not that the work has stalled.
+      note: p.status === 'matched' ? 'Approved; the student has not started yet.' : 'In progress.' }));
+
+  // 3. What it has cost and returned. Money first, because it is the number a founder
+  //    actually tracks, and vague spend is how a pilot loses trust.
+  const held = projects.reduce((n, p) => n + (Number(p.credits_held) || 0), 0);
+  const spent = projects.filter(p => p.status === 'complete')
+    .reduce((n, p) => n + (Number(p.credits_listed) || 0), 0);
+  const completed = projects.filter(p => p.status === 'complete').length;
+
+  // 4. What we learned. Empty until outcomes exist, and it says so rather than showing zeros
+  //    that look like failure.
+  const surveys = projects.filter(p => p.outcome_survey).map(p => p.outcome_survey);
+  const learned = surveys.length
+    ? {
+        answered: surveys.length,
+        wouldUseAgain: surveys.filter(s => s.wouldUseAgain).length,
+        avgShortlistRelevance: Math.round(
+          surveys.filter(s => s.shortlistRelevant).reduce((n, s) => n + s.shortlistRelevant, 0)
+          / Math.max(1, surveys.filter(s => s.shortlistRelevant).length) * 10) / 10,
+      }
+    : null;
+
+  return {
+    blocking: blocking.sort((a, b) => (b.waitingDays || 0) - (a.waitingDays || 0)),
+    running,
+    money: { heldInEscrow: held, releasedOnCompletedWork: spent, completedProjects: completed },
+    learned,
+    // Said plainly rather than rendering an empty dashboard that reads as failure.
+    emptyReason: projects.length ? null : 'Nothing posted yet. Describe a problem and we will scope the trial.',
+  };
+}
+
+// ── Step 5: introductions ─────────────────────────────────────────────────────────────
+// A company can reach a student at any point. The terms go with the ask, always — an
+// introduction that leaves out the money or the hours is how students get strung along.
+export async function requestIntroduction(member, input) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'company') throw new Error('Only company accounts can request an introduction.');
+
+  const verdict = checkIntroduction({
+    roleSummary: input.roleSummary, whyRelevant: input.whyRelevant, compensation: input.compensation,
+    timeCommitment: input.timeCommitment, nextStep: input.nextStep,
+  });
+  if (!verdict.ok) throw new Error(verdict.reason);
+
+  const studentUserId = cleanText(input.studentUserId, 60);
+  if (!studentUserId) throw new Error('Choose a student.');
+  const projectId = cleanText(input.projectId, 50);
+
+  const row = {
+    company_user_id: member.user.id,
+    student_user_id: studentUserId,
+    project_id: PROJECT_ID_PATTERN.test(projectId) ? projectId : null,
+    role_summary: cleanText(input.roleSummary, 500),
+    why_relevant: cleanText(input.whyRelevant, 800),
+    compensation: cleanText(input.compensation, 200),
+    time_commitment: cleanText(input.timeCommitment, 200),
+    next_step: cleanText(input.nextStep, 300),
+    message: cleanText(input.message, 2000) || null,
+  };
+  // Repeated asks to the same student about the same thing are pressure, not outreach —
+  // the unique constraint refuses a second live one, and this says so plainly.
+  const existing = await checked(member.supabase.from('introductions').select('id,status')
+    .eq('company_user_id', member.user.id).eq('student_user_id', studentUserId)
+    .eq('project_id', row.project_id).maybeSingle(), null);
+  if (existing) throw new Error('You have already reached out to this student about this. Wait for their answer.');
+
+  return checked(member.supabase.from('introductions').insert(row).select('*').single(), null);
+}
+
+export async function respondToIntroduction(member, input) {
+  const id = cleanText(input.introductionId, 50);
+  if (!PROJECT_ID_PATTERN.test(id)) throw new Error('Choose a valid introduction.');
+  const intro = await checked(member.supabase.from('introductions').select('*').eq('id', id).maybeSingle(), null);
+  if (!intro || intro.student_user_id !== member.user.id) throw new Error('This introduction is not yours to answer.');
+
+  const patch = applyResponse(intro, cleanText(input.response, 20), cleanText(input.note, 2000));
+  return checked(member.supabase.from('introductions').update({
+    ...patch, responded_at: new Date().toISOString(),
+  }).eq('id', intro.id).select('*').single(), null);
+}
+
+export async function loadIntroductions(member, role) {
+  const column = role === 'student' ? 'student_user_id' : 'company_user_id';
+  return optional(member.supabase.from('introductions').select('*')
+    .eq(column, member.user.id).order('created_at', { ascending: false }).limit(50), [], 'introductions');
+}
+
+// ── Step 6: what actually happened ────────────────────────────────────────────────────
+// conversion_outcome already records the result. This records what the company learned,
+// which is the only thing that will ever tell us whether the matching works.
+export async function recordOutcomeSurvey(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(member.supabase.from('member_projects').select('id,owner_user_id').eq('id', projectId).maybeSingle(), null);
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the company on this project can answer this.');
+
+  const result = normaliseOutcome(input.answers || {});
+  if (!result.ok) throw new Error('Answer whether the shortlist was relevant and whether you would use Covenda again.');
+
+  return checked(member.supabase.from('member_projects').update({
+    outcome_survey: result.answers,
+    outcome_survey_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq('id', project.id).select('*').single(), null);
+}
+
+export const OUTCOME_SURVEY_QUESTIONS = OUTCOME_QUESTIONS;
+
+// ── Step 7: company referrals ─────────────────────────────────────────────────────────
+export async function loadCompanyReferrals(member) {
+  const rows = await optional(member.supabase.from('company_referrals').select('*')
+    .eq('referrer_user_id', member.user.id).order('created_at', { ascending: false }).limit(50), [], 'company_referrals');
+  return (rows || []).map(r => ({ ...r, standing: referralStatus(r) }));
+}
+
+export async function createCompanyReferral(member) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'company') throw new Error('Only company accounts can refer another company.');
+  const code = 'CR-' + randomToken(6).toUpperCase();
+  return checked(member.supabase.from('company_referrals')
+    .insert({ referrer_user_id: member.user.id, code }).select('*').single(), null);
+}
+
 export async function loadVerificationStanding(member) {
   try {
     const [profile, clubs] = await Promise.all([
@@ -1267,6 +1808,10 @@ function clubSlug(name, school) {
 export async function registerClub(member, input) {
   const name = cleanText(input.clubName, 160);
   if (name.length < 2) throw new Error('Enter the club name.');
+  // A club nobody can look up is a club nobody can confirm.
+  if (!cleanUrl(input.websiteUrl) && !cleanUrl(input.socialUrl)) {
+    throw new Error('Add the club’s website or Instagram. We need somewhere to check it is real.');
+  }
   const row = {
     slug: clubSlug(name, cleanText(input.school, 80)),
     name,
@@ -1274,6 +1819,10 @@ export async function registerClub(member, input) {
     vertical_slug: cleanText(input.verticalSlug, 60) || null,
     contact_email: cleanEmail(input.email) || null,
     contact_role: cleanText(input.role, 80) || null,
+    // The cheapest real evidence a club exists. For most student clubs the Instagram IS the
+    // presence, so it is a peer of the website rather than a fallback.
+    website_url: cleanUrl(input.websiteUrl) || null,
+    social_url: cleanUrl(input.socialUrl) || null,
     member_estimate: Number.isFinite(Number(input.memberCount)) ? Math.max(0, Math.round(Number(input.memberCount))) : null,
     created_by: member.user.id,
   };
@@ -1284,6 +1833,75 @@ export async function registerClub(member, input) {
     return checked(member.supabase.from('clubs').update({ ...row, updated_at: new Date().toISOString() }).eq('id', existing.id).select('*').single(), null);
   }
   return checked(member.supabase.from('clubs').insert(row).select('*').single(), null);
+}
+
+// ── Club officer confirmation ─────────────────────────────────────────────────────────
+// Officers will not create accounts to vouch for someone — they are volunteers with a term of
+// office, and a signup wall is where this dies. So the student generates a single-use link
+// and sends it to their officer themselves. The officer states who they are and decides.
+export async function createClubConfirmation(member, input) {
+  const clubId = cleanText(input.clubId, 50);
+  if (!PROJECT_ID_PATTERN.test(clubId)) throw new Error('Choose a valid club.');
+  const membership = await checked(member.supabase.from('club_members')
+    .select('id,status').eq('club_id', clubId).eq('student_user_id', member.user.id).maybeSingle(), null);
+  if (!membership) throw new Error('Claim this club first, then send it for confirmation.');
+  if (membership.status === 'confirmed') throw new Error('This membership is already confirmed.');
+
+  // One live token per (student, club): a new request retires the last, so an old link in an
+  // old message cannot still confirm.
+  await member.supabase.from('club_confirmations')
+    .update({ status: 'expired', decided_at: new Date().toISOString() })
+    .eq('student_user_id', member.user.id).eq('club_id', clubId).eq('status', 'pending');
+
+  const token = randomToken(32);
+  const row = await checked(member.supabase.from('club_confirmations')
+    .insert({ token, club_id: clubId, student_user_id: member.user.id, membership_id: membership.id })
+    .select('token,expires_at').single(), null);
+  return { token: row.token, expiresAt: row.expires_at };
+}
+
+// Called from the public confirmation page. No session — the token IS the credential, so it
+// is single-use, expiring, and the officer must put a name to the decision.
+export async function resolveClubConfirmation(supabase, token) {
+  const clean = cleanText(token, 80);
+  if (!clean) return null;
+  const row = await checked(supabase.from('club_confirmations').select('*').eq('token', clean).maybeSingle(), null);
+  if (!row) return null;
+  if (row.status !== 'pending') return { ...row, usable: false, reason: 'This link has already been used.' };
+  if (row.expires_at && Date.parse(row.expires_at) < Date.now()) {
+    return { ...row, usable: false, reason: 'This link has expired. Ask the student to send a new one.' };
+  }
+  const [club, student] = await Promise.all([
+    checked(supabase.from('clubs').select('id,name,school').eq('id', row.club_id).maybeSingle(), null),
+    checked(supabase.from('member_profiles').select('display_name,school_name').eq('user_id', row.student_user_id).maybeSingle(), null),
+  ]);
+  return { ...row, usable: true, club, studentName: student?.display_name || 'This student', studentSchool: student?.school_name || null };
+}
+
+export async function decideClubConfirmation(supabase, input) {
+  const record = await resolveClubConfirmation(supabase, input.token);
+  if (!record) throw new Error('That confirmation link is not valid.');
+  if (!record.usable) throw new Error(record.reason);
+
+  const confirmed = input.decision === 'confirm';
+  const name = cleanText(input.officerName, 120);
+  if (confirmed && name.length < 2) throw new Error('Enter your name. A confirmation nobody has put their name to is worth nothing.');
+
+  const now = new Date().toISOString();
+  await checked(supabase.from('club_confirmations').update({
+    status: confirmed ? 'confirmed' : 'declined',
+    officer_name: name || null,
+    officer_email: cleanEmail(input.officerEmail) || null,
+    officer_role: cleanText(input.officerRole, 80) || null,
+    decided_at: now,
+  }).eq('id', record.id), null);
+
+  await checked(supabase.from('club_members').update({
+    status: confirmed ? 'confirmed' : 'rejected',
+    confirmed_at: confirmed ? now : null,
+  }).eq('id', record.membership_id), null);
+
+  return { confirmed, club: record.club?.name || 'the club', student: record.studentName };
 }
 
 // A student claims membership; it counts for nothing until an officer or operator confirms it.
@@ -1530,6 +2148,12 @@ export async function acceptApplication(member, input) {
   );
   if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can accept an applicant.');
   if (!['open', 'matched'].includes(project.status)) throw new Error('This project is not open for accepting an applicant.');
+  if (project.assigned_student_user_id) throw new Error('This project already has an assigned student.');
+  // Never approve someone onto paid work whose payment is not already held.
+  const listed = Number(project.credits_listed) || 0;
+  if (listed > 0 && Number(project.credits_held) < listed) {
+    throw new Error('The payment for this project is not fully held yet, so nobody can be approved to start it. Top up your balance and repost.');
+  }
   // Work-trial ladder: a Stage 2 project (deeper access) can only go to a student who has already
   // completed a Stage 1 work-trial with THIS company — proof precedes access. Projects with no
   // access_stage column/value are Stage 1, so this never changes behaviour until Stage 2 is used.
@@ -1550,13 +2174,15 @@ export async function acceptApplication(member, input) {
   // someone has actually started, and it surfaces a flake while the work can still move.
   // `project` is already a select('*') from above — refetching it cost a round-trip and
   // bought nothing.
-  const milestones = buildMilestoneSchedule(project, { startAt: now });
+  // The student is approved, not started. `matched` + an assigned student is the approved-
+  // and-waiting state; the student's own confirmation moves it to in_progress and starts the
+  // milestone clock. Two reasons: nobody should be doing work they have not agreed to begin,
+  // and a schedule that starts before they do makes them late for a project they never opened.
   await checked(
     member.supabase.from('member_projects').update({
       assigned_student_user_id: application.student_user_id,
-      status: 'in_progress',
+      status: 'matched',
       updated_at: now,
-      ...(milestones.length ? { milestones } : {}),
     }).eq('id', project.id).select('id').single(),
     null,
   );
@@ -1574,6 +2200,26 @@ export async function acceptApplication(member, input) {
     build: ({ to, from, portalUrl }) => applicationDecisionEmail({ to, from, projectTitle: project.title, accepted: true, portalUrl }),
   });
   return accepted;
+}
+
+// The student starts the work, not the company. Until this is called, an approved student has
+// committed to nothing and has no clock running against them.
+export async function startTrial(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(member.supabase.from('member_projects').select('*').eq('id', projectId).maybeSingle(), null);
+  if (!project) throw new Error('This project is no longer available.');
+  if (project.assigned_student_user_id !== member.user.id) throw new Error('Only the approved student can start this work.');
+  if (project.status === 'in_progress') return project;
+  if (project.status !== 'matched') throw new Error('This project is not waiting to be started.');
+
+  const now = new Date().toISOString();
+  const milestones = buildMilestoneSchedule(project, { startAt: now });
+  return checked(member.supabase.from('member_projects').update({
+    status: 'in_progress',
+    updated_at: now,
+    ...(milestones.length ? { milestones } : {}),
+  }).eq('id', project.id).select('*').single(), null);
 }
 
 export async function declineApplication(member, input) {
@@ -1633,7 +2279,17 @@ export async function submitDeliverable(member, input) {
   );
   if (!project || project.assigned_student_user_id !== member.user.id) throw new Error('Only the assigned student can submit work for this project.');
   if (!['in_progress', 'review'].includes(project.status)) throw new Error('This project is not ready for a deliverable yet.');
-  const body = links.length ? `${summary}\n\nLinks:\n${links.map(link => `- ${link}`).join('\n')}` : summary;
+  // Uploaded files are the work itself; links are what points at work hosted elsewhere. Both
+  // land in the deliverable so a reviewer sees one artifact list, not two.
+  const rawFiles = Array.isArray(input.deliverableFiles) ? input.deliverableFiles : [];
+  const files = rawFiles
+    .map(f => ({ name: cleanText(f?.name, 120), url: cleanUrl(f?.url) }))
+    .filter(f => f.name && f.url)
+    .slice(0, 10);
+  const parts = [summary];
+  if (files.length) parts.push('Files:\n' + files.map(f => `- ${f.name} — ${f.url}`).join('\n'));
+  if (links.length) parts.push('Links:\n' + links.map(link => `- ${link}`).join('\n'));
+  const body = parts.join('\n\n');
   const now = new Date().toISOString();
   // Clear any prior revision note so a stale "changes requested" message does not linger after resubmission.
   return checked(
@@ -1880,9 +2536,21 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'POST' && input.action === 'verify-school-email') return res.status(200).json({ ok: true, ...(await requestSchoolVerification(member, input, dependencies)) });
     if (req.method === 'POST' && input.action === 'confirm-school-email') return res.status(200).json({ ok: true, ...(await confirmSchoolVerification(member, input)) });
+    if (req.method === 'POST' && input.action === 'verify-work-email') return res.status(200).json({ ok: true, ...(await requestCompanyVerification(member, input, dependencies)) });
+    if (req.method === 'POST' && input.action === 'confirm-work-email') return res.status(200).json({ ok: true, ...(await confirmCompanyVerification(member, input)) });
+    if (req.method === 'POST' && input.action === 'save-company-profile') return res.status(200).json({ ok: true, companyProfile: await saveCompanyProfile(member, input) });
+    if (req.method === 'POST' && input.action === 'company-profile') return res.status(200).json({ ok: true, ...(await loadPublicCompanyProfile(member, input.ownerUserId)) });
+    if (req.method === 'POST' && input.action === 'revise-brief') return res.status(200).json({ ok: true, project: await reviseBrief(member, input) });
+    if (req.method === 'POST' && input.action === 'approve-brief') return res.status(200).json({ ok: true, project: await approveBrief(member, input) });
+    if (req.method === 'POST' && input.action === 'ideal-intern') return res.status(200).json({ ok: true, project: await saveIdealIntern(member, input) });
+    if (req.method === 'POST' && input.action === 'request-introduction') return res.status(201).json({ ok: true, introduction: await requestIntroduction(member, input) });
+    if (req.method === 'POST' && input.action === 'respond-introduction') return res.status(200).json({ ok: true, introduction: await respondToIntroduction(member, input) });
+    if (req.method === 'POST' && input.action === 'outcome-survey') return res.status(200).json({ ok: true, project: await recordOutcomeSurvey(member, input) });
+    if (req.method === 'POST' && input.action === 'create-company-referral') return res.status(201).json({ ok: true, referral: await createCompanyReferral(member) });
     if (req.method === 'POST' && input.action === 'save-video') return res.status(201).json({ ok: true, video: await saveMemberVideo(member, input) });
     if (req.method === 'POST' && input.action === 'delete-video') return res.status(200).json({ ok: true, ...(await deleteMemberVideo(member, input)) });
     if (req.method === 'POST' && input.action === 'register-club') return res.status(201).json({ ok: true, club: await registerClub(member, input) });
+    if (req.method === 'POST' && input.action === 'club-confirmation-link') return res.status(201).json({ ok: true, ...(await createClubConfirmation(member, input)) });
     if (req.method === 'POST' && input.action === 'claim-club') return res.status(201).json({ ok: true, membership: await claimClubMembership(member, input) });
     if (req.method === 'POST' && input.action === 'club-standing') return res.status(200).json({ ok: true, ...(await clubStanding(member, cleanText(input.clubId, 50))) });
     if (req.method === 'POST' && input.action === 'create-project') return res.status(201).json({ ok: true, project: await createMemberProject(member, input) });
@@ -1899,6 +2567,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'accept-application') return res.status(200).json({ ok: true, application: await acceptApplication(member, input) });
     if (req.method === 'POST' && input.action === 'decline-application') return res.status(200).json({ ok: true, application: await declineApplication(member, input) });
     if (req.method === 'POST' && input.action === 'withdraw-application') return res.status(200).json({ ok: true, result: await deleteApplication(member, input) });
+    if (req.method === 'POST' && input.action === 'start-trial') return res.status(200).json({ ok: true, project: await startTrial(member, input) });
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });

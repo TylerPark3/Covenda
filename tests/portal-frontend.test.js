@@ -53,7 +53,10 @@ test('batch experience: expandable cards + application with assigned video promp
   assert.match(script,/BATCH_VIDEO_PROMPTS/);
   assert.match(script,/batchInterestQuestions/);
   assert.match(script,/videoPrompt:currentBatchPrompt/);
-  assert.match(script,/interest:readBatchInterest\(form\)/);
+  // Answers come from the store now, not the form — only one question is mounted at a
+  // time, so reading the form would return the current question and nothing else.
+  assert.match(script,/interest:readBatchInterest\(\)/);
+  assert.match(script,/Read from the answer store, not the form/);
   // Dialog scaffolding for the prompt + interest answers + detail recap.
   assert.match(html,/id="batchVideoPrompt"/);
   assert.match(html,/id="batchInterestQuestions"/);
@@ -74,4 +77,62 @@ test('member portal is responsive, reduced-motion safe, and contains no server s
   assert.match(html,/noindex,nofollow/);
   const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]);
   assert.equal(new Set(ids).size,ids.length);
+});
+
+// A method="dialog" form CLOSES its dialog on implicit submit, so pressing Enter in a text
+// input silently dismissed the whole thing — the school-email dialog vanished without ever
+// calling the API, and the company intake would have lost everything typed.
+test('pressing Enter in a dialog runs the action instead of closing the dialog', () => {
+  const portalJs = script;
+  // The dynamically-built verification dialogs.
+  assert.match(portalJs, /shell\.addEventListener\('submit',event=>\{[\s\S]{0,120}preventDefault/);
+  assert.match(portalJs, /footer \.portal-primary:not\(\[disabled\]\)/);
+  // And the company intake, which has text inputs and had no handler at all.
+  assert.match(portalJs, /\$\('#intakeForm'\)\?\.addEventListener\('submit'/);
+});
+
+// Excel technique and code navigation happen on a screen. A camera recording of someone's
+// face while they work tells a rater nothing about method.
+test('the assessment records the screen, not the candidate', () => {
+  assert.match(script, /getDisplayMedia/);
+  assert.match(script, /mode==='screen'/);
+  // The mic is merged in, because thinking aloud is half the signal.
+  assert.match(script, /createMediaStreamDestination/);
+  // Stopping the merge must stop the sources, or the browser keeps saying "sharing".
+  assert.match(script, /stream\.__sources\|\|\[\]/);
+  // And a student is told the method is what is scored, before they start working silently.
+  assert.match(script, /Reviewers score the method/);
+});
+
+// A second stylesheet of `.dark .thing` rules drifts the moment someone adds a component and
+// forgets one. Night mode redefines tokens instead.
+test('night mode redefines tokens rather than overriding components', () => {
+  assert.match(styles, /:root\[data-theme="night"\]/);
+  assert.match(styles, /--accent: #d9a94e/, 'gold is lifted for dark, not reused');
+  // #b47b20 on near-black is muddy and fails contrast; reusing it would break the brand in
+  // half the product.
+  assert.doesNotMatch(styles, /\[data-theme="night"\][\s\S]{0,400}--accent: #b47b20/);
+  assert.match(html, /id="themeToggle"/);
+});
+
+test('the OS preference is respected until someone chooses', () => {
+  assert.match(script, /prefers-color-scheme: dark/);
+  assert.match(script, /localStorage\.setItem\(KEY/);
+  // Private browsing throws on localStorage; it must not take the portal down.
+  assert.match(script, /catch\{ \/\* private browsing \*\/ \}/);
+});
+
+// Gold marks what was earned. Decorating everything with it would empty it of meaning.
+test('gold is reserved for earned signals, not applied as decoration', () => {
+  assert.match(styles, /Gold marks what was EARNED/);
+});
+
+// Gold as a line or a ground is decoration and can be everywhere. Gold as a FILL is a
+// signal and stays rare. Losing that distinction is how an accent becomes noise.
+test('gold fills stay reserved while gold lines carry structure', () => {
+  assert.match(styles, /gold as a LINE or a GROUND is/i);
+  // The earned marks keep the strongest treatment.
+  assert.match(styles, /\.verif-list li\.is-held \.verif-mark[\s\S]{0,200}box-shadow: 0 0 0 1px var\(--accent\)/);
+  // And night mode gets its own ring value, because the day glow disappears on black.
+  assert.match(styles, /\[data-theme="night"\][\s\S]{0,300}rgba\(217,169,78,\.5\)/);
 });

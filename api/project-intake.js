@@ -1,4 +1,6 @@
 import { get } from '@vercel/blob';
+import { normaliseDiagnosis, diagnosisGaps, evaluateBrief, BRIEF_ENGINE_VERSION } from './brief-engine.js';
+import { decompositionGuide, trialEnvelope, checkAgainstEnvelope } from './frameworks.js';
 
 import { authorizeMember, creditBalance, VERTICALS, WORK_TYPES } from './portal.js';
 
@@ -344,6 +346,14 @@ export default async function handler(req, res, dependencies = {}) {
     }
     // Reverse-audit mode (opt-in): the founder pasted their OWN public link — return up to
     // 3 draft opportunities instead of one brief. Same metering, same safety posture.
+    if (body.action === 'diagnose') {
+      const result = await generateDiagnosedBrief({
+        problemText: body.problem, traits: Array.isArray(body.traits) ? body.traits : [],
+        vertical: body.vertical || null,
+        env, fetchImpl: dependencies.fetchImpl || fetch,
+      });
+      return res.status(200).json({ ok: true, ...result });
+    }
     if (body.action === 'reverse-audit') {
       const audit = await generateReverseAudit({ linkUrl: body.linkUrl, documentText: body.documentText, env, fetchImpl: dependencies.fetchImpl || fetch });
       let auditCharged = 0;
@@ -374,4 +384,147 @@ export default async function handler(req, res, dependencies = {}) {
     const expected = /^(Describe|Paste|The AI)/.test(message);
     return res.status(expected ? 400 : 502).json({ ok: false, error: message });
   }
+}
+
+// ── Stage 1+2: diagnose the problem, then design a trial from it ──────────────────────
+// Extractive only, same rule as the brief extractor: never invent a metric, budget,
+// headcount or deadline the founder did not give. The engine in api/brief-engine.js decides
+// whether what comes back is shippable; this only asks for it.
+const DIAGNOSE_SYSTEM = `You are Covenda's diagnostic analyst. A founder has described a problem in their own words.
+
+Do NOT accept the stated problem at face value. Founders misdiagnose — "sales are down, blame marketing" when traffic is up and the real cause is a channel conflict. Decompose it, then say where the evidence actually points.
+
+RULES
+- Extractive only. Never invent a metric, budget, headcount, deadline or customer count the founder did not state.
+- If the input is too thin to diagnose, return an empty decomposition rather than guessing.
+- rootCauseClass is "structural" (the process or model is wrong for the work) or "behavioral" (the process is fine, execution is not). They lead to different projects, so choose deliberately.
+- statedProblem is what they said. likelyProblem is what the evidence supports. If they are the same, repeat it.
+- confirmingEvidence and killingEvidence are what would settle it — usually this IS the work.
+
+Then design ONE bounded work-trial that is both USEFUL to the company and DISCRIMINATING between candidates.
+- valueToCompany: what the founder gets even if nobody is hired.
+- discriminatingSignal: for each trait they named, the specific part of the task that separates strong from weak, with what each looks like. If a trait has no discriminating element, set discriminates:false and say so. Do not pretend.
+- inputsRequired: each { label, kind } where kind is public, synthetic, or founder_approved. NEVER require internal or NDA'd material — early-stage founders cannot get it approved in time.
+- founderTimeRequired: honest minutes per week of the founder's attention.
+- estimatedHours: honest student hours.`;
+
+const DIAGNOSE_SCHEMA = {
+  type: 'object', additionalProperties: false,
+  required: ['statedProblem', 'likelyProblem', 'decomposition', 'rootCause', 'rootCauseClass', 'reasoning', 'brief'],
+  properties: {
+    statedProblem: { type: 'string' },
+    likelyProblem: { type: 'string' },
+    decomposition: {
+      type: 'array', maxItems: 6,
+      items: { type: 'object', additionalProperties: false, required: ['label', 'note'], properties: { label: { type: 'string' }, note: { type: 'string' } } },
+    },
+    rootCause: { type: 'string' },
+    rootCauseClass: { type: 'string', enum: ['structural', 'behavioral'] },
+    reasoning: { type: 'string' },
+    confirmingEvidence: { type: 'array', maxItems: 5, items: { type: 'string' } },
+    killingEvidence: { type: 'array', maxItems: 5, items: { type: 'string' } },
+    brief: {
+      type: 'object', additionalProperties: false,
+      required: ['title', 'deliverable', 'valueToCompany', 'discriminatingSignal', 'inputsRequired', 'founderTimeRequired', 'estimatedHours'],
+      properties: {
+        title: { type: 'string' }, deliverable: { type: 'string' }, valueToCompany: { type: 'string' },
+        discriminatingSignal: {
+          type: 'array', maxItems: 6,
+          items: {
+            type: 'object', additionalProperties: false,
+            required: ['trait', 'discriminates'],
+            properties: {
+              trait: { type: 'string' }, element: { type: 'string' },
+              weakLooksLike: { type: 'string' }, strongLooksLike: { type: 'string' },
+              discriminates: { type: 'boolean' },
+            },
+          },
+        },
+        inputsRequired: {
+          type: 'array', maxItems: 6,
+          items: { type: 'object', additionalProperties: false, required: ['label', 'kind'], properties: { label: { type: 'string' }, kind: { type: 'string' } } },
+        },
+        founderTimeRequired: { type: 'number' }, estimatedHours: { type: 'number' },
+        rubricSkill: { type: 'string' },
+      },
+    },
+  },
+};
+
+export async function generateDiagnosedBrief({ problemText, traits = [], vertical = null, env = process.env, fetchImpl = fetch }) {
+  const text = String(problemText || '').trim();
+  if (text.length < 40) {
+    return { ok: false, needsMore: true, questions: diagnosisGaps(normaliseDiagnosis({})), reason: 'Tell us a bit more about the problem first.' };
+  }
+  const key = env.ANTHROPIC_API_KEY;
+  if (!key) throw new IntakeConfigError('Project drafting is not configured on this deployment yet.');
+
+  // The framework for THIS industry, so the decomposition is specific rather than three
+  // branches that would fit any company anywhere.
+  const guide = decompositionGuide(vertical);
+  const envelope = trialEnvelope(vertical);
+  const frameworkBlock = guide ? [
+    '',
+    `INDUSTRY FRAMEWORK — ${guide.vertical}`,
+    guide.instruction,
+    ...guide.dimensions.map(d => `- ${d.label} — ${d.probe}`),
+    '',
+    `Check this first: ${guide.checkFirst}`,
+    `Structural looks like: ${guide.structuralVsBehavioral.structural}`,
+    `Behavioral looks like: ${guide.structuralVsBehavioral.behavioral}`,
+    '',
+    `A trial here can realistically produce: ${envelope.can.join('; ')}.`,
+    `It cannot use: ${envelope.cannot}`,
+  ].join('\n') : '';
+
+  const prompt = `The founder wrote:
+
+${text}
+${frameworkBlock}
+
+${traits.length ? `Traits they said they care about: ${traits.join(', ')}` : 'They did not name specific traits — infer at most three from the problem itself and label them.'}`;
+  const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5', max_tokens: 3000, system: DIAGNOSE_SYSTEM,
+      output_config: { format: { type: 'json_schema', schema: DIAGNOSE_SCHEMA } },
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  if (!response || !response.ok) throw new Error('The diagnosis could not be reached. Try again shortly.');
+  const data = await response.json();
+  const raw = (data?.content || []).filter(b => b && b.type === 'text').map(b => b.text).join('').trim();
+  const parsed = parseBriefJson(raw);
+  if (!parsed) throw new Error('The diagnosis came back unreadable. Try again.');
+
+  const diagnosis = normaliseDiagnosis(parsed);
+  const gaps = diagnosisGaps(diagnosis);
+  // Too thin to diagnose? Ask the specific questions rather than emitting a confident guess.
+  if (!diagnosis.decomposition.length) {
+    return { ok: false, needsMore: true, questions: gaps, diagnosis, reason: 'Not enough here to diagnose yet.' };
+  }
+  // The engine decides whether the trial is shippable. A refusal is returned intact.
+  const verdict = evaluateBrief({ ...(parsed.brief || {}), rubricSkill: parsed.brief?.rubricSkill }, { traits });
+  // The prompt states the constraints; this enforces them. A model told not to require PII
+  // will still occasionally require PII.
+  const envCheck = vertical ? checkAgainstEnvelope(vertical, {
+    deliverable: parsed.brief?.deliverable || '',
+    inputsRequired: parsed.brief?.inputsRequired || [],
+  }) : { ok: true };
+  if (!envCheck.ok) {
+    return {
+      ok: false, engineVersion: BRIEF_ENGINE_VERSION, diagnosis, openQuestions: gaps,
+      brief: parsed.brief || null,
+      refusal: { reasons: [envCheck.reason], guidance: 'Redesign the task, or tell the founder what is missing. Do not pad it.' },
+    };
+  }
+  return {
+    ok: verdict.ok,
+    engineVersion: BRIEF_ENGINE_VERSION,
+    diagnosis,
+    openQuestions: gaps,
+    brief: { ...(parsed.brief || {}), ...verdict },
+    refusal: verdict.refusal,
+  };
 }

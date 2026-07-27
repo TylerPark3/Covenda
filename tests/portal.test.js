@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, cleanWorkStyle, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, deleteApplication, deleteProject, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, respondToPacket, reviewDeliverable, saveMemberProfile, SCORER_VERSION, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
 
@@ -286,8 +287,13 @@ test('account-number detection catches raw numbers but allows emails and handles
   assert.equal(looksLikeAccountNumber('@maya'), false);
 });
 
+// Settling now reads the request first and refuses one that is already resolved, so the
+// fixture has to offer a live request rather than a settled one.
 test('only a listed operator can settle a payout', async () => {
-  const supabase = queuedSupabase([{ result: { id: 'req-1', status: 'paid' } }]);
+  const supabase = queuedSupabase([
+    { result: { id: 'req-1', status: 'requested', credits: 100, user_id: 'stu' } },
+    { result: { id: 'req-1', status: 'paid' } },
+  ]);
   await assert.rejects(
     fulfilPayout({ user: { id: 'stu', email: 'student@example.com' }, supabase }, { requestId: PROJECT_UUID }, { COVENDA_ADMIN_EMAILS: 'ops@covenda.app' }),
     /Only a Covenda operator/,
@@ -568,7 +574,10 @@ test('project messages require project membership and store only bounded text', 
   assert.equal(message.author_user_id,'student-1');
 });
 
-test('accepting an application assigns the student, moves the project in progress, and declines siblings', async () => {
+// Accepting APPROVES the student; it does not put them to work. The student's own
+// confirmation starts the trial, so nobody is ever mid-project on something they never
+// agreed to begin.
+test('accepting an application approves the student without starting the work, and declines siblings', async () => {
   let acceptPayload, assignPayload, declinePayload;
   const supabase = queuedSupabase([
     { result: { id: APPLICATION_UUID, project_id: PROJECT_UUID, student_user_id: 'student-9', status: 'submitted' } },
@@ -581,7 +590,7 @@ test('accepting an application assigns the student, moves the project in progres
   assert.equal(accepted.status, 'accepted');
   assert.equal(acceptPayload.status, 'accepted');
   assert.equal(assignPayload.assigned_student_user_id, 'student-9');
-  assert.equal(assignPayload.status, 'in_progress');
+  assert.equal(assignPayload.status, 'matched', 'approved and waiting, not started');
   assert.equal(declinePayload.status, 'declined');
 });
 
@@ -756,4 +765,79 @@ test('computeReadinessScore is explainable, versioned, and never a gate', async 
   assert.ok(weak.projectClarity.score < strong.projectClarity.score);
   assert.ok(weak.projectClarity.concerns.some(c => /goal/i.test(c)));
   assert.equal(weak.nextStep, 'Submit your project to Covenda');
+});
+
+// Money moves before the ledger says it did. The other order can mark a student paid and
+// then fail the transfer, which is the one mistake that is expensive to unwind.
+test('a payout will not settle for a student who has not finished Stripe onboarding', async () => {
+  const supabase = queuedSupabase([
+    { result: { id: 'req-1', status: 'requested', credits: 100, user_id: 'stu' } },
+    { result: { stripe_account_id: null, stripe_payouts_enabled: false } },
+  ]);
+  await assert.rejects(
+    fulfilPayout(
+      { user: { id: 'op', email: 'ops@covenda.app' }, supabase },
+      { requestId: PROJECT_UUID },
+      { COVENDA_ADMIN_EMAILS: 'ops@covenda.app', STRIPE_SECRET_KEY: 'sk_test', STRIPE_CONNECT_ENABLED: 'true' },
+    ),
+    /has not finished setting up payouts/,
+  );
+  assert.equal(supabase.rpcCalls.length, 0, 'the ledger is untouched when the transfer cannot happen');
+});
+
+test('an already-settled request cannot be settled twice', async () => {
+  const supabase = queuedSupabase([{ result: { id: 'req-1', status: 'paid', credits: 100, user_id: 'stu' } }]);
+  await assert.rejects(
+    fulfilPayout({ user: { id: 'op', email: 'ops@covenda.app' }, supabase }, { requestId: PROJECT_UUID }, { COVENDA_ADMIN_EMAILS: 'ops@covenda.app' }),
+    /already been resolved/,
+  );
+});
+
+// A missing optional table must not take the whole portal down. The dashboard reads several
+// tables added after the last schema anyone actually ran; checked() throws on a query error,
+// which 503s everything — including features with no relationship to the missing table.
+test('an optional read degrades to empty instead of failing the dashboard', async () => {
+  const src = await readFile(new URL('../api/portal.js', import.meta.url), 'utf8');
+  assert.match(src, /async function optional\(/);
+  // The newest tables all go through it.
+  for (const table of ['introductions', 'company_referrals', 'member_videos', 'company_profiles']) {
+    const call = new RegExp(`optional\\([\\s\\S]{0,140}from\\('${table}'`);
+    assert.match(src, call, `${table} should be read optionally`);
+  }
+  // The core tables still throw — if member_projects is missing, nothing works and hiding
+  // that would be worse than a 503.
+  assert.match(src, /checked\(\s*\n?\s*supabase\.from\('member_projects'/);
+});
+
+// Attaching the per-vertical process to a brief must not clobber `vetting`, which already
+// exists and holds the rails. The first version overwrote it and broke sign-in for everyone
+// with "brief.vetting.rails is not iterable".
+test('the vetting process is added alongside the rails, never over them', async () => {
+  const { BATCH_CATALOG, batchBrief } = await import('../api/batches.js');
+  const { summarise, processFor } = await import('../api/vetting.js');
+  const src = await readFile(new URL('../api/portal.js', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(src, /vetting: summariseVetting/, 'must not overwrite brief.vetting');
+  assert.match(src, /vettingProcess: summariseVetting/);
+
+  for (const b of BATCH_CATALOG) {
+    const brief = { ...batchBrief(b), vettingProcess: summarise(b.discipline) };
+    assert.ok(Array.isArray(brief.vetting.rails), `${b.slug}: rails must stay iterable`);
+    assert.equal(typeof brief.vetting.apiVerified, 'boolean', b.slug);
+  }
+});
+
+// Step 1 asks for a model. It has to be possible to give us one, and a reviewer has to be
+// able to open it — the same gap the intro video had before the recorder existed.
+test('a batch application carries the uploaded work sample through to the reviewer', async () => {
+  const html = await readFile(new URL('../portal.html', import.meta.url), 'utf8');
+  const ui = await readFile(new URL('../portal.js', import.meta.url), 'utf8');
+  const api = await readFile(new URL('../api/portal.js', import.meta.url), 'utf8');
+
+  assert.match(html, /id="batchArtifactInput"/, 'an upload control exists');
+  assert.match(html, /accept="\.xlsx[^"]*"/, 'and accepts a spreadsheet');
+  assert.match(ui, /workSampleFiles:batchArtifacts/, 'the client sends them');
+  assert.match(api, /workSampleFiles: \(Array\.isArray/, 'the API stores them');
+  // A PDF has no formula layer, and saying so at upload beats a reviewer finding out.
+  assert.match(ui, /A PDF cannot be read for formulas/);
 });
