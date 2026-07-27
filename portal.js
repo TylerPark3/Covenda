@@ -3907,6 +3907,32 @@ const videoStudio=(function(){
     return (err&&err.message)||'Could not start the recording.';
   }
 
+  // Uploads the recording straight to Blob storage. The old path POSTed the file through a
+  // serverless function that buffered it in memory and capped at 30 MB, so anything longer
+  // than about a minute had its connection cut mid-body — which surfaces as "Failed to fetch",
+  // with no status code and nothing in the logs.
+  async function uploadRecording(blob,kind='video'){
+    const contentType=(blob.type||'video/webm').split(';')[0].trim();
+    const token=await fetch('/api/upload-token',{
+      method:'POST',
+      headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},
+      body:JSON.stringify({kind,contentType}),
+    });
+    const grant=await token.json().catch(()=>({}));
+    if(!token.ok||!grant.uploadUrl)throw new Error(grant.error||'Could not start the upload.');
+
+    const put=await fetch(grant.uploadUrl,{method:'PUT',headers:{'Content-Type':contentType},body:blob});
+    if(!put.ok){
+      const detail=await put.text().catch(()=>'');
+      // Size is the failure worth naming, because it is the one the student can act on.
+      if(put.status===413)throw new Error('That recording is too large to upload. Record a shorter take.');
+      throw new Error(`The upload was rejected (${put.status}). ${detail.slice(0,120)}`);
+    }
+    const stored=await put.json().catch(()=>({}));
+    if(!stored.url)throw new Error('The upload finished but no URL came back.');
+    return stored.url;
+  }
+
   async function screenStream(){
     if(!navigator.mediaDevices?.getDisplayMedia) throw new Error('This browser cannot share a screen. Use Chrome, Edge or Safari.');
     const display=await navigator.mediaDevices.getDisplayMedia({
@@ -4011,7 +4037,16 @@ const videoStudio=(function(){
         const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9'
           :MediaRecorder.isTypeSupported('video/webm')?'video/webm':'';
         chunks=[]; secs=0;
-        recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+        // Capped bitrate. A screen share at source quality is enormous for what it has to
+        // show — technique is legible far below broadcast, and the smaller file is the
+        // difference between an upload that finishes on a home connection and one that does
+        // not. A camera take gets more, because faces need it and they are only 90 seconds.
+        const rate=mode==='screen'?900_000:1_800_000;
+        recorder=new MediaRecorder(stream,{
+          ...(mime?{mimeType:mime}:{}),
+          videoBitsPerSecond:rate,
+          audioBitsPerSecond:96_000,
+        });
         recorder.ondataavailable=e=>{ if(e.data&&e.data.size)chunks.push(e.data); };
         recorder.onstop=()=>{
           clearInterval(timer); kept=secs;
@@ -4063,13 +4098,11 @@ const videoStudio=(function(){
           const use=el('recUse');
           use.disabled=true; use.textContent='Saving…';
           try{
-            const res=await fetch('/api/video-upload',{method:'POST',headers:{'Content-Type':blob.type||'video/webm'},body:blob});
-            const body=await res.json();
-            if(!res.ok||!body.url)throw new Error(body.error||'Upload failed.');
+            const url=await uploadRecording(blob,mode==='screen'?'exercise':'video');
             // Register it on the account so the next application can just pick it.
             let saved=null,libraryError='';
             try{
-              const out=await portalRequest({method:'POST',body:JSON.stringify({action:'save-video',url:body.url,prompt,label,durationSeconds:kept})});
+              const out=await portalRequest({method:'POST',body:JSON.stringify({action:'save-video',url,prompt,label,durationSeconds:kept})});
               saved=out.video||null;
               if(saved)state.dashboard.videos=[saved,...(state.dashboard.videos||[])];
             }catch(err){
@@ -4077,7 +4110,7 @@ const videoStudio=(function(){
               // student believe it is in their library when it is not.
               libraryError=err.message||'It could not be saved to your library.';
             }
-            done({url:body.url,durationSeconds:kept,video:saved,libraryError});
+            done({url,durationSeconds:kept,video:saved,libraryError});
           }catch(err){
             use.disabled=false; use.textContent='Use this take';
             hint.textContent=err.message||'That upload did not go through. Try again, or paste a link.';
