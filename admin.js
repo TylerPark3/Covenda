@@ -26,6 +26,27 @@ function textValue(value) { if (value === null || value === undefined || value =
 function labelize(value) { return String(value).replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('_',' ').replace(/^./, char => char.toUpperCase()); }
 function dateLabel(value, full = false) { const date = new Date(value); if (Number.isNaN(date.getTime())) return '—'; return date.toLocaleString([], full ? { dateStyle:'medium', timeStyle:'short' } : { month:'short', day:'numeric' }); }
 function localDateTimeValue(value) { const date = new Date(value); if (!value || Number.isNaN(date.getTime())) return ''; return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0,16); }
+// Private-store media. A blob URL on the private store 403s if opened directly, so a reviewer
+// link has to exchange it for a short-lived signed URL at click time.
+function isPrivateMedia(url){ return /\.private\.blob\.vercel-storage\.com\//.test(String(url||'')); }
+function bindPrivateLink(anchor, url) {
+  if (!isPrivateMedia(url)) return anchor;
+  anchor.href = '#';
+  anchor.addEventListener('click', async event => {
+    event.preventDefault();
+    const was = anchor.textContent;
+    anchor.textContent = 'Opening…';
+    try {
+      const res = await fetch('/api/media', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ url }) });
+      const body = await res.json().catch(() => ({}));
+      anchor.textContent = was;
+      if (body.ok && body.url) window.open(body.url, '_blank', 'noopener');
+      else anchor.insertAdjacentText('afterend', ' — could not open');
+    } catch { anchor.textContent = was; anchor.insertAdjacentText('afterend', ' — could not open'); }
+  });
+  return anchor;
+}
+
 function authHeaders() { return { Authorization: `Bearer ${token()}`, 'Content-Type':'application/json' }; }
 
 async function adminRequest(options = {}) {
@@ -258,6 +279,11 @@ function batchApplicationRow(batch, app) {
   if (materials.videoPrompt) field('Video prompt (assigned)', materials.videoPrompt);
   (materials.interest || []).forEach(a => { if (a && a.answer) field(a.question || 'Interest', a.answer); });
   if (materials.experience) field('Relevant experience', materials.experience);
+  // Résumé-anchored questions. Shown with the fragment that prompted them, so a reviewer can
+  // tell a specific answer from a general one.
+  (materials.resumeAnswers || []).forEach(a => {
+    if (a && a.answer) field(a.anchor ? `${a.question} (from: ${a.anchor})` : a.question, a.answer);
+  });
   if ((materials.skills || []).length) { const wrap = document.createElement('div'); wrap.className = 'admin-batch-app-tags'; materials.skills.slice(0, 12).forEach(s => { const t = document.createElement('span'); t.className = 'is-skill'; t.textContent = s; wrap.append(t); }); who.append(wrap); }
   const av = materials.availability || {};
   const avText = [av.hoursPerWeek ? `${av.hoursPerWeek} hrs/week` : '', av.startDate ? `starts ${av.startDate}` : ''].filter(Boolean).join(' · ');
@@ -269,7 +295,7 @@ function batchApplicationRow(batch, app) {
   if (materials.videoUrl) linkDefs.push(['Video', materials.videoUrl]);
   if (materials.resumeUrl) linkDefs.push(['Résumé', materials.resumeUrl]);
   const links = linkDefs.filter(([, u]) => typeof u === 'string' && /^https?:\/\//i.test(u));
-  if (links.length) { const lw = document.createElement('div'); lw.className = 'admin-batch-app-links'; links.forEach(([label, url]) => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = label; lw.append(a); }); who.append(lw); }
+  if (links.length) { const lw = document.createElement('div'); lw.className = 'admin-batch-app-links'; links.forEach(([label, url]) => { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.textContent = label; lw.append(bindPrivateLink(a, url)); }); who.append(lw); }
   row.append(who);
 
   const controls = document.createElement('div'); controls.className = 'admin-batch-app-controls';

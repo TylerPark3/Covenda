@@ -371,7 +371,7 @@ function applicantCard(application,project){
   const ref=application.referral||{};if(ref.name||ref.code){const rr=document.createElement('p');rr.className='applicant-referral'+(ref.verified?' is-verified':'');const who=ref.verified?(ref.partner||ref.name):(ref.name||', ');rr.textContent=ref.verified?`Endorsed by ${who} · Covenda-certified`:`Referred by ${who}${ref.code?` (${ref.code})`:''} · referral pending`;card.append(rr);}
   const links=document.createElement('div');links.className='applicant-links';
   if(application.demonstration){if(/^https?:\/\//i.test(application.demonstration)){const dl=document.createElement('a');dl.href=application.demonstration;dl.target='_blank';dl.rel='noopener';dl.textContent='View work sample';links.append(dl);}else{const p=document.createElement('p');p.className='applicant-note';p.textContent=application.demonstration;card.append(p);}}
-  if(application.video_url){const vl=document.createElement('a');vl.href=application.video_url;vl.target='_blank';vl.rel='noopener';vl.textContent='Watch intro video';links.append(vl);}
+  if(application.video_url){const vl=document.createElement('a');vl.href=application.video_url;vl.target='_blank';vl.rel='noopener';vl.textContent='Watch intro video';links.append(bindDownload(vl,application.video_url));}
   if(links.children.length)card.append(links);
   if(project&&['open','matched'].includes(project.status)&&['submitted','reviewing','shortlisted'].includes(application.status)){const actions=document.createElement('div');actions.className='applicant-actions';const accept=document.createElement('button');accept.type='button';accept.className='portal-primary compact';accept.textContent='Accept';accept.addEventListener('click',()=>runAcceptApplication(application.id,accept));const decline=document.createElement('button');decline.type='button';decline.className='portal-secondary compact';decline.textContent='Decline';decline.addEventListener('click',()=>runDeclineApplication(application.id,decline));actions.append(accept,decline);card.append(actions);}
   return card;
@@ -1759,8 +1759,54 @@ function batchCard(batch,application){
   card.append(actions,detail);return card;
 }
 let batchResumeUrl='';
+let batchResumeQuestions=[];
+function renderResumeQuestions(payload){
+  const host=$('#batchResumeQuestions');
+  if(!host)return;
+  host.replaceChildren();
+  batchResumeQuestions=[];
+  if(!payload||!payload.ok||!(payload.questions||[]).length){
+    // Never fatal. The published technical questions still apply, so say that rather than
+    // show an error nobody can act on.
+    if(payload&&payload.reason){
+      host.hidden=false;
+      const note=document.createElement('p'); note.className='ba-rq-note';
+      note.textContent=payload.reason;
+      host.append(note);
+    } else { host.hidden=true; }
+    return;
+  }
+  host.hidden=false;
+  const head=document.createElement('p'); head.className='ba-rq-head'; head.textContent='From your résumé';
+  const why=document.createElement('p'); why.className='ba-rq-why';
+  why.textContent=payload.note||'These come from your own résumé, so nobody else gets them. Answer from memory, we are not checking the dates.';
+  host.append(head,why);
+  payload.questions.forEach((q,i)=>{
+    const wrap=document.createElement('label'); wrap.className='ba-rq-item';
+    const cap=document.createElement('span'); cap.className='ba-rq-q'; cap.textContent=q.question;
+    const area=document.createElement('textarea'); area.rows=3; area.maxLength=1500;
+    area.placeholder='A few sentences.';
+    area.dataset.rq=String(i);
+    wrap.append(cap,area);
+    // The follow-up is shown up front rather than sprung later; it is the second question that
+    // preparation rarely survives, and hiding it just wastes the student's first answer.
+    if(q.followUp){ const f=document.createElement('small'); f.className='ba-rq-follow'; f.textContent='Then: '+q.followUp; wrap.append(f); }
+    host.append(wrap);
+    batchResumeQuestions.push({question:q.question,followUp:q.followUp||'',anchor:q.anchor||'',probes:q.probes||''});
+  });
+}
+function readResumeAnswers(){
+  const host=$('#batchResumeQuestions'); if(!host)return [];
+  return batchResumeQuestions.map((q,i)=>{
+    const area=host.querySelector(`textarea[data-rq="${i}"]`);
+    return {question:q.question,followUp:q.followUp,anchor:q.anchor,answer:(area&&area.value.trim())||''};
+  }).filter(a=>a.answer);
+}
+
+
 function renderBatchResumeChip(name){const chip=$('#batchResumeChip');if(!chip)return;if(!name){chip.hidden=true;chip.textContent='';return;}chip.hidden=false;chip.replaceChildren();const s=document.createElement('span');s.textContent=name;const x=document.createElement('button');x.type='button';x.setAttribute('aria-label','Remove résumé');x.textContent='×';x.addEventListener('click',()=>{batchResumeUrl='';renderBatchResumeChip('');});chip.append(s,x);}
 let currentBatchPrompt='';
+let currentBatchVertical='';
 let batchInterestSpec=[];
 // Step 2: questions one at a time.
 //
@@ -1896,10 +1942,11 @@ $('#baBack')?.addEventListener('click',()=>{ baStep-=1; setDialogMessage('#batch
 // let them use their own tools, and capture the PROCESS rather than only the artifact.
 function renderExercise(batch){
   const host=$('#batchExercise');
+  const part=$('#baPartExercise');
   if(!host)return;
   const brief=batchBriefFor(batch);
   const a=brief&&brief.assessment;
-  if(!a||!a.exercise){host.hidden=true;return;}
+  if(!a||!a.exercise){ if(part)part.hidden=true; return; }
   host.replaceChildren();
 
   const head=document.createElement('div');head.className='ex-head';
@@ -1921,12 +1968,12 @@ function renderExercise(batch){
   // Said before they start, because a student who thinks the answer is what counts will
   // work silently and score badly for the wrong reason.
   const how=document.createElement('p');how.className='ex-how';
-  how.textContent='Share your screen and talk through what you are doing. Reviewers score the method, a sound approach that runs out of time beats a right answer nobody can follow.';
+  how.textContent='Talk through what you are doing. Reviewers score the method, a sound approach that runs out of time beats a right answer nobody can follow.';
   host.append(how);
 
   const state=document.createElement('p');state.className='ex-state';state.setAttribute('aria-live','polite');
   const go=document.createElement('button');go.type='button';go.className='portal-primary';
-  go.textContent='Share screen and start';
+  go.textContent=`Share screen and start the ${a.exercise.minutes}-minute exercise`;
   if(!videoStudio.canShareScreen){
     go.disabled=true;
     state.textContent='This browser cannot share a screen. Use Chrome, Edge or Safari to do the exercise.';
@@ -1953,7 +2000,7 @@ function renderExercise(batch){
     }
   });
   host.append(go,state);
-  host.hidden=false;
+  if(part)part.hidden=false;
 }
 
 function renderVettingSteps(batch){
@@ -2049,7 +2096,7 @@ function openBatchApply(batch){
   batchArtifacts=[];
   renderBatchArtifacts();
   const form=$('#batchApplyForm');if(!form)return;
-  form.reset();batchResumeUrl='';renderBatchResumeChip('');
+  form.reset();batchResumeUrl='';renderBatchResumeChip('');renderResumeQuestions(null);
   form.elements.batchId.value=batch.id;
   $('#batchApplyTitle').textContent=`Apply to ${batch.name}.`;
   $('#batchApplySummary').textContent=[batch.tier==='elite'?'Elite cohort':'Cohort',batch.discipline,batch.partner_org].filter(Boolean).join(' · ');
@@ -2058,6 +2105,8 @@ function openBatchApply(batch){
   const who=$('#batchApplyWho');if(who)who.textContent=batchStudentProfile(batch);
   const samples=$('#batchApplySamples');if(samples)samples.textContent=batchSampleCompanies(batch);
   currentBatchPrompt=pickBatchPrompt(batch); // a fresh random prompt each time the form opens
+  // Weights the résumé questions toward this batch's field without ignoring the rest.
+  currentBatchVertical=[batch.discipline,batch.name].filter(Boolean)[0]||'';
   const promptEl=$('#batchVideoPrompt');if(promptEl)promptEl.textContent=currentBatchPrompt;
   const batchVideoInput=$('#batchVideoUrl');
   if(batchVideoInput){batchVideoInput.value='';
@@ -2285,6 +2334,55 @@ function renderTalentCards(){
 
 // Your intro takes live on your account, not in an application. Record here once, and every
 // application after that is a two-click pick instead of a scramble for a share link.
+// Private-store playback. A stored blob URL is not directly viewable, so anything pointing at
+// one has to swap in a short-lived signed URL first. Signed on demand rather than at page load,
+// because minting a URL nobody watches leaves a live URL sitting in a log for no reason.
+function isPrivateMedia(url){ return /\.private\.blob\.vercel-storage\.com\//.test(String(url||'')); }
+async function playableUrl(url){
+  if(!url)return null;
+  if(!isPrivateMedia(url))return url;
+  try{
+    const res=await fetch('/api/media',{
+      method:'POST',
+      headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},
+      body:JSON.stringify({url}),
+    });
+    const body=await res.json().catch(()=>({}));
+    return body.ok?body.url:null;
+  }catch{ return null; }
+}
+// An explicit Play button rather than a bare <video>: a <video> with no src does not reliably
+// fire a play event, so there would be nothing to hang the signing on.
+function bindPlayback(video,url){
+  const shell=document.createElement('div'); shell.className='video-shell';
+  const play=document.createElement('button'); play.type='button'; play.className='video-play-gate';
+  play.textContent='Play';
+  const note=document.createElement('p'); note.className='video-note'; note.hidden=true;
+  video.hidden=true;
+  shell.append(play,video,note);
+  play.addEventListener('click',async()=>{
+    play.disabled=true; play.textContent='Opening…';
+    const playable=await playableUrl(url);
+    if(!playable){ play.hidden=true; note.hidden=false; note.textContent='That recording could not be opened. It may not be shared with you.'; return; }
+    play.remove(); video.hidden=false; video.src=playable; video.play().catch(()=>{});
+  });
+  return shell;
+}
+// For anything that is a link rather than a player: résumés, work samples, exercise files.
+function bindDownload(anchor,url){
+  if(!isPrivateMedia(url))return anchor;
+  anchor.href='#';
+  anchor.addEventListener('click',async event=>{
+    event.preventDefault();
+    const was=anchor.textContent; anchor.textContent='Opening…';
+    const playable=await playableUrl(url);
+    anchor.textContent=was;
+    if(playable)window.open(playable,'_blank','noopener');
+    else anchor.insertAdjacentHTML('afterend','<span class="video-note is-warn">Not shared with you.</span>');
+  });
+  return anchor;
+}
+
 function renderVideoLibrary(root){
   const sec=document.createElement('section'); sec.className='video-library';
   const head=document.createElement('div'); head.className='video-library-head';
@@ -2313,7 +2411,8 @@ function renderVideoLibrary(root){
   const list=document.createElement('div'); list.className='video-library-list';
   takes.forEach(v=>{
     const card=document.createElement('article'); card.className='video-library-item';
-    const player=document.createElement('video'); player.src=v.url; player.controls=true; player.preload='none'; player.playsInline=true;
+    const player=document.createElement('video'); player.controls=true; player.preload='none'; player.playsInline=true;
+    const playerShell=bindPlayback(player,v.url);
     const meta=document.createElement('div');
     const t=document.createElement('strong'); t.textContent=v.label||'Intro take';
     const when=document.createElement('small');
@@ -2329,7 +2428,7 @@ function renderVideoLibrary(root){
         renderPortfolio();
       }catch(error){ del.disabled=false; del.textContent='Delete'; alert(error.message); }
     });
-    card.append(player,meta,del); list.append(card);
+    card.append(playerShell,meta,del); list.append(card);
   });
   sec.append(list); root.append(sec);
 }
@@ -3288,10 +3387,18 @@ $('#batchApplyForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const e=form.elements;
   if(e.note.value.trim().length<40){setDialogMessage('#batchApplyMessage','Tell us why this cohort fits you, a few sentences at least.',true);e.note.focus();return;}
   if(!e.videoUrl.value.trim()){setDialogMessage('#batchApplyMessage','Record your walkthrough, or pick one you already made.',true);e.videoUrl.focus();return;}
+  // The exercise carries a Required badge, so it has to actually gate. A badge that does not
+  // block is worse than no badge.
+  const exercisePart=$('#baPartExercise');
+  if(exercisePart&&!exercisePart.hidden&&!($('#batchExerciseUrl')?.value||'').trim()){
+    setDialogMessage('#batchApplyMessage','The exercise is still to do. It is the second recording, below your walkthrough.',true);
+    exercisePart.scrollIntoView({behavior:'smooth',block:'center'});
+    return;
+  }
   button.disabled=true;setDialogMessage('#batchApplyMessage','Submitting your application…');
   const skills=e.skills.value.split(',').map(s=>s.trim()).filter(Boolean);
   try{
-    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(),resumeUrl:batchResumeUrl,workSampleFiles:batchArtifacts.filter(f=>f.url).map(f=>({name:f.name,url:f.url})),exerciseUrl:($('#batchExerciseUrl')?.value||'').trim(),referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
+    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(),resumeAnswers:readResumeAnswers(),resumeUrl:batchResumeUrl,workSampleFiles:batchArtifacts.filter(f=>f.url).map(f=>({name:f.name,url:f.url})),exerciseUrl:($('#batchExerciseUrl')?.value||'').trim(),referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
     $('#batchApplyDialog').close();await loadDashboard();setView('batches');
   }catch(error){setDialogMessage('#batchApplyMessage',error.message,true);}finally{button.disabled=false;}
 });
@@ -3304,6 +3411,14 @@ $('#batchResumeInput')?.addEventListener('change',async event=>{
     const res=await fetch('/api/project-upload',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':file.type||'application/octet-stream','x-file-name':encodeURIComponent(file.name)},body:file});
     const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||'Upload failed.');
     batchResumeUrl=data.blobUrl||'';renderBatchResumeChip(file.name);setDialogMessage('#batchApplyMessage','');
+    // The résumé used to be stored and never read. Now it generates the questions only this
+    // applicant gets. Best-effort: the application does not depend on it.
+    const rqHost=$('#batchResumeQuestions');
+    if(rqHost){ rqHost.hidden=false; rqHost.replaceChildren(Object.assign(document.createElement('p'),{className:'ba-rq-note',textContent:'Reading your résumé…'})); }
+    try{
+      const qr=await fetch('/api/resume-interview',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':file.type||'application/octet-stream','x-file-name':encodeURIComponent(file.name),'x-vertical':encodeURIComponent(currentBatchVertical||'')},body:file});
+      renderResumeQuestions(await qr.json().catch(()=>null));
+    }catch{ renderResumeQuestions(null); }
   }catch(error){batchResumeUrl='';renderBatchResumeChip('');setDialogMessage('#batchApplyMessage',error.message,true);}
 });
 

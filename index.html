@@ -106,7 +106,31 @@
         <div class="hero-copy">
           <p class="home-kicker">Covenda, the new way to find talent</p>
           <h1 id="homeHeroTitle">Real work becomes<br>credible <span class="word-gold">proof</span>.</h1>
-          <p class="home-oneliner">Startups meet undergraduates through work you can audit, not résumés.</p>
+          <p class="home-oneliner">Startups meet undergraduates through work you can audit.</p>
+
+          <!-- The differentiation was asserted and never shown, so a reader had to take it on
+               faith and scroll. This is the same claim made checkable: what an application is
+               made of here, next to what it is made of everywhere else. Every line is a thing
+               the product actually requires, not a positioning statement. -->
+          <div class="hero-vs">
+            <div class="hero-vs-col is-old">
+              <p class="hero-vs-cap">An application, everywhere else</p>
+              <ul>
+                <li>A résumé</li>
+                <li>A school name</li>
+                <li>A cover letter</li>
+              </ul>
+              <p class="hero-vs-verdict">All three now take seconds to generate.</p>
+            </div>
+            <div class="hero-vs-col is-new">
+              <p class="hero-vs-cap">An application on Covenda</p>
+              <ul>
+                <li>Ninety seconds on camera, unscripted, answering a prompt you see for the first time</li>
+                <li>A screen recording of you working through an exercise we supply</li>
+              </ul>
+              <p class="hero-vs-verdict">Neither one generates.</p>
+            </div>
+          </div>
         </div>
         <div class="home-paths" role="group" aria-label="Choose your path">
           <button type="button" class="home-path" data-audience-option="student" data-student-hero-entry>
@@ -298,6 +322,10 @@
         <div class="hero-copy">
           <h1 id="studentHeroTitle">Do work that proves<br><span class="word-gold">what you can do.</span></h1>
           <p>Join now without choosing a direction, or select the exact work you want before you sign up.</p>
+          <!-- A referral is how some students arrive, never a condition of arriving. Stating it
+               here because the rest of the site talks about vouching often enough that a
+               student without a professor to ask would reasonably assume the door is shut. -->
+          <p class="hero-open-note"><b>You do not need a referral.</b> Anyone can sign up. A referral just attaches an endorsement to your profile, one more piece of evidence a company can weigh.</p>
         </div>
         <!-- F3: partner-referral landing. Populated + shown by app.js only when the
              visitor arrives via a partner's ?ref= link. Not identity-verified. -->
@@ -388,7 +416,7 @@
               <figcaption><span class="sift-hint">Hover to filter</span><span class="sift-count" id="siftCount"></span></figcaption>
             </figure>
             <ul class="company-job-points">
-              <li><svg><use href="#icon-shield"/></svg>Vouched by a professor, club, or pro, not an open marketplace</li>
+              <li><svg><use href="#icon-shield"/></svg>Many arrive endorsed by a professor, club, or pro, and that endorsement is attached where you can read it</li>
               <li><svg><use href="#icon-search"/></svg>Judged on proof of work, reviewed projects, GitHub</li>
               <li><svg><use href="#icon-spark"/></svg>Work-trial first, deeper access is earned</li>
             </ul>
@@ -424,7 +452,6 @@
             <div class="mf-conn" aria-hidden="true"><span class="mf-stalk"></span><span class="mf-chev">▼</span></div>
             <div class="mf-node mf-top"><span class="mf-label">Top candidates</span></div>
           </figure>
-          <p class="mf-foot">Illustrative. Talent arrives through <b>vouched referrers</b>, a coach, a professor, a research mentor, not an open signup. The engine ranks <b>for this request</b>, with the evidence attached; it is not a global leaderboard of students.</p>
         </div>
         <div class="prompt-links" aria-label="Questions to consider">
           <button type="button" data-prompt="What would the finished result let your team do?">What would finished unlock?<svg><use href="#icon-chevron"/></svg></button>

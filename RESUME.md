@@ -11,7 +11,7 @@ Working tree is clean; nothing is lost by closing the terminal.
 cd ~/Documents/GitHub/ProofPath
 
 npm run sql        # bundles every migration, copies to clipboard → paste into Supabase
-npm run check      # 651 tests + syntax across every API file
+npm run check      # 680 tests + syntax across every API file
 ```
 
 Deploy (two steps — the second is required, the domain does not follow production):
@@ -25,10 +25,11 @@ npx vercel alias set <the-deployment-url-it-printed> covenda.app
 
 ## State right now
 
-- **651 tests green**
+- **680 tests green**
 - Live at covenda.app
-- Blob store is **private** — uploads work, but a reviewer needs a signed URL to play a
-  recording back. That signing step is not built yet.
+- Blob store is **private**, and playback now works: `api/media.js` authorises the caller
+  against rows, then mints a 15-minute read-only signed URL. Wired into the student's video
+  library, the company's application review, and the operator's batch reviewer.
 
 ## Still on your list
 
@@ -38,13 +39,10 @@ npx vercel alias set <the-deployment-url-it-printed> covenda.app
   "not a collaborator" email
 
 **Mine, next session:**
-1. **Signed URLs for private blobs** — uploads succeed, playback will 403 until this exists.
-   Highest priority; everything else is additive.
-2. Wire `companyBriefing` into the company dashboard UI (backend done, nothing renders it)
-3. Wire the supplied assessments into the batch application UI (all 25 exist in
+1. Wire `companyBriefing` into the company dashboard UI (backend done, nothing renders it)
+2. Wire the supplied assessments into the batch application UI (all 25 exist in
    `api/assessments.js`, nothing shows them)
-4. Résumé-question upload flow (`api/resume-questions.js` is built and unrouted)
-5. Remaining docs: `ASSESSMENT_PLATFORM_MATRIX`, `EVIDENCE_GRAPH`, `VETTING_RAILS`,
+3. Remaining docs: `ASSESSMENT_PLATFORM_MATRIX`, `EVIDENCE_GRAPH`, `VETTING_RAILS`,
    `PHI_INTAKE_GATE` (currently inside `VETTING_HEALTHCARE.md`)
 
 ---
@@ -56,12 +54,13 @@ npx vercel alias set <the-deployment-url-it-printed> covenda.app
 | Batch catalogue, 25 specialisations | `api/batches.js` |
 | Vetting process per vertical | `api/vetting.js`, `api/vetting-software.js` |
 | Supplied assessments (all 25) | `api/assessments.js`, `api/finance-assessment.js` |
-| Résumé-generated questions | `api/resume-questions.js` |
+| Résumé-generated questions | `api/resume-questions.js` → `api/resume-interview.js` |
 | Batch admission scoring | `api/batch-score.js` |
 | Batch churn policy | `api/batch-churn.js` |
 | Evidence normalisation | `api/evidence.js` |
 | Brief engine + industry frameworks | `api/brief-engine.js`, `api/frameworks.js` |
 | Company briefing | `api/portal.js` → `companyBriefing` |
+| Private-media playback | `api/media.js` |
 | Vetting designs, all five passes | `docs/VETTING_*.md`, `docs/VETTING_MATRIX.md` |
 | Build vs buy | `docs/BUILD_VS_BUY.md` |
 | AI authenticity position | `docs/AI_AUTHENTICITY.md` |

@@ -1110,6 +1110,18 @@ export async function applyToBatch(member, input) {
         })).filter(a => a.answer)
       : [],
     resumeUrl: cleanUrl(input.resumeUrl),
+    // Answers to questions generated from this applicant's own résumé. Nobody else in the
+    // batch was asked them, which is the point: a shared question can be prepared once and
+    // reused, and one anchored to a specific line of their own history cannot. The anchor
+    // travels with the answer so a reviewer can see what prompted the question.
+    resumeAnswers: Array.isArray(input.resumeAnswers)
+      ? input.resumeAnswers.slice(0, 6).map(a => ({
+          question: cleanText(a?.question, 400),
+          followUp: cleanText(a?.followUp, 400),
+          anchor: cleanText(a?.anchor, 300),
+          answer: cleanText(a?.answer, 1500),
+        })).filter(a => a.question && a.answer)
+      : [],
     // The screen recording of the supplied exercise — the process, not just the result.
     exerciseUrl: cleanUrl(input.exerciseUrl),
     // The work sample itself — the spreadsheet or document the vetting process reads.

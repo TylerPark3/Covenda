@@ -1101,6 +1101,22 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .video-library-item { display:grid; gap:9px; padding:11px; border:1px solid var(--line); background:var(--gold-pale); min-width:0; }
 .video-library-item video { width:100%; aspect-ratio:16/9; background:#191712; object-fit:cover; }
 .video-library-item div { display:grid; gap:3px; min-width:0; }
+
+/* Playback gate. Private-store recordings are fetched only when someone asks for them, so the
+   card shows a still frame until then rather than an empty black player. */
+.video-shell { position:relative; display:grid; }
+.video-shell video[hidden] { display:none; }
+.video-play-gate {
+  width:100%; aspect-ratio:16/9; border:1px solid var(--gold-line, var(--line));
+  background:#191712 linear-gradient(160deg, rgba(198,161,74,.16), transparent 60%);
+  color:var(--gold, #c6a14a); font: 600 15px/1 inherit; letter-spacing:.06em; text-transform:uppercase;
+  cursor:pointer; transition: background-color .15s ease, color .15s ease;
+}
+.video-play-gate:hover:not(:disabled) { background-color:#211d15; }
+.video-play-gate:disabled { cursor:progress; opacity:.7; }
+.video-play-gate:focus-visible { outline:2px solid var(--gold, #c6a14a); outline-offset:2px; }
+.video-note { font-size:14px; color:var(--soft); margin:0; }
+.video-note.is-warn { color:var(--warn, #a8452f); }
 .video-library-item strong { font-size: 14px; }
 .video-library-item small { color:var(--soft); font-size: 14.5px; }
 .video-library-prompt { line-height:1.5; }
@@ -1585,7 +1601,44 @@ body { background: var(--surface); }
 #batchApplyDialog [data-ba-step] { background: #fff; }
 
 /* Work-sample upload. */
-.ba-upload { display: grid; gap: 10px; margin-bottom: 26px; padding: 22px 24px; border: 1px solid #ebe8e1; background: #fff; }
+/* Three separate submissions used to sit under one heading with a single visible button, so
+   the exercise's button read as the walkthrough's. Each part is now numbered and titled, and
+   the count follows the visible parts: a batch with no supplied exercise numbers 1 and 2, not
+   1 and 3. Counters skip display:none, which is what [hidden] does. */
+.batch-apply-step.is-parts { counter-reset: bapart; }
+.ba-part { counter-increment: bapart; display: grid; gap: 14px; padding: 0 0 34px; }
+.ba-part + .ba-part { padding-top: 34px; border-top: 1px solid #ebe8e1; }
+.ba-part-head {
+  display: flex; align-items: baseline; gap: 10px; margin: 0;
+  font-size: 24px; font-weight: 650; letter-spacing: -.02em; color: #000;
+}
+.ba-part-head::before {
+  content: counter(bapart);
+  flex: none; width: 34px; height: 34px; display: grid; place-items: center;
+  border: 2px solid var(--gold-deep); color: var(--gold-deep);
+  font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums;
+  transform: translateY(2px);
+}
+.ba-part-what { margin: -4px 0 0 44px; max-width: 62ch; font-size: 17px; line-height: 1.5; color: #555049; }
+.ba-part > :not(.ba-part-head):not(.ba-part-what) { margin-left: 44px; }
+/* Résumé-anchored questions. Visually set apart from the standard fields because they are
+   the one part of the application nobody else in the batch was asked. */
+.ba-rq { display: grid; gap: 18px; margin: 6px 0 26px; padding: 24px; border: 1px solid var(--gold-line, #d8cdae); background: var(--gold-pale, #faf7ef); }
+.ba-rq-head { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-deep); }
+.ba-rq-why { margin: -10px 0 0; max-width: 62ch; font-size: 16px; line-height: 1.5; color: #5b554c; }
+.ba-rq-note { margin: 0; font-size: 16px; color: #5b554c; }
+.ba-rq-item { display: grid; gap: 8px; }
+.ba-rq-q { font-size: 18px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; color: #000; text-wrap: balance; }
+.ba-rq-item textarea { width: 100%; padding: 13px 14px; border: 1px solid #cfcabf; background: #fff; font: inherit; font-size: 16px; line-height: 1.5; resize: vertical; }
+.ba-rq-item textarea:focus { outline: 2px solid var(--gold-deep); outline-offset: -1px; border-color: var(--gold-deep); }
+.ba-rq-follow { font-size: 14.5px; color: #6d675e; }
+
+.opt { display:inline-block; margin-left:4px; padding:1px 6px; background:#f2f0eb; color:#6d675e; font-size:13.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+@media (max-width: 620px) {
+  .ba-part-what, .ba-part > :not(.ba-part-head):not(.ba-part-what) { margin-left: 0; }
+}
+
+.ba-upload { display: grid; gap: 10px; margin-bottom: 0; padding: 22px 24px; border: 1px solid #ebe8e1; background: #fff; }
 .ba-upload-cap { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: #000; }
 .ba-upload-note { margin: 0; max-width: 62ch; font-size: 15.5px; line-height: 1.6; color: #55524a; }
 .ba-upload input[type="file"] { width: 100%; padding: 16px; border: 1px dashed #cfcabf; background: #fff; font-size: 15.5px; cursor: pointer; }

@@ -292,29 +292,44 @@
           <div class="batch-vetting" id="batchVetting" hidden></div>
         </div>
 
-        <div class="batch-apply-step" data-ba-step="1">
-          <p class="batch-step-kicker">Your 90-second walkthrough <b class="req">Required</b></p>
-          <div class="batch-prompt-box">
-            <span class="batch-prompt-tag">Your assigned prompt</span>
-            <p id="batchVideoPrompt"></p>
-          </div>
-          <p class="batch-step-hint">Unscripted, answering the prompt above. Retake as often as you like, only the take you keep is saved.</p>
-          <div class="batch-exercise" id="batchExercise" hidden></div>
-          <input type="hidden" id="batchExerciseUrl" name="exerciseUrl">
+        <div class="batch-apply-step is-parts" data-ba-step="1">
+          <p class="batch-step-kicker">What you submit</p>
 
-          <div class="ba-upload">
-            <p class="ba-upload-cap">Your work sample</p>
-            <p class="ba-upload-note">The spreadsheet, model or document itself, not a PDF export or a screenshot. We open the file and read how it was built.</p>
-            <input type="file" id="batchArtifactInput" accept=".xlsx,.xls,.csv,.pdf,.docx,.pptx">
-            <ul class="ba-upload-list" id="batchArtifactList"></ul>
-            <p class="ba-upload-status" id="batchArtifactStatus" aria-live="polite"></p>
-          </div>
+          <section class="ba-part">
+            <p class="ba-part-head">Your walkthrough <b class="req">Required</b></p>
+            <p class="ba-part-what">90 seconds on camera, answering the prompt below.</p>
+            <div class="batch-prompt-box">
+              <span class="batch-prompt-tag">Your assigned prompt</span>
+              <p id="batchVideoPrompt"></p>
+            </div>
+            <p class="batch-step-hint">Unscripted. Retake as often as you like, only the take you keep is saved.</p>
+            <div class="video-field" data-video-field="batch">
+              <div class="video-picker" id="batchVideoPicker"></div>
+              <input name="videoUrl" type="hidden" required id="batchVideoUrl">
+              <p class="batch-video-state" id="batchVideoState" aria-live="polite"></p>
+            </div>
+          </section>
 
-          <div class="video-field" data-video-field="batch">
-            <div class="video-picker" id="batchVideoPicker"></div>
-            <input name="videoUrl" type="hidden" required id="batchVideoUrl">
-            <p class="batch-video-state" id="batchVideoState" aria-live="polite"></p>
-          </div>
+          <section class="ba-part" id="baPartExercise" hidden>
+            <p class="ba-part-head">The exercise <b class="req">Required</b></p>
+            <p class="ba-part-what">A separate recording. We give you the files, you share your screen and work through them.</p>
+            <div class="batch-exercise" id="batchExercise"></div>
+            <input type="hidden" id="batchExerciseUrl" name="exerciseUrl">
+          </section>
+
+          <section class="ba-part">
+            <p class="ba-part-head">Your work sample <b class="opt">Optional</b></p>
+            <p class="ba-part-what">The spreadsheet, model or document itself, not a PDF export or a screenshot. We open the file and read how it was built.</p>
+            <div class="ba-upload">
+              <input type="file" id="batchArtifactInput" accept=".xlsx,.xls,.csv,.pdf,.docx,.pptx">
+              <ul class="ba-upload-list" id="batchArtifactList"></ul>
+              <p class="ba-upload-status" id="batchArtifactStatus" aria-live="polite"></p>
+            </div>
+            <div class="form-grid">
+              <label>Or a link<input name="workSample1" type="url" placeholder="Portfolio, repo, doc"></label>
+              <label>Another link<input name="workSample2" type="url" placeholder="https://…"></label>
+            </div>
+          </section>
         </div>
 
         <div class="batch-apply-step" data-ba-step="2">
@@ -331,20 +346,16 @@
             <label>Hours per week <small>Optional</small><input name="hoursPerWeek" type="number" min="1" max="60" inputmode="numeric" placeholder="10"></label>
             <label>Earliest start <small>Optional</small><input name="startDate" type="date"></label>
           </div>
-          <div class="form-grid">
-            <label>Work sample 1 <small>Portfolio, repo, doc</small><input name="workSample1" type="url" placeholder="https://…"></label>
-            <label>Work sample 2 <small>Optional</small><input name="workSample2" type="url" placeholder="https://…"></label>
-          </div>
-
           <div class="batch-resume-row">
-          <button type="button" class="portal-ghost compact" id="batchResumeBtn"><svg><use href="#p-plus"/></svg>Attach résumé / CV</button>
-          <input type="file" id="batchResumeInput" accept=".pdf,.doc,.docx" hidden>
-          <span id="batchResumeChip" class="batch-resume-chip" hidden></span>
-        </div>
+            <button type="button" class="portal-ghost compact" id="batchResumeBtn"><svg><use href="#p-plus"/></svg>Attach résumé / CV</button>
+            <input type="file" id="batchResumeInput" accept=".pdf,.doc,.docx" hidden>
+            <span id="batchResumeChip" class="batch-resume-chip" hidden></span>
+          </div>
+          <section class="ba-rq" id="batchResumeQuestions" hidden></section>
 
           <div class="ba-referral">
           <p class="ba-referral-cap">Who vouches for you?</p>
-          <p class="ba-referral-note">Optional, but it is the strongest thing on this application.</p>
+          <p class="ba-referral-note">Leave this blank and your application is still complete. If someone did see you work, their endorsement is the strongest single thing you can attach.</p>
           <label>Their name<input name="referralName" placeholder="Prof. Lee"></label>
           <label>Referral code <small>if they gave you one</small><input name="referralCode" placeholder="REF-XXXX"></label>
         </div>
