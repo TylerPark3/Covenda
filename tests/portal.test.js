@@ -805,3 +805,18 @@ test('the vetting process is added alongside the rails, never over them', async 
     assert.equal(typeof brief.vetting.apiVerified, 'boolean', b.slug);
   }
 });
+
+// Step 1 asks for a model. It has to be possible to give us one, and a reviewer has to be
+// able to open it — the same gap the intro video had before the recorder existed.
+test('a batch application carries the uploaded work sample through to the reviewer', async () => {
+  const html = await readFile(new URL('../portal.html', import.meta.url), 'utf8');
+  const ui = await readFile(new URL('../portal.js', import.meta.url), 'utf8');
+  const api = await readFile(new URL('../api/portal.js', import.meta.url), 'utf8');
+
+  assert.match(html, /id="batchArtifactInput"/, 'an upload control exists');
+  assert.match(html, /accept="\.xlsx[^"]*"/, 'and accepts a spreadsheet');
+  assert.match(ui, /workSampleFiles:batchArtifacts/, 'the client sends them');
+  assert.match(api, /workSampleFiles: \(Array\.isArray/, 'the API stores them');
+  // A PDF has no formula layer, and saying so at upload beats a reviewer finding out.
+  assert.match(ui, /A PDF cannot be read for formulas/);
+});

@@ -298,6 +298,14 @@
             <p id="batchVideoPrompt"></p>
           </div>
           <p class="batch-step-hint">Unscripted, answering the prompt above. Retake as often as you like — only the take you keep is saved.</p>
+          <div class="ba-upload">
+            <p class="ba-upload-cap">Your work sample</p>
+            <p class="ba-upload-note">The spreadsheet, model or document itself — not a PDF export or a screenshot. We open the file and read how it was built.</p>
+            <input type="file" id="batchArtifactInput" accept=".xlsx,.xls,.csv,.pdf,.docx,.pptx">
+            <ul class="ba-upload-list" id="batchArtifactList"></ul>
+            <p class="ba-upload-status" id="batchArtifactStatus" aria-live="polite"></p>
+          </div>
+
           <div class="video-field" data-video-field="batch">
             <div class="video-picker" id="batchVideoPicker"></div>
             <input name="videoUrl" type="hidden" required id="batchVideoUrl">

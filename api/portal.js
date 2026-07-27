@@ -1108,6 +1108,13 @@ export async function applyToBatch(member, input) {
         })).filter(a => a.answer)
       : [],
     resumeUrl: cleanUrl(input.resumeUrl),
+    // The work sample itself — the spreadsheet or document the vetting process reads.
+    // The client uploads and sends URLs; nothing is stored here that a reviewer
+    // cannot open.
+    workSampleFiles: (Array.isArray(input.workSampleFiles) ? input.workSampleFiles : [])
+      .slice(0, 5)
+      .map(f => ({ name: cleanText(f?.name, 160), url: cleanUrl(f?.url) }))
+      .filter(f => f.name && f.url),
     referral: cleanReferral(input.referral, verifiedPartnersFromEnv(process.env)),
     verticals: profile.verticals || [],
     workTypes: profile.work_types || [],

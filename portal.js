@@ -1913,9 +1913,61 @@ function renderVettingSteps(batch){
   host.hidden=false;
 }
 
+// The work sample upload. Step 1 asked for a model and offered no way to give us one — the
+// same gap as the intro video before the recorder existed.
+let batchArtifacts=[];
+function renderBatchArtifacts(){
+  const list=$('#batchArtifactList');if(!list)return;
+  list.replaceChildren();
+  batchArtifacts.forEach((f,i)=>{
+    const li=document.createElement('li');
+    li.className=f.url?'is-done':(f.error?'is-error':'is-busy');
+    const name=document.createElement('span');name.textContent=f.name;
+    const state=document.createElement('small');
+    state.textContent=f.error||(f.url?`${Math.round(f.sizeBytes/1024)} KB`:'Uploading…');
+    li.append(name,state);
+    if(f.url||f.error){
+      const x=document.createElement('button');x.type='button';x.setAttribute('aria-label','Remove '+f.name);x.textContent='×';
+      x.addEventListener('click',()=>{batchArtifacts.splice(i,1);renderBatchArtifacts();});
+      li.append(x);
+    }
+    list.append(li);
+  });
+}
+$('#batchArtifactInput')?.addEventListener('change',async event=>{
+  const picked=[...(event.target.files||[])];
+  event.target.value='';
+  const status=$('#batchArtifactStatus');
+  for(const file of picked){
+    const entry={name:file.name,sizeBytes:file.size,url:null,error:null};
+    batchArtifacts.push(entry);renderBatchArtifacts();
+    try{
+      const res=await fetch('/api/file-upload',{
+        method:'POST',
+        headers:{'Content-Type':file.type||'application/octet-stream','X-Covenda-Filename':file.name},
+        body:file,
+      });
+      const body=await res.json();
+      if(!res.ok||!body.ok)throw new Error(body.error||'Upload failed.');
+      entry.url=body.url;entry.sizeBytes=body.sizeBytes;
+    }catch(err){ entry.error=err.message||'Upload failed.'; }
+    renderBatchArtifacts();
+  }
+  // A .pdf where a workbook was asked for is the one mistake worth naming immediately: the
+  // parse reads formulas, and a PDF has none.
+  if(status){
+    const pdf=batchArtifacts.some(f=>/\.pdf$/i.test(f.name));
+    status.textContent=pdf
+      ? 'A PDF cannot be read for formulas. If you have the spreadsheet, add it too.'
+      : (batchArtifacts.some(f=>f.error)?'Some files did not upload.':'');
+  }
+});
+
 function openBatchApply(batch){
   baStep=0;
   batchAnswers={};
+  batchArtifacts=[];
+  renderBatchArtifacts();
   const form=$('#batchApplyForm');if(!form)return;
   form.reset();batchResumeUrl='';renderBatchResumeChip('');
   form.elements.batchId.value=batch.id;
@@ -3158,7 +3210,7 @@ $('#batchApplyForm')?.addEventListener('submit',async event=>{
   button.disabled=true;setDialogMessage('#batchApplyMessage','Submitting your application…');
   const skills=e.skills.value.split(',').map(s=>s.trim()).filter(Boolean);
   try{
-    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(),resumeUrl:batchResumeUrl,referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
+    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(),resumeUrl:batchResumeUrl,workSampleFiles:batchArtifacts.filter(f=>f.url).map(f=>({name:f.name,url:f.url})),referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
     $('#batchApplyDialog').close();await loadDashboard();setView('batches');
   }catch(error){setDialogMessage('#batchApplyMessage',error.message,true);}finally{button.disabled=false;}
 });

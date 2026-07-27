@@ -1573,3 +1573,28 @@ body { background: var(--surface); }
 #batchApplyDialog footer { border-top: 1px solid #ebe8e1; background: #fff; }
 #batchApplyDialog .ba-count { font-size: 15px; color: #7d7870; }
 #batchApplyDialog footer button { min-height: 52px; font-size: 16px; }
+
+/* The dialog is full-screen; capping the body at 720px put a narrow column in the middle of
+   a wide space, which is what made it read as compressed. */
+#batchApplyDialog .dialog-body { max-width: 1040px; }
+#batchApplyDialog .ba-progress { max-width: 1040px; margin-inline: auto; width: 100%; }
+#batchApplyDialog footer { max-width: 1040px; margin-inline: auto; width: 100%; }
+
+/* Leftover tints — the cream ground made the white panels inside it look like cut-outs. */
+#batchApplyDialog .batch-apply-step,
+#batchApplyDialog [data-ba-step] { background: #fff; }
+
+/* Work-sample upload. */
+.ba-upload { display: grid; gap: 10px; margin-bottom: 26px; padding: 22px 24px; border: 1px solid #ebe8e1; background: #fff; }
+.ba-upload-cap { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: #000; }
+.ba-upload-note { margin: 0; max-width: 62ch; font-size: 15.5px; line-height: 1.6; color: #55524a; }
+.ba-upload input[type="file"] { width: 100%; padding: 16px; border: 1px dashed #cfcabf; background: #fff; font-size: 15.5px; cursor: pointer; }
+.ba-upload input[type="file"]:hover { border-color: #000; }
+.ba-upload-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.ba-upload-list li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #ebe8e1; font-size: 15px; }
+.ba-upload-list li span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ba-upload-list li small { flex: none; color: #7d7870; font-size: 14px; }
+.ba-upload-list li.is-done { border-color: rgba(31,122,77,.35); }
+.ba-upload-list li.is-error small { color: #a3301f; }
+.ba-upload-list button { border: 0; background: none; padding: 0 4px; font-size: 20px; color: #7d7870; cursor: pointer; }
+.ba-upload-status { margin: 0; font-size: 14.5px; color: var(--gold-deep); }
