@@ -297,7 +297,7 @@
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
           <h1 id="studentHeroTitle">Do work that proves<br><span class="word-gold">what you can do.</span></h1>
-          <p>Join now without choosing a direction, or select the exact work you want before you sign up.</p>
+          <p>Join now without choosing an industry, or select an industry and a specific task before you sign up.</p>
         </div>
         <!-- F3: partner-referral landing. Populated + shown by app.js only when the
              visitor arrives via a partner's ?ref= link. Not identity-verified. -->
@@ -314,33 +314,33 @@
             <div>
               <p class="student-route-label">Join without choosing</p>
               <h2>Start now. Choose later.</h2>
-              <p>No work area is required. Add or change your direction whenever you are ready.</p>
+              <p>No industry is required. Add or change your interests whenever you are ready.</p>
             </div>
             <button class="gold-button student-join-primary" type="button" data-action="student-quick" data-join-mode="open">
               Join now — choose later<svg><use href="#icon-arrow-right"/></svg>
             </button>
           </div>
           <div class="student-choice-divider" aria-hidden="true"><span>or</span></div>
-          <fieldset class="student-vertical-picker">
-            <legend><span>Choose a work area</span><small>Optional — select one, then a specific specialty before joining.</small></legend>
-            <div class="student-vertical-rail">
-              <button class="student-vertical" type="button" data-work-type="Research" data-vertical-label="Research &amp; strategy" aria-pressed="false"><span>01</span><strong>Research &amp; strategy</strong><small>Markets, customers, products</small></button>
-              <button class="student-vertical" type="button" data-work-type="Data & spreadsheets" data-vertical-label="Data &amp; analysis" aria-pressed="false"><span>02</span><strong>Data &amp; analysis</strong><small>Models, cleanup, reporting</small></button>
-              <button class="student-vertical" type="button" data-work-type="Operations" data-vertical-label="Operations" aria-pressed="false"><span>03</span><strong>Operations</strong><small>Processes, programs, vendors</small></button>
-              <button class="student-vertical" type="button" data-work-type="QA & testing" data-vertical-label="QA &amp; testing" aria-pressed="false"><span>04</span><strong>QA &amp; testing</strong><small>Test cases, bugs, evaluation</small></button>
-              <button class="student-vertical" type="button" data-work-type="Writing & documentation" data-vertical-label="Writing &amp; documentation" aria-pressed="false"><span>05</span><strong>Writing &amp; documentation</strong><small>Briefs, SOPs, knowledge</small></button>
+          <fieldset class="student-industry-picker">
+            <legend><span>Choose an industry</span><small>Optional — select an industry, then choose the specific task you want to do.</small></legend>
+            <div class="student-industry-rail">
+              <button class="student-industry" type="button" data-industry="Accounting &amp; finance" aria-pressed="false"><span>01</span><strong>Accounting &amp; finance</strong><small>Models, markets, controls</small></button>
+              <button class="student-industry" type="button" data-industry="Software &amp; AI" aria-pressed="false"><span>02</span><strong>Software &amp; AI</strong><small>Products, data, testing</small></button>
+              <button class="student-industry" type="button" data-industry="Healthcare operations" aria-pressed="false"><span>03</span><strong>Healthcare operations</strong><small>Research, workflows, SOPs</small></button>
+              <button class="student-industry" type="button" data-industry="Consumer &amp; retail" aria-pressed="false"><span>04</span><strong>Consumer &amp; retail</strong><small>Customers, reporting, operations</small></button>
+              <button class="student-industry" type="button" data-industry="Professional services" aria-pressed="false"><span>05</span><strong>Professional services</strong><small>Briefs, analysis, client work</small></button>
             </div>
           </fieldset>
-          <p class="student-specialty-empty" id="studentSpecialtyEmpty">Pick a work area to see the exact kinds of work inside it.</p>
-          <div class="student-specialty-panel" id="studentSpecialtyPanel" aria-live="polite" hidden>
-            <div class="student-specialty-heading">
-              <div><p>Your work area</p><strong id="studentSpecialtyTitle"></strong></div>
-              <button type="button" id="studentChoiceClear">Clear choice</button>
+          <p class="student-task-empty" id="studentTaskEmpty">Pick an industry to see the specific tasks available inside it.</p>
+          <div class="student-task-panel" id="studentTaskPanel" aria-live="polite" hidden>
+            <div class="student-task-heading">
+              <div><p>Tasks in</p><strong id="studentTaskTitle"></strong></div>
+              <button type="button" id="studentIndustryClear">Clear industry</button>
             </div>
-            <div class="student-specialty-options" id="studentSpecialtyOptions" role="group" aria-label="Choose a specialty"></div>
-            <p class="student-specialty-status" id="studentSpecialtyStatus">Choose the specific work you want attached to your signup.</p>
+            <div class="student-task-options" id="studentTaskOptions" role="group" aria-label="Choose a specific task"></div>
+            <p class="student-task-status" id="studentTaskStatus">Choose the task you want attached to your signup.</p>
             <button class="gold-button student-join-selected" id="studentJoinSelected" type="button" data-action="student-quick" data-join-mode="selected" disabled>
-              <span id="studentJoinSelectedLabel">Choose a specialty to join</span><svg><use href="#icon-arrow-right"/></svg>
+              <span id="studentJoinSelectedLabel">Choose a task to join</span><svg><use href="#icon-arrow-right"/></svg>
             </button>
           </div>
         </div>

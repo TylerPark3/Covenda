@@ -5,7 +5,8 @@ const state = {
   audience: 'home',
   surface: 'site',
   workType: '',
-  studentSpecialty: '',
+  studentIndustry: '',
+  studentTask: '',
   toastTimer: null,
 };
 let selectorFxController = null;
@@ -90,7 +91,8 @@ const storageKey = 'covendaPilotSubmissions';
 const introStorageKey = 'covendaIntroSeen';
 const audienceStorageKey = 'covendaAudience';
 const workTypeStorageKey = 'covendaSelectedWorkType';
-const studentSpecialtyStorageKey = 'covendaSelectedSpecialty';
+const studentIndustryStorageKey = 'covendaSelectedIndustry';
+const studentTaskStorageKey = 'covendaSelectedIndustryTask';
 const draftKeys = {
   studentForm: 'covendaStudentInterestDraft',
   companyForm: 'covendaCompanyProblemDraft',
@@ -480,48 +482,44 @@ function setSurface(surface) {
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
-const studentSpecialties = {
-  'Research': ['Customer research', 'Competitive analysis', 'Market sizing', 'Product discovery'],
-  'Data & spreadsheets': ['Data cleanup', 'Spreadsheet modeling', 'Dashboards & reporting', 'Data analysis'],
-  'Operations': ['Process mapping', 'Project coordination', 'Vendor operations', 'Finance operations'],
-  'QA & testing': ['Manual QA', 'Test-case writing', 'Bug reproduction', 'Model evaluation'],
-  'Writing & documentation': ['Technical documentation', 'Research briefs', 'SOPs & playbooks', 'Content operations'],
-};
+function studentIndustryTasks(industry) {
+  return (INDUSTRY_TREE[industry] || []).map(item => item.label);
+}
 
 function updateStudentJoinChoice() {
   const button = $('#studentJoinSelected');
   const label = $('#studentJoinSelectedLabel');
   if (!button || !label) return;
-  const ready = Boolean(state.workType && state.studentSpecialty);
+  const ready = Boolean(state.studentIndustry && state.studentTask);
   button.disabled = !ready;
-  label.textContent = ready ? `Join for ${state.studentSpecialty}` : 'Choose a specialty to join';
+  label.textContent = ready ? `Join for ${state.studentTask}` : 'Choose a task to join';
 }
 
-function selectStudentSpecialty(label) {
-  const choices = studentSpecialties[state.workType] || [];
+function selectStudentTask(label) {
+  const choices = studentIndustryTasks(state.studentIndustry);
   if (!choices.includes(label)) return;
-  state.studentSpecialty = label;
-  writeStorage(studentSpecialtyStorageKey, { workType: state.workType, label });
-  $$('.student-specialty').forEach(button => {
-    const selected = button.dataset.specialty === label;
+  state.studentTask = label;
+  writeStorage(studentTaskStorageKey, { industry: state.studentIndustry, label });
+  $$('.student-task').forEach(button => {
+    const selected = button.dataset.task === label;
     button.classList.toggle('is-selected', selected);
     button.setAttribute('aria-pressed', String(selected));
   });
-  const status = $('#studentSpecialtyStatus');
-  if (status) status.textContent = `Selected: ${label}. This direction will be attached to your signup.`;
+  const status = $('#studentTaskStatus');
+  if (status) status.textContent = `Selected: ${label}. Your industry and task will be attached to your signup.`;
   updateStudentJoinChoice();
 }
 
-function renderStudentSpecialties(workType) {
-  const host = $('#studentSpecialtyOptions');
-  const title = $('#studentSpecialtyTitle');
-  const status = $('#studentSpecialtyStatus');
-  const panel = $('#studentSpecialtyPanel');
-  const empty = $('#studentSpecialtyEmpty');
+function renderStudentTasks(industry) {
+  const host = $('#studentTaskOptions');
+  const title = $('#studentTaskTitle');
+  const status = $('#studentTaskStatus');
+  const panel = $('#studentTaskPanel');
+  const empty = $('#studentTaskEmpty');
   if (!host || !title || !status || !panel || !empty) return;
-  const vertical = $(`.student-vertical[data-work-type="${workType}"]`);
-  const choices = studentSpecialties[workType] || [];
-  if (!vertical || !choices.length) {
+  const industryButton = $(`.student-industry[data-industry="${industry}"]`);
+  const choices = studentIndustryTasks(industry);
+  if (!industryButton || !choices.length) {
     host.replaceChildren();
     title.textContent = '';
     panel.hidden = true;
@@ -531,36 +529,32 @@ function renderStudentSpecialties(workType) {
   }
   panel.hidden = false;
   empty.hidden = true;
-  title.textContent = vertical?.dataset.verticalLabel || workType;
+  title.textContent = industry;
   host.replaceChildren();
 
-  if (!choices.includes(state.studentSpecialty)) state.studentSpecialty = '';
+  if (!choices.includes(state.studentTask)) state.studentTask = '';
   choices.forEach(label => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'student-specialty';
-    button.dataset.specialty = label;
+    button.className = 'student-task';
+    button.dataset.task = label;
     button.textContent = label;
-    button.setAttribute('aria-pressed', String(label === state.studentSpecialty));
-    button.classList.toggle('is-selected', label === state.studentSpecialty);
-    button.addEventListener('click', () => selectStudentSpecialty(label));
+    button.setAttribute('aria-pressed', String(label === state.studentTask));
+    button.classList.toggle('is-selected', label === state.studentTask);
+    button.addEventListener('click', () => selectStudentTask(label));
     host.append(button);
   });
-  status.textContent = state.studentSpecialty
-    ? `Selected: ${state.studentSpecialty}. This direction will be attached to your signup.`
-    : 'Choose the specific work you want attached to your signup.';
+  status.textContent = state.studentTask
+    ? `Selected: ${state.studentTask}. Your industry and task will be attached to your signup.`
+    : 'Choose the task you want attached to your signup.';
   updateStudentJoinChoice();
 }
 
 function selectWorkType(workType) {
   if (!workType) return;
-  if (workType !== state.workType) {
-    state.studentSpecialty = '';
-    removeStorage(studentSpecialtyStorageKey);
-  }
   state.workType = workType;
   writeStorage(workTypeStorageKey, workType);
-  $$('.work-option, .student-vertical').forEach(button => {
+  $$('.work-option').forEach(button => {
     const selected = button.dataset.workType === workType;
     const newlySelected = selected && !button.classList.contains('is-selected');
     button.classList.toggle('is-selected', selected);
@@ -576,23 +570,39 @@ function selectWorkType(workType) {
   $$('input[name="workType"]', $('#studentForm')).forEach(input => {
     if (input.value === workType) input.checked = true;
   });
-  renderStudentSpecialties(workType);
 }
 
-function clearStudentWorkChoice() {
-  state.workType = '';
-  state.studentSpecialty = '';
-  removeStorage(workTypeStorageKey);
-  removeStorage(studentSpecialtyStorageKey);
-  $$('.student-vertical').forEach(button => {
+function selectStudentIndustry(industry) {
+  if (!studentIndustryTasks(industry).length) return;
+  if (industry !== state.studentIndustry) {
+    state.studentTask = '';
+    removeStorage(studentTaskStorageKey);
+  }
+  state.studentIndustry = industry;
+  writeStorage(studentIndustryStorageKey, industry);
+  $$('.student-industry').forEach(button => {
+    const selected = button.dataset.industry === industry;
+    button.classList.toggle('is-selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  $('#workspacePrimaryPath').textContent = industry;
+  renderStudentTasks(industry);
+}
+
+function clearStudentIndustryChoice() {
+  state.studentIndustry = '';
+  state.studentTask = '';
+  removeStorage(studentIndustryStorageKey);
+  removeStorage(studentTaskStorageKey);
+  $$('.student-industry').forEach(button => {
     button.classList.remove('is-selected');
     button.setAttribute('aria-pressed', 'false');
   });
   $('#workspacePrimaryPath').textContent = 'Not chosen yet';
-  renderStudentSpecialties('');
+  renderStudentTasks('');
 }
 
-$('#studentChoiceClear')?.addEventListener('click', clearStudentWorkChoice);
+$('#studentIndustryClear')?.addEventListener('click', clearStudentIndustryChoice);
 
 function setWorkspaceTab(tabName) {
   $$('[data-workspace-tab]').forEach(button => button.classList.toggle('is-active', button.dataset.workspaceTab === tabName));
@@ -1840,14 +1850,13 @@ function openQuickJoin({ includeDirection = false } = {}) {
   quickJoinForm.hidden = false;
   $('#quickJoinMessage').textContent = '';
   const selectedDirection = $('#quickJoinSpecialty');
-  const vertical = $(`.student-vertical[data-work-type="${state.workType}"]`)?.dataset.verticalLabel || state.workType;
-  quickJoinDirection = includeDirection && state.studentSpecialty
-    ? { vertical, specialty: state.studentSpecialty }
+  quickJoinDirection = includeDirection && state.studentIndustry && state.studentTask
+    ? { industry: state.studentIndustry, task: state.studentTask }
     : null;
   if (selectedDirection) {
     selectedDirection.hidden = !quickJoinDirection;
     selectedDirection.textContent = quickJoinDirection
-      ? `Your direction: ${quickJoinDirection.vertical} · ${quickJoinDirection.specialty}`
+      ? `Your interest: ${quickJoinDirection.industry} · ${quickJoinDirection.task}`
       : '';
   }
   renderQuickInterests();
@@ -1894,9 +1903,12 @@ if (quickJoinForm) {
     if (!name || !emailVal || !consent) { message.textContent = 'Please add your name, email, and agree to be contacted.'; return; }
     const submit = $('button[type="submit"]', quickJoinForm);
     submit.disabled = true; submit.textContent = 'Joining…';
-    const industries = selectedQuickInterests();
+    const industries = [...new Set([
+      ...(quickJoinDirection ? [quickJoinDirection.industry] : []),
+      ...selectedQuickInterests(),
+    ])];
     const directionInterest = quickJoinDirection
-      ? `${quickJoinDirection.vertical} · ${quickJoinDirection.specialty}`
+      ? `${quickJoinDirection.industry} · ${quickJoinDirection.task}`
       : '';
     try {
       const result = await sendSubmission({
@@ -1916,7 +1928,7 @@ if (quickJoinForm) {
         title: name + ' · quick join',
         summary: directionInterest
           ? 'Interested in ' + directionInterest
-          : (industries.length ? 'Interested in ' + industries.join(', ') : 'Joined without choosing a work area'),
+          : (industries.length ? 'Interested in ' + industries.join(', ') : 'Joined without choosing an industry'),
       });
       renderQuickJoinDone(result.reference);
       renderProfileBanner();
@@ -2481,6 +2493,9 @@ $$('[data-work-type]').forEach(button => button.addEventListener('click', () => 
     selectWorkType(niche);
   }
   if (button.closest('.work-types')) openDialog(studentDialog, studentForm);
+}));
+$$('.student-industry').forEach(button => button.addEventListener('click', () => {
+  selectStudentIndustry(button.dataset.industry);
 }));
 $$('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
 $$('.form-dialog').forEach(dialog => dialog.addEventListener('click', event => {
@@ -3805,9 +3820,13 @@ const restoredWorkTypes = checkedValues(studentForm, 'workType');
 const rememberedWorkType = readStorage(workTypeStorageKey, '');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];
 else if (rememberedWorkType) state.workType = rememberedWorkType;
-const rememberedSpecialty = readStorage(studentSpecialtyStorageKey, null);
-if (rememberedSpecialty?.workType === state.workType && typeof rememberedSpecialty.label === 'string') {
-  state.studentSpecialty = rememberedSpecialty.label;
+const rememberedStudentIndustry = readStorage(studentIndustryStorageKey, '');
+if (typeof rememberedStudentIndustry === 'string' && INDUSTRY_TREE[rememberedStudentIndustry]) {
+  state.studentIndustry = rememberedStudentIndustry;
+}
+const rememberedStudentTask = readStorage(studentTaskStorageKey, null);
+if (rememberedStudentTask?.industry === state.studentIndustry && typeof rememberedStudentTask.label === 'string') {
+  state.studentTask = rememberedStudentTask.label;
 }
 // ---- Motion (adapted from design_handoff_covenda_motion/covenda-motion.js) ----
 // Vanilla helper: play anything marked [data-animate] once it scrolls into view.
@@ -4550,7 +4569,8 @@ restoreRosterDraft();
 renderLocalSubmissionState();
 renderNarrowFlow();
 if (state.workType) selectWorkType(state.workType);
-else renderStudentSpecialties('');
+if (state.studentIndustry) selectStudentIndustry(state.studentIndustry);
+else renderStudentTasks('');
 setAudience(state.audience);
 renderReferralBanner();
 renderReferralLink();

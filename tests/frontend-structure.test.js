@@ -17,12 +17,12 @@ test('HTML ids remain unique', () => {
   assert.deepEqual([...new Set(duplicates)], []);
 });
 
-test('student-first hero leads with optional joining, five work areas, and a scroll continuation', () => {
+test('student-first hero leads with optional joining, five industries, and a scroll continuation', () => {
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(hero, /Do work that proves/);
-  assert.equal((hero.match(/data-work-type=/g) || []).length, 5);
+  assert.equal((hero.match(/data-industry=/g) || []).length, 5);
   assert.match(hero, /Join now — choose later/);
-  assert.match(hero, /No work area is required/);
+  assert.match(hero, /No industry is required/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
 });
@@ -41,38 +41,40 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
   assert.match(styles, /\.intro-statement/);
 });
 
-test('the student entry separates signup without a choice from signup with a specific direction', () => {
+test('the student entry separates open signup from an industry-to-task signup path', () => {
   const studentHero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(studentHero, /Do work that proves/);
   assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"[\s\S]*Join now — choose later/);
-  assert.match(studentHero, /Join now — choose later[\s\S]*Choose a work area/);
-  for (const vertical of ['Research &amp; strategy', 'Data &amp; analysis', 'Operations', 'QA &amp; testing', 'Writing &amp; documentation']) {
-    assert.match(studentHero, new RegExp(vertical));
+  assert.match(studentHero, /Join now — choose later[\s\S]*Choose an industry/);
+  for (const industry of ['Accounting &amp; finance', 'Software &amp; AI', 'Healthcare operations', 'Consumer &amp; retail', 'Professional services']) {
+    assert.match(studentHero, new RegExp(industry));
   }
-  assert.doesNotMatch(studentHero, /student-vertical is-selected/);
+  assert.doesNotMatch(studentHero, /student-industry is-selected/);
   assert.doesNotMatch(studentHero, /Explore[\s\S]*Profile[\s\S]*Track/);
   assert.doesNotMatch(studentHero, /selectorFxCanvas|student-journey|narrowFlow/);
-  assert.match(styles, /\.student-vertical-rail[\s\S]*grid-template-columns: repeat\(5/);
-  assert.match(styles, /\.student-vertical \{[\s\S]*border-right: 1px solid var\(--line-strong\)[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.student-industry-rail[\s\S]*grid-template-columns: repeat\(5/);
+  assert.match(styles, /\.student-industry \{[\s\S]*border-right: 1px solid var\(--line-strong\)[\s\S]*border-radius: 0/);
   assert.match(styles, /\.student-join-primary \{[\s\S]*width: min\(100%, 320px\)[\s\S]*border-radius: 0/);
   assert.match(styles, /@keyframes student-join-confirm/);
-  assert.match(script, /\$\$\('\.work-option, \.student-vertical'\)/);
-  assert.match(studentHero, /id="studentSpecialtyPanel"/);
-  assert.match(studentHero, /id="studentSpecialtyPanel"[^>]*hidden/);
-  assert.match(studentHero, /id="studentSpecialtyOptions"/);
+  assert.match(script, /\$\$\('\.student-industry'\)/);
+  assert.match(studentHero, /id="studentTaskPanel"/);
+  assert.match(studentHero, /id="studentTaskPanel"[^>]*hidden/);
+  assert.match(studentHero, /id="studentTaskOptions"/);
   assert.match(studentHero, /id="studentJoinSelected"[^>]*data-join-mode="selected"[^>]*disabled/);
-  assert.match(studentHero, /id="studentChoiceClear"/);
-  assert.match(script, /const studentSpecialties = \{/);
-  for (const specialty of ['Customer research', 'Spreadsheet modeling', 'Process mapping', 'Manual QA', 'Technical documentation']) {
-    assert.match(script, new RegExp(specialty));
+  assert.match(studentHero, /id="studentIndustryClear"/);
+  assert.match(script, /function studentIndustryTasks\(industry\)/);
+  for (const task of ['Financial modeling & analysis', 'QA & test cases', 'Process & workflow mapping', 'Customer & market research', 'Research & briefs']) {
+    assert.match(script, new RegExp(task));
   }
-  assert.match(script, /function renderStudentSpecialties\(workType\)/);
-  assert.match(script, /function selectStudentSpecialty\(label\)/);
-  assert.match(script, /function clearStudentWorkChoice\(\)/);
+  assert.match(script, /function renderStudentTasks\(industry\)/);
+  assert.match(script, /function selectStudentTask\(label\)/);
+  assert.match(script, /function selectStudentIndustry\(industry\)/);
+  assert.match(script, /function clearStudentIndustryChoice\(\)/);
   assert.match(script, /function updateStudentJoinChoice\(\)/);
   assert.match(script, /quickJoinDirection/);
   assert.match(script, /includeDirection = button\.dataset\.joinMode === 'selected'/);
-  assert.match(script, /studentSpecialtyStorageKey/);
+  assert.match(script, /studentIndustryStorageKey/);
+  assert.match(script, /studentTaskStorageKey/);
   assert.match(script, /function confirmStudentJoin\(button\)/);
 });
 
