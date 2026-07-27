@@ -1618,3 +1618,18 @@ body { background: var(--surface); }
 .teaser-tag { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #7d7870; }
 .teaser-q { margin: 0; font-size: 20px; line-height: 1.5; color: #000; }
 .teaser-note { margin: 0; font-size: 15px; color: #7d7870; }
+
+/* The supplied exercise. Work happens on screen, so the recording is of a screen. */
+.batch-exercise { display: grid; gap: 16px; margin-bottom: 26px; padding: 26px 28px; border: 1px solid #000; background: #fff; }
+.ex-head h4 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 24px; letter-spacing: -.02em; color: #000; }
+.ex-meta { margin: 0; font-size: 15px; color: #7d7870; font-variant-numeric: tabular-nums; }
+.ex-block { display: grid; gap: 6px; padding: 16px 18px; border: 1px solid #ebe8e1; }
+.ex-block.is-task { border-color: #000; }
+.ex-block strong { font-size: 13px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #7d7870; }
+.ex-block p { margin: 0; font-size: 16.5px; line-height: 1.6; color: #000; }
+.ex-how { margin: 0; font-size: 15.5px; line-height: 1.6; color: #55524a; }
+.batch-exercise .portal-primary { justify-self: start; min-height: 54px; padding: 0 26px; font-size: 16.5px; }
+.ex-state { margin: 0; font-size: 15px; color: var(--gold-deep); }
+
+/* Screen recording needs a bigger stage than a talking head. */
+.rec-overlay .rec-stage:has(video[data-mode="screen"]) { max-width: 1100px; }

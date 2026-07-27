@@ -1876,6 +1876,66 @@ $('#baBack')?.addEventListener('click',()=>{ baStep-=1; setDialogMessage('#batch
 // The vetting process for THIS batch's vertical, shown before anything is asked. A student
 // meeting a video prompt with no context assumes the video IS the process; it is one stage of
 // four, and which four depends on the industry.
+// The supplied exercise, screen-recorded. This is the Litmus mechanism: hand over real work,
+// let them use their own tools, and capture the PROCESS rather than only the artifact.
+function renderExercise(batch){
+  const host=$('#batchExercise');
+  if(!host)return;
+  const brief=batchBriefFor(batch);
+  const a=brief&&brief.assessment;
+  if(!a||!a.exercise){host.hidden=true;return;}
+  host.replaceChildren();
+
+  const head=document.createElement('div');head.className='ex-head';
+  const h=document.createElement('h4');h.textContent=a.exercise.title;
+  const meta=document.createElement('p');meta.className='ex-meta';
+  meta.textContent=`${a.exercise.minutes} minutes · we supply everything`;
+  head.append(h,meta);host.append(head);
+
+  const supplied=document.createElement('div');supplied.className='ex-block';
+  const st=document.createElement('strong');st.textContent='What you get';
+  const sp=document.createElement('p');sp.textContent=a.exercise.supplied;
+  supplied.append(st,sp);host.append(supplied);
+
+  const task=document.createElement('div');task.className='ex-block is-task';
+  const tt=document.createElement('strong');tt.textContent='What to do';
+  const tp=document.createElement('p');tp.textContent=a.exercise.task;
+  task.append(tt,tp);host.append(task);
+
+  // Said before they start, because a student who thinks the answer is what counts will
+  // work silently and score badly for the wrong reason.
+  const how=document.createElement('p');how.className='ex-how';
+  how.textContent='Share your screen and talk through what you are doing. Reviewers score the method — a sound approach that runs out of time beats a right answer nobody can follow.';
+  host.append(how);
+
+  const state=document.createElement('p');state.className='ex-state';state.setAttribute('aria-live','polite');
+  const go=document.createElement('button');go.type='button';go.className='portal-primary';
+  go.textContent='Share screen and start';
+  if(!videoStudio.canShareScreen){
+    go.disabled=true;
+    state.textContent='This browser cannot share a screen. Use Chrome, Edge or Safari to do the exercise.';
+  }
+  go.addEventListener('click',async()=>{
+    go.disabled=true;state.textContent='Waiting for you to pick a window…';
+    const out=await videoStudio.record({
+      mode:'screen',
+      maxSeconds:a.exercise.minutes*60,
+      prompt:a.exercise.task,
+      label:`${batch.name} · ${a.exercise.title}`,
+    });
+    go.disabled=false;
+    if(out&&out.url){
+      const input=$('#batchExerciseUrl');if(input)input.value=out.url;
+      state.textContent='Recorded and attached.';
+      go.textContent='Record again';
+    }else{
+      state.textContent='Nothing recorded.';
+    }
+  });
+  host.append(go,state);
+  host.hidden=false;
+}
+
 function renderVettingSteps(batch){
   const host=$('#batchVetting');
   if(!host)return;
@@ -1987,6 +2047,7 @@ function openBatchApply(batch){
   renderBatchInterest(batch);
   setDialogMessage('#batchApplyMessage','');
   renderVettingSteps(batch);
+  renderExercise(batch);
   renderBatchWizard();
   $('#batchApplyDialog').showModal();
 }
@@ -3210,7 +3271,7 @@ $('#batchApplyForm')?.addEventListener('submit',async event=>{
   button.disabled=true;setDialogMessage('#batchApplyMessage','Submitting your application…');
   const skills=e.skills.value.split(',').map(s=>s.trim()).filter(Boolean);
   try{
-    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(),resumeUrl:batchResumeUrl,workSampleFiles:batchArtifacts.filter(f=>f.url).map(f=>({name:f.name,url:f.url})),referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
+    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(),resumeUrl:batchResumeUrl,workSampleFiles:batchArtifacts.filter(f=>f.url).map(f=>({name:f.name,url:f.url})),exerciseUrl:($('#batchExerciseUrl')?.value||'').trim(),referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
     $('#batchApplyDialog').close();await loadDashboard();setView('batches');
   }catch(error){setDialogMessage('#batchApplyMessage',error.message,true);}finally{button.disabled=false;}
 });
@@ -3414,11 +3475,48 @@ const videoStudio=(function(){
 
   // Opens the recorder and resolves with {url,durationSeconds} once a take is kept, or null
   // if the student backs out. Uploads then registers the take in their library.
-  function record({prompt='',maxSeconds=90,label=''}={}){
+  // Screen capture, for assessments where the work happens on screen rather than on a face.
+  // Litmus's insight applies directly: what a candidate DOES — which shortcut, which file
+  // they open first, whether they sanity-check — is the signal, and a finished artifact
+  // hides all of it.
+  //
+  // Audio comes from the microphone as well as the tab, because thinking aloud is half of
+  // what a rater is reading. A silent screen recording of correct answers tells you much
+  // less than a narrated one that goes wrong twice.
+  async function screenStream(){
+    if(!navigator.mediaDevices?.getDisplayMedia) throw new Error('This browser cannot share a screen. Use Chrome, Edge or Safari.');
+    const display=await navigator.mediaDevices.getDisplayMedia({
+      video:{frameRate:{ideal:12,max:15}},   // technique is legible at 12fps; 60 is wasted bytes
+      audio:true,
+    });
+    let mic=null;
+    try{ mic=await navigator.mediaDevices.getUserMedia({audio:true}); }catch{ /* screen only */ }
+    if(!mic)return display;
+    // Merge the mic into the display stream so one MediaRecorder captures both.
+    const ctx=new AudioContext();
+    const dest=ctx.createMediaStreamDestination();
+    [display,mic].forEach(st=>{ if(st.getAudioTracks().length)ctx.createMediaStreamSource(st).connect(dest); });
+    const merged=new MediaStream([...display.getVideoTracks(),...dest.stream.getAudioTracks()]);
+    // If they stop sharing from the browser's own bar, the recording has to end with it.
+    display.getVideoTracks()[0]?.addEventListener('ended',()=>{
+      merged.getTracks().forEach(t=>t.stop());
+    });
+    merged.__sources=[display,mic];
+    return merged;
+  }
+
+  function record({prompt='',maxSeconds=90,label='',mode='camera'}={}){
     return new Promise(resolve=>{
       let overlay=null,stream=null,recorder=null,chunks=[],timer=null,secs=0,blob=null,kept=0,settled=false;
       const done=value=>{ if(settled)return; settled=true; cleanup(); resolve(value); };
-      function stopStream(){ if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
+      function stopStream(){
+        if(!stream)return;
+        stream.getTracks().forEach(t=>t.stop());
+        // A merged stream holds the originals; stopping only the merge leaves the browser
+        // showing "sharing your screen" after the recording has finished.
+        (stream.__sources||[]).forEach(src=>src&&src.getTracks().forEach(t=>t.stop()));
+        stream=null;
+      }
       function cleanup(){ clearInterval(timer); stopStream(); if(overlay){overlay.close();overlay.remove();overlay=null;} }
       const el=id=>overlay.querySelector('#'+id);
 
@@ -3445,13 +3543,19 @@ const videoStudio=(function(){
       const hint=el('recHint');
       (async()=>{
         try{
-          stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
-        }catch{
-          hint.textContent='Camera or mic was blocked. Allow access, or paste a link.';
+          stream=mode==='screen'
+            ? await screenStream()
+            : await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
+        }catch(err){
+          hint.textContent=mode==='screen'
+            ? (err.message||'Screen sharing was declined. Nothing is recorded until you pick a window.')
+            : 'Camera or mic was blocked. Allow access, or paste a link.';
           return;
         }
         video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
-        hint.textContent='Up to '+maxSeconds+' seconds, unscripted. Reviewers listen for how you think.';
+        hint.textContent=mode==='screen'
+          ? 'Share the window you are working in. Talk through what you are doing — reviewers score the method, not just the result.'
+          : 'Up to '+maxSeconds+' seconds, unscripted. Reviewers listen for how you think.';
         const start=el('recStart'); start.disabled=false;
         start.addEventListener('click',()=>countIn());
       })();
@@ -3498,8 +3602,10 @@ const videoStudio=(function(){
           el('recRetake').hidden=true; el('recUse').hidden=true;
           video.controls=false; video.src=''; blob=null;
           try{
-            stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
-          }catch{ hint.textContent='Camera access was lost. Close and try again.'; return; }
+            stream=mode==='screen'
+              ? await screenStream()
+              : await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
+          }catch{ hint.textContent='Capture was lost. Close and try again.'; return; }
           video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
           countIn();
         };
@@ -3605,5 +3711,5 @@ const videoStudio=(function(){
     return { refresh:paint };
   }
 
-  return { record, mountPicker, canRecord, library };
+  return { record, mountPicker, canRecord, library, canShareScreen: Boolean(navigator.mediaDevices?.getDisplayMedia) };
 })();

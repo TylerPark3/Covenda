@@ -75,3 +75,16 @@ test('pressing Enter in a dialog runs the action instead of closing the dialog',
   // And the company intake, which has text inputs and had no handler at all.
   assert.match(portalJs, /\$\('#intakeForm'\)\?\.addEventListener\('submit'/);
 });
+
+// Excel technique and code navigation happen on a screen. A camera recording of someone's
+// face while they work tells a rater nothing about method.
+test('the assessment records the screen, not the candidate', () => {
+  assert.match(script, /getDisplayMedia/);
+  assert.match(script, /mode==='screen'/);
+  // The mic is merged in, because thinking aloud is half the signal.
+  assert.match(script, /createMediaStreamDestination/);
+  // Stopping the merge must stop the sources, or the browser keeps saying "sharing".
+  assert.match(script, /stream\.__sources\|\|\[\]/);
+  // And a student is told the method is what is scored, before they start working silently.
+  assert.match(script, /Reviewers score the method/);
+});
