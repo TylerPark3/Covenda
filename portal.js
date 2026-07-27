@@ -1815,6 +1815,46 @@ $('#baNext')?.addEventListener('click',()=>{
 });
 $('#baBack')?.addEventListener('click',()=>{ baStep-=1; setDialogMessage('#batchApplyMessage',''); renderBatchWizard(); });
 
+// The vetting process for THIS batch's vertical, shown before anything is asked. A student
+// meeting a video prompt with no context assumes the video IS the process; it is one stage of
+// four, and which four depends on the industry.
+function renderVettingSteps(batch){
+  const host=$('#batchVetting');
+  if(!host)return;
+  const brief=batchBriefFor(batch);
+  const v=brief&&brief.vetting;
+  const stages=(brief&&brief.vettingStages)||[];
+  if(!v||!stages.length){host.hidden=true;return;}
+  host.replaceChildren();
+
+  const head=document.createElement('div');head.className='vet-head';
+  const h=document.createElement('h4');h.textContent='How '+v.vertical+' is vetted';
+  const meta=document.createElement('p');meta.className='vet-meta';
+  meta.textContent=`${stages.length} steps · about ${v.minutes} minutes of your time`;
+  head.append(h,meta);host.append(head);
+
+  const ol=document.createElement('ol');ol.className='vet-steps';
+  stages.forEach((st,i)=>{
+    const li=document.createElement('li');li.dataset.kind=st.kind;
+    const n=document.createElement('span');n.className='vet-n';n.textContent=String(i+1);
+    const box=document.createElement('div');
+    const t=document.createElement('strong');t.textContent=st.label;
+    const tag=document.createElement('em');tag.className='vet-kind';
+    tag.textContent=st.kind==='automated'?'checked by machine':'judged by people';
+    const why=document.createElement('small');why.textContent=st.why;
+    box.append(t,tag,why);
+    li.append(n,box);ol.append(li);
+  });
+  host.append(ol);
+
+  // What the machine can and cannot establish here — different per vertical, and the part
+  // that stops the automated stages reading as the whole judgement.
+  const honest=document.createElement('p');honest.className='vet-honest';
+  honest.textContent=v.honesty;
+  host.append(honest);
+  host.hidden=false;
+}
+
 function openBatchApply(batch){
   baStep=0;
   const form=$('#batchApplyForm');if(!form)return;
@@ -1835,6 +1875,7 @@ function openBatchApply(batch){
       onChange:url=>{const st=$('#batchVideoState');if(st)st.textContent=url?'Attached to this application.':'';}});}
   renderBatchInterest(batch);
   setDialogMessage('#batchApplyMessage','');
+  renderVettingSteps(batch);
   renderBatchWizard();
   $('#batchApplyDialog').showModal();
 }

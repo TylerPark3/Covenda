@@ -288,6 +288,7 @@
         <div class="batch-apply-detail" data-ba-step="0">
           <div class="batch-detail-block"><h4>Who this cohort is for</h4><p id="batchApplyWho"></p></div>
           <div class="batch-detail-block"><h4>Where admitted students go</h4><p id="batchApplySamples"></p></div>
+          <div class="batch-vetting" id="batchVetting" hidden></div>
         </div>
 
         <div class="batch-apply-step" data-ba-step="1">
@@ -322,18 +323,21 @@
             <label>Work sample 1 <small>Portfolio, repo, doc</small><input name="workSample1" type="url" placeholder="https://…"></label>
             <label>Work sample 2 <small>Optional</small><input name="workSample2" type="url" placeholder="https://…"></label>
           </div>
-        </div>
-        <div class="batch-resume-row">
+
+          <div class="batch-resume-row">
           <button type="button" class="portal-ghost compact" id="batchResumeBtn"><svg><use href="#p-plus"/></svg>Attach résumé / CV</button>
           <input type="file" id="batchResumeInput" accept=".pdf,.doc,.docx" hidden>
           <span id="batchResumeChip" class="batch-resume-chip" hidden></span>
         </div>
-        <div class="ba-referral">
+
+          <div class="ba-referral">
           <p class="ba-referral-cap">Who vouches for you?</p>
           <p class="ba-referral-note">Optional — but it is the strongest thing on this application.</p>
           <label>Their name<input name="referralName" placeholder="Prof. Lee"></label>
           <label>Referral code <small>if they gave you one</small><input name="referralCode" placeholder="REF-XXXX"></label>
         </div>
+        </div>
+
         <p class="dialog-message" id="batchApplyMessage" aria-live="polite"></p>
       </div>
       <footer class="ba-footer"><button class="portal-secondary" type="button" id="baBack" hidden>Back</button><span class="ba-count" id="baCount"></span><button class="portal-primary" type="button" id="baNext">Continue<svg><use href="#p-arrow"/></svg></button><button class="portal-primary" type="submit" id="baSubmit" hidden>Submit application<svg><use href="#p-arrow"/></svg></button></footer>

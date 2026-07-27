@@ -1488,3 +1488,28 @@ body { background: var(--surface); }
 #batchApplyDialog .batch-step-kicker { font-size: 15px; }
 #batchApplyDialog .batch-step-hint { font-size: 14.5px; line-height: 1.6; }
 #batchApplyDialog .batch-prompt-box p { font-size: 16px; line-height: 1.55; }
+
+/* The application asks real questions; they should read like questions, not form labels. */
+#batchApplyDialog label { font-size: 15.5px; font-weight: 650; }
+#batchApplyDialog label small { font-size: 13.5px; font-weight: 500; }
+#batchApplyDialog .batch-step-kicker { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
+#batchApplyDialog .batch-prompt-box p { font-size: 18px; line-height: 1.5; }
+#batchApplyDialog .batch-prompt-tag { font-size: 12.5px; }
+#batchApplyDialog textarea { font-size: 16px; line-height: 1.6; }
+#batchApplyDialog input { font-size: 16px; }
+
+/* ── The vetting process, shown before anything is asked ───────────────────────────────
+   A student meeting a video prompt with no context assumes the video IS the process. It is
+   one stage of four, and which four depends on the industry. */
+.batch-vetting { display: grid; gap: 14px; margin-top: 20px; padding: 20px 22px; border: 1px solid var(--line-strong); background: #fff; }
+.vet-head h4 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 20px; letter-spacing: -.02em; }
+.vet-meta { margin: 0; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+.vet-steps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.vet-steps li { display: grid; grid-template-columns: 30px 1fr; gap: 13px; }
+.vet-n { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--line-strong); font-size: 13px; font-weight: 700; color: var(--soft); }
+.vet-steps li[data-kind="automated"] .vet-n { border-color: rgba(47,93,124,.4); background: var(--flow-pale); color: var(--flow); }
+.vet-steps li[data-kind="human"] .vet-n { border-color: rgba(91,75,138,.4); background: var(--proof-pale); color: var(--proof); }
+.vet-steps strong { display: block; font-size: 15.5px; }
+.vet-kind { display: inline-block; margin: 2px 0 4px; font-style: normal; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--soft); }
+.vet-steps small { display: block; color: var(--muted); font-size: 14px; line-height: 1.55; }
+.vet-honest { margin: 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; line-height: 1.6; }
