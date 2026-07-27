@@ -124,15 +124,26 @@ test('the proof lens opens the homepage without removing the existing product st
   const compareAt = html.indexOf('class="compare-section"');
   const exchangeAt = html.indexOf('class="exchange-section"');
   assert.ok(heroAt >= 0 && heroAt < proofAt && proofAt < compareAt && compareAt < exchangeAt);
-  assert.match(html, /Stop screening claims\.[\s\S]*Inspect the proof\./);
-  assert.match(html, /data-proof-criterion="product"/);
-  assert.match(html, /data-proof-evidence="contribution"/);
-  assert.match(html, /A shortlist you can explain\./);
+  assert.match(html, /Here’s what that means\./);
+  assert.match(html, /More startups[\s\S]*need talent\./);
+  assert.match(html, /AI makes applications[\s\S]*harder to trust\./);
+  assert.match(html, /More students want[\s\S]*startup work\./);
+  assert.match(html, /Covenda makes the work visible\./);
+  assert.match(html, /data-proof-step="0"/);
+  assert.match(html, /data-proof-step="3"/);
+  assert.match(html, /Build a work profile/);
+  assert.match(html, /Filter for fit/);
+  assert.match(html, /Try one real project/);
+  assert.match(html, /The work becomes the proof\./);
+  assert.doesNotMatch(html, /Stop screening claims|Define the proof|Meet by mutual choice/);
   assert.match(html, /Quality over quantity/);
   assert.match(html, /One project\.[\s\S]*Two sides win\./);
   assert.match(styles, /body:not\(\[data-audience="home"\]\) \.proof-lens-section \{ display: none; \}/);
   assert.match(styles, /body\[data-audience="home"\] \.compare-section \{ display: block; \}/);
+  assert.match(styles, /\.proof-product-rail/);
+  assert.match(styles, /@keyframes proof-rise-in/);
   assert.match(script, /function initProofLens\(\)/);
+  assert.match(script, /querySelectorAll\('\[data-proof-step\]'\)/);
 });
 
 test('the ideal-intern walkthrough is a minimal company-only two-route demo', () => {
