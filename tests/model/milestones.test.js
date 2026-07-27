@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   MILESTONE_VERSION, SILENCE_GRACE_HOURS,
   buildMilestoneSchedule, evaluateMilestones, reassignmentDecision,
@@ -140,4 +141,23 @@ test('missing or malformed data degrades instead of throwing', () => {
   assert.equal(reassignmentDecision(empty, {}).action, 'none');
   const junk = evaluateMilestones([{ due_at: 'not-a-date' }], START);
   assert.equal(junk.milestones[0].status, 'open');
+});
+
+// Stage 4 was fully built, fully tested, and imported by NOTHING — the flake defense never
+// ran. These pin the two seams that make it real.
+test('a schedule is laid down the moment a student is assigned', async () => {
+  const portal = await readFile(new URL('../../api/portal.js', import.meta.url), 'utf8');
+  assert.match(portal, /import \{ buildMilestoneSchedule/);
+  assert.match(portal, /const milestones = buildMilestoneSchedule\(project, \{ startAt: now \}\)/);
+  // Written in the same update that assigns the student — not a second write that can fail
+  // on its own and leave a project assigned with no schedule.
+  assert.match(portal, /assigned_student_user_id: application\.student_user_id,[\s\S]{0,220}milestones/);
+});
+
+test('submitting a deliverable marks the milestone rather than asserting on-time later', async () => {
+  const portal = await readFile(new URL('../../api/portal.js', import.meta.url), 'utf8');
+  assert.match(portal, /function markMilestoneSubmitted\(/);
+  assert.match(portal, /function projectMilestoneState\(/);
+  // The action is a recommendation the operator acts on, never an automatic mutation.
+  assert.match(portal, /action: reassignmentDecision\(evaluation, project \|\| \{\}, now\)/);
 });
