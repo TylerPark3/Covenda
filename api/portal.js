@@ -260,6 +260,25 @@ export async function authorizeMember(req, dependencies = {}) {
   return { user: { id: data.user.id, email: cleanEmail(data.user.email), metadata: data.user.user_metadata || {} }, supabase };
 }
 
+// For optional, additive features whose table may not exist yet. checked() throws on a query
+// error, which is right for the core tables — if member_projects is missing, nothing works
+// and pretending otherwise hides it. But a portal that 503s in its entirety because an
+// introductions table has not been migrated yet is a code/schema skew taking down features
+// that have nothing to do with it. These degrade to empty and log the reason.
+async function optional(query, fallback = [], label = 'optional table') {
+  try {
+    const { data, error } = await query;
+    if (error) {
+      console.warn(JSON.stringify({ level: 'warn', message: 'Optional read skipped', label, error: error.message }));
+      return fallback;
+    }
+    return data ?? fallback;
+  } catch (error) {
+    console.warn(JSON.stringify({ level: 'warn', message: 'Optional read threw', label, error: String(error?.message || error) }));
+    return fallback;
+  }
+}
+
 async function checked(query, fallback = []) {
   const { data, error } = await query;
   if (error) throw error;
@@ -1272,10 +1291,10 @@ export async function saveMemberVideo(member, input) {
 }
 
 export async function loadMemberVideos(member) {
-  return checked(
+  return optional(
     member.supabase.from('member_videos').select('*').eq('user_id', member.user.id)
       .order('created_at', { ascending: false }).limit(50),
-    [],
+    [], 'member_videos',
   );
 }
 
@@ -1429,7 +1448,7 @@ export async function saveCompanyProfile(member, input) {
 }
 
 export async function loadCompanyProfile(member) {
-  return checked(member.supabase.from('company_profiles').select('*').eq('user_id', member.user.id).maybeSingle(), null);
+  return optional(member.supabase.from('company_profiles').select('*').eq('user_id', member.user.id).maybeSingle(), null, 'company_profiles');
 }
 
 // A student opening a company from a project. Published only — and the caller must already
@@ -1599,8 +1618,8 @@ export async function respondToIntroduction(member, input) {
 
 export async function loadIntroductions(member, role) {
   const column = role === 'student' ? 'student_user_id' : 'company_user_id';
-  return checked(member.supabase.from('introductions').select('*')
-    .eq(column, member.user.id).order('created_at', { ascending: false }).limit(50), []);
+  return optional(member.supabase.from('introductions').select('*')
+    .eq(column, member.user.id).order('created_at', { ascending: false }).limit(50), [], 'introductions');
 }
 
 // ── Step 6: what actually happened ────────────────────────────────────────────────────
@@ -1626,8 +1645,8 @@ export const OUTCOME_SURVEY_QUESTIONS = OUTCOME_QUESTIONS;
 
 // ── Step 7: company referrals ─────────────────────────────────────────────────────────
 export async function loadCompanyReferrals(member) {
-  const rows = await checked(member.supabase.from('company_referrals').select('*')
-    .eq('referrer_user_id', member.user.id).order('created_at', { ascending: false }).limit(50), []);
+  const rows = await optional(member.supabase.from('company_referrals').select('*')
+    .eq('referrer_user_id', member.user.id).order('created_at', { ascending: false }).limit(50), [], 'company_referrals');
   return (rows || []).map(r => ({ ...r, standing: referralStatus(r) }));
 }
 

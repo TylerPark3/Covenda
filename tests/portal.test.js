@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 
 import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, cleanWorkStyle, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, deleteApplication, deleteProject, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, respondToPacket, reviewDeliverable, saveMemberProfile, SCORER_VERSION, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
 
@@ -769,4 +770,20 @@ test('an already-settled request cannot be settled twice', async () => {
     fulfilPayout({ user: { id: 'op', email: 'ops@covenda.app' }, supabase }, { requestId: PROJECT_UUID }, { COVENDA_ADMIN_EMAILS: 'ops@covenda.app' }),
     /already been resolved/,
   );
+});
+
+// A missing optional table must not take the whole portal down. The dashboard reads several
+// tables added after the last schema anyone actually ran; checked() throws on a query error,
+// which 503s everything — including features with no relationship to the missing table.
+test('an optional read degrades to empty instead of failing the dashboard', async () => {
+  const src = await readFile(new URL('../api/portal.js', import.meta.url), 'utf8');
+  assert.match(src, /async function optional\(/);
+  // The newest tables all go through it.
+  for (const table of ['introductions', 'company_referrals', 'member_videos', 'company_profiles']) {
+    const call = new RegExp(`optional\\([\\s\\S]{0,140}from\\('${table}'`);
+    assert.match(src, call, `${table} should be read optionally`);
+  }
+  // The core tables still throw — if member_projects is missing, nothing works and hiding
+  // that would be worse than a 503.
+  assert.match(src, /checked\(\s*\n?\s*supabase\.from\('member_projects'/);
 });
