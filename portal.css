@@ -1238,3 +1238,24 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .trial-start-facts li.is-warn::before { content: "!"; color: var(--gold-deep); }
 .trial-start .portal-primary { justify-self: start; }
 .verif-link { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line-strong); background: var(--gold-pale); font-family: var(--font-mono); font-size: 12px; color: var(--gold-deep); }
+
+/* ── Readiness ─────────────────────────────────────────────────────────────────────────
+   "Strong fit today" vs "could become one", and the cheapest move that closes the gap.
+   Never styled as a failure state — every state here is reachable, and the colour says so. */
+.readiness { display: grid; gap: 10px; margin: 12px 0 16px; padding: 15px 17px; border: 1px solid var(--line-strong); background: #fff; }
+.readiness[data-state="ready"] { border-color: rgba(36,117,58,.4); background: #f4faf5; }
+.readiness[data-state="reachable"] { border-color: var(--gold); background: var(--gold-pale); }
+.readiness-top { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.readiness-top strong { font-family: var(--font-display); font-weight: 500; font-size: 19px; letter-spacing: -.02em; }
+.readiness[data-state="ready"] .readiness-top strong { color: var(--success); }
+.readiness[data-state="reachable"] .readiness-top strong { color: var(--gold-deep); }
+.readiness-top span { flex: none; color: var(--soft); font-size: 12px; font-variant-numeric: tabular-nums; }
+.readiness-sum { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.readiness-steps-head { margin: 4px 0 0; font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); }
+.readiness-steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: rs; }
+.readiness-steps li { counter-increment: rs; display: grid; gap: 3px; padding-left: 26px; position: relative; }
+.readiness-steps li::before { content: counter(rs); position: absolute; left: 0; top: 1px; display: grid; place-items: center; width: 18px; height: 18px; border: 1px solid var(--line-strong); font-size: 10.5px; font-weight: 700; color: var(--gold-deep); }
+.readiness-steps strong { font-size: 13px; }
+.readiness-effort { display: inline-block; font-style: normal; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--soft); }
+.readiness-steps span { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.readiness-disclaimer { margin: 4px 0 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--soft); font-size: 11.5px; line-height: 1.5; }

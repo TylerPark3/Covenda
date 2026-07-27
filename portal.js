@@ -1436,10 +1436,46 @@ function batchVettingBlock(brief){
   return wrap;
 }
 
+// "Strong fit today" versus "could become one" — and what closes the difference.
+function readinessBlock(standing){
+  const r=standing.readiness;
+  const box=document.createElement('div');box.className='readiness';box.dataset.state=r.state;
+  const top=document.createElement('div');top.className='readiness-top';
+  const lab=document.createElement('strong');lab.textContent=r.label;
+  const cnt=document.createElement('span');cnt.textContent=standing.metCount+' of '+standing.total+' requirements met';
+  top.append(lab,cnt);
+  const sum=document.createElement('p');sum.className='readiness-sum';sum.textContent=r.summary;
+  box.append(top,sum);
+  if((r.steps||[]).length){
+    const head=document.createElement('p');head.className='readiness-steps-head';
+    head.textContent=r.steps.length===1?'What closes it':'What closes it, cheapest first';
+    const ol=document.createElement('ol');ol.className='readiness-steps';
+    r.steps.forEach(step=>{
+      const li=document.createElement('li');
+      const t=document.createElement('strong');t.textContent=step.label;
+      const eff=document.createElement('em');eff.className='readiness-effort';eff.textContent=step.effort;
+      const how=document.createElement('span');how.textContent=step.how;
+      li.append(t,eff,how);ol.append(li);
+    });
+    box.append(head,ol);
+  }
+  const dis=document.createElement('p');dis.className='readiness-disclaimer';dis.textContent=r.disclaimer;
+  box.append(dis);
+  return box;
+}
+
 function batchRequirementsBlock(brief,standing){
   const wrap=document.createElement('div');wrap.className='batch-detail-block batch-requirements';
   const h=document.createElement('h4');h.textContent='What it takes to get in';wrap.append(h);
-  if(standing){const sum=document.createElement('p');sum.className='batch-standing-line';sum.textContent=standing.metCount+' of '+standing.total+' met'+(standing.meetsThreshold?' — you clear the bar.':' — here is the rest.');wrap.append(sum);}
+  // Where you stand, whether that is fixed, and the cheapest thing that closes it. A score
+  // with no path attached is a rejection with extra words.
+  if(standing&&standing.readiness){
+    wrap.append(readinessBlock(standing));
+  }else if(standing){
+    const sum=document.createElement('p');sum.className='batch-standing-line';
+    sum.textContent=standing.metCount+' of '+standing.total+' met'+(standing.meetsThreshold?' — you clear the bar.':' — here is the rest.');
+    wrap.append(sum);
+  }
   const list=document.createElement('ul');list.className='batch-req-list';
   for(const req of brief.requirements){
     const check=standing?.checks?.find(c=>c.key===req.key)||null;

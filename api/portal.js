@@ -10,6 +10,7 @@ import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION, evaluate
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normaliseEmail } from './verification.js';
 import { classifyCompanyEmail, domainMatchesCompany, companyVerificationStanding } from './company-verification.js';
+import { readinessFor } from './readiness.js';
 import { buildMilestoneSchedule, evaluateMilestones, reassignmentDecision, founderTimeVariance } from './milestones.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
@@ -1065,11 +1066,18 @@ export async function loadBatchStanding(member) {
       // here so the check reads as "not yet confirmed" rather than a false zero.
       availabilityHoursPerWeek: undefined,
     };
-    return BATCH_CATALOG.map(batch => ({
-      slug: batch.slug,
-      name: batch.name,
-      ...evaluateBatchAdmission(batch, applicant),
-    }));
+    return BATCH_CATALOG.map(batch => {
+      const admission = evaluateBatchAdmission(batch, applicant);
+      // The score says where you stand; readiness says whether that is fixed, and what
+      // closes it. Admission itself is untouched — this only explains it.
+      const met = admission.total ? Math.round((admission.metCount / admission.total) * 100) : 0;
+      return {
+        slug: batch.slug,
+        name: batch.name,
+        ...admission,
+        readiness: readinessFor({ score: met, gaps: admission.checks || [] }),
+      };
+    });
   } catch {
     return [];
   }

@@ -4805,3 +4805,33 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 /* The split takes the section's full content width — it was capped at 1080px, which left it
    floating in the middle of a wider page. */
 .batches-section > .tb-split { width: min(100%, var(--content)); }
+
+/* ── The problem ───────────────────────────────────────────────────────────────────────
+   Named directly, because every other section on this page is an answer to it. Numbered
+   because it IS a sequence — applying got free, so the résumé got filtered on school, so
+   the platforms encoded that. Each step causes the next. */
+.slop-section { padding: clamp(60px, 8vw, 116px) var(--page-gutter); background: #14120d; color: #ece7da; border-top: 1px solid #262219; }
+.slop-section > * { width: min(100%, var(--content)); margin-inline: auto; }
+.slop-head { text-align: center; }
+.slop-head .feature-kicker { justify-content: center; color: var(--gold-light); }
+.slop-head h2 {
+  margin: 0 auto 18px; max-width: 22ch;
+  font-family: var(--font-display); font-weight: 400;
+  font-size: clamp(34px, 4.4vw, 62px); line-height: 1.04; letter-spacing: -.045em;
+  color: #fff; text-wrap: balance;
+}
+.slop-head > p { max-width: 64ch; margin: 0 auto; color: #b3ab99; font-size: 17px; line-height: 1.7; }
+
+.slop-grid { display: grid; gap: 1px; margin-top: clamp(38px, 5vw, 60px); background: #2b2619; border: 1px solid #2b2619; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.slop-card { display: grid; align-content: start; gap: 10px; padding: clamp(24px, 2.8vw, 34px); background: #14120d; }
+.slop-n { font-family: var(--font-mono); font-size: 12px; letter-spacing: .16em; color: var(--gold-light); }
+.slop-card h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(20px, 2vw, 25px); letter-spacing: -.02em; line-height: 1.22; color: #fff; }
+.slop-card p { margin: 0; color: #a9a190; font-size: 15px; line-height: 1.65; }
+
+.slop-answer { margin-top: clamp(34px, 4vw, 52px); padding: clamp(24px, 3vw, 38px); border: 1px solid var(--gold-deep); background: #191610; }
+.slop-answer-tag { margin: 0 0 16px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-light); }
+.slop-answer-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.slop-answer-list li { padding-left: 22px; position: relative; color: #b3ab99; font-size: 15.5px; line-height: 1.65; }
+.slop-answer-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-light); }
+.slop-answer-list strong { color: #fff; font-weight: 650; }
+@media (max-width: 620px) { .slop-answer-list li { font-size: 15px; } }
