@@ -5,7 +5,7 @@ import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicatio
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
-import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical } from './batches.js';
+import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility } from './batches.js';
 import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION, evaluateClubVerification, memberStanding } from './clubs.js';
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normaliseEmail } from './verification.js';
@@ -301,7 +301,18 @@ export async function loadMemberDashboard(member, env = process.env) {
     ]);
     const batchStanding = await loadBatchStanding(member);
     const verification = await loadVerificationStanding(member);
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches, batchApplications, batchStanding, verification, videos, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    // How each open batch lines up with the skills this student actually listed. Browsing
+    // help, not an admission signal — evaluateBatchAdmission remains the only gate.
+    const evidencedSkills = Object.keys(((profile.skill_signals || {}).github || [])
+      .reduce((acc, a) => { (a.skills || []).forEach(sk => { acc[sk.skill] = true; }); return acc; }, {}));
+    const batchesWithFit = (batches || []).map(b => ({
+      ...b,
+      compatibility: batchCompatibility(
+        { ...b, requirements: (BATCH_CATALOG.find(c => c.slug === b.slug) || {}).requirements || [] },
+        { skills: profile.skills || [], verticals: profile.verticals || [], evidencedSkills },
+      ),
+    }));
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, batchBriefs: BATCH_CATALOG.map(batchBrief), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));

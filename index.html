@@ -354,30 +354,23 @@
         </div>
         <div class="company-jobs">
           <article class="company-job company-job-builder">
-            <p class="company-job-eyebrow"><svg><use href="#icon-user"/></svg>Build the profile</p>
+            <p class="company-job-eyebrow"><svg><use href="#icon-user"/></svg>Tell us the problem</p>
             <h2>The intern you actually need</h2>
-            <p>Pick the field and the work. We turn it into a scoped trial and a shortlist you can read in a minute.</p>
+            <p>Describe the work in your own words. We turn it into a scoped paid trial and bring you people who have done it.</p>
+            <!-- Six fields of field/work-type/skills/hours before a founder had seen a single
+                 student was filtering they had no basis to do yet. One box, and we ask the
+                 structured questions later, once there is a reason to. -->
             <form class="ideal-builder" id="idealBuilder" novalidate>
-              <fieldset class="ib-field">
-                <legend>Field</legend>
-                <div class="ib-chips" id="ibVerticals" role="group" aria-label="Choose the field"></div>
-              </fieldset>
-              <fieldset class="ib-field">
-                <legend>Kind of work</legend>
-                <div class="ib-chips" id="ibWorkTypes" role="group" aria-label="Choose the kind of work"></div>
-              </fieldset>
-              <div class="ib-row">
-                <label>Must-have skills <span>Comma-separated</span><input name="requiredSkills" placeholder="Python, SQL"></label>
-                <label>Hours / week<input name="hoursPerWeek" type="number" min="1" max="40" inputmode="numeric" placeholder="10"></label>
-                <label>Length <span>Weeks</span><input name="durationWeeks" type="number" min="1" max="26" inputmode="numeric" placeholder="4"></label>
-                <label>Your review time <span>Min / week</span><input name="reviewMinutesPerWeek" type="number" min="0" max="600" inputmode="numeric" placeholder="60"></label>
-              </div>
-              <label class="ib-problem">What would they help with?<textarea id="companyProblemSeed" name="problem" rows="3" placeholder="The work you'd hand them, and what a useful finish looks like…"></textarea></label>
+              <label class="ib-problem ib-problem-lead">
+                <span class="ib-problem-cap">What keeps getting pushed back?</span>
+                <textarea id="companyProblemSeed" name="problem" rows="5" placeholder="The task that slips every week. What it is, and what a useful finish looks like."></textarea>
+              </label>
               <div class="composer-meta ib-fit"><span class="composer-fit" id="companyFitChip" data-fit="empty" role="status" aria-live="polite">Start typing — we’ll show project fit</span></div>
               <div class="ib-actions">
-                <button class="gold-button" type="submit">Build the profile<svg><use href="#icon-arrow-right"/></svg></button>
-                <button class="quiet-link" type="button" data-action="schedule-demo">Prefer a call first?<svg><use href="#icon-chevron"/></svg></button>
+                <button class="gold-button" type="submit">Start here<svg><use href="#icon-arrow-right"/></svg></button>
+                <button class="quiet-link" type="button" data-action="schedule-demo">Or book a call<svg><use href="#icon-chevron"/></svg></button>
               </div>
+              <p class="ib-note">No account needed to start. We only ask about skills, hours, and budget once we know what the work is.</p>
               <div class="form-message" id="ibMessage" role="status" aria-live="polite"></div>
             </form>
             <div class="ib-result" id="ibResult" hidden></div>

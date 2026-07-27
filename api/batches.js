@@ -576,6 +576,91 @@ export function batchBySlug(slug) {
 // The public, student-facing view of a batch: what it is and exactly what it takes to get in.
 // Also the company-facing walkthrough. Safe to render unauthenticated — no weights, no
 // applicant data, no connector scopes or partner terms.
+// ---------------------------------------------------------------------------
+// Compatibility: how well a student's stated skills line up with what a batch is about.
+//
+// Deliberately NOT the admission decision. `evaluateBatchAdmission` weighs real evidence
+// against the published bar and is what actually gates entry. This is the softer question a
+// student asks while browsing — "is this one even for me?" — and it must never be mistaken
+// for the first. It reads stated skills, which are self-reported and therefore worth exactly
+// what self-report is worth.
+//
+// Explainable by construction: it returns the terms that matched, so the UI can show why
+// rather than presenting a number nobody can interrogate. The product's own line is that
+// nothing here is a black-box score, and a compatibility bar is precisely where that
+// promise would quietly break.
+// ---------------------------------------------------------------------------
+
+const COMPAT_STOPWORDS = new Set([
+  'and', 'the', 'for', 'with', 'from', 'that', 'this', 'you', 'your', 'are', 'not', 'work',
+  'real', 'into', 'each', 'must', 'point', 'their', 'them', 'they', 'has', 'have', 'who',
+  'what', 'when', 'where', 'how', 'why', 'a', 'an', 'of', 'in', 'on', 'at', 'to', 'is', 'it',
+]);
+
+function compatTerms(text) {
+  return String(text || '')
+    .toLowerCase()
+    .split(/[^a-z0-9+#.]+/)
+    .map(t => t.replace(/^[.]+|[.]+$/g, ''))
+    .filter(t => t.length > 2 && !COMPAT_STOPWORDS.has(t));
+}
+
+// The words that describe what a batch is about. Name and discipline carry the most signal,
+// so they are counted twice; the summary and requirement labels fill in the vocabulary.
+function batchVocabulary(batch) {
+  if (!batch) return new Set();
+  const strong = [batch.name, batch.discipline, batch.verticalSlug, batch.discipline].join(' ');
+  const rest = [batch.summary, (batch.requirements || []).map(r => r.label).join(' ')].join(' ');
+  return new Set([...compatTerms(strong), ...compatTerms(rest)]);
+}
+
+export function batchCompatibility(batch, { skills = [], verticals = [], evidencedSkills = [] } = {}) {
+  const vocab = batchVocabulary(batch);
+  const stated = (skills || []).map(s => String(s || '').trim()).filter(Boolean);
+  const evidenced = new Set((evidencedSkills || []).map(s => String(s || '').toLowerCase().trim()));
+
+  if (!stated.length) {
+    return {
+      score: null, matched: [], evidencedMatched: [], verticalMatch: false,
+      basis: 'no-skills',
+      why: 'Add skills to your profile and every batch will show how well it lines up.',
+    };
+  }
+
+  const matched = [];
+  const evidencedMatched = [];
+  for (const skill of stated) {
+    const terms = compatTerms(skill);
+    if (!terms.length) continue;
+    // A skill counts if any of its words is part of how this batch describes itself.
+    if (terms.some(t => vocab.has(t))) {
+      matched.push(skill);
+      if (evidenced.has(skill.toLowerCase())) evidencedMatched.push(skill);
+    }
+  }
+
+  const verticalMatch = Boolean(batch?.verticalSlug && (verticals || []).includes(batch.verticalSlug));
+
+  // Proportion of your skills this batch speaks to, lifted by an interest match and again by
+  // any of those skills being backed by analysed code rather than only claimed.
+  const overlap = matched.length / stated.length;
+  let score = Math.round(overlap * 70);
+  if (verticalMatch) score += 20;
+  if (evidencedMatched.length) score += Math.min(10, evidencedMatched.length * 5);
+  score = Math.max(0, Math.min(100, score));
+
+  let why;
+  if (!matched.length && !verticalMatch) why = 'Nothing on your profile points at this field yet.';
+  else if (!matched.length) why = 'You listed this vertical as an interest, but none of your skills speak to it yet.';
+  else {
+    const names = matched.slice(0, 3).join(', ');
+    why = `${matched.length} of your ${stated.length} skills line up — ${names}${matched.length > 3 ? ', and more' : ''}`
+      + (verticalMatch ? ', and it is a vertical you follow.' : '.');
+  }
+
+  return { score, matched, evidencedMatched, verticalMatch, basis: 'stated-skills', why };
+}
+
 export function batchBrief(batch) {
   if (!batch) return null;
   const rails = (batch.vetting?.rails || []).map(id => VETTING_RAILS[id]).filter(Boolean);

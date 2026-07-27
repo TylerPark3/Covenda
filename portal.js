@@ -1152,13 +1152,60 @@ function discoverCard(project,isApplied){
 }
 const BATCH_STATUS_LABELS={submitted:'Applied',reviewing:'In review',accepted:'Accepted',waitlisted:'Waitlisted',declined:'Not selected'};
 const batchRosters=new Map(); // batchId -> loaded accepted-student array (company view cache)
+// How each batch lines up with the skills a student actually listed. Browsing help — the
+// admission bar is unchanged and unaffected by this number, which the copy says out loud.
+let batchMinFit=0;
+function compatPill(c){
+  if(!c||c.score===null)return null;
+  const s=Math.round(c.score);
+  const el=document.createElement('span');
+  el.className='compat-pill '+(s>=70?'is-high':s>=40?'is-mid':'is-low');
+  el.textContent=`${s}% match`;
+  el.title=c.why||'';
+  return el;
+}
+function batchFitOf(batch){
+  const c=batch&&batch.compatibility;
+  return c&&c.score!==null?c.score:null;
+}
+function renderBatchFilter(root){
+  const d=state.dashboard;
+  const withFit=(d.batches||[]).filter(b=>batchFitOf(b)!==null);
+  const bar=document.createElement('div');bar.className='batch-filter';
+  if(!withFit.length){
+    // Nothing to filter by yet, so say what unlocks it instead of showing a dead control.
+    const p=document.createElement('p');p.className='batch-filter-empty';
+    p.textContent='Add skills to your profile and every batch will show how well it lines up with them.';
+    const go=document.createElement('button');go.type='button';go.className='portal-ghost compact';
+    go.textContent='Add your skills';go.addEventListener('click',()=>setView('portfolio'));
+    bar.append(p,go);root.append(bar);return;
+  }
+  const label=document.createElement('label');label.className='batch-filter-range';
+  const cap=document.createElement('span');cap.textContent='Minimum match';
+  const range=document.createElement('input');range.type='range';range.min='0';range.max='100';range.step='10';range.value=String(batchMinFit);
+  const out=document.createElement('b');out.textContent=batchMinFit?`${batchMinFit}%`:'Any';
+  range.addEventListener('input',()=>{ batchMinFit=Number(range.value)||0; out.textContent=batchMinFit?`${batchMinFit}%`:'Any'; renderBatches(); });
+  label.append(cap,range,out);
+  const note=document.createElement('small');note.className='batch-filter-note';
+  note.textContent='Match reads your listed skills against what each batch is about. It does not affect whether you are admitted.';
+  bar.append(label,note);root.append(bar);
+}
 function renderBatches(){
   const root=$('#batchList');if(!root)return;
   const role=state.dashboard?.profile?.role;
   if(role==='company'){renderCompanyBatches(root);return;}
-  const batches=(state.dashboard.batches||[]).filter(b=>b.status==='open'||b.status==='reviewing');
+  let batches=(state.dashboard.batches||[]).filter(b=>b.status==='open'||b.status==='reviewing');
   const appByBatch=new Map((state.dashboard.batchApplications||[]).map(a=>[a.batch_id,a]));
   root.replaceChildren();
+  renderBatchFilter(root);
+  if(batchMinFit>0)batches=batches.filter(b=>{const f=batchFitOf(b);return f===null||f>=batchMinFit;});
+  // Best fit first when we have anything to sort by; otherwise leave the curated order alone.
+  if(batches.some(b=>batchFitOf(b)!==null))batches=batches.slice().sort((a,b)=>(batchFitOf(b)??-1)-(batchFitOf(a)??-1));
+  if(!batches.length&&batchMinFit>0){
+    const empty=document.createElement('p');empty.className='batch-filter-none';
+    empty.textContent=`No batch matches your skills at ${batchMinFit}% or above. Lower the bar, or add more skills to your profile.`;
+    root.append(empty);return;
+  }
   if(!batches.length){emptyList(root,'p-spark','No batches are open right now.','Curated cohorts open a few times a season. Check back — admitted students are surfaced directly to partner companies.');return;}
   for(const batch of batches)root.append(batchCard(batch,appByBatch.get(batch.id)));
 }
@@ -1175,8 +1222,16 @@ function companyBatchCard(batch,access,admittedCount){
   const card=document.createElement('article');card.className='batch-card'+(batch.tier==='elite'?' is-elite':'');
   const top=document.createElement('div');top.className='batch-card-top';
   const h=document.createElement('h3');h.textContent=batch.name;top.append(h);
-  top.append(pill(batch.tier==='elite'?'Elite':'Open',batch.tier==='elite'?'batch-tier is-elite':'batch-tier'));
+  const marks=document.createElement('div');marks.className='batch-card-marks';
+  const cp=compatPill(batch.compatibility);if(cp)marks.append(cp);
+  marks.append(pill(batch.tier==='elite'?'Elite':'Open',batch.tier==='elite'?'batch-tier is-elite':'batch-tier'));
+  top.append(marks);
   card.append(top);
+  // Why it matched, in words — a number nobody can interrogate is the thing this product
+  // says it is not.
+  if(batch.compatibility&&batch.compatibility.score!==null&&batch.compatibility.why){
+    const why=document.createElement('p');why.className='compat-why';why.textContent=batch.compatibility.why;card.append(why);
+  }
   const meta=document.createElement('div');meta.className='discover-meta';
   if(batch.discipline)meta.append(discoverChip('Discipline',batch.discipline));
   if(batch.partner_org)meta.append(discoverChip('Partner',batch.partner_org));

@@ -898,14 +898,14 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
   align-items: end;
   margin-bottom: 64px;
 }
-.section-heading h2, .why-copy h2, .final-cta h2, .workspace-title h1, .simple-workspace-view h1 {
+.section-heading h2, .why-copy h2, .final-cta h2, .workspace-title h1, .simple-workspace-view h1, .exchange-head h2 {
   margin: 0;
   font-size: clamp(38px, 4vw, 60px);
   line-height: 1.03;
   letter-spacing: -.055em;
   font-weight: 720;
 }
-.section-heading h2, .why-copy h2, .final-cta h2, .dialog-copy h2, .review-intro h3 {
+.section-heading h2, .why-copy h2, .final-cta h2, .dialog-copy h2, .review-intro h3, .exchange-head h2 {
   font-family: var(--font-display);
   font-weight: 400;
 }
@@ -3827,13 +3827,6 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
   margin-left: auto;
 }
 .exchange-head { text-align: center; }
-.exchange-head h2 {
-  margin: 0;
-  font-size: clamp(46px, 5.35vw, 82px);
-  font-weight: 400;
-  letter-spacing: -.055em;
-  line-height: .94;
-}
 .exchange-head h2 .word-gold { font-style: normal; }
 .exchange-head > p {
   max-width: 650px;
@@ -4768,3 +4761,10 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
    reads as a badge and not as another hairline icon. Sized to sit on a text baseline. */
 .verified-seal { display: inline-block; width: 1em; height: 1em; margin-left: .3em; color: var(--gold-deep); vertical-align: -.12em; }
 .verified-seal.is-lg { width: 1.25em; height: 1.25em; }
+
+/* The company entry point is one box now. It should read as an invitation to type, not as a
+   form to be completed, so the field carries the weight and the caption sits above it. */
+.ib-problem-lead { display: grid; gap: 8px; }
+.ib-problem-cap { font-size: 14px; font-weight: 650; color: var(--ink); }
+.ib-problem-lead textarea { min-height: 132px; line-height: 1.6; }
+.ib-note { margin: 10px 0 0; color: var(--soft); font-size: 13px; line-height: 1.5; }

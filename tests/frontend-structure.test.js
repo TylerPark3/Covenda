@@ -79,11 +79,16 @@ test('the student entry separates signup without a choice from signup with a spe
 test('audience switch supports student and company site states', () => {
   assert.match(html, /data-audience-option="student"/);
   assert.match(html, /data-audience-option="company"/);
-  // Company hero leads with the profile builder — the backlog card was removed, since
-  // "describe the person" is the entry point now and the problem field lives inside it.
-  assert.match(html, /Build the profile/);
+  // The company hero leads with one free-text box. Six structured fields before a founder had
+  // seen a single student was filtering they had no basis to do — the skills, hours and budget
+  // questions come later, once there is a reason to ask them.
+  assert.match(html, /id="companyProblemSeed"/);
+  assert.match(html, /What keeps getting pushed back\?/);
   assert.match(html, /Hire from a vetted batch/);
-  assert.doesNotMatch(html, /Work that keeps getting pushed back/);
+  // The chip pickers and the numeric grid are gone from the entry point.
+  assert.doesNotMatch(html, /id="ibVerticals"/);
+  assert.doesNotMatch(html, /id="ibWorkTypes"/);
+  assert.doesNotMatch(html, /name="requiredSkills"/);
   assert.match(script, /document\.body\.dataset\.audience = audience/);
   assert.match(styles, /body\[data-audience="company"\] \.hero-student/);
   assert.match(script, /covendaAudience/);
