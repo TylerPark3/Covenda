@@ -1862,6 +1862,11 @@ function openQuickJoin({ includeDirection = false } = {}) {
       ? `Your direction: ${quickJoinDirection.vertical} · ${quickJoinDirection.specialty}`
       : '';
   }
+  // Asking "what are you into?" after someone has already chosen a vertical and a specialty
+  // asks the same question twice. The chips only appear on the join-without-choosing path,
+  // where they are the only signal of direction there is.
+  const interestsBlock = document.getElementById('quickJoinInterestsBlock');
+  if (interestsBlock) interestsBlock.hidden = Boolean(quickJoinDirection);
   renderQuickInterests();
   quickJoinForm.dataset.startedAt = String(Date.now());
   quickJoinDialog.showModal();
