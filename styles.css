@@ -3299,24 +3299,6 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .referral-qr-copy { flex: 1 1 200px; min-width: 0; }
 .referral-qr-copy .referral-link-help { margin: 0 0 10px; }
 
-/* ---- How proof is verified (connector registry, incl. honest limits). Home audience only,
-       matching the dedup rule applied to the other top-of-funnel sections. ---- */
-body:not([data-audience="home"]) #verifyMethods { display: none; }
-.verify-section { padding: clamp(48px, 7vw, 96px) var(--page-gutter); border-top: 1px solid var(--line); background: #fff; }
-.verify-inner { max-width: 1000px; margin: 0 auto; }
-.verify-section .section-heading { display: block; grid-template-columns: none; text-align: center; max-width: 660px; margin: 0 auto clamp(30px, 4vw, 46px); }
-.verify-section .section-heading h2 { font-size: clamp(32px, 3.2vw, 46px); line-height: 1.04; }
-.verify-section .section-heading p:last-child { max-width: 58ch; margin: 16px auto 0; font-size: 15.5px; line-height: 1.62; }
-.verify-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: clamp(16px, 2.4vw, 26px); }
-.verify-col { padding: clamp(20px, 2.6vw, 28px); border: 1px solid var(--line-strong); border-radius: 0; background: #fff; }
-.verify-col-tag { margin: 0 0 16px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-deep); }
-.verify-col ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
-.verify-col li { display: grid; gap: 4px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-.verify-col li:last-child { padding-bottom: 0; border-bottom: 0; }
-.verify-col li strong { font-size: 14.5px; letter-spacing: -.01em; }
-.verify-col li span { color: var(--muted); font-size: 13px; line-height: 1.55; }
-.verify-note { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--soft); font-size: 12.5px; line-height: 1.6; }
-
 /* ---- Public batch board detail: the same brief the portal renders, audience-split.
        Student sees the bar; company sees the evaluation walkthrough. ------------------ */
 .batch-actions-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin-top: 16px; }
@@ -5012,19 +4994,6 @@ body[data-audience="company"] .slop-section { display: block; }
 .batch-card > p { flex: 1 1 auto; }
 .record-illus { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--line); color: var(--soft); font-size: 12px; line-height: 1.5; }
 
-/* ── Why now (student) ─────────────────────────────────────────────────────────────────
-   The argument for doing startup work at all, before the argument for doing it here. */
-.whynow { padding: clamp(50px, 6vw, 90px) 0; }
-.whynow-head { max-width: 62ch; margin: 0 auto clamp(30px, 4vw, 46px); text-align: center; }
-.whynow-head .feature-kicker { justify-content: center; }
-.whynow-head h2 { margin: 0 auto 16px; max-width: 22ch; font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 3.6vw, 50px); line-height: 1.08; letter-spacing: -.04em; text-wrap: balance; }
-.whynow-head > p { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.7; }
-.whynow-grid { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
-.whynow-grid article { display: grid; align-content: start; gap: 9px; padding: clamp(22px, 2.6vw, 30px); background: #fff; }
-.whynow-grid h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(19px, 1.9vw, 23px); letter-spacing: -.02em; line-height: 1.25; }
-.whynow-grid p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.65; }
-.whynow-close { max-width: 60ch; margin: clamp(22px, 3vw, 32px) auto 0; text-align: center; color: var(--ink); font-size: 16px; line-height: 1.6; }
-
 /* The five-stage story, sized to be read rather than glanced at. */
 .fd-stage { padding: clamp(20px, 2.2vw, 30px) clamp(16px, 1.8vw, 24px); }
 .fd-stage h3, .fd-stage strong { font-size: clamp(17px, 1.5vw, 21px); line-height: 1.25; }
@@ -5360,15 +5329,16 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
 .proof-profile-preview strong { font-size: 12px; }
 .proof-profile-preview em { color: var(--muted); font-size: 10px; font-style: normal; }
 .proof-profile-preview i {
-  margin-top: 13px;
-  padding-top: 9px;
+  grid-column: 1 / -1;
+  margin-top: 7px;
+  padding-top: 7px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 9px;
   font-style: normal;
-  text-align: center;
+  text-align: left;
 }
-.proof-profile-preview i:nth-of-type(1) { grid-column: 1; }
+.proof-profile-preview i + i { margin-top: 0; }
 .proof-filter-preview { display: grid; gap: 8px; }
 .proof-filter-preview span {
   display: flex;
@@ -5403,6 +5373,14 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
   color: #d8d8d1;
   font-size: 12px;
   line-height: 1.65;
+}
+.proof-outcome-note {
+  margin: 18px 0 0;
+  color: var(--soft);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.55;
+  text-align: right;
 }
 .proof-lens-actions { display: flex; justify-content: center; gap: 13px; margin-top: 34px; }
 .proof-lens-actions button {
@@ -5461,6 +5439,7 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
   .proof-product-step:hover,
   .proof-product-step:focus-visible,
   .proof-product-step.is-active { transform: none; box-shadow: 7px 8px 0 rgba(180,123,32,.09); }
+  .proof-outcome-note { text-align: left; }
   .proof-lens-actions { display: grid; grid-template-columns: 1fr; }
   .proof-lens-actions button { width: 100%; min-width: 0; }
 }

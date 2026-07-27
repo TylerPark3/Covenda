@@ -192,7 +192,7 @@
                   <span class="proof-avatar">ML</span>
                   <strong>Maya L.</strong>
                   <em>Product builder</em>
-                  <i>Projects</i><i>Skills</i><i>Availability</i>
+                  <i>2 shipped projects</i><i>Product + research</i><i>10 hrs/week</i>
                 </div>
               </button>
 
@@ -200,9 +200,9 @@
                 <small>2</small>
                 <h4>Filter for fit</h4>
                 <div class="proof-filter-preview" aria-hidden="true">
-                  <span><b>Work</b>Product</span>
+                  <span><b>Work</b>Product design</span>
                   <span><b>Stage</b>Early-stage</span>
-                  <span><b>Time</b>10+ hrs/week</span>
+                  <span><b>Time</b>Available now</span>
                 </div>
               </button>
 
@@ -212,16 +212,17 @@
                 <div class="proof-trial-preview" aria-hidden="true">
                   <span>Trial project</span>
                   <strong>Improve the signup flow</strong>
-                  <i>Clear task · agreed scope</i>
+                  <i>Paid · 2 weeks · named reviewer</i>
                 </div>
               </button>
 
               <button class="proof-product-step proof-product-outcome" type="button" data-proof-step="3" aria-pressed="false">
                 <small><svg aria-hidden="true"><use href="#icon-check"/></svg></small>
-                <h4>The work becomes the proof.</h4>
-                <p>Review the result.<br>Then decide what’s next.</p>
+                <h4>A strong trial can lead to a role.</h4>
+                <p>Internship · ongoing project · full-time<br>When both sides agree.</p>
               </button>
             </div>
+            <p class="proof-outcome-note">Illustrative path. A trial creates evidence, not a guaranteed offer.</p>
           </section>
         </div>
 
@@ -241,8 +242,8 @@
       <section class="compare-section" aria-labelledby="compareTitle">
         <div class="compare-head">
           <p class="compare-kicker">Quality over quantity</p>
-          <h2 id="compareTitle">A network hands you names.<br>We hand you a <span class="word-gold">shortlist you can interrogate.</span></h2>
-          <p class="compare-lede">Nobody here is a search result. Every student went through the same published process, and every number attached to them can be taken apart.</p>
+          <h2 id="compareTitle">See the work.<br><span class="word-gold">Then decide.</span></h2>
+          <p class="compare-lede">A Covenda profile shows what a student built, the skills they can prove, when they can work, and what happened in a trial.</p>
         </div>
 
         <div class="compare-scroll">
@@ -256,17 +257,17 @@
               </tr>
             </thead>
             <tbody>
-              <tr><th scope="row">You receive</th><td>A r&eacute;sum&eacute;</td><td class="is-us">Vetted talent, not just recorded work</td></tr>
-              <tr><th scope="row">Filtered by</th><td>School name</td><td class="is-us">Batch vetting, assessed per discipline</td></tr>
-              <tr><th scope="row">Matched by</th><td>Keywords</td><td class="is-us">The ideal intern you describe</td></tr>
-              <tr><th scope="row">Score</th><td>Black box</td><td class="is-us">Our v1 scoring model, and it shows its work</td></tr>
-              <tr><th scope="row">Engagement</th><td>One job post</td><td class="is-us">Intro, internship, role, or paid trial</td></tr>
-              <tr><th scope="row">Who decides</th><td>The algorithm</td><td class="is-us">You</td></tr>
+              <tr><th scope="row">You receive</th><td>A r&eacute;sum&eacute;</td><td class="is-us">A work profile with projects and availability</td></tr>
+              <tr><th scope="row">Filtered by</th><td>School and keywords</td><td class="is-us">Skills, work type, stage, and time</td></tr>
+              <tr><th scope="row">Matched by</th><td>A generic job post</td><td class="is-us">The role and problem you describe</td></tr>
+              <tr><th scope="row">Before hiring</th><td>More interviews</td><td class="is-us">A small paid trial with a clear finish</td></tr>
+              <tr><th scope="row">A strong trial</th><td>Another application</td><td class="is-us">Can lead to an internship, project, or role</td></tr>
+              <tr><th scope="row">Who decides</th><td>The algorithm</td><td class="is-us">The company and student</td></tr>
             </tbody>
           </table>
         </div>
 
-        <p class="compare-foot"><b>Where this stands.</b> V1 scoring is a weighted model that shows its work. The ML re-ranker runs in shadow, influencing nothing until there are enough outcomes to train it honestly. No student placed yet.</p>
+        <p class="compare-foot"><b>Where this stands.</b> Matching is transparent and the ML re-ranker changes nothing until there are enough real outcomes to train it honestly. No student placed yet.</p>
       </section>
 
       <!-- Home-only. One two-way exchange: the company contributes real work, referred
@@ -908,33 +909,6 @@
         </div>
       </section>
 
-      <!-- How proof is verified, per vertical — including where it CANNOT be. Filled by app.js
-           from /api/proof-methods (the connector registry). Only mechanisms that are actually
-           built are listed; the honest-limits verticals are shown as human rails, never dressed
-           up as machine verification. Hidden entirely if the endpoint is unavailable. -->
-      <section class="verify-section" id="verifyMethods" hidden>
-        <div class="verify-inner">
-          <div class="section-heading">
-            <p class="feature-kicker">How proof works</p>
-            <h2>Machines check facts.<br>Experts judge <span class="word-gold">work</span>.</h2>
-            <p>Not a trade-off. A machine proves the account and history are yours; a person judges whether the thinking was any good. We run both.</p>
-          </div>
-          <div class="verify-cols">
-            <div class="verify-col" id="verifyMachine">
-              <p class="verify-col-tag">Machine-checked · objective</p>
-              <p class="verify-col-sub">Facts that hold up without anyone's opinion: who owns the account, when the work accumulated, whether the formulas compute.</p>
-              <ul id="verifyMachineList"></ul>
-            </div>
-            <div class="verify-col verify-col-human" id="verifyHuman">
-              <p class="verify-col-tag">Expert-vetted · judgement</p>
-              <p class="verify-col-sub">What no API can answer: can they defend the decisions they made, and will someone who supervised them stake their name on it.</p>
-              <ul id="verifyHumanList"></ul>
-              <p class="verify-note">Two raters score a walkthrough against published anchors and adjudicate where they disagree, judgement, measured. What never counts as proof is a simulation or a self-reported number.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <!-- Student of the Week: consent-first spotlight. Hidden until /api/featured-student
            returns a consented, operator-featured student — never a placeholder person. -->
       <section class="spotlight-section" id="studentOfWeek" hidden>
@@ -1093,37 +1067,6 @@
       </section>
 
       <section class="why-section" id="why">
-        <!-- Why a capable student should want startup work right now. The argument is
-             made in Covenda's own voice on purpose: paraphrasing a named person into a
-             pull-quote is a misquote waiting to happen, and the reasoning does not need
-             borrowed authority to stand up. -->
-        <div class="whynow audience-content" data-for-audience="student">
-          <div class="whynow-head">
-            <p class="feature-kicker">Why now</p>
-            <h2>The thing you can’t put on a résumé<br>is the thing that now matters most.</h2>
-            <p>Building something used to take capital, a team, and years. It takes a fraction of that today, which moves the scarce thing from credentials to judgement. Taste, agency, knowing which problem is worth solving. None of it fits in a bullet point, and all of it shows up in an afternoon of real work.</p>
-          </div>
-          <div class="whynow-grid">
-            <article>
-              <h3>The cost of building collapsed</h3>
-              <p>What needed a team and a year now needs a weekend and good judgement. That is why a startup will hand real work to a nineteen-year-old who can show they have done it.</p>
-            </article>
-            <article>
-              <h3>Credentials price the wrong thing</h3>
-              <p>A degree certifies you cleared an admissions bar at seventeen. It says nothing about whether you can scope an ambiguous problem, the only skill that has gone up in value.</p>
-            </article>
-            <article>
-              <h3>Being early looks like being wrong</h3>
-              <p>The work worth doing is usually the work most people dismiss. Nobody hands you a credential for conviction. You get it by shipping something and being right.</p>
-            </article>
-            <article>
-              <h3>Proximity is still the whole game</h3>
-              <p>Careers move through people who have seen your work. That is why Covenda runs on vouching, the network you need is built by being useful to people, early, before you need anything.</p>
-            </article>
-          </div>
-          <p class="whynow-close">A trial is the shortest path to all four: real work, a named person who saw you do it, and a record you keep.</p>
-        </div>
-
         <div class="credibility-ladder audience-content" data-for-audience="student">
           <div class="section-heading">
             <h2>Three ways in.<br>One ladder up.</h2>

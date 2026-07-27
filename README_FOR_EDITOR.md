@@ -64,7 +64,7 @@ For inspection, the local records are exposed at `window.COVENDA_DEMO_MODEL`. Th
 ## Presentation rules
 
 - Explain the product before exposing the operating interface.
-- Keep the home story in this order: dark hero, literal market-and-product proof visual, **Quality over quantity** comparison, then the existing project exchange and supporting sections. The opening visual must plainly show growing startup need, growing student interest, application noise, and Covenda's profile → filter → trial → proof workflow; it adds context and does not replace the longer product story.
+- Keep the home story in this order: dark hero, literal market-and-product proof visual, **Quality over quantity** comparison, then the existing project exchange and supporting sections. The opening visual must plainly show growing startup need, growing student interest, application noise, and Covenda's profile → filter → paid trial → possible internship/project/role workflow. Keep the outcome explicitly non-guaranteed. Do not restore the removed student **Why now** essay or the home **Machines check facts** explainer; both repeated ideas the surrounding product visuals already communicate.
 - Keep the compact **Find a student / Post a trial** walkthrough on the company audience only. Each route uses three short steps and remains explicitly illustrative.
 - Use one strong accent, black text, consistent rounded geometry, and restrained depth instead of decorative card grids. Reserve translucent glass for navigation, controls, and dialogs; keep reading surfaces nearly opaque and high contrast.
 - Preserve the two-part wordmark: **Proof** stays upright black; **Path** is italic blue with a dark edge and no neon glow. Keep it legible at navigation size and avoid decorative flicker.

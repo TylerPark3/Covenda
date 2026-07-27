@@ -134,9 +134,15 @@ test('the proof lens opens the homepage without removing the existing product st
   assert.match(html, /Build a work profile/);
   assert.match(html, /Filter for fit/);
   assert.match(html, /Try one real project/);
-  assert.match(html, /The work becomes the proof\./);
+  assert.match(html, /Paid · 2 weeks · named reviewer/);
+  assert.match(html, /A strong trial can lead to a role\./);
+  assert.match(html, /Internship · ongoing project · full-time/);
+  assert.match(html, /not a guaranteed offer/);
   assert.doesNotMatch(html, /Stop screening claims|Define the proof|Meet by mutual choice/);
   assert.match(html, /Quality over quantity/);
+  assert.match(html, /See the work\.[\s\S]*Then decide\./);
+  assert.match(html, /A small paid trial with a clear finish/);
+  assert.match(html, /Can lead to an internship, project, or role/);
   assert.match(html, /One project\.[\s\S]*Two sides win\./);
   assert.match(styles, /body:not\(\[data-audience="home"\]\) \.proof-lens-section \{ display: none; \}/);
   assert.match(styles, /body\[data-audience="home"\] \.compare-section \{ display: block; \}/);
@@ -353,21 +359,13 @@ test('readiness read-out builds nodes with createIcon, not raw icon strings', ()
   assert.doesNotMatch(block, /iconUse\(/); // iconUse returns a string; append() would print it
 });
 
-test('the how-we-verify section exists and advertises only what is actually built', () => {
-  // The section must be present but start hidden\s*[,—.]\s*it only appears once /api/proof-methods
-  // returns real registry data, so a failed fetch shows nothing rather than empty scaffolding.
-  assert.match(html, /<section class="verify-section" id="verifyMethods" hidden>/);
-  assert.match(html, /id="verifyMachineList"/);
-  assert.match(html, /id="verifyHumanList"/);
-
-  // The renderer must filter on status: only 'live' mechanisms are presented as verification,
-  // and only 'human_rail' verticals in the honest-limits column. A gated connector (Alpaca,
-  // pending terms) or an unbuilt stub must never be advertised as available.
-  const block = script.match(/function initVerifyMethods\(\)[\s\S]*?\}\)\(\);/)?.[0] || '';
-  assert.ok(block, 'initVerifyMethods should exist in app.js');
-  assert.match(block, /m\.status === 'live'/);
-  assert.match(block, /m\.status === 'human_rail'/);
-  assert.ok(!/status === 'planned'|status === 'stub'/.test(block), 'must not surface planned/stub connectors');
+test('the redundant why-now and machine-check explainers stay removed', () => {
+  assert.doesNotMatch(html, /The thing you can’t put on a résumé/);
+  assert.doesNotMatch(html, /class="whynow/);
+  assert.doesNotMatch(html, /id="verifyMethods"/);
+  assert.doesNotMatch(html, /Machines check facts/);
+  assert.doesNotMatch(script, /function initVerifyMethods\(\)/);
+  assert.doesNotMatch(styles, /\.verify-section|\.whynow-head|\.whynow-grid/);
 });
 
 // The public batch board renders the same brief the portal does, fetched from the pre-auth
@@ -758,23 +756,6 @@ test('only the student path uses the folded-sheet transition, and it respects re
   assert.match(styles, /@keyframes audience-sheet-a/);
   assert.match(styles, /@keyframes audience-sheet-b/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.audience-transition \{ display: none; \}/);
-});
-
-// Machine checks and expert judgement are complementary instruments, not a primary and a
-// fallback. The section used to head "We verify what can be verified" with the human column
-// titled "Where that isn't possible", which framed judgement as a deficiency.
-test('verification reads as two instruments, not a fallback', () => {
-  assert.match(html, /Machines check facts/);
-  assert.match(html, /Experts judge/);
-  assert.match(html, /Machine-checked · objective/);
-  assert.match(html, /Expert-vetted · judgement/);
-  assert.match(html, /Not a trade-off/);
-  assert.match(html, /[Ww]e run both/);
-  assert.doesNotMatch(html, /Where that isn’t possible/);
-  assert.doesNotMatch(html, /We verify what can be/);
-  // Judgement is measured, not vibes — and the honesty line survives the reframe.
-  assert.match(html, /adjudicate where they disagree/);
-  assert.match(html, /simulation or a self-reported number/);
 });
 
 // A referrer was told their "vouch gains weight" with nothing showing what that becomes.
