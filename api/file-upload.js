@@ -47,6 +47,23 @@ function safeName(raw, ext) {
   return `${stem}.${ext}`;
 }
 
+// The Blob store's access mode is a deployment setting, not something this code should
+// assume. Asking for `public` on a private store throws outright — which is exactly how the
+// video recorder broke — so try the configured default and fall back rather than hardcoding.
+//
+// Consequence worth knowing: on a private store the returned URL is not publicly fetchable,
+// so a reviewer needs a signed URL to watch a recording. That is stricter than the previous
+// public-but-unguessable posture and better for student privacy, but it means playback has
+// to go through a signing step.
+async function putEither(key, body, contentType) {
+  try {
+    return await put(key, body, { access: 'public', contentType });
+  } catch (error) {
+    if (!/private access|public access/i.test(String(error?.message || ''))) throw error;
+    return put(key, body, { access: 'private', contentType });
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed.' });
   if (!sameOrigin(req)) return res.status(403).json({ ok: false, error: 'Cross-origin uploads are not allowed.' });
@@ -80,13 +97,12 @@ export default async function handler(req, res) {
 
   const name = safeName(req.headers['x-covenda-filename'], ext);
   try {
-    const blob = await put(`deliverables/${name}`, Buffer.concat(chunks), {
-      access: 'public',            // public-but-unguessable; see the note in video-upload.js
-      addRandomSuffix: true,
-      contentType,
-    });
+    // Unique key built here rather than relying on addRandomSuffix.
+    const key = `deliverables/${Date.now()}-${Math.random().toString(36).slice(2, 10)}-${name}`;
+    const blob = await putEither(key, Buffer.concat(chunks), contentType);
     return res.status(200).json({ ok: true, url: blob.url, name, contentType, sizeBytes: size });
-  } catch {
-    return res.status(502).json({ ok: false, error: 'That upload did not go through. Try again.' });
+  } catch (error) {
+    console.error(JSON.stringify({ level: 'error', message: 'File upload failed', error: String(error?.message || error) }));
+    return res.status(502).json({ ok: false, error: `That upload did not go through: ${String(error?.message || 'unknown error')}` });
   }
 }
