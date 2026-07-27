@@ -3577,26 +3577,26 @@ body.is-audience-transitioning .audience-transition span {
   flex: 1;
   background: var(--line);
 }
-.student-vertical-picker {
+.student-industry-picker {
   margin: 0;
   padding: 0;
   border: 0;
   text-align: left;
 }
-.student-vertical-picker legend {
+.student-industry-picker legend {
   width: 100%;
   margin: 0 0 20px;
   color: var(--ink);
   font-family: var(--font-body);
 }
-.student-vertical-picker legend span {
+.student-industry-picker legend span {
   display: block;
   font-family: var(--font-display);
   font-size: clamp(25px, 3vw, 38px);
   font-weight: 430;
   letter-spacing: -.04em;
 }
-.student-vertical-picker legend small {
+.student-industry-picker legend small {
   display: block;
   margin-top: 7px;
   color: var(--muted);
@@ -3606,14 +3606,14 @@ body.is-audience-transitioning .audience-transition span {
   line-height: 1.5;
   text-transform: none;
 }
-.student-vertical-rail {
+.student-industry-rail {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   border-top: 1px solid var(--line-strong);
   border-left: 1px solid var(--line-strong);
 }
-.student-vertical {
-  min-height: 148px;
+.student-industry {
+  min-height: 132px;
   display: grid;
   align-content: space-between;
   gap: 16px;
@@ -3628,14 +3628,14 @@ body.is-audience-transitioning .audience-transition span {
   cursor: pointer;
   transition: color .18s ease, background .18s ease, transform .24s cubic-bezier(.2,.8,.2,1);
 }
-.student-vertical > span {
+.student-industry > span {
   color: var(--gold-deep);
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .12em;
 }
-.student-vertical > strong {
+.student-industry > strong {
   align-self: end;
   color: inherit;
   font-family: var(--font-display);
@@ -3644,20 +3644,20 @@ body.is-audience-transitioning .audience-transition span {
   letter-spacing: -.035em;
   line-height: 1.06;
 }
-.student-vertical > small { color: var(--muted); font-size: 10px; line-height: 1.4; }
-.student-vertical:hover { color: var(--ink); transform: translateY(-2px); }
-.student-vertical.is-selected { background: var(--ink); color: #fff; }
-.student-vertical.is-selected > span { color: var(--gold); }
-.student-vertical.is-selected > small { color: rgba(255,255,255,.68); }
-.student-vertical:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 6px; }
-.student-specialty-empty {
+.student-industry > small { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.student-industry:hover { color: var(--ink); transform: translateY(-2px); }
+.student-industry.is-selected { background: var(--ink); color: #fff; }
+.student-industry.is-selected > span { color: var(--gold); }
+.student-industry.is-selected > small { color: rgba(255,255,255,.68); }
+.student-industry:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 6px; }
+.student-direction-empty {
   margin: 18px 0 0;
   padding: 16px 18px;
   border-left: 3px solid var(--line-strong);
   color: var(--muted);
   font-size: 12px;
 }
-.student-specialty-panel {
+.student-direction-panel {
   display: grid;
   grid-template-columns: minmax(180px, .7fr) minmax(0, 2fr);
   gap: 18px clamp(24px, 4vw, 64px);
@@ -3666,14 +3666,14 @@ body.is-audience-transitioning .audience-transition span {
   padding: 28px 0 0;
   border-top: 1px solid var(--line);
 }
-.student-specialty-panel[hidden] { display: none; }
-.student-specialty-heading {
+.student-direction-panel[hidden] { display: none; }
+.student-direction-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
-.student-specialty-heading p {
+.student-direction-heading p {
   margin: 0 0 7px;
   color: var(--muted);
   font-size: 10px;
@@ -3681,13 +3681,13 @@ body.is-audience-transitioning .audience-transition span {
   letter-spacing: .15em;
   text-transform: uppercase;
 }
-.student-specialty-heading strong {
+.student-direction-heading strong {
   font-family: var(--font-display);
   font-size: clamp(20px, 2vw, 27px);
   font-weight: 450;
   letter-spacing: -.035em;
 }
-.student-specialty-heading button {
+.student-direction-heading button {
   padding: 2px 0;
   border: 0;
   border-bottom: 1px solid currentColor;
@@ -3698,13 +3698,42 @@ body.is-audience-transitioning .audience-transition span {
   font-weight: 650;
   cursor: pointer;
 }
-.student-specialty-heading button:hover { color: var(--ink); }
-.student-specialty-options {
+.student-direction-heading button:hover { color: var(--ink); }
+.student-direction-step {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.student-direction-step[hidden] { display: none; }
+.student-direction-step + .student-direction-step {
+  grid-column: 2;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.student-direction-step-copy {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.student-direction-step-copy > span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--gold);
+  color: var(--gold-deep);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.student-direction-step-copy strong,
+.student-direction-step-copy small { display: block; }
+.student-direction-step-copy strong { font-size: 12px; }
+.student-direction-step-copy small { margin-top: 2px; color: var(--muted); font-size: 10px; }
+.student-sector-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
-.student-specialty {
+.student-sector {
   position: relative;
   min-height: 48px;
   padding: 11px 42px 11px 14px;
@@ -3719,7 +3748,7 @@ body.is-audience-transitioning .audience-transition span {
   cursor: pointer;
   transition: border-color .18s ease, color .18s ease, background .18s ease, transform .18s ease;
 }
-.student-specialty::after {
+.student-sector::after {
   content: "";
   position: absolute;
   top: 50%;
@@ -3731,11 +3760,34 @@ body.is-audience-transitioning .audience-transition span {
   transform: translateY(-50%) rotate(45deg);
   transition: background .18s ease, border-color .18s ease, transform .24s cubic-bezier(.2,.9,.25,1.35);
 }
-.student-specialty:hover { border-color: var(--gold); color: var(--ink); transform: translateY(-1px); }
-.student-specialty.is-selected { border-color: var(--gold-deep); background: var(--gold-pale); color: var(--ink); }
-.student-specialty.is-selected::after { border-color: var(--gold-deep); background: var(--gold); transform: translateY(-50%) rotate(135deg) scale(1.12); }
-.student-specialty:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 3px; }
-.student-specialty-status {
+.student-sector:hover { border-color: var(--gold); color: var(--ink); transform: translateY(-1px); }
+.student-sector.is-selected { border-color: var(--gold-deep); background: var(--gold-pale); color: var(--ink); }
+.student-sector.is-selected::after { border-color: var(--gold-deep); background: var(--gold); transform: translateY(-50%) rotate(135deg) scale(1.12); }
+.student-sector:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 3px; }
+.student-task-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.student-task {
+  min-height: 62px;
+  padding: 11px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.student-task strong,
+.student-task small { display: block; }
+.student-task strong { font-size: 12px; font-weight: 670; }
+.student-task small { margin-top: 4px; color: var(--muted); font-size: 9px; line-height: 1.4; }
+.student-task:hover { border-color: var(--gold); }
+.student-task.is-selected { border-color: var(--gold-deep); background: var(--ink); color: #fff; }
+.student-task.is-selected small { color: rgba(255,255,255,.68); }
+.student-task:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 3px; }
+.student-direction-status {
   grid-column: 2;
   margin: -6px 0 0;
   color: var(--muted);
@@ -3772,23 +3824,24 @@ body.is-audience-transitioning .audience-transition span {
   .hero-student h1 { font-size: clamp(46px, 13vw, 68px); }
   .student-open-join { grid-template-columns: 1fr; padding: 22px 18px; }
   .student-join-primary { width: min(100%, 320px); min-height: 56px; }
-  .student-vertical-rail { grid-template-columns: 1fr 1fr; gap: 0 18px; }
-  .student-vertical { min-height: 132px; margin-top: -1px; padding: 15px; border-top: 1px solid var(--line-strong); border-left: 1px solid var(--line-strong); }
-  .student-vertical:last-child { grid-column: 1 / -1; min-height: 112px; }
-  .student-specialty-panel { grid-template-columns: 1fr; gap: 18px; }
-  .student-specialty-options { grid-template-columns: 1fr; }
-  .student-specialty-status { grid-column: 1; }
+  .student-industry-rail { grid-template-columns: 1fr 1fr; gap: 0 18px; }
+  .student-industry { min-height: 126px; margin-top: -1px; padding: 15px; border-top: 1px solid var(--line-strong); border-left: 1px solid var(--line-strong); }
+  .student-direction-panel { grid-template-columns: 1fr; gap: 18px; }
+  .student-direction-step + .student-direction-step { grid-column: 1; }
+  .student-sector-options,
+  .student-task-options { grid-template-columns: 1fr; }
+  .student-direction-status { grid-column: 1; }
   .student-join-selected { grid-column: 1; width: 100%; }
   .quick-selected-direction { margin-right: 20px; margin-left: 20px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .audience-transition { display: none; }
-  .student-vertical,
+  .student-industry,
   .student-join-primary,
   .student-join-primary svg,
-  .student-specialty,
-  .student-specialty::after { transition: none; animation: none; }
+  .student-sector,
+  .student-sector::after { transition: none; animation: none; }
 }
 
 /* ---- First explanation: one real task becomes value for both sides. --------------- */

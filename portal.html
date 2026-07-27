@@ -14,6 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,400;6..72,500&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="type.css">
   <link rel="stylesheet" href="portal.css">
+  <script src="industry-taxonomy.js" defer></script>
   <script src="portal.js" defer></script>
 </head>
 <body>
@@ -140,7 +141,7 @@
         <div class="discover-body">
           <aside class="discover-filters" aria-label="Filter projects">
             <label>Search<input id="discoverSearch" type="search" placeholder="Skill, deliverable, company"></label>
-            <label>Vertical<select id="filterVertical"><option value="">Any vertical</option><option>Accounting &amp; finance</option><option>Software &amp; AI</option><option>Healthcare operations</option><option>Consumer &amp; retail</option><option>Professional services</option></select></label>
+            <label>Industry<select id="filterVertical"><option value="">Any industry</option><option>Technology</option><option>Finance</option><option>Health</option><option>Consumer</option><option>Business</option><option>Climate &amp; industry</option></select></label>
             <label>Work type<select id="filterWorkType"><option value="">Any work type</option><option>Research</option><option>Data &amp; spreadsheets</option><option>Operations</option><option>QA &amp; testing</option><option>Writing &amp; documentation</option></select></label>
             <label>Minimum payout (credits)<input id="filterMinCredits" type="number" min="0" step="25" placeholder="Any"></label>
             <label>Deadline within<select id="filterWithin"><option value="">Any time</option><option value="7">1 week</option><option value="30">1 month</option><option value="90">3 months</option></select></label>
@@ -229,6 +230,13 @@
         <label>Headline<input name="headline" maxlength="180" placeholder="Researcher who turns messy questions into clear decisions"></label>
         <label>About<textarea name="bio" rows="4" maxlength="2000" placeholder="Share what you are learning, building, or looking for next."></textarea></label>
         <label>Skills <small>Separate with commas</small><input name="skills" placeholder="Market research, Excel, operations"></label>
+        <fieldset class="profile-interests" data-student-profile>
+          <legend>Startup interests <small>Optional — broad industry, then sector, then work type</small></legend>
+          <p>Choose as much or as little as you know today. These preferences improve project discovery; they are not qualifications.</p>
+          <div class="profile-interest-block"><strong>Industries</strong><div class="profile-interest-options" id="profileIndustryOptions"></div></div>
+          <div class="profile-interest-block" id="profileSectorBlock" hidden><strong>Sectors</strong><div class="profile-interest-options" id="profileSectorOptions"></div></div>
+          <div class="profile-interest-block"><strong>Work types</strong><div class="profile-interest-options" id="profileWorkTypeOptions"></div></div>
+        </fieldset>
         <label class="visibility-row" data-student-profile><input name="portfolioVisibility" type="checkbox" value="members" checked><span>Let signed-in company members discover my portfolio.</span></label>
         <label class="visibility-row"><input name="emailNotifications" type="checkbox" checked><span>Email me about applications, decisions, and payouts.</span></label>
         <label class="visibility-row" data-student-profile><input name="spotlightConsent" type="checkbox"><span>Covenda may feature me publicly (photo, skills, projects, reviews) on the homepage and in marketing — Student of the Week. Off by default; withdraw anytime.</span></label>

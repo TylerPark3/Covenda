@@ -38,6 +38,10 @@ const profileOnboarding = readFileSync(
   new URL('../supabase/migrations/20260724200000_member_profile_onboarding_fields.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const industrySectors = readFileSync(
+  new URL('../supabase/migrations/20260727110000_student_industry_sectors.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 const projectTargeting = readFileSync(
   new URL('../supabase/migrations/20260724300000_project_targeting_and_files.sql', import.meta.url),
   'utf8',
@@ -163,6 +167,16 @@ test('member profile onboarding migration adds matching fields idempotently with
   assert.match(profileOnboarding, /jsonb_typeof\(work_types\) = 'array'/);
   assert.match(profileOnboarding, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(profileOnboarding, /drop table|truncate|delete from|grant delete|create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('industry-sector migration is additive, indexed, and keeps browser access unchanged', () => {
+  assert.match(industrySectors, /alter table public\.member_profiles[\s\S]*add column if not exists industry_sectors jsonb/);
+  assert.match(industrySectors, /alter table public\.member_projects[\s\S]*add column if not exists industry_sectors jsonb/);
+  assert.match(industrySectors, /jsonb_typeof\(industry_sectors\) = 'array'/);
+  assert.match(industrySectors, /create index if not exists member_profiles_industry_sectors_gin/);
+  assert.match(industrySectors, /create index if not exists member_projects_industry_sectors_gin/);
+  assert.match(industrySectors, /notify pgrst, 'reload schema'/);
+  assert.doesNotMatch(industrySectors, /drop table|truncate|delete from|grant|create policy/);
 });
 
 test('credit ledger is append-only, guards double payouts, and stays server-only', () => {

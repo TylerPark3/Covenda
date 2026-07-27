@@ -26,6 +26,21 @@ test('member portal exposes login, onboarding, role-aware navigation, and projec
   assert.match(script,/action:'send-message'/);
 });
 
+test('student onboarding uses the shared industry hierarchy and remains skippable and editable',()=>{
+  assert.match(html,/<script src="industry-taxonomy\.js" defer><\/script>[\s\S]*<script src="portal\.js" defer><\/script>/);
+  assert.match(html,/id="profileIndustryOptions"/);
+  assert.match(html,/id="profileSectorOptions"/);
+  assert.match(html,/id="profileWorkTypeOptions"/);
+  assert.match(script,/const PORTAL_TAXONOMY = globalThis\.CovendaIndustryTaxonomy/);
+  assert.match(script,/kind:'industries'/);
+  assert.match(script,/kind:'sectors'/);
+  assert.match(script,/kind:'multiOptional'/);
+  assert.match(script,/Skip for now/);
+  assert.match(script,/industrySectors:v\.industrySectors/);
+  assert.match(script,/renderProfileInterestEditor/);
+  assert.match(styles,/\.profile-interests/);
+});
+
 test('batch experience: expandable cards + application with assigned video prompt and interest questions',()=>{
   const api=readFileSync(new URL('../api/portal.js',import.meta.url),'utf8');
   // Expandable, detail-rich cards instead of a bare Apply button.

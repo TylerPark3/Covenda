@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import '../industry-taxonomy.js';
 
 import { supabaseConfiguration } from './submissions.js';
 import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail } from './notify.js';
@@ -38,10 +39,18 @@ function cleanTalentPrefs(input) {
   }
   return Object.keys(prefs).length ? prefs : null;
 }
-// Fixed taxonomies shared with the marketing site (BATCHES industries + work types).
-// The vertical project-matcher reads these exact strings, so onboarding must write them verbatim.
-export const VERTICALS = new Set(['Accounting & finance', 'Software & AI', 'Healthcare operations', 'Consumer & retail', 'Professional services', 'Not sure yet — show me everything']);
-export const WORK_TYPES = new Set(['Research', 'Data & spreadsheets', 'Operations', 'QA & testing', 'Writing & documentation']);
+// One shared hierarchy serves the marketing selector, portal onboarding, profile editor, and
+// server validation. Legacy vertical labels remain accepted so existing profiles/projects keep
+// matching while members move to the broader six-group model.
+const INDUSTRY_TAXONOMY = globalThis.CovendaIndustryTaxonomy;
+const LEGACY_VERTICALS = Object.keys(INDUSTRY_TAXONOMY.legacyGroups);
+export const VERTICALS = new Set([
+  ...INDUSTRY_TAXONOMY.groups.map(group => group.label),
+  INDUSTRY_TAXONOMY.openChoice,
+  ...LEGACY_VERTICALS,
+]);
+export const INDUSTRY_SECTORS = new Set(INDUSTRY_TAXONOMY.groups.flatMap(group => group.sectors));
+export const WORK_TYPES = new Set(INDUSTRY_TAXONOMY.workTypes.map(item => item.value));
 const emailBuckets = new Map();
 
 export class PortalOperationalError extends Error {
@@ -70,6 +79,14 @@ function cleanList(value, maxItems = 20) {
 // Keep only values that exactly match a fixed taxonomy (verticals / work types).
 function cleanTaxonomy(value, allowed, maxItems = 8) {
   return cleanList(value, maxItems).filter(item => allowed.has(item));
+}
+
+function canonicalVertical(value) {
+  return INDUSTRY_TAXONOMY.legacyGroups[value] || value;
+}
+
+function canonicalVerticalSet(values) {
+  return new Set((values || []).map(canonicalVertical));
 }
 
 function parseBody(req) {
@@ -333,7 +350,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     });
   }
   const studentDirectory = profile.role === 'company'
-    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,work_types,avatar_url,skill_signals').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
+    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,industry_sectors,work_types,avatar_url,skill_signals').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
     : [];
   const messages = projectIds.length
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
@@ -374,6 +391,7 @@ export async function saveMemberProfile(member, input) {
   // Additive onboarding/matching fields — only written when the caller supplies them,
   // so the existing profile modal keeps saving even before the migration is applied.
   if (input.verticals !== undefined) row.verticals = cleanTaxonomy(input.verticals, VERTICALS);
+  if (input.industrySectors !== undefined) row.industry_sectors = cleanTaxonomy(input.industrySectors, INDUSTRY_SECTORS, 20);
   if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
   if (input.avatarUrl !== undefined) row.avatar_url = cleanText(input.avatarUrl, 500) || null;
   if (input.emailOptOut !== undefined) row.email_opt_out = input.emailOptOut === true;
@@ -612,17 +630,24 @@ function recommendApproach(project) {
 export function computeFitScore(project, profile, context = {}) {
   const reasons = [];
   const concerns = [];
-  const pV = new Set(profile?.verticals || []);
+  const pV = canonicalVerticalSet(profile?.verticals);
+  const pI = new Set(profile?.industry_sectors || []);
   const pW = new Set(profile?.work_types || []);
   const pS = new Set((profile?.skills || []).map(s => String(s).toLowerCase().trim()).filter(Boolean));
-  const everything = pV.has('Not sure yet — show me everything');
-  const projV = project.verticals || [];
+  const everything = pV.has(INDUSTRY_TAXONOMY.openChoice);
+  const projV = (project.verticals || []).map(canonicalVertical);
+  const projI = project.industry_sectors || [];
   const projW = project.work_types || [];
   const projS = (project.desired_skills ? String(project.desired_skills).split(/[,\n]/) : []).map(s => s.toLowerCase().trim()).filter(Boolean);
   let score = 0;
-  if (projV.length && (everything || projV.some(v => pV.has(v)))) {
+  const sectorMatches = projI.filter(sector => pI.has(sector));
+  if ((projV.length && (everything || projV.some(v => pV.has(v)))) || sectorMatches.length) {
     score += FIT_WEIGHTS.vertical;
-    reasons.push(everything ? 'Open to every vertical' : `Matches your vertical (${projV.find(v => pV.has(v)) || projV[0]})`);
+    reasons.push(
+      sectorMatches.length
+        ? `Matches your sector (${sectorMatches[0]})`
+        : everything ? 'Open to every industry' : `Matches your industry (${projV.find(v => pV.has(v)) || projV[0]})`,
+    );
   }
   const wMatches = projW.filter(w => pW.has(w));
   if (projW.length && wMatches.length) { score += FIT_WEIGHTS.workType; reasons.push(`Your work type: ${wMatches.slice(0, 2).join(', ')}`); }
@@ -698,15 +723,18 @@ export function studentEvidenceTier(profile, completedCount = 0) {
 }
 
 export function rankOpportunities(opportunities, profile, context = {}) {
-  const profileVerticals = new Set(profile?.verticals || []);
+  const profileVerticals = canonicalVerticalSet(profile?.verticals);
+  const profileSectors = new Set(profile?.industry_sectors || []);
   const profileWorkTypes = new Set(profile?.work_types || []);
-  const everything = profileVerticals.has('Not sure yet — show me everything');
+  const everything = profileVerticals.has(INDUSTRY_TAXONOMY.openChoice);
   const isMatch = project => {
-    const verticals = project.verticals || [];
+    const verticals = (project.verticals || []).map(canonicalVertical);
+    const sectors = project.industry_sectors || [];
     const workTypes = project.work_types || [];
     const verticalMatch = everything || verticals.some(value => profileVerticals.has(value));
+    const sectorMatch = sectors.some(value => profileSectors.has(value));
     const workTypeMatch = workTypes.some(value => profileWorkTypes.has(value));
-    return Boolean((verticals.length && verticalMatch) || (workTypes.length && workTypeMatch));
+    return Boolean((verticals.length && verticalMatch) || sectorMatch || (workTypes.length && workTypeMatch));
   };
   return (opportunities || [])
     .map(project => { const fit = computeFitScore(project, profile, context); return { ...project, matched: isMatch(project), fitScore: fit.score, fitPresentation: presentScore(fit.score, studentEvidenceTier(profile, context.completedCount)), fitReasons: fit.reasons, fitConcerns: fit.concerns, fitApproach: fit.recommendedApproach }; })
@@ -796,6 +824,7 @@ export async function createMemberProject(member, input) {
   // Additive intake/targeting fields — only written when supplied, so the simple project
   // modal keeps working even before the targeting migration is applied.
   if (input.verticals !== undefined) row.verticals = cleanTaxonomy(input.verticals, VERTICALS);
+  if (input.industrySectors !== undefined) row.industry_sectors = cleanTaxonomy(input.industrySectors, INDUSTRY_SECTORS, 20);
   if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
   if (input.problemText !== undefined) row.problem_text = cleanText(input.problemText, 8_000) || null;
   if (input.consultBooked !== undefined) row.consult_booked = input.consultBooked === true;
@@ -976,7 +1005,7 @@ export async function loadBatchApplications(member) {
   return error ? [] : (data || []);
 }
 export async function applyToBatch(member, input) {
-  const profile = await checked(member.supabase.from('member_profiles').select('role,verticals,work_types,skills').eq('user_id', member.user.id).maybeSingle(), null);
+  const profile = await checked(member.supabase.from('member_profiles').select('role,verticals,industry_sectors,work_types,skills').eq('user_id', member.user.id).maybeSingle(), null);
   if (profile?.role !== 'student') throw new Error('Only student accounts can apply to a batch.');
   const batchId = cleanText(input.batchId, 50);
   if (!PROJECT_ID_PATTERN.test(batchId)) throw new Error('Choose a valid batch.');
@@ -1385,7 +1414,7 @@ export async function loadBatchRoster(member, input) {
   const apps = await checked(member.supabase.from('batch_applications').select('student_user_id,materials').eq('batch_id', batchId).eq('status', 'accepted'), []);
   const studentIds = [...new Set(apps.map(a => a.student_user_id).filter(Boolean))];
   if (!studentIds.length) return [];
-  const profiles = await checked(member.supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,verticals,work_types,avatar_url,identity_verified').in('user_id', studentIds), []);
+  const profiles = await checked(member.supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,verticals,industry_sectors,work_types,avatar_url,identity_verified').in('user_id', studentIds), []);
   const materialsById = new Map(apps.map(a => [a.student_user_id, a.materials || {}]));
   return profiles.map(p => ({ ...p, batchMaterials: materialsById.get(p.user_id) || {} }));
 }
@@ -1393,9 +1422,9 @@ export async function loadBatchRoster(member, input) {
 export async function applyToProject(member, input, env = process.env) {
   const projectId = cleanText(input.projectId, 50);
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(projectId)) throw new Error('Choose a valid project.');
-  const profile = await checked(member.supabase.from('member_profiles').select('role,display_name,verticals,work_types,skills').eq('user_id', member.user.id).maybeSingle(), null);
+  const profile = await checked(member.supabase.from('member_profiles').select('role,display_name,verticals,industry_sectors,work_types,skills').eq('user_id', member.user.id).maybeSingle(), null);
   if (profile?.role !== 'student') throw new Error('Only student accounts can apply to projects.');
-  const project = await checked(member.supabase.from('member_projects').select('id,title,owner_user_id,status,visibility,verticals,work_types,desired_skills,credits_listed,target_date').eq('id', projectId).maybeSingle(), null);
+  const project = await checked(member.supabase.from('member_projects').select('id,title,owner_user_id,status,visibility,verticals,industry_sectors,work_types,desired_skills,credits_listed,target_date').eq('id', projectId).maybeSingle(), null);
   if (!project || project.status !== 'open' || !['members', 'open'].includes(project.visibility)) throw new Error('This project is not accepting applications.');
   const existing = await checked(
     member.supabase.from('project_applications').select('*').eq('project_id', projectId).eq('student_user_id', member.user.id).maybeSingle(),
@@ -1419,7 +1448,7 @@ export async function applyToProject(member, input, env = process.env) {
   let { data: application, error } = await member.supabase.from('project_applications').insert(richRow).select('*').single();
   if (error) ({ data: application, error } = await member.supabase.from('project_applications').insert(baseRow).select('*').single());
   if (error) throw error;
-  await logMatchEvent(member, { projectId, studentUserId: member.user.id, eventType: 'applied', fit, features: { project: pick(project, ['verticals', 'work_types', 'desired_skills', 'credits_listed']), student: pick(profile, ['verticals', 'work_types', 'skills']) } });
+  await logMatchEvent(member, { projectId, studentUserId: member.user.id, eventType: 'applied', fit, features: { project: pick(project, ['verticals', 'industry_sectors', 'work_types', 'desired_skills', 'credits_listed']), student: pick(profile, ['verticals', 'industry_sectors', 'work_types', 'skills']) } });
   // Best-effort: tell the project owner a new applicant arrived. Never blocks the application.
   await notifyMember(member.supabase, {
     toUserId: project.owner_user_id,

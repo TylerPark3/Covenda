@@ -14,6 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&amp;family=Newsreader:opsz,wght@6..72,400;6..72,500&amp;display=swap" rel="stylesheet">
   <link rel="stylesheet" href="type.css">
   <link rel="stylesheet" href="styles.css">
+  <script src="industry-taxonomy.js" defer></script>
   <script src="app.js" defer></script>
   <!-- QR encoder bridge. app.js is deliberately CLASSIC (a test evaluates it with
        `new Function`, so an `import` there would fail the suite), while qrcode.js is an ES
@@ -297,7 +298,7 @@
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
           <h1 id="studentHeroTitle">Do work that proves<br><span class="word-gold">what you can do.</span></h1>
-          <p>Join now without choosing a direction, or select the exact work you want before you sign up.</p>
+          <p>Join now without choosing, or tell us which part of the startup world interests you.</p>
         </div>
         <!-- F3: partner-referral landing. Populated + shown by app.js only when the
              visitor arrives via a partner's ?ref= link. Not identity-verified. -->
@@ -314,33 +315,41 @@
             <div>
               <p class="student-route-label">Join without choosing</p>
               <h2>Start now. Choose later.</h2>
-              <p>No work area is required. Add or change your direction whenever you are ready.</p>
+              <p>No industry is required. Add or change your interests whenever you are ready.</p>
             </div>
             <button class="gold-button student-join-primary" type="button" data-action="student-quick" data-join-mode="open">
               Join now — choose later<svg><use href="#icon-arrow-right"/></svg>
             </button>
           </div>
           <div class="student-choice-divider" aria-hidden="true"><span>or</span></div>
-          <fieldset class="student-vertical-picker">
-            <legend><span>Choose a work area</span><small>Optional — select one, then a specific specialty before joining.</small></legend>
-            <div class="student-vertical-rail">
-              <button class="student-vertical" type="button" data-work-type="Research" data-vertical-label="Research &amp; strategy" aria-pressed="false"><span>01</span><strong>Research &amp; strategy</strong><small>Markets, customers, products</small></button>
-              <button class="student-vertical" type="button" data-work-type="Data & spreadsheets" data-vertical-label="Data &amp; analysis" aria-pressed="false"><span>02</span><strong>Data &amp; analysis</strong><small>Models, cleanup, reporting</small></button>
-              <button class="student-vertical" type="button" data-work-type="Operations" data-vertical-label="Operations" aria-pressed="false"><span>03</span><strong>Operations</strong><small>Processes, programs, vendors</small></button>
-              <button class="student-vertical" type="button" data-work-type="QA & testing" data-vertical-label="QA &amp; testing" aria-pressed="false"><span>04</span><strong>QA &amp; testing</strong><small>Test cases, bugs, evaluation</small></button>
-              <button class="student-vertical" type="button" data-work-type="Writing & documentation" data-vertical-label="Writing &amp; documentation" aria-pressed="false"><span>05</span><strong>Writing &amp; documentation</strong><small>Briefs, SOPs, knowledge</small></button>
+          <fieldset class="student-industry-picker">
+            <legend><span>What kind of startup interests you?</span><small>Optional — start broad. More specific choices appear only after you click.</small></legend>
+            <div class="student-industry-rail">
+              <button class="student-industry" type="button" data-student-industry="Technology" aria-pressed="false"><span>01</span><strong>Technology</strong><small>Software, AI, data, and computing</small></button>
+              <button class="student-industry" type="button" data-student-industry="Finance" aria-pressed="false"><span>02</span><strong>Finance</strong><small>Money, markets, payments, and ownership</small></button>
+              <button class="student-industry" type="button" data-student-industry="Health" aria-pressed="false"><span>03</span><strong>Health</strong><small>Care, science, wellness, and life sciences</small></button>
+              <button class="student-industry" type="button" data-student-industry="Consumer" aria-pressed="false"><span>04</span><strong>Consumer</strong><small>Products people use every day</small></button>
+              <button class="student-industry" type="button" data-student-industry="Business" aria-pressed="false"><span>05</span><strong>Business</strong><small>Tools and services that help teams grow</small></button>
+              <button class="student-industry" type="button" data-student-industry="Climate &amp; industry" aria-pressed="false"><span>06</span><strong>Climate &amp; industry</strong><small>Energy, infrastructure, and the physical world</small></button>
             </div>
           </fieldset>
-          <p class="student-specialty-empty" id="studentSpecialtyEmpty">Pick a work area to see the exact kinds of work inside it.</p>
-          <div class="student-specialty-panel" id="studentSpecialtyPanel" aria-live="polite" hidden>
-            <div class="student-specialty-heading">
-              <div><p>Your work area</p><strong id="studentSpecialtyTitle"></strong></div>
-              <button type="button" id="studentChoiceClear">Clear choice</button>
+          <p class="student-direction-empty" id="studentDirectionEmpty">Pick one industry to see the startup sectors inside it.</p>
+          <div class="student-direction-panel" id="studentDirectionPanel" aria-live="polite" hidden>
+            <div class="student-direction-heading">
+              <div><p>Explore</p><strong id="studentDirectionTitle"></strong></div>
+              <button type="button" id="studentDirectionClear">Clear choice</button>
             </div>
-            <div class="student-specialty-options" id="studentSpecialtyOptions" role="group" aria-label="Choose a specialty"></div>
-            <p class="student-specialty-status" id="studentSpecialtyStatus">Choose the specific work you want attached to your signup.</p>
+            <div class="student-direction-step">
+              <div class="student-direction-step-copy"><span>1</span><div><strong>Choose a sector</strong><small>You can change this later.</small></div></div>
+              <div class="student-sector-options" id="studentSectorOptions" role="group" aria-label="Choose a startup sector"></div>
+            </div>
+            <div class="student-direction-step" id="studentTaskStep" hidden>
+              <div class="student-direction-step-copy"><span>2</span><div><strong>Choose the work</strong><small>What would you like to be known for?</small></div></div>
+              <div class="student-task-options" id="studentTaskOptions" role="group" aria-label="Choose a type of work"></div>
+            </div>
+            <p class="student-direction-status" id="studentDirectionStatus">Choose one sector to continue.</p>
             <button class="gold-button student-join-selected" id="studentJoinSelected" type="button" data-action="student-quick" data-join-mode="selected" disabled>
-              <span id="studentJoinSelectedLabel">Choose a specialty to join</span><svg><use href="#icon-arrow-right"/></svg>
+              <span id="studentJoinSelectedLabel">Choose a sector and work type</span><svg><use href="#icon-arrow-right"/></svg>
             </button>
           </div>
         </div>
@@ -1281,12 +1290,13 @@
         <fieldset class="industry-fieldset">
           <legend>Which industries do you want to build proof in? <span>Pick one or more</span></legend>
           <div class="industry-grid" id="studentIndustryGrid">
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Accounting & finance"><span>Accounting &amp; finance</span></label>
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Software & AI"><span>Software &amp; AI</span></label>
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Healthcare operations"><span>Healthcare operations</span></label>
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Consumer & retail"><span>Consumer &amp; retail</span></label>
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Professional services"><span>Professional services</span></label>
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Not sure yet — show me everything"><span>Not sure yet — show me everything</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Technology"><span>Technology</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Finance"><span>Finance</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Health"><span>Health</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Consumer"><span>Consumer</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Business"><span>Business</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Climate & industry"><span>Climate &amp; industry</span></label>
+            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Open to any industry"><span>Open to any industry</span></label>
           </div>
           <p class="industry-specializations" id="studentSpecializations" aria-live="polite"></p>
         </fieldset>
@@ -1403,7 +1413,7 @@
           <label>Your role<input name="companyRole" autocomplete="organization-title" required></label>
           <label>Company website<input name="companyWebsite" type="url" placeholder="https://" required></label>
           <label>Company size<select name="companySize" required><option value="">Choose one</option><option>1–5 people</option><option>6–20 people</option><option>21–50 people</option><option>51–200 people</option><option>201+ people</option></select></label>
-          <label>Industry<select name="companyIndustry" required><option value="">Choose one</option><option>Accounting and finance operations</option><option>Software and AI</option><option>Healthcare operations</option><option>Research</option><option>Consumer and services</option><option>Other professional services</option></select></label>
+          <label>Industry<select name="companyIndustry" required><option value="">Choose one</option><option>Technology</option><option>Finance</option><option>Health</option><option>Consumer</option><option>Business</option><option>Climate &amp; industry</option></select></label>
           <label>How often does this work recur?<select name="companyFrequency" required><option value="">Choose one</option><option>Every week</option><option>Every month</option><option>Every quarter</option><option>One-time backlog</option><option>Not sure</option></select></label>
         </div>
       </section>

@@ -17,19 +17,20 @@
 // averaged away, transparent weights, evidence-cited explanations, a refusal path, and an
 // offline eval harness. The flywheel this file feeds is what earns the model later.
 
+import '../industry-taxonomy.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 
 export const REQUIREMENT_VERSION = 'talent-requirement-1.0.0';
 
-// Mirrors VERTICALS / WORK_TYPES in api/portal.js. Kept local to avoid importing the portal
-// (which imports batches, which would make this circular); a drift-guard test pins them.
+// Read the dependency-free shared taxonomy instead of importing the portal API and creating
+// a circular graph. Legacy labels remain accepted while stored records migrate forward.
+const TAXONOMY = globalThis.CovendaIndustryTaxonomy;
 export const REQUIREMENT_VERTICALS = [
-  'Accounting & finance', 'Software & AI', 'Healthcare operations',
-  'Consumer & retail', 'Professional services',
+  ...TAXONOMY.groups.map(group => group.label),
+  TAXONOMY.openChoice,
+  ...Object.keys(TAXONOMY.legacyGroups).filter(label => !label.startsWith('Not sure')),
 ];
-export const REQUIREMENT_WORK_TYPES = [
-  'Research', 'Data & spreadsheets', 'Operations', 'QA & testing', 'Writing & documentation',
-];
+export const REQUIREMENT_WORK_TYPES = TAXONOMY.workTypes.map(workType => workType.value);
 
 const clean = (value, max = 400) => String(value ?? '').trim().slice(0, max);
 const num = value => {

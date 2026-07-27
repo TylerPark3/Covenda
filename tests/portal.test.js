@@ -138,7 +138,7 @@ test('profile onboarding persists a fixed role and sanitized member fields', asy
   assert.equal(profile.onboarding_complete,true);
 });
 
-test('onboarding persists only whitelisted verticals and work types plus an avatar url', async () => {
+test('onboarding persists only whitelisted industries, sectors, and work types plus an avatar url', async () => {
   let saved;
   const supabase={from(table){assert.equal(table,'member_profiles');return {
     select(){return this;},eq(){return this;},async maybeSingle(){return {data:null,error:null};},
@@ -146,11 +146,13 @@ test('onboarding persists only whitelisted verticals and work types plus an avat
   };}};
   const profile=await saveMemberProfile({user:{id:'user-1'},supabase},{
     role:'student',displayName:'Maya',
-    verticals:['Software & AI','Not a real vertical','Accounting & finance'],
+    verticals:['Technology','Not a real vertical','Finance'],
+    industrySectors:['Developer tools & infrastructure','Imaginary sector','Banking & payments'],
     workTypes:['Research','Nonsense','QA & testing'],
     avatarUrl:'https://blob.example/a.png',portfolioVisibility:'members',
   });
-  assert.deepEqual(profile.verticals,['Software & AI','Accounting & finance']);
+  assert.deepEqual(profile.verticals,['Technology','Finance']);
+  assert.deepEqual(profile.industry_sectors,['Developer tools & infrastructure','Banking & payments']);
   assert.deepEqual(profile.work_types,['Research','QA & testing']);
   assert.equal(profile.avatar_url,'https://blob.example/a.png');
 });
@@ -160,6 +162,7 @@ test('the existing profile modal save omits onboarding columns so it works befor
   const supabase={from(){return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:null,error:null};},upsert(value){saved=value;return this;},async single(){return {data:saved,error:null};}};}};
   await saveMemberProfile({user:{id:'user-1'},supabase},{role:'student',displayName:'Maya',portfolioVisibility:'members'});
   assert.equal('verticals' in saved,false);
+  assert.equal('industry_sectors' in saved,false);
   assert.equal('work_types' in saved,false);
   assert.equal('avatar_url' in saved,false);
 });
@@ -331,6 +334,24 @@ test('opportunities matching the student vertical or work type are flagged and s
   assert.equal(ranked[0].matched, true);
   assert.equal(ranked[ranked.length - 1].id, '1');
   assert.equal(ranked.find(project => project.id === '1').matched, false);
+});
+
+test('broad industries match legacy projects and exact sectors improve discovery', () => {
+  const profile = {
+    verticals: ['Technology'],
+    industry_sectors: ['Developer tools & infrastructure'],
+    work_types: [],
+    skills: [],
+  };
+  const ranked = rankOpportunities([
+    { id: 'legacy', verticals: ['Software & AI'], work_types: [] },
+    { id: 'sector', verticals: [], industry_sectors: ['Developer tools & infrastructure'], work_types: [] },
+    { id: 'other', verticals: ['Healthcare operations'], work_types: [] },
+  ], profile);
+  assert.equal(ranked.find(project => project.id === 'legacy').matched, true);
+  assert.equal(ranked.find(project => project.id === 'sector').matched, true);
+  assert.equal(ranked.find(project => project.id === 'other').matched, false);
+  assert.ok(ranked.find(project => project.id === 'sector').fitReasons.some(reason => /sector/i.test(reason)));
 });
 
 test('fit score reflects vertical, work-type, skill and pay overlap, with explainable reasons', () => {

@@ -6,6 +6,7 @@ const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const script = await readFile(new URL('../app.js', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../styles.css', import.meta.url), 'utf8');
 const typeCss = await readFile(new URL('../type.css', import.meta.url), 'utf8');
+const taxonomy = await readFile(new URL('../industry-taxonomy.js', import.meta.url), 'utf8');
 
 test('frontend JavaScript parses', () => {
   assert.doesNotThrow(() => new Function(script));
@@ -17,12 +18,12 @@ test('HTML ids remain unique', () => {
   assert.deepEqual([...new Set(duplicates)], []);
 });
 
-test('student-first hero leads with optional joining, five work areas, and a scroll continuation', () => {
+test('student-first hero leads with optional joining, six broad industries, and a scroll continuation', () => {
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(hero, /Do work that proves/);
-  assert.equal((hero.match(/data-work-type=/g) || []).length, 5);
+  assert.equal((hero.match(/data-student-industry=/g) || []).length, 6);
   assert.match(hero, /Join now — choose later/);
-  assert.match(hero, /No work area is required/);
+  assert.match(hero, /No industry is required/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
 });
@@ -41,39 +42,49 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
   assert.match(styles, /\.intro-statement/);
 });
 
-test('the student entry separates signup without a choice from signup with a specific direction', () => {
+test('the student entry progressively discloses industry, sector, and work without blocking signup', () => {
   const studentHero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
+  const studentForm = html.match(/<dialog class="form-dialog" id="studentDialog"[\s\S]*?<\/dialog>/)?.[0] || '';
+  const companyForm = html.match(/<dialog class="form-dialog" id="companyDialog"[\s\S]*?<\/dialog>/)?.[0] || '';
   assert.match(studentHero, /Do work that proves/);
   assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"[\s\S]*Join now — choose later/);
-  assert.match(studentHero, /Join now — choose later[\s\S]*Choose a work area/);
-  for (const vertical of ['Research &amp; strategy', 'Data &amp; analysis', 'Operations', 'QA &amp; testing', 'Writing &amp; documentation']) {
-    assert.match(studentHero, new RegExp(vertical));
+  assert.match(studentHero, /Join now — choose later[\s\S]*What kind of startup interests you/);
+  for (const industry of ['Technology', 'Finance', 'Health', 'Consumer', 'Business', 'Climate &amp; industry']) {
+    assert.match(studentHero, new RegExp(industry));
   }
-  assert.doesNotMatch(studentHero, /student-vertical is-selected/);
+  assert.doesNotMatch(studentHero, /student-industry is-selected/);
   assert.doesNotMatch(studentHero, /Explore[\s\S]*Profile[\s\S]*Track/);
   assert.doesNotMatch(studentHero, /selectorFxCanvas|student-journey|narrowFlow/);
-  assert.match(styles, /\.student-vertical-rail[\s\S]*grid-template-columns: repeat\(5/);
-  assert.match(styles, /\.student-vertical \{[\s\S]*border-right: 1px solid var\(--line-strong\)[\s\S]*border-radius: 0/);
+  assert.match(styles, /\.student-industry-rail[\s\S]*grid-template-columns: repeat\(3/);
+  assert.match(styles, /\.student-industry \{[\s\S]*border-right: 1px solid var\(--line-strong\)[\s\S]*border-radius: 0/);
   assert.match(styles, /\.student-join-primary \{[\s\S]*width: min\(100%, 320px\)[\s\S]*border-radius: 0/);
   assert.match(styles, /@keyframes student-join-confirm/);
-  assert.match(script, /\$\$\('\.work-option, \.student-vertical'\)/);
-  assert.match(studentHero, /id="studentSpecialtyPanel"/);
-  assert.match(studentHero, /id="studentSpecialtyPanel"[^>]*hidden/);
-  assert.match(studentHero, /id="studentSpecialtyOptions"/);
+  assert.match(studentHero, /id="studentDirectionPanel"/);
+  assert.match(studentHero, /id="studentDirectionPanel"[^>]*hidden/);
+  assert.match(studentHero, /id="studentSectorOptions"/);
+  assert.match(studentHero, /id="studentTaskOptions"/);
   assert.match(studentHero, /id="studentJoinSelected"[^>]*data-join-mode="selected"[^>]*disabled/);
-  assert.match(studentHero, /id="studentChoiceClear"/);
-  assert.match(script, /const studentSpecialties = \{/);
-  for (const specialty of ['Customer research', 'Spreadsheet modeling', 'Process mapping', 'Manual QA', 'Technical documentation']) {
-    assert.match(script, new RegExp(specialty));
+  assert.match(studentHero, /id="studentDirectionClear"/);
+  for (const sector of ['Artificial intelligence & machine learning', 'Banking & payments', 'Digital health', 'E-commerce & marketplaces', 'HR, recruiting & future of work', 'Climate tech & sustainability']) {
+    assert.match(taxonomy, new RegExp(sector.replace(/[&]/g, '\\&')));
   }
-  assert.match(script, /function renderStudentSpecialties\(workType\)/);
-  assert.match(script, /function selectStudentSpecialty\(label\)/);
-  assert.match(script, /function clearStudentWorkChoice\(\)/);
+  assert.match(script, /function renderStudentDirection\(industry\)/);
+  assert.match(script, /function selectStudentSector\(label\)/);
+  assert.match(script, /function selectStudentWorkType\(value\)/);
+  assert.match(script, /function clearStudentDirection\(\)/);
   assert.match(script, /function updateStudentJoinChoice\(\)/);
   assert.match(script, /quickJoinDirection/);
   assert.match(script, /includeDirection = button\.dataset\.joinMode === 'selected'/);
-  assert.match(script, /studentSpecialtyStorageKey/);
+  assert.match(script, /studentDirectionStorageKey/);
   assert.match(script, /function confirmStudentJoin\(button\)/);
+  for (const industry of ['Technology', 'Finance', 'Health', 'Consumer', 'Business']) {
+    assert.match(studentForm, new RegExp(`value="${industry}"`));
+    assert.match(companyForm, new RegExp(`<option>${industry}</option>`));
+  }
+  assert.match(studentForm, /value="Climate & industry"/);
+  assert.match(companyForm, /<option>Climate &amp; industry<\/option>/);
+  assert.doesNotMatch(studentForm, /value="Software & AI"/);
+  assert.match(script, /startupTaxonomy\.groups\.map/);
 });
 
 test('audience switch supports student and company site states', () => {

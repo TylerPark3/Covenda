@@ -5,7 +5,9 @@ const state = {
   audience: 'home',
   surface: 'site',
   workType: '',
-  studentSpecialty: '',
+  studentIndustry: '',
+  studentSector: '',
+  studentWorkType: '',
   toastTimer: null,
 };
 let selectorFxController = null;
@@ -90,7 +92,7 @@ const storageKey = 'covendaPilotSubmissions';
 const introStorageKey = 'covendaIntroSeen';
 const audienceStorageKey = 'covendaAudience';
 const workTypeStorageKey = 'covendaSelectedWorkType';
-const studentSpecialtyStorageKey = 'covendaSelectedSpecialty';
+const studentDirectionStorageKey = 'covendaStudentDirection';
 const draftKeys = {
   studentForm: 'covendaStudentInterestDraft',
   companyForm: 'covendaCompanyProblemDraft',
@@ -480,87 +482,134 @@ function setSurface(surface) {
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 
-const studentSpecialties = {
-  'Research': ['Customer research', 'Competitive analysis', 'Market sizing', 'Product discovery'],
-  'Data & spreadsheets': ['Data cleanup', 'Spreadsheet modeling', 'Dashboards & reporting', 'Data analysis'],
-  'Operations': ['Process mapping', 'Project coordination', 'Vendor operations', 'Finance operations'],
-  'QA & testing': ['Manual QA', 'Test-case writing', 'Bug reproduction', 'Model evaluation'],
-  'Writing & documentation': ['Technical documentation', 'Research briefs', 'SOPs & playbooks', 'Content operations'],
-};
+const startupTaxonomy = globalThis.CovendaIndustryTaxonomy;
+
+function studentIndustryGroup(label) {
+  return startupTaxonomy?.groups.find(group => group.label === label) || null;
+}
+
+function saveStudentDirection() {
+  writeStorage(studentDirectionStorageKey, {
+    industry: state.studentIndustry,
+    sector: state.studentSector,
+    workType: state.studentWorkType,
+  });
+}
 
 function updateStudentJoinChoice() {
   const button = $('#studentJoinSelected');
   const label = $('#studentJoinSelectedLabel');
   if (!button || !label) return;
-  const ready = Boolean(state.workType && state.studentSpecialty);
+  const ready = Boolean(state.studentIndustry && state.studentSector && state.studentWorkType);
   button.disabled = !ready;
-  label.textContent = ready ? `Join for ${state.studentSpecialty}` : 'Choose a specialty to join';
+  label.textContent = ready ? `Join for ${state.studentSector}` : 'Choose a sector and work type';
 }
 
-function selectStudentSpecialty(label) {
-  const choices = studentSpecialties[state.workType] || [];
-  if (!choices.includes(label)) return;
-  state.studentSpecialty = label;
-  writeStorage(studentSpecialtyStorageKey, { workType: state.workType, label });
-  $$('.student-specialty').forEach(button => {
-    const selected = button.dataset.specialty === label;
+function renderStudentWorkTypes() {
+  const host = $('#studentTaskOptions');
+  const step = $('#studentTaskStep');
+  if (!host || !step) return;
+  host.replaceChildren();
+  step.hidden = !state.studentSector;
+  if (!state.studentSector) return;
+  startupTaxonomy.workTypes.forEach(item => {
+    const button = document.createElement('button');
+    const copy = document.createElement('span');
+    const title = document.createElement('strong');
+    const detail = document.createElement('small');
+    button.type = 'button';
+    button.className = 'student-task';
+    button.dataset.studentWorkType = item.value;
+    button.setAttribute('aria-pressed', String(item.value === state.studentWorkType));
+    button.classList.toggle('is-selected', item.value === state.studentWorkType);
+    title.textContent = item.label;
+    detail.textContent = item.description;
+    copy.append(title, detail);
+    button.append(copy);
+    button.addEventListener('click', () => selectStudentWorkType(item.value));
+    host.append(button);
+  });
+}
+
+function selectStudentWorkType(value) {
+  if (!startupTaxonomy.workTypes.some(item => item.value === value)) return;
+  state.studentWorkType = value;
+  saveStudentDirection();
+  $$('.student-task').forEach(button => {
+    const selected = button.dataset.studentWorkType === value;
     button.classList.toggle('is-selected', selected);
     button.setAttribute('aria-pressed', String(selected));
   });
-  const status = $('#studentSpecialtyStatus');
-  if (status) status.textContent = `Selected: ${label}. This direction will be attached to your signup.`;
+  const status = $('#studentDirectionStatus');
+  if (status) status.textContent = `${state.studentIndustry} · ${state.studentSector} · ${value}`;
   updateStudentJoinChoice();
 }
 
-function renderStudentSpecialties(workType) {
-  const host = $('#studentSpecialtyOptions');
-  const title = $('#studentSpecialtyTitle');
-  const status = $('#studentSpecialtyStatus');
-  const panel = $('#studentSpecialtyPanel');
-  const empty = $('#studentSpecialtyEmpty');
+function selectStudentSector(label) {
+  const group = studentIndustryGroup(state.studentIndustry);
+  if (!group?.sectors.includes(label)) return;
+  if (state.studentSector !== label) state.studentWorkType = '';
+  state.studentSector = label;
+  saveStudentDirection();
+  $$('.student-sector').forEach(button => {
+    const selected = button.dataset.studentSector === label;
+    button.classList.toggle('is-selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  renderStudentWorkTypes();
+  const status = $('#studentDirectionStatus');
+  if (status) status.textContent = 'Now choose the kind of work you want to do.';
+  updateStudentJoinChoice();
+}
+
+function renderStudentDirection(industry) {
+  const host = $('#studentSectorOptions');
+  const title = $('#studentDirectionTitle');
+  const status = $('#studentDirectionStatus');
+  const panel = $('#studentDirectionPanel');
+  const empty = $('#studentDirectionEmpty');
   if (!host || !title || !status || !panel || !empty) return;
-  const vertical = $(`.student-vertical[data-work-type="${workType}"]`);
-  const choices = studentSpecialties[workType] || [];
-  if (!vertical || !choices.length) {
+  const group = studentIndustryGroup(industry);
+  if (!group) {
     host.replaceChildren();
     title.textContent = '';
     panel.hidden = true;
     empty.hidden = false;
+    renderStudentWorkTypes();
     updateStudentJoinChoice();
     return;
   }
   panel.hidden = false;
   empty.hidden = true;
-  title.textContent = vertical?.dataset.verticalLabel || workType;
+  title.textContent = group.label;
   host.replaceChildren();
-
-  if (!choices.includes(state.studentSpecialty)) state.studentSpecialty = '';
-  choices.forEach(label => {
+  if (!group.sectors.includes(state.studentSector)) {
+    state.studentSector = '';
+    state.studentWorkType = '';
+  }
+  group.sectors.forEach(label => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className = 'student-specialty';
-    button.dataset.specialty = label;
+    button.className = 'student-sector';
+    button.dataset.studentSector = label;
     button.textContent = label;
-    button.setAttribute('aria-pressed', String(label === state.studentSpecialty));
-    button.classList.toggle('is-selected', label === state.studentSpecialty);
-    button.addEventListener('click', () => selectStudentSpecialty(label));
+    button.setAttribute('aria-pressed', String(label === state.studentSector));
+    button.classList.toggle('is-selected', label === state.studentSector);
+    button.addEventListener('click', () => selectStudentSector(label));
     host.append(button);
   });
-  status.textContent = state.studentSpecialty
-    ? `Selected: ${state.studentSpecialty}. This direction will be attached to your signup.`
-    : 'Choose the specific work you want attached to your signup.';
+  renderStudentWorkTypes();
+  status.textContent = state.studentWorkType
+    ? `${state.studentIndustry} · ${state.studentSector} · ${state.studentWorkType}`
+    : state.studentSector ? 'Now choose the kind of work you want to do.' : 'Choose one sector to continue.';
   updateStudentJoinChoice();
 }
 
 function selectWorkType(workType) {
   if (!workType) return;
-  if (workType !== state.workType) {
-    state.studentSpecialty = '';
-    removeStorage(studentSpecialtyStorageKey);
-  }
   state.workType = workType;
   writeStorage(workTypeStorageKey, workType);
-  $$('.work-option, .student-vertical').forEach(button => {
+  $$('.work-option').forEach(button => {
     const selected = button.dataset.workType === workType;
     const newlySelected = selected && !button.classList.contains('is-selected');
     button.classList.toggle('is-selected', selected);
@@ -576,23 +625,39 @@ function selectWorkType(workType) {
   $$('input[name="workType"]', $('#studentForm')).forEach(input => {
     if (input.value === workType) input.checked = true;
   });
-  renderStudentSpecialties(workType);
 }
 
-function clearStudentWorkChoice() {
-  state.workType = '';
-  state.studentSpecialty = '';
-  removeStorage(workTypeStorageKey);
-  removeStorage(studentSpecialtyStorageKey);
-  $$('.student-vertical').forEach(button => {
+function selectStudentIndustry(industry) {
+  if (!studentIndustryGroup(industry)) return;
+  if (state.studentIndustry !== industry) {
+    state.studentSector = '';
+    state.studentWorkType = '';
+  }
+  state.studentIndustry = industry;
+  saveStudentDirection();
+  $$('.student-industry').forEach(button => {
+    const selected = button.dataset.studentIndustry === industry;
+    button.classList.toggle('is-selected', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  $('#workspacePrimaryPath').textContent = industry;
+  renderStudentDirection(industry);
+}
+
+function clearStudentDirection() {
+  state.studentIndustry = '';
+  state.studentSector = '';
+  state.studentWorkType = '';
+  removeStorage(studentDirectionStorageKey);
+  $$('.student-industry').forEach(button => {
     button.classList.remove('is-selected');
     button.setAttribute('aria-pressed', 'false');
   });
   $('#workspacePrimaryPath').textContent = 'Not chosen yet';
-  renderStudentSpecialties('');
+  renderStudentDirection('');
 }
 
-$('#studentChoiceClear')?.addEventListener('click', clearStudentWorkChoice);
+$('#studentDirectionClear')?.addEventListener('click', clearStudentDirection);
 
 function setWorkspaceTab(tabName) {
   $$('[data-workspace-tab]').forEach(button => button.classList.toggle('is-active', button.dataset.workspaceTab === tabName));
@@ -1587,46 +1652,21 @@ function renderLocalSubmissionState() {
   renderProofRecord();
 }
 
-// §8 industry-first cascading. Canonical verticals (matching the portal/matching taxonomy) →
-// specializations, each mapped to a work type so work_types stay DERIVABLE for matching even
-// though students no longer pick them directly. One editable source of truth.
-const INDUSTRY_TREE = {
-  'Accounting & finance': [
-    { label: 'Month-end close & reconciliation', workType: 'Data & spreadsheets' },
-    { label: 'Financial modeling & analysis', workType: 'Data & spreadsheets' },
-    { label: 'Bookkeeping & AP/AR cleanup', workType: 'Operations' },
-    { label: 'Market & pricing research', workType: 'Research' },
-  ],
-  'Software & AI': [
-    { label: 'Product & market research', workType: 'Research' },
-    { label: 'QA & test cases', workType: 'QA & testing' },
-    { label: 'Data cleanup & analysis', workType: 'Data & spreadsheets' },
-    { label: 'Docs & knowledge base', workType: 'Writing & documentation' },
-  ],
-  'Healthcare operations': [
-    { label: 'Process & workflow mapping', workType: 'Operations' },
-    { label: 'Research & literature synthesis', workType: 'Research' },
-    { label: 'SOPs & documentation', workType: 'Writing & documentation' },
-  ],
-  'Consumer & retail': [
-    { label: 'Customer & market research', workType: 'Research' },
-    { label: 'Operations & CRM hygiene', workType: 'Operations' },
-    { label: 'Reporting & data cleanup', workType: 'Data & spreadsheets' },
-  ],
-  'Professional services': [
-    { label: 'Research & briefs', workType: 'Research' },
-    { label: 'Process documentation', workType: 'Writing & documentation' },
-    { label: 'Operations support', workType: 'Operations' },
-  ],
-  'Not sure yet — show me everything': [
-    { label: 'Open to any safe project', workType: 'Research' },
-  ],
-};
+// The full interest form shares the broad groups and sector vocabulary used by the landing
+// selector and portal. Work type is carried forward only when the student explicitly chose it.
+const INDUSTRY_TREE = Object.fromEntries([
+  ...startupTaxonomy.groups.map(group => [
+    group.label,
+    group.sectors.map(label => ({ label })),
+  ]),
+  [startupTaxonomy.openChoice, []],
+]);
 function studentIndustries(form) { return checkedValues(form, 'studentIndustry'); }
 function derivedWorkTypes(form) {
-  const set = new Set();
-  for (const industry of studentIndustries(form)) for (const spec of (INDUSTRY_TREE[industry] || [])) set.add(spec.workType);
-  return [...set];
+  const industries = studentIndustries(form);
+  return state.studentWorkType && industries.includes(state.studentIndustry)
+    ? [state.studentWorkType]
+    : [];
 }
 // Show, derived from the picked industries, the concrete work a student would end up on — the
 // "cascade" without a second required input, so drafts stay simple to restore.
@@ -1840,14 +1880,13 @@ function openQuickJoin({ includeDirection = false } = {}) {
   quickJoinForm.hidden = false;
   $('#quickJoinMessage').textContent = '';
   const selectedDirection = $('#quickJoinSpecialty');
-  const vertical = $(`.student-vertical[data-work-type="${state.workType}"]`)?.dataset.verticalLabel || state.workType;
-  quickJoinDirection = includeDirection && state.studentSpecialty
-    ? { vertical, specialty: state.studentSpecialty }
+  quickJoinDirection = includeDirection && state.studentIndustry && state.studentSector && state.studentWorkType
+    ? { industry: state.studentIndustry, sector: state.studentSector, workType: state.studentWorkType }
     : null;
   if (selectedDirection) {
     selectedDirection.hidden = !quickJoinDirection;
     selectedDirection.textContent = quickJoinDirection
-      ? `Your direction: ${quickJoinDirection.vertical} · ${quickJoinDirection.specialty}`
+      ? `Your direction: ${quickJoinDirection.industry} · ${quickJoinDirection.sector} · ${quickJoinDirection.workType}`
       : '';
   }
   renderQuickInterests();
@@ -1894,9 +1933,12 @@ if (quickJoinForm) {
     if (!name || !emailVal || !consent) { message.textContent = 'Please add your name, email, and agree to be contacted.'; return; }
     const submit = $('button[type="submit"]', quickJoinForm);
     submit.disabled = true; submit.textContent = 'Joining…';
-    const industries = selectedQuickInterests();
+    const industries = [...new Set([
+      ...(quickJoinDirection ? [quickJoinDirection.industry] : []),
+      ...selectedQuickInterests(),
+    ])];
     const directionInterest = quickJoinDirection
-      ? `${quickJoinDirection.vertical} · ${quickJoinDirection.specialty}`
+      ? `${quickJoinDirection.industry} · ${quickJoinDirection.sector} · ${quickJoinDirection.workType}`
       : '';
     try {
       const result = await sendSubmission({
@@ -1916,7 +1958,7 @@ if (quickJoinForm) {
         title: name + ' · quick join',
         summary: directionInterest
           ? 'Interested in ' + directionInterest
-          : (industries.length ? 'Interested in ' + industries.join(', ') : 'Joined without choosing a work area'),
+          : (industries.length ? 'Interested in ' + industries.join(', ') : 'Joined without choosing an industry'),
       });
       renderQuickJoinDone(result.reference);
       renderProfileBanner();
@@ -2481,6 +2523,9 @@ $$('[data-work-type]').forEach(button => button.addEventListener('click', () => 
     selectWorkType(niche);
   }
   if (button.closest('.work-types')) openDialog(studentDialog, studentForm);
+}));
+$$('[data-student-industry]').forEach(button => button.addEventListener('click', () => {
+  selectStudentIndustry(button.dataset.studentIndustry);
 }));
 $$('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
 $$('.form-dialog').forEach(dialog => dialog.addEventListener('click', event => {
@@ -3805,9 +3850,11 @@ const restoredWorkTypes = checkedValues(studentForm, 'workType');
 const rememberedWorkType = readStorage(workTypeStorageKey, '');
 if (restoredWorkTypes.length) state.workType = restoredWorkTypes[0];
 else if (rememberedWorkType) state.workType = rememberedWorkType;
-const rememberedSpecialty = readStorage(studentSpecialtyStorageKey, null);
-if (rememberedSpecialty?.workType === state.workType && typeof rememberedSpecialty.label === 'string') {
-  state.studentSpecialty = rememberedSpecialty.label;
+const rememberedDirection = readStorage(studentDirectionStorageKey, null);
+if (rememberedDirection && studentIndustryGroup(rememberedDirection.industry)) {
+  state.studentIndustry = rememberedDirection.industry;
+  state.studentSector = rememberedDirection.sector || '';
+  state.studentWorkType = rememberedDirection.workType || '';
 }
 // ---- Motion (adapted from design_handoff_covenda_motion/covenda-motion.js) ----
 // Vanilla helper: play anything marked [data-animate] once it scrolls into view.
@@ -4550,7 +4597,8 @@ restoreRosterDraft();
 renderLocalSubmissionState();
 renderNarrowFlow();
 if (state.workType) selectWorkType(state.workType);
-else renderStudentSpecialties('');
+if (state.studentIndustry) selectStudentIndustry(state.studentIndustry);
+else renderStudentDirection('');
 setAudience(state.audience);
 renderReferralBanner();
 renderReferralLink();
