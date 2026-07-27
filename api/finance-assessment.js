@@ -218,3 +218,81 @@ export function scoreGuidance(slug) {
     note: 'Score the method, not the finished file. A correct answer reached by trial and error scores below a wrong answer reached by a sound approach that ran out of time.',
   };
 }
+
+// ── Concept questions (multiple choice) ───────────────────────────────────────────────
+// Multiple choice earns its place for CONCEPTS, where there genuinely is a right answer and
+// a wrong one, and where a written answer would tell us nothing extra. Every distractor here
+// is a real misconception rather than filler — a wrong option nobody would pick teaches us
+// nothing about the person who did not pick it.
+export const CONCEPT_QUESTIONS = {
+  'accounting-audit': [
+    { q: 'Depreciation increases by 10. Ignoring tax, what happens to cash flow from operations?',
+      options: ['Falls by 10', 'Rises by 10', 'Unchanged', 'Falls by 10 then recovers'],
+      answer: 2,
+      why: 'Net income falls by 10 and depreciation is added back — the two cancel. Picking "falls" is the classic error of treating a non-cash charge as cash.' },
+    { q: 'A company recognises revenue on delivery. It ships in December and is paid in February. In December:',
+      options: ['Revenue and cash both rise', 'Revenue rises, receivables rise', 'Deferred revenue rises', 'Nothing is recorded'],
+      answer: 1,
+      why: 'Accrual timing. "Deferred revenue" is the mirror error — that is cash before delivery.' },
+    { q: 'Which of these would NOT appear as a reconciling item between book and bank?',
+      options: ['Outstanding cheques', 'Deposits in transit', 'Bank fees not yet recorded', 'An accrued expense'],
+      answer: 3,
+      why: 'An accrual never touches the bank, so it cannot reconcile against it.' },
+  ],
+  'investment-banking': [
+    { q: 'A company raises 100 of debt and holds it as cash. Enterprise value:',
+      options: ['Rises by 100', 'Falls by 100', 'Unchanged', 'Depends on the interest rate'],
+      answer: 2,
+      why: 'Debt up 100, cash up 100, net debt unchanged. This is the single most common undergraduate error in finance.' },
+    { q: 'Which has the largest effect on a DCF output, typically?',
+      options: ['Year-1 revenue growth', 'Terminal growth rate', 'Year-3 margin', 'Working capital timing'],
+      answer: 1,
+      why: 'Terminal value is usually the majority of the total. A candidate who says year-1 growth has not looked at where the value sits.' },
+    { q: 'Two identical companies; one leases its fleet, one owns it. All else equal, the lessee will show:',
+      options: ['Higher EBITDA', 'Lower EBITDA', 'Identical EBITDA', 'Higher net income'],
+      answer: 1,
+      why: 'Lease expense sits above EBITDA; depreciation does not. This is why EBITDA multiples mislead across different capital structures.' },
+  ],
+};
+
+// ── Brainteasers ──────────────────────────────────────────────────────────────────────
+// Not for the answer. For whether someone can hold an unfamiliar constraint in their head
+// and reason forward from it — and, more usefully, whether they say "I do not know yet" out
+// loud instead of guessing confidently.
+//
+// Scored on the reasoning shown, never on getting there. A candidate who states their
+// approach and runs out of time scores above one who blurts the memorised answer.
+export const BRAINTEASERS = [
+  { id: 'ropes',
+    q: 'Two ropes each burn for exactly one hour, but not at a uniform rate — half a rope does not mean half an hour. Using only these two ropes and a lighter, measure 45 minutes.',
+    reveals: 'Whether they use both ends. The insight is that lighting a rope at both ends halves its time regardless of how unevenly it burns.',
+    weak: 'Tries to fold or measure the rope — treats the non-uniform burn as a detail rather than the whole problem.',
+    strong: 'Light rope A at both ends and rope B at one end. A finishes at 30 minutes; light B\'s other end then; B finishes 15 minutes later.' },
+  { id: 'bridge',
+    q: 'Four people must cross a bridge at night with one torch. It holds two at a time and the torch must come back. They take 1, 2, 7 and 10 minutes; a pair moves at the slower one\'s pace. Get everyone across in 17.',
+    reveals: 'Whether they notice the two slowest should cross together rather than each being escorted.',
+    weak: 'Sends the fastest person back and forth every time — the intuitive approach, and it costs 19.',
+    strong: 'Pairs the two slowest so their times overlap instead of accumulating.' },
+  { id: 'weighing',
+    q: 'You have 8 balls, one heavier. Using a balance scale twice, find it.',
+    reveals: 'Whether they think in thirds rather than halves. Halving is the instinct and it needs three weighings.',
+    weak: 'Splits 4 and 4 — binary search, which is one weighing too many.',
+    strong: 'Splits 3-3-2 and uses the fact that a balanced scale is information too.' },
+  { id: 'pills',
+    q: 'You have 10 bottles of pills. All weigh 1g each except one bottle where every pill weighs 1.1g. You have a digital scale and one weighing. Find the bad bottle.',
+    reveals: 'Whether they can encode identity into a measurement rather than searching.',
+    weak: 'Weighs bottles one at a time and runs out of weighings.',
+    strong: 'Takes 1 pill from bottle 1, 2 from bottle 2, and so on; the excess over 55g names the bottle.' },
+];
+
+export function brainteaserFor(seedIndex = 0) {
+  return BRAINTEASERS[Math.abs(Number(seedIndex) || 0) % BRAINTEASERS.length];
+}
+
+// The rubric for a brainteaser reads reasoning, and says so, because a student who thinks it
+// is a trivia test will guess rather than think aloud.
+export const BRAINTEASER_RUBRIC = {
+  4: 'Guesses, or recites a remembered answer with no reasoning. Cannot say why it works.',
+  6: 'States an approach, tests it against the constraint, and adjusts when it fails. May not finish.',
+  9: 'Identifies the binding constraint early and reasons from it. Says clearly what they do not yet know rather than filling the silence.',
+};

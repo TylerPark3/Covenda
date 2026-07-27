@@ -1598,3 +1598,23 @@ body { background: var(--surface); }
 .ba-upload-list li.is-error small { color: #a3301f; }
 .ba-upload-list button { border: 0; background: none; padding: 0 4px; font-size: 20px; color: #7d7870; cursor: pointer; }
 .ba-upload-status { margin: 0; font-size: 14.5px; color: var(--gold-deep); }
+
+/* Answer space sized for an answer. A 4-row box tells a student to write four rows; the
+   questions ask for reasoning, so the box has to look like it expects some. */
+#batchApplyDialog textarea { min-height: 200px; font-size: 17px; line-height: 1.7; padding: 16px 18px; }
+.bq-q textarea { min-height: 240px; }
+.bq-label { font-size: 24px; line-height: 1.3; }
+.bq-hint { font-size: 16px; }
+
+/* Concept questions: one per screen, options big enough to hit. */
+.mcq { display: grid; gap: 12px; margin-top: 6px; }
+.mcq label { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; border: 1px solid #d8d4cb; background: #fff; font-size: 16.5px; font-weight: 500; cursor: pointer; }
+.mcq label:hover { border-color: #000; }
+.mcq input { margin: 3px 0 0; width: 20px; height: 20px; accent-color: #000; }
+.mcq label:has(input:checked) { border-color: #000; box-shadow: inset 3px 0 0 #000; }
+
+/* A brainteaser gets its own framing so nobody reads it as trivia. */
+.teaser { display: grid; gap: 12px; padding: 24px; border: 1px solid #000; background: #fff; }
+.teaser-tag { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #7d7870; }
+.teaser-q { margin: 0; font-size: 20px; line-height: 1.5; color: #000; }
+.teaser-note { margin: 0; font-size: 15px; color: #7d7870; }
