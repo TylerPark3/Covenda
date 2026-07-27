@@ -47,6 +47,58 @@ questions come from their specific commits.
 
 ---
 
+## Revision after reading Litmus — this changes the design
+
+Litmus runs an async work trial generated **from the hiring company's own repos, tickets and
+job descriptions**, scoped to the feature that team is shipping next rather than a generic
+problem. Candidates work in their own IDE and terminal. **AI use is encouraged, and the
+prompts are captured alongside the code** — from Claude Code, the Copilot CLI — so reviewers
+see how the candidate actually works. Submissions execute in a sandbox, and grading runs on
+three axes: **tool fluency, process, and outcome.**
+
+That is a better answer to the problem than the one I designed above, and I want to be
+direct about why.
+
+**Everything in "the residual gap" below is an attempt to DETECT AI use.** Ownership
+verification, history span, defense questions built to expose a non-author — all of it treats
+model assistance as contamination to be filtered out. Litmus treats it as the medium the work
+now happens in, and grades how well the candidate directs it. Given that ~38–48% of
+candidates are already using AI and 80% do so on take-homes when told not to, detection is a
+losing arms race and *capture* is the winning move. If you can see the prompts, you do not
+need to catch anyone.
+
+**What I am changing in the design above:**
+
+1. **Ask for the transcript, not just the artifact.** A candidate submitting a repo should be
+   able to submit the prompt history alongside it. Not required — many students will not have
+   kept it — but a submission that includes it should be *easier* to defend, not harder,
+   because the reviewer can see the reasoning directly rather than reconstructing it through
+   questions.
+
+2. **Grade three axes, not one.** The single rubric above collapses tool fluency, process and
+   outcome into one number. Litmus separates them, and the separation is the useful part: a
+   candidate with weak output and excellent process is exactly the junior hire a startup
+   wants, and a single score hides that. This should replace the 4/6/9 single scale with
+   three anchored scales.
+
+3. **Generate the assessment from the company's real context.** Litmus builds the trial from
+   the hiring company's repos and tickets. Covenda already has the machinery for the
+   equivalent — the brief engine turns a founder's problem statement into a scoped trial —
+   and this is confirmation that the shape is right. The gap is that our batch vetting is
+   still generic while our trials are specific. Batch vetting should pull from the same well.
+
+4. **What survives unchanged:** the defense. Litmus captures process through prompts; we
+   capture it through a recorded walkthrough. Both are reading the same thing. Where a
+   candidate has no transcript, the defense is the only route to process, so it stays
+   mandatory rather than becoming an alternative.
+
+**What I would not copy:** Litmus grades against the hiring company's specific codebase.
+Covenda admits to a *batch* before any company is attached, so there is no codebase to scope
+to at that moment. Batch vetting has to stay company-agnostic; the company-specific version
+is what the trial itself already does.
+
+---
+
 ## The residual gap, stated once (applies to all five)
 
 **Ownership ≠ authorship.** OAuth proves the account owns the repo. Commit timeline proves
@@ -331,3 +383,5 @@ neither rater would defend.
 - [We Recruit IT — *38% of Your Tech Candidates Are Using AI to Cheat*](https://werecruit.it/blog/ai-cheating-interviews-2026/)
 - [Built In — *Is Using AI in a Job Interview Cheating? It
   Depends.*](https://builtin.com/articles/ai-job-interview-cheating-debate)
+- [Litmus — async work trials generated from your repos and tickets](https://litmushiring.com/)
+- [Y Combinator — *Litmus: Run an async work trial on every engineer you interview*](https://www.ycombinator.com/companies/litmus-hiring)
