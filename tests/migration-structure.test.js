@@ -42,6 +42,10 @@ const industrySectors = readFileSync(
   new URL('../supabase/migrations/20260727110000_student_industry_sectors.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const v1Onboarding = readFileSync(
+  new URL('../supabase/migrations/20260727900000_v1_onboarding_profiles.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 const projectTargeting = readFileSync(
   new URL('../supabase/migrations/20260724300000_project_targeting_and_files.sql', import.meta.url),
   'utf8',
@@ -177,6 +181,19 @@ test('industry-sector migration is additive, indexed, and keeps browser access u
   assert.match(industrySectors, /create index if not exists member_projects_industry_sectors_gin/);
   assert.match(industrySectors, /notify pgrst, 'reload schema'/);
   assert.doesNotMatch(industrySectors, /drop table|truncate|delete from|grant|create policy/);
+});
+
+test('V1 onboarding migration keeps student evidence server-only and discovery private by default', () => {
+  for (const column of ['area_of_study text', 'capability_areas jsonb', 'engagement_preferences jsonb', 'discovery_opt_in boolean', 'introduction_approval_required boolean', 'profile_state text']) {
+    assert.match(v1Onboarding, new RegExp(`add column if not exists ${column}`));
+  }
+  assert.match(v1Onboarding, /discovery_opt_in boolean not null default false/);
+  assert.match(v1Onboarding, /introduction_approval_required boolean not null default true/);
+  assert.match(v1Onboarding, /create table if not exists public\.student_evidence_items/);
+  assert.match(v1Onboarding, /student_evidence_source_required/);
+  assert.match(v1Onboarding, /alter table public\.student_evidence_items force row level security/);
+  assert.match(v1Onboarding, /revoke all on table public\.student_evidence_items from public, anon, authenticated/);
+  assert.doesNotMatch(v1Onboarding, /create policy|grant [^;]* to (anon|authenticated)/);
 });
 
 test('credit ledger is append-only, guards double payouts, and stays server-only', () => {

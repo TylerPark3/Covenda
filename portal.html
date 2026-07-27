@@ -230,10 +230,15 @@
       <header><div><p class="eyebrow">Member setup</p><h2>Make Covenda yours.</h2><p>Your role controls the projects and tools in your workspace.</p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
       <div class="dialog-body">
         <fieldset class="role-choice"><legend>I am joining as…</legend><label><input type="radio" name="role" value="student" required><span><svg><use href="#p-user"/></svg><b>Student</b><small>Find projects and build proof.</small></span></label><label><input type="radio" name="role" value="company"><span><svg><use href="#p-project"/></svg><b>Company</b><small>Post work and discover talent.</small></span></label><label><input type="radio" name="role" value="university"><span><svg><use href="#p-compass"/></svg><b>University</b><small>Support students and projects.</small></span></label></fieldset>
-        <div class="form-grid"><label>Full name<input name="displayName" autocomplete="name" required></label><label data-profile-field="organization">Organization<input name="organizationName" autocomplete="organization"></label><label data-profile-field="school">School or university<input name="schoolName" autocomplete="organization"></label><label data-profile-field="graduation">Graduation year<input name="graduationYear" type="number" min="2020" max="2100" inputmode="numeric"></label></div>
+        <div class="form-grid"><label>Full name<input name="displayName" autocomplete="name" required></label><label data-profile-field="organization">Organization<input name="organizationName" autocomplete="organization"></label><label data-profile-field="school">School or university<input name="schoolName" autocomplete="organization"></label><label data-profile-field="study">Area of study<input name="areaOfStudy" placeholder="Computer science, economics, undecided"></label><label data-profile-field="graduation">Graduation year<input name="graduationYear" type="number" min="2020" max="2100" inputmode="numeric"></label></div>
         <label>Headline<input name="headline" maxlength="180" placeholder="Researcher who turns messy questions into clear decisions"></label>
         <label>About<textarea name="bio" rows="4" maxlength="2000" placeholder="Share what you are learning, building, or looking for next."></textarea></label>
         <label>Skills <small>Separate with commas</small><input name="skills" placeholder="Market research, Excel, operations"></label>
+        <fieldset class="profile-interests" data-student-profile>
+          <legend>Capability areas <small>Choose up to five</small></legend>
+          <p>These are broad claims about where you can contribute. Evidence cards and reviewed work are shown separately.</p>
+          <div class="profile-interest-options" id="profileCapabilityOptions"></div>
+        </fieldset>
         <fieldset class="profile-interests" data-student-profile>
           <legend>Startup interests <small>Optional — broad industry, then sector, then work type</small></legend>
           <p>Choose as much or as little as you know today. These preferences improve project discovery; they are not qualifications.</p>
@@ -241,7 +246,13 @@
           <div class="profile-interest-block" id="profileSectorBlock" hidden><strong>Sectors</strong><div class="profile-interest-options" id="profileSectorOptions"></div></div>
           <div class="profile-interest-block"><strong>Work types</strong><div class="profile-interest-options" id="profileWorkTypeOptions"></div></div>
         </fieldset>
-        <label class="visibility-row" data-student-profile><input name="portfolioVisibility" type="checkbox" value="members" checked><span>Let signed-in company members discover my portfolio.</span></label>
+        <fieldset class="profile-interests" data-student-profile>
+          <legend>Availability <small>Optional</small></legend>
+          <div class="profile-interest-block"><strong>Engagements</strong><div class="profile-interest-options" id="profileEngagementOptions"></div></div>
+          <div class="profile-interest-block"><strong>Work model</strong><div class="profile-interest-options" id="profileWorkModelOptions"></div></div>
+          <div class="form-grid"><label>Hours per week<input name="hoursPerWeek" type="number" min="1" max="60" inputmode="numeric"></label><label>Earliest start<input name="startTiming" maxlength="80" placeholder="Now, September, after finals"></label></div>
+        </fieldset>
+        <label class="visibility-row" data-student-profile><input name="portfolioVisibility" type="checkbox" value="members"><span>Request company discovery after my profile and evidence are ready. Covenda still asks before introductions.</span></label>
         <label class="visibility-row"><input name="emailNotifications" type="checkbox" checked><span>Email me about applications, decisions, and payouts.</span></label>
         <label class="visibility-row" data-student-profile><input name="spotlightConsent" type="checkbox"><span>Covenda may feature me publicly (photo, skills, projects, reviews) on the homepage and in marketing. Student of the Week. Off by default; withdraw anytime.</span></label>
         <details class="appeal-box" data-student-profile>

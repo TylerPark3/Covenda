@@ -1,6 +1,6 @@
 # Covenda prototype — editor handoff
 
-Updated: July 18, 2026
+Updated: July 27, 2026
 
 ## Purpose
 
@@ -9,6 +9,8 @@ This prototype demonstrates the current Covenda thesis: **the core product is ma
 **July 17 alignment decision:** lead with the employer's last real problem, use the de-identified onboarding bottleneck map as the flagship accounting example, and expose only Accounting Operations plus the bounded Wealth Operations second path. Review-note analysis remains a higher-risk later use case; AI and science paths are not active lanes.
 
 **Development status: authenticated MVP foundation.** The public site collects structured company, student, university, and call-request intake. A protected operator inbox and the first role-aware member portal now exist in code; live member access still requires the portal migration, Google provider, redirect URLs, and custom SMTP to be configured in the same Supabase project used by Vercel. There is no live payment or automated matching system. Until Covenda records customer interviews, convertible tasks, funded pilots, accepted work, and repeat or candidate-advancement behavior, add only what improves real customer learning, safety, accessibility, or completion of the current flows.
+
+**July 27 onboarding milestone:** first-run students and companies now use separate progressive setup paths instead of being dropped into the full profile form. Student setup captures context, up to five broad capability claims, industry and sector interests, practical availability, optional student-authored evidence, and explicit introduction approval. New student profiles stay private; requesting discovery is separate from reaching the operator-controlled `company_visible` state. Company setup captures only the representative, company, short student-facing context, and one immediate goal, then creates an unpublished profile draft. Evidence cards are server-only, labeled unreviewed until confirmed, and editable profile fields remain available after onboarding. The next milestone is the operator review/visibility queue and structured introduction approval surface, not automatic matching or open unpaid trials.
 
 **July 18 launch decision:** prioritize a functional public pilot site and practical visitor outcomes over more decorative UI work. The working public address is `https://proof-path.vercel.app/`. Local source and GitHub `main` now contain the same five-step Overview, interactive 11-stage employer workflow, bounded intake function, and referenced founder imagery represented by the current public presentation. Future edits are unfinished until the local tests and public-flow QA pass and the change is deployed to the existing Vercel project. Use the founder's real Calendly event link for booking instead of building a native scheduling backend. A custom domain is valuable but should not delay customer conversations; connecting or buying one requires the founder's exact domain choice and DNS or purchase approval.
 

@@ -34,11 +34,26 @@ test('student onboarding uses the shared industry hierarchy and remains skippabl
   assert.match(script,/const PORTAL_TAXONOMY = globalThis\.CovendaIndustryTaxonomy/);
   assert.match(script,/kind:'industries'/);
   assert.match(script,/kind:'sectors'/);
-  assert.match(script,/kind:'multiOptional'/);
+  assert.match(script,/kind:'capabilities'/);
+  assert.match(script,/kind:'studentPreferences'/);
+  assert.match(script,/kind:'evidence'/);
+  assert.match(script,/kind:'privacy'/);
   assert.match(script,/Skip for now/);
   assert.match(script,/industrySectors:v\.industrySectors/);
+  assert.match(script,/portfolioVisibility:'private'/);
+  assert.match(script,/introductionApprovalRequired/);
   assert.match(script,/renderProfileInterestEditor/);
   assert.match(styles,/\.profile-interests/);
+});
+
+test('company onboarding is progressive and ends in a concrete starting action',()=>{
+  assert.match(script,/const COMPANY_ONBOARD_SCREENS=/);
+  assert.match(script,/kind:'companyBasics'/);
+  assert.match(script,/kind:'companyStory'/);
+  assert.match(script,/kind:'companyIntent'/);
+  assert.match(script,/What would you like to do today\?/);
+  assert.match(script,/action:'save-company-profile'/);
+  assert.match(script,/published:false/);
 });
 
 test('batch experience: expandable cards + application with assigned video prompt and interest questions',()=>{

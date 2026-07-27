@@ -59,6 +59,28 @@ export const VERTICALS = new Set([
 ]);
 export const INDUSTRY_SECTORS = new Set(INDUSTRY_TAXONOMY.groups.flatMap(group => group.sectors));
 export const WORK_TYPES = new Set(INDUSTRY_TAXONOMY.workTypes.map(item => item.value));
+export const CAPABILITY_AREAS = new Set([
+  'Software & product building',
+  'AI & data',
+  'QA & testing',
+  'Research & strategy',
+  'Product & growth',
+  'Design',
+  'Finance & analytics',
+  'Operations',
+  'Writing & documentation',
+  'Other',
+]);
+export const STUDENT_ENGAGEMENT_TYPES = new Set(['Project', 'Internship', 'Part-time', 'Full-time']);
+export const STUDENT_WORK_MODELS = new Set(['Remote', 'Hybrid', 'In person', 'Flexible']);
+export const COMPANY_INTENTS = new Set([
+  'browse_talent',
+  'curated_shortlist',
+  'post_opportunity',
+  'hire_role',
+  'paid_trial',
+  'talk_to_covenda',
+]);
 const emailBuckets = new Map();
 
 export class PortalOperationalError extends Error {
@@ -94,7 +116,21 @@ function cleanList(value, maxItems = 20) {
 
 // Keep only values that exactly match a fixed taxonomy (verticals / work types).
 function cleanTaxonomy(value, allowed, maxItems = 8) {
-  return cleanList(value, maxItems).filter(item => allowed.has(item));
+  return cleanList(value, 100).filter(item => allowed.has(item)).slice(0, maxItems);
+}
+
+function cleanEngagementPreferences(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const preferences = {
+    engagementTypes: cleanTaxonomy(value.engagementTypes, STUDENT_ENGAGEMENT_TYPES, 4),
+    workModels: cleanTaxonomy(value.workModels, STUDENT_WORK_MODELS, 4),
+  };
+  const hours = Number(value.hoursPerWeek);
+  if (Number.isFinite(hours)) preferences.hoursPerWeek = Math.max(1, Math.min(60, Math.round(hours)));
+  const start = cleanText(value.startTiming, 80);
+  if (start) preferences.startTiming = start;
+  preferences.active = value.active !== false;
+  return preferences;
 }
 
 function canonicalVertical(value) {
@@ -351,8 +387,8 @@ export async function loadMemberDashboard(member, env = process.env) {
     const matchedCount = rankedOpportunities.filter(project => project.matched).length;
     // Students hold credits too once escrow is released, so they get a balance (the
     // Wallet view itself stays company/university only).
-    const [walletBalance, creditLedger, payoutRequests, batches, batchApplications, videos] = await Promise.all([
-      creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member), loadBatches(member), loadBatchApplications(member), loadMemberVideos(member),
+    const [walletBalance, creditLedger, payoutRequests, batches, batchApplications, videos, evidenceItems] = await Promise.all([
+      creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member), loadBatches(member), loadBatchApplications(member), loadMemberVideos(member), loadStudentEvidence(member),
     ]);
     const batchStanding = await loadBatchStanding(member);
     const verification = await loadVerificationStanding(member);
@@ -367,7 +403,7 @@ export async function loadMemberDashboard(member, env = process.env) {
         { skills: profile.skills || [], verticals: profile.verticals || [], evidencedSkills },
       ),
     }));
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, evidenceItems, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -402,7 +438,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     });
   }
   const studentDirectory = profile.role === 'company'
-    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,industry_sectors,work_types,avatar_url,skill_signals').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
+    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,industry_sectors,work_types,avatar_url,skill_signals,capability_areas,engagement_preferences').eq('role', 'student').eq('discovery_opt_in', true).eq('profile_state', 'company_visible').order('updated_at', { ascending: false }).limit(100))
     : [];
   const messages = projectIds.length
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
@@ -427,7 +463,7 @@ export async function saveMemberProfile(member, input) {
   const displayName = cleanText(input.displayName, 120);
   if (!displayName) throw new Error('Enter your name.');
 
-  const existing = await checked(supabase.from('member_profiles').select('role').eq('user_id', user.id).maybeSingle(), null);
+  const existing = await checked(supabase.from('member_profiles').select('role,profile_state').eq('user_id', user.id).maybeSingle(), null);
   if (existing?.role && existing.role !== role) throw new Error('Account roles cannot be changed from this screen. Contact Covenda support.');
   const graduationYear = input.graduationYear ? Number(input.graduationYear) : null;
   if (graduationYear && (!Number.isInteger(graduationYear) || graduationYear < 2020 || graduationYear > 2100)) throw new Error('Enter a valid graduation year.');
@@ -451,6 +487,20 @@ export async function saveMemberProfile(member, input) {
   if (input.verticals !== undefined) row.verticals = cleanTaxonomy(input.verticals, VERTICALS);
   if (input.industrySectors !== undefined) row.industry_sectors = cleanTaxonomy(input.industrySectors, INDUSTRY_SECTORS, 20);
   if (input.workTypes !== undefined) row.work_types = cleanTaxonomy(input.workTypes, WORK_TYPES);
+  if (input.areaOfStudy !== undefined) row.area_of_study = cleanText(input.areaOfStudy, 160) || null;
+  if (input.capabilityAreas !== undefined) row.capability_areas = cleanTaxonomy(input.capabilityAreas, CAPABILITY_AREAS, 5);
+  if (input.engagementPreferences !== undefined) row.engagement_preferences = cleanEngagementPreferences(input.engagementPreferences);
+  if (input.discoveryOptIn !== undefined) row.discovery_opt_in = input.discoveryOptIn === true;
+  if (input.introductionApprovalRequired !== undefined) row.introduction_approval_required = input.introductionApprovalRequired !== false;
+  if (input.companyIntent !== undefined) {
+    const intent = cleanText(input.companyIntent, 40);
+    row.company_intent = COMPANY_INTENTS.has(intent) ? intent : null;
+  }
+  if (role === 'student' && input.capabilityAreas !== undefined) {
+    const reviewedStates = new Set(['company_visible', 'evidence_confirmed', 'work_verified', 'paused']);
+    if (!reviewedStates.has(existing?.profile_state)) row.profile_state = row.capability_areas.length ? 'profile_complete' : 'draft';
+  }
+  if (role === 'company' && input.companyIntent !== undefined) row.profile_state = 'profile_complete';
   if (input.avatarUrl !== undefined) row.avatar_url = cleanText(input.avatarUrl, 500) || null;
   if (input.emailOptOut !== undefined) row.email_opt_out = input.emailOptOut === true;
   // Spotlight is an EXPLICIT opt-in (higher bar than portfolio visibility). Only touch the
@@ -460,6 +510,46 @@ export async function saveMemberProfile(member, input) {
   // keeps working before the startup_fit migration is applied.
   if (input.workStyle !== undefined) row.work_style = cleanWorkStyle(input.workStyle);
   return checked(supabase.from('member_profiles').upsert(row, { onConflict: 'user_id' }).select('*').single(), null);
+}
+
+export async function saveStudentEvidence(member, input) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'student') throw new Error('Only student accounts can add student evidence.');
+  const title = cleanText(input.title, 160);
+  const contribution = cleanText(input.contribution, 1_200);
+  const artifactUrl = cleanText(input.artifactUrl, 500);
+  const observer = cleanText(input.observer, 160);
+  if (!title || !contribution) throw new Error('Add a project title and describe what you personally contributed.');
+  if (!artifactUrl && !observer) throw new Error('Add either a work link or someone who observed the work.');
+  if (artifactUrl) {
+    try {
+      const parsed = new URL(artifactUrl);
+      if (parsed.protocol !== 'https:') throw new Error();
+    } catch {
+      throw new Error('Use a valid HTTPS link for the work sample.');
+    }
+  }
+  const aiUse = ['none', 'assistive', 'substantial'].includes(input.aiUse) ? input.aiUse : 'none';
+  const row = {
+    student_user_id: member.user.id,
+    title,
+    context: cleanText(input.context, 1_200) || null,
+    contribution,
+    outcome: cleanText(input.outcome, 1_200) || null,
+    artifact_url: artifactUrl || null,
+    observer_name: observer || null,
+    ai_use: aiUse,
+    review_state: 'unreviewed',
+  };
+  return checked(member.supabase.from('student_evidence_items').insert(row).select('*').single(), null);
+}
+
+export async function loadStudentEvidence(member) {
+  return optional(
+    member.supabase.from('student_evidence_items').select('*').eq('student_user_id', member.user.id).order('created_at', { ascending: false }).limit(20),
+    [],
+    'student_evidence_items',
+  );
 }
 
 // ---- Credits. 1 credit = $1. Public posts are free; a hyper-narrow (vertical +
@@ -2534,6 +2624,7 @@ export default async function handler(req, res, dependencies = {}) {
       return res.status(200).json({ ok: true, appeal: data });
     }
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
+    if (req.method === 'POST' && input.action === 'save-student-evidence') return res.status(200).json({ ok: true, evidence: await saveStudentEvidence(member, input) });
     if (req.method === 'POST' && input.action === 'verify-school-email') return res.status(200).json({ ok: true, ...(await requestSchoolVerification(member, input, dependencies)) });
     if (req.method === 'POST' && input.action === 'confirm-school-email') return res.status(200).json({ ok: true, ...(await confirmSchoolVerification(member, input)) });
     if (req.method === 'POST' && input.action === 'verify-work-email') return res.status(200).json({ ok: true, ...(await requestCompanyVerification(member, input, dependencies)) });

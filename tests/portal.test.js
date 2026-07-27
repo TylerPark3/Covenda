@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, cleanWorkStyle, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, deleteApplication, deleteProject, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, respondToPacket, reviewDeliverable, saveMemberProfile, SCORER_VERSION, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
+import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, cleanWorkStyle, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, deleteApplication, deleteProject, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, respondToPacket, reviewDeliverable, saveMemberProfile, saveStudentEvidence, SCORER_VERSION, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
 
 test('accepting a packet funds it — escrow held, status opens', async () => {
   const cap = {};
@@ -166,6 +166,35 @@ test('the existing profile modal save omits onboarding columns so it works befor
   assert.equal('industry_sectors' in saved,false);
   assert.equal('work_types' in saved,false);
   assert.equal('avatar_url' in saved,false);
+});
+
+test('V1 student onboarding sanitizes capabilities, practical preferences, and privacy choices', async () => {
+  let saved;
+  const supabase={from(){return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:null,error:null};},upsert(value){saved=value;return this;},async single(){return {data:saved,error:null};}};}};
+  const profile=await saveMemberProfile({user:{id:'student-1'},supabase},{
+    role:'student',displayName:'Maya',portfolioVisibility:'private',
+    areaOfStudy:' Applied mathematics ',
+    capabilityAreas:['AI & data','Operations','Fake capability','Design','Writing & documentation','Finance & analytics','Other'],
+    engagementPreferences:{engagementTypes:['Project','Internship','Unpaid mystery'],workModels:['Remote','Flexible','Moon'],hoursPerWeek:99,startTiming:'After finals',active:true},
+    discoveryOptIn:false,introductionApprovalRequired:true,
+  });
+  assert.equal(profile.area_of_study,'Applied mathematics');
+  assert.deepEqual(profile.capability_areas,['AI & data','Operations','Design','Writing & documentation','Finance & analytics']);
+  assert.deepEqual(profile.engagement_preferences,{engagementTypes:['Project','Internship'],workModels:['Remote','Flexible'],hoursPerWeek:60,startTiming:'After finals',active:true});
+  assert.equal(profile.discovery_opt_in,false);
+  assert.equal(profile.introduction_approval_required,true);
+  assert.equal(profile.profile_state,'profile_complete');
+  assert.equal(profile.portfolio_visibility,'private');
+});
+
+test('student evidence requires attributable work and remains unreviewed', async () => {
+  let inserted;
+  const supabase={from(table){if(table==='member_profiles')return {select(){return this;},eq(){return this;},async maybeSingle(){return {data:{role:'student'},error:null};}};assert.equal(table,'student_evidence_items');return {insert(row){inserted=row;return this;},select(){return this;},async single(){return {data:inserted,error:null};}};}};
+  const item=await saveStudentEvidence({user:{id:'student-1'},supabase},{title:' Churn model ',contribution:'Built the cohort model',artifactUrl:'https://example.com/work',aiUse:'substantial'});
+  assert.equal(item.title,'Churn model');
+  assert.equal(item.review_state,'unreviewed');
+  assert.equal(item.ai_use,'substantial');
+  await assert.rejects(()=>saveStudentEvidence({user:{id:'student-1'},supabase},{title:'Claim',contribution:'Did things'}),/work link or someone who observed/);
 });
 
 test('credit cost charges the platform fee ON TOP so the student keeps the full listed amount', () => {

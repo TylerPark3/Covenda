@@ -2786,6 +2786,37 @@ function renderAtsPanel(root){
     }).catch(()=>{ p.textContent='Could not check your ATS connection.'; });
 }
 
+function renderStudentProfileState(root,profile,evidenceItems=[]){
+  const section=document.createElement('section');section.className='student-profile-state';
+  const head=document.createElement('div');head.className='student-profile-state-head';
+  const copy=document.createElement('div');const kicker=document.createElement('p');kicker.className='eyebrow';kicker.textContent='Profile visibility';
+  const title=document.createElement('h3');
+  const visible=profile?.profile_state==='company_visible'&&profile?.discovery_opt_in===true;
+  title.textContent=visible?'Company-visible':'Private profile';
+  const detail=document.createElement('p');detail.textContent=visible?'Approved company members can discover this profile. Covenda still asks before a direct introduction.':'Only you and Covenda can see this profile. Add evidence and complete verification before requesting company visibility.';
+  copy.append(kicker,title,detail);const badge=document.createElement('span');badge.className='company-form-state';badge.dataset.published=visible?'yes':'no';badge.textContent=visible?'Visible':'Private';head.append(copy,badge);section.append(head);
+  if(evidenceItems.length){
+    const evidence=document.createElement('div');evidence.className='student-evidence-list';
+    evidenceItems.forEach(item=>{const card=document.createElement('article');card.className='student-evidence-card';const top=document.createElement('div');const h=document.createElement('h4');h.textContent=item.title;const state=document.createElement('span');state.textContent=item.review_state==='confirmed'?'Confirmed':'Student-authored, unreviewed';top.append(h,state);const contribution=document.createElement('p');contribution.textContent=item.contribution;if(item.artifact_url){const link=document.createElement('a');link.href=item.artifact_url;link.target='_blank';link.rel='noopener';link.textContent='Open work sample';card.append(top,contribution,link);}else card.append(top,contribution);const ai=document.createElement('small');ai.textContent=`AI use: ${String(item.ai_use||'none').replace('_',' ')}`;card.append(ai);evidence.append(card);});
+    section.append(evidence);
+  }else{
+    const empty=document.createElement('p');empty.className='onboard-choice-note';empty.textContent='No evidence cards yet. One concrete work sample is enough to start.';section.append(empty);
+  }
+  const add=document.createElement('details');add.className='student-evidence-add';
+  const summary=document.createElement('summary');summary.textContent='Add an evidence card';
+  const form=document.createElement('form');form.className='student-evidence-form';
+  const evidenceTitle=onboardField('Project or work title','evidenceCardTitle','',{placeholder:'Customer churn analysis',required:true,maxLength:160});
+  const contribution=onboardField('What you personally contributed','evidenceCardContribution','',{rows:3,placeholder:'Be specific about what you did.',required:true,maxLength:1200});
+  const url=onboardField('Work link','evidenceCardUrl','',{type:'url',placeholder:'https://…',maxLength:500});
+  const observer=onboardField('Or, someone who observed the work','evidenceCardObserver','',{placeholder:'Name or role',maxLength:160});
+  const submit=document.createElement('button');submit.type='submit';submit.className='portal-primary compact';submit.textContent='Save evidence card';
+  const status=document.createElement('p');status.className='dialog-message';status.setAttribute('aria-live','polite');
+  form.append(evidenceTitle.label,contribution.label,url.label,observer.label,submit,status);
+  form.addEventListener('submit',async event=>{event.preventDefault();submit.disabled=true;status.textContent='Saving…';status.classList.remove('is-error');try{await portalRequest({method:'POST',body:JSON.stringify({action:'save-student-evidence',title:evidenceTitle.input.value,contribution:contribution.input.value,artifactUrl:url.input.value,observer:observer.input.value,aiUse:'none'})});await loadDashboard();renderPortfolio();}catch(error){status.textContent=error.message;status.classList.add('is-error');submit.disabled=false;}});
+  add.append(summary,form);section.append(add);
+  root.append(section);
+}
+
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
   $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Students who opted into discovery.';$('#editProfile').hidden=true;
   const batches=document.createElement('section');batches.className='talent-batches';
@@ -2818,7 +2849,7 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   bar.append(search,vsel,skl,msel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));const interests=document.createElement('div');interests.className='skills profile-interest-summary';[...(profile?.verticals||[]),...(profile?.industry_sectors||[])].forEach(value=>interests.append(pill(value,'status-pill')));details.append(h,headline,bio,skills);if(interests.childElementCount)details.append(interests);details.append(avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderVideoLibrary(root);renderPayoutSetup(root);renderProofOfWork(root,profile);}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';[...(profile?.capability_areas||[]),...(profile?.skills||[])].forEach(skill=>skills.append(pill(skill)));const interests=document.createElement('div');interests.className='skills profile-interest-summary';[...(profile?.verticals||[]),...(profile?.industry_sectors||[])].forEach(value=>interests.append(pill(value,'status-pill')));details.append(h,headline,bio,skills);if(interests.childElementCount)details.append(interests);details.append(avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderStudentProfileState(root,profile,state.dashboard.evidenceItems||[]);renderCredibility(root,state.dashboard);renderVideoLibrary(root);renderPayoutSetup(root);renderProofOfWork(root,profile);}
   if(profile?.role==='company'){renderCompanyVerification(root);renderAtsPanel(root);renderCompanyReferrals(root);renderCompanyProfileForm(root);}}
 
 // Live credibility meter — a checklist of REAL, earned signals (identity, completeness, proven
@@ -3021,8 +3052,27 @@ function renderProfileInterestEditor(form,profile){
   };
   paint();
 }
-function updateProfileFields(){const role=$('[name="role"]:checked',$('#profileForm'))?.value||state.dashboard?.profile?.role||'student';$$('[data-profile-field="organization"]').forEach(el=>el.hidden=role==='student');$$('[data-profile-field="school"],[data-profile-field="graduation"],[data-student-profile]').forEach(el=>el.hidden=role!=='student');}
-function openProfile({required=false}={}){const form=$('#profileForm');const p=state.dashboard?.profile;form.reset();if(p){form.elements.role.value=p.role;form.elements.displayName.value=p.display_name||'';form.elements.organizationName.value=p.organization_name||'';form.elements.schoolName.value=p.school_name||'';form.elements.graduationYear.value=p.graduation_year||'';form.elements.headline.value=p.headline||'';form.elements.bio.value=p.bio||'';form.elements.skills.value=(p.skills||[]).join(', ');form.elements.portfolioVisibility.checked=p.portfolio_visibility!=='private';if(form.elements.emailNotifications)form.elements.emailNotifications.checked=p.email_opt_out!==true;if(form.elements.spotlightConsent)form.elements.spotlightConsent.checked=p.spotlight_consent===true;
+function renderProfileSetupEditor(form,profile){
+  const values={
+    capabilityAreas:Array.isArray(profile?.capability_areas)?[...profile.capability_areas]:[],
+    engagementTypes:Array.isArray(profile?.engagement_preferences?.engagementTypes)?[...profile.engagement_preferences.engagementTypes]:[],
+    workModels:Array.isArray(profile?.engagement_preferences?.workModels)?[...profile.engagement_preferences.workModels]:[],
+  };
+  form.profileSetup=values;
+  const paint=(root,options,key,max=Infinity)=>{
+    root.replaceChildren();
+    options.forEach(label=>root.append(profileInterestButton(label,values[key].includes(label),()=>{
+      if(values[key].includes(label))values[key]=values[key].filter(value=>value!==label);
+      else if(values[key].length<max)values[key].push(label);
+      paint(root,options,key,max);
+    })));
+  };
+  paint($('#profileCapabilityOptions',form),ONBOARD_CAPABILITIES,'capabilityAreas',5);
+  paint($('#profileEngagementOptions',form),ONBOARD_ENGAGEMENTS,'engagementTypes');
+  paint($('#profileWorkModelOptions',form),ONBOARD_WORK_MODELS,'workModels');
+}
+function updateProfileFields(){const role=$('[name="role"]:checked',$('#profileForm'))?.value||state.dashboard?.profile?.role||'student';$$('[data-profile-field="organization"]').forEach(el=>el.hidden=role==='student');$$('[data-profile-field="school"],[data-profile-field="study"],[data-profile-field="graduation"],[data-student-profile]').forEach(el=>el.hidden=role!=='student');}
+function openProfile({required=false}={}){const form=$('#profileForm');const p=state.dashboard?.profile;form.reset();if(p){form.elements.role.value=p.role;form.elements.displayName.value=p.display_name||'';form.elements.organizationName.value=p.organization_name||'';form.elements.schoolName.value=p.school_name||'';form.elements.areaOfStudy.value=p.area_of_study||'';form.elements.graduationYear.value=p.graduation_year||'';form.elements.headline.value=p.headline||'';form.elements.bio.value=p.bio||'';form.elements.skills.value=(p.skills||[]).join(', ');form.elements.hoursPerWeek.value=p.engagement_preferences?.hoursPerWeek||'';form.elements.startTiming.value=p.engagement_preferences?.startTiming||'';form.elements.portfolioVisibility.checked=p.discovery_opt_in===true;if(form.elements.emailNotifications)form.elements.emailNotifications.checked=p.email_opt_out!==true;if(form.elements.spotlightConsent)form.elements.spotlightConsent.checked=p.spotlight_consent===true;
   const appealBtn=document.getElementById('appealSubmitBtn');
   if(appealBtn&&!appealBtn.dataset.wired){appealBtn.dataset.wired='1';appealBtn.addEventListener('click',async()=>{
     const subject=form.elements.appealSubject?form.elements.appealSubject.value.trim():'';
@@ -3036,7 +3086,7 @@ function openProfile({required=false}={}){const form=$('#profileForm');const p=s
       if(form.elements.appealEvidence)form.elements.appealEvidence.value='';
     }catch(error){if(status)status.textContent=error.message;}
     appealBtn.disabled=false;
-  });}$$('[name="role"]',form).forEach(input=>input.disabled=true);}else{$$('[name="role"]',form).forEach(input=>input.disabled=false);const inferred=state.dashboard?.user?.metadata?.full_name||state.dashboard?.user?.metadata?.name||'';form.elements.displayName.value=inferred;}renderProfileInterestEditor(form,p);form.dataset.required=required?'true':'false';$$('[data-close-dialog]',form).forEach(button=>button.hidden=required);updateProfileFields();setDialogMessage('#profileMessage','');$('#profileDialog').showModal();}
+  });}$$('[name="role"]',form).forEach(input=>input.disabled=true);}else{$$('[name="role"]',form).forEach(input=>input.disabled=false);const inferred=state.dashboard?.user?.metadata?.full_name||state.dashboard?.user?.metadata?.name||'';form.elements.displayName.value=inferred;}renderProfileInterestEditor(form,p);renderProfileSetupEditor(form,p);form.dataset.required=required?'true':'false';$$('[data-close-dialog]',form).forEach(button=>button.hidden=required);updateProfileFields();setDialogMessage('#profileMessage','');$('#profileDialog').showModal();}
 function openProject(){setDialogMessage('#projectMessage','');$('#projectForm').reset();$('#projectDialog').showModal();}
 // A "Create Project" click on the marketing site stashes the typed brief and routes here. Once
 // the visitor is signed in as a COMPANY, open the project intake pre-filled with that brief.
@@ -3066,31 +3116,50 @@ function openReview(project){const form=$('#reviewForm');form.reset();form.eleme
   ].filter(Boolean).join(' · ');
   setDialogMessage('#reviewMessage','');$('#reviewDialog').showModal();}
 
-// ===== Suno-style student onboarding: one question per screen (first-run students only). =====
-// Company/university keep the existing #profileDialog modal; "Edit profile" is unchanged.
+// ===== Progressive first-run onboarding. =====
+// Students and companies get a short role-specific path. Detailed profile editing remains
+// available afterwards, so setup asks only for the information needed to make the next screen
+// useful. University partners keep the existing profile dialog for now.
 const ONBOARD_VERTICALS=[...PORTAL_TAXONOMY.groups.map(group=>group.label),PORTAL_TAXONOMY.openChoice];
 const ONBOARD_WORK_TYPES=PORTAL_TAXONOMY.workTypes.map(item=>item.value);
-const ONBOARD_SCREENS=[
-  {id:'role',kind:'role',headline:'How are you joining Covenda?',sub:'This sets up the right workspace for you.'},
-  {id:'profile',kind:'profile',headline:"Let's set up your profile.",sub:'You can edit this at any time.'},
+const ONBOARD_CAPABILITIES=['Software & product building','AI & data','QA & testing','Research & strategy','Product & growth','Design','Finance & analytics','Operations','Writing & documentation','Other'];
+const ONBOARD_ENGAGEMENTS=['Project','Internship','Part-time','Full-time'];
+const ONBOARD_WORK_MODELS=['Remote','Hybrid','In person','Flexible'];
+const COMPANY_INTENTS=[
+  ['browse_talent','Browse talent','See evidence-backed student profiles.','p-search'],
+  ['curated_shortlist','Get a curated shortlist','Tell Covenda what you need.','p-spark'],
+  ['post_opportunity','Post an opportunity','Share a real piece of work or role.','p-project'],
+  ['hire_role','Hire for a role','Start an internship or full-time search.','p-user'],
+  ['paid_trial','Invite a paid trial','De-risk a shortlist with bounded paid work.','p-shield'],
+  ['talk_to_covenda','Talk to Covenda','Get help choosing the right path.','p-message'],
+];
+const ROLE_SCREEN={id:'role',kind:'role',headline:'How are you joining Covenda?',sub:'Choose one. We will only show the setup you need.'};
+const STUDENT_ONBOARD_SCREENS=[
+  {id:'profile',kind:'profile',headline:'Start with your name.',sub:'A photo is optional. You can change everything later.'},
+  {id:'studentBasics',kind:'studentBasics',headline:'Where are you right now?',sub:'Three quick details help companies understand your context.'},
+  {id:'capabilities',kind:'capabilities',field:'capabilityAreas',options:ONBOARD_CAPABILITIES,headline:'What can you contribute?',sub:'Choose up to five broad capability areas. These are claims, not verified badges.'},
   {id:'verticals',kind:'industries',field:'verticals',options:ONBOARD_VERTICALS,headline:'What kind of startup interests you?',sub:'Start broad. You can skip this or change it later.'},
   {id:'sectors',kind:'sectors',field:'industrySectors',headline:'Which parts interest you most?',sub:'Pick any that fit. This makes project discovery more useful.'},
-  {id:'workTypes',kind:'multiOptional',field:'workTypes',options:ONBOARD_WORK_TYPES,headline:'What kind of work fits you?',sub:'Choose how you want to contribute, or skip for now.'},
-  {id:'school',kind:'text',field:'schoolName',type:'text',autocomplete:'organization',headline:'Where do you study?',sub:'Your school or university.',placeholder:'Columbia University'},
-  {id:'grad',kind:'text',field:'graduationYear',type:'number',headline:'When do you graduate?',sub:'Your expected graduation year.',placeholder:'2027'},
-  {id:'headline',kind:'text',field:'headline',type:'text',headline:'One line about you.',sub:'How you want to be introduced.',placeholder:'Researcher who turns messy questions into clear decisions'},
-  {id:'skills',kind:'text',field:'skills',type:'text',headline:'What are you good at?',sub:'A few skills, separated by commas.',placeholder:'Research, Excel, writing'},
-  {id:'about',kind:'textarea',field:'bio',headline:'Anything else worth knowing?',sub:'A short intro, optional, but it helps.',placeholder:'What you are learning, building, or looking for next.'},
-  {id:'handoff',kind:'handoff',headline:"Let's find your first project.",sub:"Takes about 3 minutes. We'll guide you through it."},
+  {id:'preferences',kind:'studentPreferences',headline:'What would fit your life?',sub:'Set your availability. This guides discovery; it does not filter you out.'},
+  {id:'evidence',kind:'evidence',headline:'Add one piece of real work.',sub:'Optional now. A link or named observer makes the contribution easier to understand.'},
+  {id:'privacy',kind:'privacy',headline:'You control who sees you.',sub:'Your profile starts private, and Covenda asks before every introduction.'},
+  {id:'handoff',kind:'handoff',headline:'Your private profile is ready.',sub:'Explore opportunities now, then add or confirm evidence before becoming company-visible.'},
 ];
-let onboardState={step:0,values:{role:'student',verticals:[],industrySectors:[],workTypes:[]},saving:false};
+const COMPANY_ONBOARD_SCREENS=[
+  {id:'companyBasics',kind:'companyBasics',headline:'Tell us who you are.',sub:'Just enough to create a private company workspace.'},
+  {id:'companyStory',kind:'companyStory',headline:'What should students understand?',sub:'Two clear sentences are more useful than a long company profile.'},
+  {id:'companyIntent',kind:'companyIntent',headline:'What would you like to do today?',sub:'Choose one starting point. Every other tool stays available.'},
+  {id:'companyHandoff',kind:'companyHandoff',headline:'Your company workspace is ready.',sub:'The profile stays a draft until you publish it. Work-email confirmation is a separate trust signal, not an endorsement.'},
+];
+function onboardScreens(){const role=onboardState.values.role;return [ROLE_SCREEN,...(role==='company'?COMPANY_ONBOARD_SCREENS:STUDENT_ONBOARD_SCREENS)];}
+let onboardState={step:0,values:{role:'student',verticals:[],industrySectors:[],workTypes:[],capabilityAreas:[],engagementTypes:[],workModels:[],introductionApprovalRequired:true},saving:false};
 function onboardKey(){const d=state.dashboard;return 'covendaOnboard:'+(d?.user?.id||d?.user?.email||'anon');}
 function persistOnboard(){try{localStorage.setItem(onboardKey(),JSON.stringify({step:onboardState.step,values:onboardState.values}));}catch{}}
 function clearOnboard(){try{localStorage.removeItem(onboardKey());}catch{}}
 // A brand-new member, or a student who has a row but never finished onboarding.
 function shouldOnboard(profile){
   if(!profile) return true;
-  return profile.role==='student' && profile.onboarding_complete===false;
+  return profile.onboarding_complete===false;
 }
 function startOnboarding(){
   const meta=state.dashboard?.user?.metadata||{};
@@ -3107,19 +3176,39 @@ function startOnboarding(){
     verticals:Array.isArray(profile?.verticals)&&profile.verticals.length?[...profile.verticals]:seededVerticals,
     industrySectors:Array.isArray(profile?.industry_sectors)&&profile.industry_sectors.length?[...profile.industry_sectors]:seededSectors,
     workTypes:Array.isArray(profile?.work_types)&&profile.work_types.length?[...profile.work_types]:seededWorkTypes,
+    capabilityAreas:Array.isArray(profile?.capability_areas)?[...profile.capability_areas]:[],
+    engagementTypes:Array.isArray(profile?.engagement_preferences?.engagementTypes)?[...profile.engagement_preferences.engagementTypes]:[],
+    workModels:Array.isArray(profile?.engagement_preferences?.workModels)?[...profile.engagement_preferences.workModels]:[],
+    hoursPerWeek:profile?.engagement_preferences?.hoursPerWeek||'',
+    startTiming:profile?.engagement_preferences?.startTiming||'',
+    active:profile?.engagement_preferences?.active!==false,
+    introductionApprovalRequired:profile?.introduction_approval_required!==false,
     displayName:profile?.display_name||meta.full_name||meta.name||'',
     schoolName:profile?.school_name||'',
     graduationYear:profile?.graduation_year||'',
+    areaOfStudy:profile?.area_of_study||'',
     headline:profile?.headline||'',
     bio:profile?.bio||'',
     skills:Array.isArray(profile?.skills)?profile.skills.join(', '):'',
     avatarUrl:profile?.avatar_url||'',
+    companyName:state.dashboard?.companyProfile?.company_name||profile?.organization_name||'',
+    companyWebsite:state.dashboard?.companyProfile?.website_url||'',
+    companyOneLiner:state.dashboard?.companyProfile?.one_liner||'',
+    companyStudentGain:state.dashboard?.companyProfile?.student_gain||'',
+    companyIntent:profile?.company_intent||'',
+    evidenceTitle:'',
+    evidenceContext:'',
+    evidenceContribution:'',
+    evidenceOutcome:'',
+    evidenceUrl:'',
+    evidenceObserver:'',
+    evidenceAiUse:'none',
   },saving:false};
-  try{const raw=localStorage.getItem(onboardKey());if(raw){const saved=JSON.parse(raw);onboardState.values={...onboardState.values,...saved.values};onboardState.step=Math.min(Math.max(saved.step||0,0),ONBOARD_SCREENS.length-1);}}catch{}
+  try{const raw=localStorage.getItem(onboardKey());if(raw){const saved=JSON.parse(raw);onboardState.values={...onboardState.values,...saved.values};onboardState.step=Math.min(Math.max(saved.step||0,0),onboardScreens().length-1);}}catch{}
   $('#portalAuth').hidden=true;$('#portalLoading').hidden=true;$('#memberShell').hidden=true;$('#onboardFlow').hidden=false;
   renderOnboard();
 }
-function onboardNext(){if(onboardState.step<ONBOARD_SCREENS.length-1){onboardState.step++;persistOnboard();renderOnboard();}}
+function onboardNext(){if(onboardState.step<onboardScreens().length-1){onboardState.step++;persistOnboard();renderOnboard();}}
 function onboardBack(){if(onboardState.step>0){onboardState.step--;persistOnboard();renderOnboard();}}
 function exitOnboardToModal(role){clearOnboard();$('#onboardFlow').hidden=true;showMember();renderDashboard();openProfile({required:true});const form=$('#profileForm');form.elements.role.value=role;$$('[name="role"]',form).forEach(i=>i.disabled=true);updateProfileFields();}
 function onboardCta(label,onClick,{disabled=false}={}){const b=document.createElement('button');b.type='button';b.className='onboard-cta';const s=document.createElement('span');s.textContent=label;b.append(s,icon('p-arrow'));b.disabled=disabled;b.addEventListener('click',onClick);return b;}
@@ -3166,7 +3255,7 @@ async function uploadAvatar(file){
 function renderOnboardRoleScreen({values,controls,body,msg}){
   const roles=[['student','Student','Find projects and build proof.','p-user'],['company','Company','Post work and discover talent.','p-project'],['university','University','Support students and projects.','p-compass']];
   const grid=document.createElement('div');grid.className='onboard-cards';let first=null;
-  roles.forEach(([value,title,copy,ic],idx)=>{const card=document.createElement('button');card.type='button';card.className='onboard-card'+(values.role===value?' is-selected':'');card.append(icon(ic));const b=document.createElement('strong');b.textContent=title;const p=document.createElement('span');p.textContent=copy;card.append(b,p);card.addEventListener('click',()=>{onboardState.values.role=value;persistOnboard();if(value==='student')onboardNext();else exitOnboardToModal(value);});grid.append(card);if(idx===0)first=card;});
+  roles.forEach(([value,title,copy,ic],idx)=>{const card=document.createElement('button');card.type='button';card.className='onboard-card'+(values.role===value?' is-selected':'');card.append(icon(ic));const b=document.createElement('strong');b.textContent=title;const p=document.createElement('span');p.textContent=copy;card.append(b,p);card.addEventListener('click',()=>{onboardState.values.role=value;onboardState.step=0;persistOnboard();if(value==='university')exitOnboardToModal(value);else onboardNext();});grid.append(card);if(idx===0)first=card;});
   controls.append(grid);body.append(msg);return first;
 }
 function renderOnboardProfileScreen({values,controls,body,msg}){
@@ -3187,7 +3276,7 @@ function renderOnboardProfileScreen({values,controls,body,msg}){
   input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();if(input.value.trim())onboardNext();}});
   controls.append(avatarWrap,upload,caption,label);body.append(msg,cta);return input;
 }
-function renderOnboardChoiceScreen({screen,values,controls,body,msg},options,{optional=false,exclusiveOpen=false}={}){
+function renderOnboardChoiceScreen({screen,values,controls,body,msg},options,{optional=false,exclusiveOpen=false,max=Infinity}={}){
   const allowed=new Set(options);
   const selected=new Set((values[screen.field]||[]).filter(value=>allowed.has(value)));
   onboardState.values[screen.field]=[...selected];
@@ -3196,10 +3285,12 @@ function renderOnboardChoiceScreen({screen,values,controls,body,msg},options,{op
   options.forEach((opt,idx)=>{const card=document.createElement('button');card.type='button';card.className='onboard-card onboard-chip'+(selected.has(opt)?' is-selected':'');card.setAttribute('aria-pressed',selected.has(opt)?'true':'false');const ic=ONBOARD_ICONS[opt];if(ic)card.append(icon(ic));const b=document.createElement('strong');b.textContent=opt;card.append(b);card.addEventListener('click',()=>{
     if(selected.has(opt))selected.delete(opt);
     else{
+      if(selected.size>=max){msg.textContent=`Choose up to ${max}.`;return;}
       if(exclusiveOpen&&opt===PORTAL_TAXONOMY.openChoice)selected.clear();
       if(exclusiveOpen&&opt!==PORTAL_TAXONOMY.openChoice)selected.delete(PORTAL_TAXONOMY.openChoice);
       selected.add(opt);
     }
+    msg.textContent='';
     $$('.onboard-chip',grid).forEach(choice=>{const on=selected.has(choice.dataset.option);choice.classList.toggle('is-selected',on);choice.setAttribute('aria-pressed',String(on));});
     onboardState.values[screen.field]=[...selected];persistOnboard();cta.disabled=!optional&&!selected.size;cta.querySelector('span').textContent=selected.size?'Continue':'Skip for now';
   });card.dataset.option=opt;grid.append(card);if(idx===0)first=card;});
@@ -3208,6 +3299,7 @@ function renderOnboardChoiceScreen({screen,values,controls,body,msg},options,{op
 function renderOnboardMultiScreen(context){return renderOnboardChoiceScreen(context,context.screen.options,{optional:false});}
 function renderOnboardOptionalScreen(context){return renderOnboardChoiceScreen(context,context.screen.options,{optional:true});}
 function renderOnboardIndustriesScreen(context){return renderOnboardChoiceScreen(context,context.screen.options,{optional:true,exclusiveOpen:true});}
+function renderOnboardCapabilitiesScreen(context){return renderOnboardChoiceScreen(context,context.screen.options,{optional:false,max:5});}
 function renderOnboardSectorsScreen(context){
   const selectedGroups=new Set(context.values.verticals||[]);
   const options=PORTAL_TAXONOMY.groups.filter(group=>selectedGroups.has(group.label)).flatMap(group=>group.sectors);
@@ -3227,19 +3319,130 @@ function renderOnboardTextScreen({screen,values,controls,body,msg}){
   if(screen.kind!=='textarea')input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();onboardNext();}});
   controls.append(label);body.append(msg,cta);return input;
 }
+
+function onboardField(labelText,name,value,{type='text',placeholder='',required=false,rows=0,autocomplete='',maxLength=300}={}){
+  const label=document.createElement('label');label.className='onboard-field';
+  const caption=document.createElement('span');caption.textContent=labelText;
+  const input=rows?document.createElement('textarea'):document.createElement('input');
+  if(rows)input.rows=rows;else input.type=type;
+  input.name=name;input.value=value||'';input.placeholder=placeholder;input.required=required;if(rows||type!=='number')input.maxLength=maxLength;
+  if(autocomplete)input.autocomplete=autocomplete;
+  input.addEventListener('input',()=>{onboardState.values[name]=input.value;persistOnboard();});
+  label.append(caption,input);return {label,input};
+}
+
+function renderOnboardStudentBasicsScreen({values,controls,body,msg}){
+  const grid=document.createElement('div');grid.className='onboard-form-grid';
+  const school=onboardField('School or university','schoolName',values.schoolName,{placeholder:'Columbia University',autocomplete:'organization'});
+  const study=onboardField('Area of study','areaOfStudy',values.areaOfStudy,{placeholder:'Computer science, economics, undecided'});
+  const grad=onboardField('Expected graduation year','graduationYear',values.graduationYear,{type:'number',placeholder:'2027'});
+  grad.input.min='2020';grad.input.max='2100';grad.input.inputMode='numeric';
+  grid.append(school.label,study.label,grad.label);controls.append(grid);
+  body.append(msg,onboardCta('Continue',onboardNext));return school.input;
+}
+
+function onboardOptionGroup(title,values,options,onChange,{single=false}={}){
+  const field=document.createElement('fieldset');field.className='onboard-option-group';
+  const legend=document.createElement('legend');legend.textContent=title;field.append(legend);
+  const row=document.createElement('div');row.className='onboard-mini-options';
+  const selected=new Set(values||[]);
+  options.forEach(option=>{const button=document.createElement('button');button.type='button';button.className='onboard-mini-option'+(selected.has(option)?' is-selected':'');button.setAttribute('aria-pressed',selected.has(option)?'true':'false');button.textContent=option;button.addEventListener('click',()=>{
+    if(single)selected.clear();
+    if(!single&&selected.has(option))selected.delete(option);else selected.add(option);
+    [...row.children].forEach(child=>{const active=selected.has(child.dataset.value);child.classList.toggle('is-selected',active);child.setAttribute('aria-pressed',String(active));});
+    onChange([...selected]);
+  });button.dataset.value=option;row.append(button);});
+  field.append(row);return field;
+}
+
+function renderOnboardStudentPreferencesScreen({values,controls,body,msg}){
+  const engagement=onboardOptionGroup('Open to',values.engagementTypes,ONBOARD_ENGAGEMENTS,next=>{onboardState.values.engagementTypes=next;persistOnboard();});
+  const model=onboardOptionGroup('Work model',values.workModels,ONBOARD_WORK_MODELS,next=>{onboardState.values.workModels=next;persistOnboard();});
+  const grid=document.createElement('div');grid.className='onboard-form-grid';
+  const hours=onboardField('Hours available each week','hoursPerWeek',values.hoursPerWeek,{type:'number',placeholder:'10'});
+  hours.input.min='1';hours.input.max='60';hours.input.inputMode='numeric';
+  const start=onboardField('Earliest start','startTiming',values.startTiming,{placeholder:'Now, September, after finals'});
+  grid.append(hours.label,start.label);
+  const active=document.createElement('label');active.className='onboard-check';
+  const check=document.createElement('input');check.type='checkbox';check.checked=values.active!==false;
+  const copy=document.createElement('span');copy.textContent='I am open to hearing about relevant opportunities.';
+  check.addEventListener('change',()=>{onboardState.values.active=check.checked;persistOnboard();});
+  active.append(check,copy);controls.append(engagement,model,grid,active);
+  body.append(msg,onboardCta('Continue',onboardNext));return engagement.querySelector('button');
+}
+
+function renderOnboardEvidenceScreen({values,controls,body,msg}){
+  const note=document.createElement('p');note.className='onboard-choice-note';note.textContent='This is a student-authored evidence card. Covenda will label it unreviewed until the artifact or observer is confirmed.';
+  const grid=document.createElement('div');grid.className='onboard-form-grid';
+  const title=onboardField('Project or work title','evidenceTitle',values.evidenceTitle,{placeholder:'Customer churn analysis'});
+  const context=onboardField('Context','evidenceContext',values.evidenceContext,{placeholder:'Course, club, internship, or personal project'});
+  const contribution=onboardField('What I personally contributed','evidenceContribution',values.evidenceContribution,{rows:3,placeholder:'Be specific about what you did.',maxLength:1200});
+  const outcome=onboardField('Outcome','evidenceOutcome',values.evidenceOutcome,{rows:2,placeholder:'What changed, shipped, or was learned?',maxLength:1200});
+  const url=onboardField('Work link','evidenceUrl',values.evidenceUrl,{type:'url',placeholder:'https://…',maxLength:500});
+  const observer=onboardField('Someone who observed the work','evidenceObserver',values.evidenceObserver,{placeholder:'Name or role',maxLength:160});
+  grid.append(title.label,context.label,contribution.label,outcome.label,url.label,observer.label);
+  const ai=onboardOptionGroup('How AI was used',[values.evidenceAiUse||'none'],['none','assistive','substantial'],next=>{onboardState.values.evidenceAiUse=next[0]||'none';persistOnboard();},{single:true});
+  const actions=document.createElement('div');actions.className='onboard-split-actions';
+  const skip=document.createElement('button');skip.type='button';skip.className='onboard-text-button';skip.textContent='Skip for now';skip.addEventListener('click',onboardNext);
+  const add=onboardCta('Save and continue',()=>{
+    if(!onboardState.values.evidenceTitle?.trim()||!onboardState.values.evidenceContribution?.trim()||(!onboardState.values.evidenceUrl?.trim()&&!onboardState.values.evidenceObserver?.trim())){msg.textContent='Add a title, your contribution, and either a work link or observer.';return;}
+    msg.textContent='';onboardNext();
+  });
+  actions.append(skip,add);controls.append(note,grid,ai);body.append(msg,actions);return title.input;
+}
+
+function renderOnboardPrivacyScreen({values,controls,body,msg}){
+  const cards=document.createElement('div');cards.className='onboard-privacy-cards';
+  [['Private by default','Companies cannot browse this profile yet. You decide when it is ready.','p-shield'],['Introduction approval','Covenda asks you before sharing your profile with a specific company.','p-message']].forEach(([title,copy,ic])=>{const card=document.createElement('div');card.className='onboard-privacy-card';card.append(icon(ic));const text=document.createElement('div');const strong=document.createElement('strong');strong.textContent=title;const p=document.createElement('p');p.textContent=copy;text.append(strong,p);card.append(text);cards.append(card);});
+  const approval=document.createElement('label');approval.className='onboard-check';
+  const check=document.createElement('input');check.type='checkbox';check.checked=values.introductionApprovalRequired!==false;
+  const copy=document.createElement('span');copy.textContent='Ask me before every company introduction.';
+  check.addEventListener('change',()=>{onboardState.values.introductionApprovalRequired=check.checked;persistOnboard();});
+  approval.append(check,copy);controls.append(cards,approval);body.append(msg,onboardCta('Continue',onboardNext));return check;
+}
+
+function renderOnboardCompanyBasicsScreen({values,controls,body,msg}){
+  const grid=document.createElement('div');grid.className='onboard-form-grid';
+  const name=onboardField('Your name','displayName',values.displayName,{placeholder:'Your name',autocomplete:'name',required:true});
+  const role=onboardField('Your role','headline',values.headline,{placeholder:'Founder, talent lead, engineering lead'});
+  const company=onboardField('Company name','companyName',values.companyName,{placeholder:'Acme',autocomplete:'organization',required:true});
+  const website=onboardField('Company website','companyWebsite',values.companyWebsite,{type:'url',placeholder:'https://…'});
+  grid.append(name.label,role.label,company.label,website.label);controls.append(grid);
+  const cta=onboardCta('Continue',()=>{if(!onboardState.values.displayName?.trim()||!onboardState.values.companyName?.trim()){msg.textContent='Add your name and company name.';return;}onboardNext();});
+  body.append(msg,cta);return name.input;
+}
+
+function renderOnboardCompanyStoryScreen({values,controls,body,msg}){
+  const grid=document.createElement('div');grid.className='onboard-form-grid';
+  const one=onboardField('What does the company build?','companyOneLiner',values.companyOneLiner,{rows:3,placeholder:'One plain-language sentence.',maxLength:300});
+  const gain=onboardField('Why bring in a student or early-career hire?','companyStudentGain',values.companyStudentGain,{rows:3,placeholder:'Describe the real work and what they can learn.',maxLength:1200});
+  grid.append(one.label,gain.label);controls.append(grid);body.append(msg,onboardCta('Continue',onboardNext));return one.input;
+}
+
+function renderOnboardCompanyIntentScreen({values,controls,body,msg}){
+  const grid=document.createElement('div');grid.className='onboard-cards onboard-intent-grid';let first=null;
+  COMPANY_INTENTS.forEach(([value,title,copy,ic],index)=>{const card=document.createElement('button');card.type='button';card.className='onboard-card'+(values.companyIntent===value?' is-selected':'');card.setAttribute('aria-pressed',values.companyIntent===value?'true':'false');card.append(icon(ic));const strong=document.createElement('strong');strong.textContent=title;const p=document.createElement('span');p.textContent=copy;card.append(strong,p);card.addEventListener('click',()=>{onboardState.values.companyIntent=value;persistOnboard();$$('.onboard-card',grid).forEach(item=>{const on=item===card;item.classList.toggle('is-selected',on);item.setAttribute('aria-pressed',String(on));});cta.disabled=false;});grid.append(card);if(index===0)first=card;});
+  const cta=onboardCta('Continue',onboardNext,{disabled:!values.companyIntent});controls.append(grid);body.append(msg,cta);return first;
+}
+
 function renderOnboardHandoffScreen({values,controls,body,msg}){
   const pill=document.createElement('div');pill.className='onboard-social';const blobs=document.createElement('div');blobs.className='onboard-social-blobs';['a','b','c'].forEach(seed=>{const wrap=document.createElement('span');wrap.append(procAvatar((values.displayName||'covenda')+seed));blobs.append(wrap);});const t=document.createElement('span');t.textContent='Join the first cohort of Covenda students';pill.append(blobs,t);
   controls.append(pill);const cta=onboardCta("I'm ready",()=>finishOnboarding());body.append(msg,cta);return cta;
 }
-const ONBOARD_RENDERERS={role:renderOnboardRoleScreen,profile:renderOnboardProfileScreen,multi:renderOnboardMultiScreen,multiOptional:renderOnboardOptionalScreen,industries:renderOnboardIndustriesScreen,sectors:renderOnboardSectorsScreen,text:renderOnboardTextScreen,textarea:renderOnboardTextScreen,handoff:renderOnboardHandoffScreen};
+function renderOnboardCompanyHandoffScreen({controls,body,msg}){
+  const list=document.createElement('ul');list.className='onboard-ready-list';
+  ['Private company profile created','Work-email confirmation available in your profile','Your selected starting action opens next'].forEach(text=>{const li=document.createElement('li');li.append(icon('p-check'),document.createTextNode(text));list.append(li);});
+  controls.append(list);const cta=onboardCta('Open my workspace',finishOnboarding);body.append(msg,cta);return cta;
+}
+const ONBOARD_RENDERERS={role:renderOnboardRoleScreen,profile:renderOnboardProfileScreen,multi:renderOnboardMultiScreen,multiOptional:renderOnboardOptionalScreen,industries:renderOnboardIndustriesScreen,sectors:renderOnboardSectorsScreen,capabilities:renderOnboardCapabilitiesScreen,studentBasics:renderOnboardStudentBasicsScreen,studentPreferences:renderOnboardStudentPreferencesScreen,evidence:renderOnboardEvidenceScreen,privacy:renderOnboardPrivacyScreen,companyBasics:renderOnboardCompanyBasicsScreen,companyStory:renderOnboardCompanyStoryScreen,companyIntent:renderOnboardCompanyIntentScreen,companyHandoff:renderOnboardCompanyHandoffScreen,text:renderOnboardTextScreen,textarea:renderOnboardTextScreen,handoff:renderOnboardHandoffScreen};
 
 function renderOnboard(){
-  const screen=ONBOARD_SCREENS[onboardState.step];const values=onboardState.values;
+  const screens=onboardScreens();const screen=screens[onboardState.step];const values=onboardState.values;
   const inner=$('#onboardInner');inner.replaceChildren();
   const top=document.createElement('div');top.className='onboard-top';
   if(onboardState.step>0){const back=document.createElement('button');back.type='button';back.className='onboard-back';back.textContent='← Back';back.addEventListener('click',onboardBack);top.append(back);}else{top.append(document.createElement('span'));}
   const prog=document.createElement('div');prog.className='onboard-progress';prog.setAttribute('aria-hidden','true');
-  ONBOARD_SCREENS.forEach((_,i)=>{const dot=document.createElement('span');dot.className='onboard-dot'+(i<onboardState.step?' is-done':i===onboardState.step?' is-current':'');prog.append(dot);});
+  screens.forEach((_,i)=>{const dot=document.createElement('span');dot.className='onboard-dot'+(i<onboardState.step?' is-done':i===onboardState.step?' is-current':'');prog.append(dot);});
   top.append(prog);inner.append(top);
   const body=document.createElement('div');body.className='onboard-screen';body.dataset.kind=screen.kind;
   const h=document.createElement('h1');h.className='onboard-headline';h.textContent=screen.headline;
@@ -3255,14 +3458,25 @@ function renderOnboard(){
 }
 async function finishOnboarding(){
   if(onboardState.saving)return;onboardState.saving=true;const v=onboardState.values;const msg=$('#onboardMessage');
-  if(msg){msg.textContent='Saving your profile…';msg.classList.remove('is-error');}
+  if(msg){msg.textContent='Saving your workspace…';msg.classList.remove('is-error');}
   try{
-    const payload={action:'save-profile',role:'student',displayName:v.displayName||'',schoolName:v.schoolName||'',graduationYear:v.graduationYear||'',headline:v.headline||'',bio:v.bio||'',skills:v.skills||'',portfolioVisibility:'members',verticals:v.verticals||[],industrySectors:v.industrySectors||[],workTypes:v.workTypes||[]};
-    // Only claim the avatar_url column when there is actually an image — otherwise every
-    // student's save would depend on that column existing.
-    if(v.avatarUrl)payload.avatarUrl=v.avatarUrl;
-    await portalRequest({method:'PATCH',body:JSON.stringify(payload)});
-    clearOnboard();$('#onboardFlow').hidden=true;await loadDashboard();setView('discover');
+    if(v.role==='company'){
+      await portalRequest({method:'PATCH',body:JSON.stringify({action:'save-profile',role:'company',displayName:v.displayName||'',organizationName:v.companyName||'',headline:v.headline||'',portfolioVisibility:'private',companyIntent:v.companyIntent||''})});
+      await portalRequest({method:'POST',body:JSON.stringify({action:'save-company-profile',companyName:v.companyName||'',websiteUrl:v.companyWebsite||'',oneLiner:v.companyOneLiner||'',studentGain:v.companyStudentGain||'',published:false})});
+    }else{
+      const payload={action:'save-profile',role:'student',displayName:v.displayName||'',schoolName:v.schoolName||'',graduationYear:v.graduationYear||'',areaOfStudy:v.areaOfStudy||'',headline:v.headline||'',bio:v.bio||'',skills:v.skills||'',portfolioVisibility:'private',discoveryOptIn:false,introductionApprovalRequired:v.introductionApprovalRequired!==false,capabilityAreas:v.capabilityAreas||[],engagementPreferences:{engagementTypes:v.engagementTypes||[],workModels:v.workModels||[],hoursPerWeek:v.hoursPerWeek||undefined,startTiming:v.startTiming||'',active:v.active!==false},verticals:v.verticals||[],industrySectors:v.industrySectors||[],workTypes:v.workTypes||[]};
+      if(v.avatarUrl)payload.avatarUrl=v.avatarUrl;
+      await portalRequest({method:'PATCH',body:JSON.stringify(payload)});
+      if(v.evidenceTitle?.trim()){
+        await portalRequest({method:'POST',body:JSON.stringify({action:'save-student-evidence',title:v.evidenceTitle,context:v.evidenceContext,contribution:v.evidenceContribution,outcome:v.evidenceOutcome,artifactUrl:v.evidenceUrl,observer:v.evidenceObserver,aiUse:v.evidenceAiUse})});
+      }
+    }
+    clearOnboard();$('#onboardFlow').hidden=true;await loadDashboard();
+    if(v.role==='company'){
+      const destination=v.companyIntent==='post_opportunity'?'projects':v.companyIntent==='browse_talent'?'discover':'overview';
+      setView(destination);
+      if(v.companyIntent==='post_opportunity')openIntake();
+    }else setView('discover');
   }catch(error){onboardState.saving=false;if(msg){msg.textContent=error.message;msg.classList.add('is-error');}}
 }
 
@@ -3345,7 +3559,7 @@ $('#intakePost')?.addEventListener('click',async()=>{const form=$('#intakeForm')
 $('#googleLogin').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;setLoginMessage('Opening Google sign-in…');try{const response=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'google-login'})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Google sign-in could not start.');location.assign(result.url);}catch(error){setLoginMessage(error.message,true);button.disabled=false;}});
 $('#memberEmailForm').addEventListener('submit',async event=>{event.preventDefault();const button=$('button',event.currentTarget);button.disabled=true;setLoginMessage('Requesting a secure sign-in link…');try{const response=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request-link',email:event.currentTarget.elements.email.value})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Could not request a sign-in link.');setLoginMessage(result.message);}catch(error){setLoginMessage(error.message,true);}finally{button.disabled=false;}});
 
-$('#profileForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#profileMessage','Saving your workspace…');const interests=form.profileInterests||{};const payload={action:'save-profile',role:form.elements.role.value,displayName:form.elements.displayName.value,organizationName:form.elements.organizationName.value,schoolName:form.elements.schoolName.value,graduationYear:form.elements.graduationYear.value,headline:form.elements.headline.value,bio:form.elements.bio.value,skills:form.elements.skills.value,portfolioVisibility:form.elements.portfolioVisibility.checked?'members':'private',emailOptOut:form.elements.emailNotifications?!form.elements.emailNotifications.checked:undefined,spotlightConsent:form.elements.spotlightConsent?form.elements.spotlightConsent.checked:undefined};if(payload.role==='student'){payload.verticals=interests.verticals||[];payload.industrySectors=interests.industrySectors||[];payload.workTypes=interests.workTypes||[];}try{await portalRequest({method:'PATCH',body:JSON.stringify(payload)});$('#profileDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#profileMessage',error.message,true);}finally{button.disabled=false;}});
+$('#profileForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#profileMessage','Saving your workspace…');const interests=form.profileInterests||{};const setup=form.profileSetup||{};const role=form.elements.role.value;const payload={action:'save-profile',role,displayName:form.elements.displayName.value,organizationName:form.elements.organizationName.value,schoolName:form.elements.schoolName.value,graduationYear:form.elements.graduationYear.value,headline:form.elements.headline.value,bio:form.elements.bio.value,skills:form.elements.skills.value,portfolioVisibility:role==='student'?'private':'members',emailOptOut:form.elements.emailNotifications?!form.elements.emailNotifications.checked:undefined,spotlightConsent:form.elements.spotlightConsent?form.elements.spotlightConsent.checked:undefined};if(payload.role==='student'){payload.areaOfStudy=form.elements.areaOfStudy.value;payload.capabilityAreas=setup.capabilityAreas||[];payload.engagementPreferences={engagementTypes:setup.engagementTypes||[],workModels:setup.workModels||[],hoursPerWeek:form.elements.hoursPerWeek.value||undefined,startTiming:form.elements.startTiming.value||'',active:true};payload.verticals=interests.verticals||[];payload.industrySectors=interests.industrySectors||[];payload.workTypes=interests.workTypes||[];payload.discoveryOptIn=form.elements.portfolioVisibility.checked;}try{await portalRequest({method:'PATCH',body:JSON.stringify(payload)});$('#profileDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#profileMessage',error.message,true);}finally{button.disabled=false;}});
 
 $('#projectForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#projectMessage','Creating project…');const payload={action:'create-project',title:form.elements.title.value,summary:form.elements.summary.value,deliverable:form.elements.deliverable.value,desiredSkills:form.elements.desiredSkills.value,targetDate:form.elements.targetDate.value,visibility:form.elements.visibility.value,accessStage:form.elements.accessStage?Number(form.elements.accessStage.value):1,engagementRung:form.elements.engagementRung?form.elements.engagementRung.value:'',opportunityType:form.elements.opportunityType?form.elements.opportunityType.value:undefined,experienceRequirement:form.elements.experienceRequirement?form.elements.experienceRequirement.value:undefined,referralRequirement:form.elements.referralRequirement?form.elements.referralRequirement.value:undefined,founderTimeBudgetMinWeek:form.elements.founderTimeBudgetMinWeek&&form.elements.founderTimeBudgetMinWeek.value!==''?Number(form.elements.founderTimeBudgetMinWeek.value):undefined,talentSources:[...form.querySelectorAll('input[name="talentSource"]:checked')].map(el=>el.value)};try{await portalRequest({method:'POST',body:JSON.stringify(payload)});$('#projectDialog').close();await loadDashboard();setView('projects');}catch(error){setDialogMessage('#projectMessage',error.message,true);}finally{button.disabled=false;}});
 
