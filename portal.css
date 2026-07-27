@@ -1159,3 +1159,4 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
   .journey-head { flex-direction:column; }
   .journey-go { align-self:flex-start; }
 }
+.video-note.is-warn { color:var(--gold-deep); }

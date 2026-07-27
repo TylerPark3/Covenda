@@ -2236,13 +2236,17 @@ const videoStudio=(function(){
             const body=await res.json();
             if(!res.ok||!body.url)throw new Error(body.error||'Upload failed.');
             // Register it on the account so the next application can just pick it.
-            let saved=null;
+            let saved=null,libraryError='';
             try{
               const out=await portalRequest({method:'POST',body:JSON.stringify({action:'save-video',url:body.url,prompt,label,durationSeconds:kept})});
               saved=out.video||null;
               if(saved)state.dashboard.videos=[saved,...(state.dashboard.videos||[])];
-            }catch{ /* the take still works for this application even if the library write fails */ }
-            done({url:body.url,durationSeconds:kept,video:saved});
+            }catch(err){
+              // The take still works for this application, but saying nothing would let the
+              // student believe it is in their library when it is not.
+              libraryError=err.message||'It could not be saved to your library.';
+            }
+            done({url:body.url,durationSeconds:kept,video:saved,libraryError});
           }catch(err){
             use.disabled=false; use.textContent='Use this take';
             hint.textContent=err.message||'That upload did not go through. Try again, or paste a link.';
@@ -2295,7 +2299,14 @@ const videoStudio=(function(){
         rec.disabled=true;
         const out=await record({prompt,maxSeconds,label});
         rec.disabled=false;
-        if(out&&out.url){ input.value=out.url; mode='pick'; paint(); onChange&&onChange(input.value); }
+        if(out&&out.url){
+          input.value=out.url; mode='pick'; paint(); onChange&&onChange(input.value);
+          if(out.libraryError){
+            const warn=document.createElement('p'); warn.className='video-note is-warn';
+            warn.textContent='Attached to this application, but not saved to your library — '+out.libraryError;
+            host.append(warn);
+          }
+        }
       });
       const alt=document.createElement('button'); alt.type='button'; alt.className='video-link-toggle';
       alt.textContent=mode==='link'?'Record one instead':'I already have a link';
