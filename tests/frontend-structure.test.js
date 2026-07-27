@@ -416,9 +416,11 @@ test('school clubs can register and see the earned verification ladder', () => {
   assert.match(styles, /\.club-ladder/);
 });
 
-test('batches are described as elite batches', () => {
-  assert.match(html, /Join an elite batch in your field/);
-  assert.match(html, /an elite batch in one field/);
+// "Join an elite batch in your field" pinned the old heading. The section now leads with the
+// distinction instead, and "elite" survives where it belongs — on the batches that are.
+test('elite is a tier on the batch, not the section headline', () => {
+  assert.match(script, /brief\.tier === 'elite' \? 'Elite' : 'Open'/);
+  assert.match(html, /Trials are the work/);
 });
 
 // Credibility is club-led now, and the geometric motif carries past the hero.
@@ -767,4 +769,17 @@ test('the credibility heading lost the stranded numeral', () => {
   assert.doesNotMatch(html, /cred-big-num/);
   assert.doesNotMatch(styles, /\.cred-big-num/);
   assert.match(styles, /\.credibility-ladder \.section-heading \{ display: block/);
+});
+
+// Trials and batches both existed with no explanation of which to do or why, so a student
+// had to guess. The relationship — trials earn the evidence, batches are what companies pay
+// to search — is now stated once, plainly, with the direction between them shown.
+test('the trial/batch distinction is stated, not left to inference', () => {
+  assert.match(html, /Trials are the work/);
+  assert.match(html, /Batches are the shortlist/);
+  assert.match(html, /Open to anyone — no batch needed/);
+  assert.match(html, /accepted trial work is the strongest way to clear it/);
+  // Which to start with, said outright.
+  assert.match(html, /Start with trials if you have nothing yet/);
+  assert.match(styles, /\.tb-split/);
 });
