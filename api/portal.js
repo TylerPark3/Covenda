@@ -1462,6 +1462,32 @@ export async function approveBrief(member, input) {
   }).eq('id', project.id).select('*').single(), null);
 }
 
+// The ideal intern, in the founder's words. Traits and skills are kept apart deliberately:
+// a skill can be evidenced from an artifact, a trait cannot, and putting "self-starter" in
+// the same list as a verified capability would imply they are comparable.
+//
+// The memo is the part the brief engine reads. A skill list says what to filter on; the memo
+// says what the work is FOR, which is what decides whether a trial discriminates usefully.
+export async function saveIdealIntern(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(member.supabase.from('member_projects').select('id,owner_user_id').eq('id', projectId).maybeSingle(), null);
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the company on this project can describe the role.');
+
+  const list = value => (Array.isArray(value) ? value : String(value || '').split(','))
+    .map(v => cleanText(v, 80)).filter(Boolean).slice(0, 12);
+
+  const memo = cleanText(input.memo, 2000);
+  if (memo.length < 20) throw new Error('Say why you need this person — a skills list on its own does not scope a trial.');
+
+  return checked(member.supabase.from('member_projects').update({
+    ideal_traits: list(input.traits),
+    ideal_skills: list(input.skills),
+    ideal_memo: memo,
+    updated_at: new Date().toISOString(),
+  }).eq('id', project.id).select('*').single(), null);
+}
+
 // ── Step 5: introductions ─────────────────────────────────────────────────────────────
 // A company can reach a student at any point. The terms go with the ask, always — an
 // introduction that leaves out the money or the hours is how students get strung along.
@@ -2318,6 +2344,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'company-profile') return res.status(200).json({ ok: true, ...(await loadPublicCompanyProfile(member, input.ownerUserId)) });
     if (req.method === 'POST' && input.action === 'revise-brief') return res.status(200).json({ ok: true, project: await reviseBrief(member, input) });
     if (req.method === 'POST' && input.action === 'approve-brief') return res.status(200).json({ ok: true, project: await approveBrief(member, input) });
+    if (req.method === 'POST' && input.action === 'ideal-intern') return res.status(200).json({ ok: true, project: await saveIdealIntern(member, input) });
     if (req.method === 'POST' && input.action === 'request-introduction') return res.status(201).json({ ok: true, introduction: await requestIntroduction(member, input) });
     if (req.method === 'POST' && input.action === 'respond-introduction') return res.status(200).json({ ok: true, introduction: await respondToIntroduction(member, input) });
     if (req.method === 'POST' && input.action === 'outcome-survey') return res.status(200).json({ ok: true, project: await recordOutcomeSurvey(member, input) });

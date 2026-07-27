@@ -228,7 +228,14 @@ function renderFocus(){
   $('#focusTitle').textContent=role==='student'?'Your project tracker':'Project operations';
   if(role==='student')root.append(rungBadge());
   if(!project){const empty=document.createElement('div');empty.className='empty-line';const h=document.createElement('h3');h.textContent=role==='student'?'No assigned project yet.':'No project posted yet.';const p=document.createElement('p');p.textContent=role==='student'?'Browse open work, or finish your profile while we route a fit.':'Create a private draft first, then make it visible when the scope is ready.';const button=document.createElement('button');button.type='button';button.textContent=role==='student'?'Browse open projects →':'Start a project →';button.addEventListener('click',()=>role==='student'?setView('discover'):openIntake());empty.append(h,p,button);root.append(empty);return;}
-  if(role==='company')renderBriefReview(root,project);
+  if(role==='company'){
+    renderBriefReview(root,project);
+    // Describing the person shapes what the trial tests, so it sits with the brief.
+    const ideal=document.createElement('button');ideal.type='button';ideal.className='ideal-link';
+    ideal.textContent=project.ideal_memo?'Edit who you need':'Describe who you need →';
+    ideal.addEventListener('click',()=>openIdealIntern(project));
+    root.append(ideal);
+  }
   const row=document.createElement('article');row.className='project-focus';const copy=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;const meta=document.createElement('div');meta.className='project-focus-meta';meta.append(pill(statusLabels[project.status]||project.status,'status-pill',project.status));if(project.target_date)meta.append(pill(`Due ${dateLabel(project.target_date)}`));copy.append(h,p,meta);const actions=projectActionNode(project);if(actions)copy.append(actions);const progress=document.createElement('div');progress.className='project-progress';const track=document.createElement('div');const fill=document.createElement('i');fill.style.width=`${statusProgress[project.status]||10}%`;track.append(fill);const label=document.createElement('span');label.textContent=`${statusProgress[project.status]||10}% through workflow`;progress.append(track,label);row.append(copy,progress);root.append(row);
 }
 function pill(label,className='skill-pill',status=''){const span=document.createElement('span');span.className=className;span.textContent=label;if(status)span.dataset.status=status;return span;}
@@ -254,6 +261,13 @@ function conversionControl(project){
   label.append(span,select);
   const status=document.createElement('small');status.className='conversion-status';
   status.textContent=project.conversion_recorded_at?`Saved · ${dateLabel(project.conversion_recorded_at)}`:'Helps us place students like this. Never shared publicly.';
+  // Ask what they learned once, right where they are already reflecting on the outcome.
+  if(!project.outcome_survey_at&&(state.dashboard?.outcomeQuestions||[]).length){
+    const more=document.createElement('button');more.type='button';more.className='conversion-survey';
+    more.textContent='Tell us how it went →';
+    more.addEventListener('click',()=>openOutcomeSurvey(project));
+    wrap.append(more);
+  }
   select.addEventListener('change',async()=>{
     select.disabled=true;status.textContent='Saving…';
     try{await portalRequest({method:'POST',body:JSON.stringify({action:'record-conversion',projectId:project.id,outcome:select.value})});
@@ -1882,6 +1896,119 @@ function githubSkills(s){
   g.forEach(a=>(a.skills||[]).forEach(sk=>{const cur=map.get(sk.skill);if(!cur||Number(sk.score)>cur.score)map.set(sk.skill,{skill:sk.skill,score:Number(sk.score)});}));
   return [...map.values()].sort((a,b)=>b.score-a.score);
 }
+// Sending an introduction. The terms are fields, not optional extras — the API refuses
+// without them, and asking here rather than rejecting later is the difference between a
+// form that teaches and one that scolds.
+// The ideal intern, in the founder's own words. Traits and skills stay in separate fields
+// because they are not the same kind of claim — one can be evidenced, the other cannot.
+function openIdealIntern(project){
+  const d=verifDialog('The person you actually need',
+    'This shapes the trial. The memo matters most — a skills list says what to filter on, the memo says what the work is for.');
+  const traits=verifField('Traits','comma-separated. Not testable from an artifact, but worth saying.',{type:'text',placeholder:'Comfortable with ambiguity, writes clearly'});
+  const skills=verifField('Skills','comma-separated. These can be evidenced.',{type:'text',placeholder:'Python, SQL'});
+  const memoWrap=document.createElement('label');
+  const cap=document.createElement('span');cap.textContent='Why do you need this person?';
+  const area=document.createElement('textarea');area.rows=5;
+  area.placeholder='What the work is for, and what changes once it is done.';
+  memoWrap.append(cap,area);
+  if(project.ideal_traits)traits.input.value=(project.ideal_traits||[]).join(', ');
+  if(project.ideal_skills)skills.input.value=(project.ideal_skills||[]).join(', ');
+  if(project.ideal_memo)area.value=project.ideal_memo;
+  d.body.append(traits.label,skills.label,memoWrap);
+
+  const save=document.createElement('button');save.type='button';save.className='portal-primary';save.textContent='Save';
+  d.foot.append(save);
+  save.addEventListener('click',async()=>{
+    save.disabled=true;d.say('Saving…');
+    try{
+      await portalRequest({method:'POST',body:JSON.stringify({
+        action:'ideal-intern',projectId:project.id,
+        traits:traits.input.value,skills:skills.input.value,memo:area.value.trim(),
+      })});
+      d.say('Saved. This shapes what the trial tests.');
+      await loadDashboard();
+      setTimeout(()=>d.close(),1000);
+    }catch(error){ save.disabled=false; d.say(error.message,true); }
+  });
+  d.open();area.focus();
+}
+
+function openIntroduction(student){
+  const d=verifDialog('Reach out to '+(student.display_name||'this student'),
+    'They see these terms with your message, and can accept, ask a question, or decline.');
+  const role=verifField('What is the work?',null,{type:'text',placeholder:'Two-week data cleanup'});
+  const why=verifField('Why them?','they see this',{type:'text',placeholder:'You shipped a similar pipeline'});
+  const pay=verifField('What it pays','a number, a range, or “unpaid”. Not “competitive”.',{type:'text',placeholder:'$600 flat'});
+  const time=verifField('Time commitment',null,{type:'text',placeholder:'10 hrs/week for 2 weeks'});
+  const next=verifField('Next step',null,{type:'text',placeholder:'A 20-minute call'});
+  const note=document.createElement('label');
+  const cap=document.createElement('span');cap.textContent='Personal message';
+  const small=document.createElement('small');small.textContent=' optional';cap.append(small);
+  const area=document.createElement('textarea');area.rows=3;
+  note.append(cap,area);
+  d.body.append(role.label,why.label,pay.label,time.label,next.label,note);
+
+  const send=document.createElement('button');send.type='button';send.className='portal-primary';send.textContent='Send introduction';
+  d.foot.append(send);
+  send.addEventListener('click',async()=>{
+    send.disabled=true;d.say('Sending…');
+    try{
+      await portalRequest({method:'POST',body:JSON.stringify({
+        action:'request-introduction',
+        studentUserId:student.user_id,
+        roleSummary:role.input.value.trim(),whyRelevant:why.input.value.trim(),
+        compensation:pay.input.value.trim(),timeCommitment:time.input.value.trim(),
+        nextStep:next.input.value.trim(),message:area.value.trim(),
+      })});
+      d.say('Sent. They decide from here.');
+      await loadDashboard();
+      setTimeout(()=>d.close(),1100);
+    }catch(error){ send.disabled=false; d.say(error.message,true); }
+  });
+  d.open();role.input.focus();
+}
+
+// What the company learned. Asked once, after a project completes, because the answers are
+// the only thing that will tell us whether the matching works.
+function openOutcomeSurvey(project){
+  const qs=state.dashboard?.outcomeQuestions||[];
+  if(!qs.length)return;
+  const d=verifDialog('How did that go?','Two answers are required; the rest help and are optional.');
+  const fields={};
+  qs.forEach(q=>{
+    const wrap=document.createElement('label');
+    const cap=document.createElement('span');cap.textContent=q.prompt;
+    let input;
+    if(q.kind==='yesno'){
+      input=document.createElement('select');
+      [['','—'],['yes','Yes'],['no','No']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;input.append(o);});
+    }else if(q.kind==='scale'){
+      input=document.createElement('select');
+      [['','—'],['1','1 — not at all'],['2','2'],['3','3'],['4','4'],['5','5 — completely']].forEach(([v,t])=>{const o=document.createElement('option');o.value=v;o.textContent=t;input.append(o);});
+    }else if(q.kind==='number'){
+      input=document.createElement('input');input.type='number';input.min='0';
+    }else{
+      input=document.createElement('input');input.type='text';
+    }
+    fields[q.key]=input;
+    wrap.append(cap,input);d.body.append(wrap);
+  });
+  const save=document.createElement('button');save.type='button';save.className='portal-primary';save.textContent='Save';
+  d.foot.append(save);
+  save.addEventListener('click',async()=>{
+    const answers={};
+    Object.entries(fields).forEach(([k,el])=>{ if(el.value!=='')answers[k]=el.value; });
+    save.disabled=true;d.say('Saving…');
+    try{
+      await portalRequest({method:'POST',body:JSON.stringify({action:'outcome-survey',projectId:project.id,answers})});
+      d.say('Thank you — this is what makes the next shortlist better.');
+      await loadDashboard();
+      setTimeout(()=>d.close(),1100);
+    }catch(error){ save.disabled=false; d.say(error.message,true); }
+  });
+  d.open();
+}
+
 function talentCard(s){
   const card=document.createElement('article');card.className='talent-card';
   const head=document.createElement('div');head.className='talent-card-head';
@@ -1892,6 +2019,10 @@ function talentCard(s){
   if((s.skills||[]).length){const sk=document.createElement('div');sk.className='skills';s.skills.forEach(x=>sk.append(pill(x)));card.append(sk);}
   const gs=githubSkills(s).slice(0,3);
   if(gs.length){const g=document.createElement('div');g.className='talent-scores';gs.forEach(x=>{const chip=document.createElement('span');chip.className='talent-score-chip';const nm=document.createElement('b');nm.textContent=x.skill;const sc=document.createElement('i');sc.textContent=x.score.toFixed(1);chip.append(nm,sc);g.append(chip);});card.append(g);}
+  const act=document.createElement('div');act.className='talent-actions';
+  const reach=document.createElement('button');reach.type='button';reach.className='portal-primary compact';reach.textContent='Reach out';
+  reach.addEventListener('click',()=>openIntroduction(s));
+  act.append(reach);card.append(act);
   return card;
 }
 function renderTalentCards(){
