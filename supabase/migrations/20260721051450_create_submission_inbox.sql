@@ -1,4 +1,4 @@
-create table public.submissions (
+create table if not exists public.submissions (
   id bigint generated always as identity primary key,
   reference text not null unique,
   submission_type text not null,
@@ -33,13 +33,13 @@ comment on table public.submissions is 'Private Covenda intake inbox. Access is 
 comment on column public.submissions.details is 'Sanitized structured intake data produced by the Covenda submission API.';
 comment on column public.submissions.revision_of is 'Immutable parent receipt reference for company packet revisions.';
 
-create index submissions_type_created_at_idx
+create index if not exists submissions_type_created_at_idx
   on public.submissions (submission_type, created_at desc);
 
-create index submissions_status_created_at_idx
+create index if not exists submissions_status_created_at_idx
   on public.submissions (status, created_at desc);
 
-create index submissions_revision_of_idx
+create index if not exists submissions_revision_of_idx
   on public.submissions (revision_of)
   where revision_of is not null;
 

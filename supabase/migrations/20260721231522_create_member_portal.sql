@@ -1,4 +1,4 @@
-create table public.member_profiles (
+create table if not exists public.member_profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
   role text not null,
   display_name text not null,
@@ -19,7 +19,7 @@ create table public.member_profiles (
   constraint member_profiles_visibility_allowed check (portfolio_visibility in ('private', 'members'))
 );
 
-create table public.member_projects (
+create table if not exists public.member_projects (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null references auth.users(id) on delete cascade,
   assigned_student_user_id uuid references auth.users(id) on delete set null,
@@ -42,7 +42,7 @@ create table public.member_projects (
   constraint member_projects_budget_positive check (budget_cents is null or budget_cents >= 0)
 );
 
-create table public.project_applications (
+create table if not exists public.project_applications (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.member_projects(id) on delete cascade,
   student_user_id uuid not null references auth.users(id) on delete cascade,
@@ -55,12 +55,12 @@ create table public.project_applications (
   constraint project_applications_status_allowed check (status in ('submitted', 'reviewing', 'shortlisted', 'accepted', 'declined', 'withdrawn'))
 );
 
-create index member_profiles_role_idx on public.member_profiles (role, updated_at desc);
-create index member_projects_owner_idx on public.member_projects (owner_user_id, updated_at desc);
-create index member_projects_student_idx on public.member_projects (assigned_student_user_id, updated_at desc) where assigned_student_user_id is not null;
-create index member_projects_discover_idx on public.member_projects (status, visibility, created_at desc);
-create index project_applications_student_idx on public.project_applications (student_user_id, updated_at desc);
-create index project_applications_project_idx on public.project_applications (project_id, updated_at desc);
+create index if not exists member_profiles_role_idx on public.member_profiles (role, updated_at desc);
+create index if not exists member_projects_owner_idx on public.member_projects (owner_user_id, updated_at desc);
+create index if not exists member_projects_student_idx on public.member_projects (assigned_student_user_id, updated_at desc) where assigned_student_user_id is not null;
+create index if not exists member_projects_discover_idx on public.member_projects (status, visibility, created_at desc);
+create index if not exists project_applications_student_idx on public.project_applications (student_user_id, updated_at desc);
+create index if not exists project_applications_project_idx on public.project_applications (project_id, updated_at desc);
 
 comment on table public.member_profiles is 'Private role-aware member profiles. Authorization is mediated by the Covenda portal API.';
 comment on table public.member_projects is 'Company and university projects visible only through authenticated, role-aware portal API queries.';
