@@ -130,84 +130,65 @@
       </section>
 
 
-      <!-- The differentiation, shown rather than asserted: what an application is made of
-           here, next to what it is made of everywhere else. Every line is a thing the product
-           actually requires. Runs first, but out of the hero, which the three path buttons
-           need to themselves. -->
-      <section class="proof-contrast" aria-labelledby="proofContrastTitle">
-        <h2 id="proofContrastTitle">A company never receives <span class="word-gold">just a r&eacute;sum&eacute;</span>.</h2>
-          <div class="hero-vs">
-            <div class="hero-vs-col is-old">
-              <p class="hero-vs-cap">An application, everywhere else</p>
-              <ul>
-                <li>A résumé</li>
-                <li>A school name</li>
-                <li>A cover letter</li>
-              </ul>
-              <p class="hero-vs-verdict">All three now take seconds to generate.</p>
-            </div>
-            <div class="hero-vs-col is-new">
-              <p class="hero-vs-cap">What arrives on Covenda</p>
-              <ul>
-                <li><b>Someone already filtered.</b> Vetted against the published bar for their specialisation, by two raters who had to agree.</li>
-                <li><b>Scored against your role</b>, not against a category. You define what the work is like; the score shows which parts matched and which did not.</li>
-                <li><b>Work you can watch.</b> Unscripted on camera against a prompt they see for the first time, and a screen recording of them working through an exercise we set.</li>
-                <li><b>Ready to be useful now.</b> They have already done a piece of real work under observation before you ever meet them.</li>
-              </ul>
-              <p class="hero-vs-verdict">None of it generates, and none of it is a claim you have to take on trust.</p>
-            </div>
-          </div>
-      </section>
-
-
-      <!-- The "why us" section. Every claim here is a thing the product does today and a
-           visitor could verify by signing up. Notably absent: machine learning. The
-           compatibility score is a transparent weighted model over eight axes, not a learned
-           one, and calling it ML would be the one kind of claim this site does not make.
-           The explainability is the stronger pitch regardless — every competitor says "AI
-           matching" and none of them can tell you why a candidate scored what they scored. -->
-      <section class="quality-section" aria-labelledby="qualityTitle">
-        <div class="quality-head">
-          <p class="quality-kicker">Quality over quantity</p>
-          <h2 id="qualityTitle">A network hands you names.<br>We hand you a <span class="word-gold">shortlist you can interrogate.</span></h2>
-          <p class="quality-lede">Nobody here is a search result. Every student has been through the same published process, and every number attached to them can be taken apart.</p>
+      <!-- One comparison, not two sections making the same case in different shapes. A real
+           table because this IS tabular: the same five questions, answered two ways. Every
+           Covenda cell is a thing the product does today and a visitor could go and verify.
+           Notably absent from the matching row: any claim that the score is learned. It is a
+           transparent weighted model, and the learned re-ranker stays off until there are
+           enough completed outcomes to train it honestly. -->
+      <section class="compare-section" aria-labelledby="compareTitle">
+        <div class="compare-head">
+          <p class="compare-kicker">Quality over quantity</p>
+          <h2 id="compareTitle">A network hands you names.<br>We hand you a <span class="word-gold">shortlist you can interrogate.</span></h2>
+          <p class="compare-lede">Nobody here is a search result. Every student went through the same published process, and every number attached to them can be taken apart.</p>
         </div>
 
-        <ol class="quality-grid">
-          <li>
-            <span class="q-num" aria-hidden="true">01</span>
-            <h3>A vetted process, not a sign-up form</h3>
-            <p>Each specialisation has its own published bar. Two raters score against it and adjudicate where they disagree. You can read the bar before you trust the result.</p>
-          </li>
-          <li>
-            <span class="q-num" aria-hidden="true">02</span>
-            <h3>Recorded work, not claims</h3>
-            <p>Ninety seconds unscripted against a prompt they see for the first time, plus a screen recording of them working through an exercise we supply. You watch the thinking, not a summary of it.</p>
-          </li>
-          <li>
-            <span class="q-num" aria-hidden="true">03</span>
-            <h3>Compatibility you can audit</h3>
-            <p>You describe the role on eight axes. Students answer the same eight. The score shows its work: which axes matched, which did not, and how many were compared at all. No black box, because a number you cannot question is a number you cannot use.</p>
-          </li>
-          <li>
-            <span class="q-num" aria-hidden="true">04</span>
-            <h3>Scoped to you, not to a category</h3>
-            <p>You describe the person and the problem in your own words. We build the trial around that, then run it. You keep the final call on every hire, and we never take it from you.</p>
-          </li>
-        </ol>
-
-        <div class="quality-saves">
-          <p class="qs-cap">What you stop paying for</p>
-          <ul>
-            <li><b>Sourcing.</b> No job board, no campus tour, no scraping LinkedIn for people who never reply.</li>
-            <li><b>First-round screening.</b> The filtering already happened, against a bar you can read before you trust it.</li>
-            <li><b>The mis-hire.</b> You watch someone work before you commit, so the expensive discovery happens in week zero rather than month three.</li>
-            <li><b>Ramp-up.</b> They arrive having already done a scoped piece of your kind of work under observation.</li>
-          </ul>
-          <p class="qs-note">You keep the final call on every hire. Covenda narrows the field and shows its reasoning; it never decides for you.</p>
+        <div class="compare-scroll">
+          <table class="compare-table">
+            <caption class="sr-only">How hiring on other application platforms compares with hiring on Covenda</caption>
+            <thead>
+              <tr>
+                <th scope="col"><span class="ct-q">The question</span></th>
+                <th scope="col"><span class="ct-them">Other application platforms</span></th>
+                <th scope="col" class="is-us"><span class="ct-us">Covenda</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">What actually arrives</th>
+                <td>A r&eacute;sum&eacute;, a school name, a cover letter. All three now take seconds to generate.</td>
+                <td class="is-us"><b>Work you can watch.</b> Ninety seconds unscripted against a prompt they see for the first time, plus a screen recording of them working through an exercise we set.</td>
+              </tr>
+              <tr>
+                <th scope="row">How they were filtered</th>
+                <td>Keyword match, or the school name, or nothing at all. The bar is not published, so you cannot check it.</td>
+                <td class="is-us"><b>Against a published bar</b> for their specialisation, by two raters who had to agree. You read the bar before you trust the result.</td>
+              </tr>
+              <tr>
+                <th scope="row">How they were matched to you</th>
+                <td>Keyword overlap, or a black-box score you cannot question.</td>
+                <td class="is-us"><b>Eight axes you define, answered by both sides.</b> The score shows which matched, which did not, and how many were compared at all.</td>
+              </tr>
+              <tr>
+                <th scope="row">How the role gets scoped</th>
+                <td>You write a job post and hope the right people read it.</td>
+                <td class="is-us"><b>You describe the person and the problem in your own words.</b> That becomes an introduction, an internship, a part-time or full-time role, or a paid trial first if you would rather see the work before you commit. Your call, not ours.</td>
+              </tr>
+              <tr>
+                <th scope="row">What it costs you</th>
+                <td>Sourcing, first-round screening, and the mis-hire you find out about in month three.</td>
+                <td class="is-us"><b>None of those.</b> The filtering already happened, and where you want it, you can watch someone work before you commit, so the expensive discovery happens in week zero rather than month three.</td>
+              </tr>
+              <tr>
+                <th scope="row">Who decides</th>
+                <td>An algorithm ranks, and you rarely learn why.</td>
+                <td class="is-us"><b>You do.</b> Covenda narrows the field and shows its reasoning. It never decides for you.</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
-        <p class="quality-foot"><b>Two things we will not overstate.</b> The compatibility model is a transparent weighted score, not a learned one. The machine-learning re-ranker is built and deliberately switched off until there are enough completed outcomes to train it honestly, because a model fitted on a handful of results is worse than the arithmetic it would replace. And Covenda has not placed a student yet, so everything above describes how the process works, not how well it has worked.</p>
+        <p class="compare-foot"><b>Two things we will not overstate.</b> The compatibility score is a transparent weighted model, not a learned one. The machine-learning re-ranker is built and deliberately switched off until there are enough completed outcomes to train it honestly, because a model fitted on a handful of results is worse than the arithmetic it would replace. And Covenda has not placed a student yet, so everything above describes how the process works, not how well it has worked.</p>
       </section>
 
       <!-- Home-only. One two-way exchange: the company contributes real work, referred
