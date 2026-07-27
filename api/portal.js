@@ -1882,7 +1882,17 @@ export async function submitDeliverable(member, input) {
   );
   if (!project || project.assigned_student_user_id !== member.user.id) throw new Error('Only the assigned student can submit work for this project.');
   if (!['in_progress', 'review'].includes(project.status)) throw new Error('This project is not ready for a deliverable yet.');
-  const body = links.length ? `${summary}\n\nLinks:\n${links.map(link => `- ${link}`).join('\n')}` : summary;
+  // Uploaded files are the work itself; links are what points at work hosted elsewhere. Both
+  // land in the deliverable so a reviewer sees one artifact list, not two.
+  const rawFiles = Array.isArray(input.deliverableFiles) ? input.deliverableFiles : [];
+  const files = rawFiles
+    .map(f => ({ name: cleanText(f?.name, 120), url: cleanUrl(f?.url) }))
+    .filter(f => f.name && f.url)
+    .slice(0, 10);
+  const parts = [summary];
+  if (files.length) parts.push('Files:\n' + files.map(f => `- ${f.name} — ${f.url}`).join('\n'));
+  if (links.length) parts.push('Links:\n' + links.map(link => `- ${link}`).join('\n'));
+  const body = parts.join('\n\n');
   const now = new Date().toISOString();
   // Clear any prior revision note so a stale "changes requested" message does not linger after resubmission.
   return checked(

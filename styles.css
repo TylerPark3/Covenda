@@ -495,10 +495,15 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 .hero-company { display: none; }
 /* Company hero: two clear segments — delegate work, and find talent. */
 /* Delegate card wider than the talent card, so the problem composer has room to breathe. */
-.company-jobs { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(400px, 1fr); gap: clamp(20px, 2.6vw, 34px); margin: clamp(30px, 4vw, 46px) 0 0; width: min(100%, var(--content)); text-align: left; align-items: start; }
-@media (max-width: 800px) { .company-jobs { grid-template-columns: 1fr; } }
-.company-job { display: flex; flex-direction: column; padding: clamp(22px, 2.6vw, 32px); border: 1px solid var(--line); border-radius: 0; background: #fff; }
-.company-job-talent { border-color: var(--gold-light); background: linear-gradient(180deg, var(--gold-pale), #fff 62%); }
+.company-jobs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin: clamp(30px, 4vw, 46px) 0 0; width: min(100%, var(--content)); text-align: left; align-items: stretch; border: 1px solid var(--line); }
+@media (max-width: 800px) {
+  .company-jobs { grid-template-columns: 1fr; }
+  .company-job + .company-job { border-left: 0; border-top: 1px solid var(--line); }
+}
+.company-job { display: flex; flex-direction: column; min-width: 0; padding: clamp(24px, 3vw, 40px); border: 0; border-radius: 0; background: #fff; }
+/* The single rule down the centre is where the two halves meet. */
+.company-job + .company-job { border-left: 1px solid var(--line); }
+.company-job-talent { background: linear-gradient(180deg, var(--gold-pale), #fff 62%); }
 .company-job-eyebrow { display: inline-flex; align-items: center; gap: 7px; margin: 0; color: var(--gold-deep); font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .company-job-eyebrow svg { width: 15px; height: 15px; }
 .company-job h2 { margin: 12px 0 0; font-size: clamp(22px, 2.4vw, 30px); line-height: 1.08; letter-spacing: -.03em; }
@@ -4745,7 +4750,8 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 }
 .tb-side { display: grid; align-content: start; gap: 10px; padding: clamp(24px, 3vw, 40px); border: 0; background: #fff; }
 /* The one rule between them IS the bifurcation. */
-.tb-side + .tb-arrow + .tb-side { border-left: 1px solid var(--line-strong); }
+/* The one rule between them is the division. */
+.tb-side + .tb-side { border-left: 1px solid var(--line-strong); }
 .tb-side.is-batch { background: var(--gold-pale); }
 .tb-tag { margin: 0; font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
 .tb-side.is-batch .tb-tag { color: var(--gold-deep); }
@@ -4753,25 +4759,12 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 .tb-side p { margin: 0; max-width: 46ch; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
 .tb-out { margin-top: 6px !important; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink) !important; }
 .tb-out b { color: var(--gold-deep); }
-/* A drawn arrow, not two pseudo-elements with hand-tuned margins — the old one used an
-   `absolute` with no positioned parent, so it landed wherever the page happened to put it.
-   It now straddles the dividing rule, with a white plate so the line does not run through it. */
-.tb-arrow {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2;
-  display: grid; place-items: center; align-content: center; gap: 6px;
-  padding: 12px 10px; background: #fff;
-}
-.tb-arrow svg { width: clamp(46px, 4vw, 64px); height: auto; overflow: visible; }
-.tb-arrow line { stroke: var(--gold); stroke-width: 1.5; }
-.tb-arrow path { fill: var(--gold); }
-.tb-arrow span { font-family: var(--font-mono); font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--gold-deep); }
 .tb-note { display: flex; align-items: flex-start; gap: 9px; max-width: 74ch; margin: clamp(16px, 2vw, 22px) 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
 .tb-note svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 2px; color: var(--gold-deep); }
 @media (max-width: 820px) {
   /* Stacked, the division becomes horizontal and the arrow turns to point down the page. */
   .tb-split { grid-template-columns: 1fr; }
-  .tb-side + .tb-arrow + .tb-side { border-left: 0; border-top: 1px solid var(--line-strong); }
-  .tb-arrow { padding: 8px 12px; }
+  .tb-side + .tb-side { border-left: 0; border-top: 1px solid var(--line-strong); }
   .tb-arrow svg { width: 26px; transform: rotate(90deg); }
 }
 
@@ -4790,9 +4783,9 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 /* Explainer above, browser below, with a rule between them — the two halves used to run
    together with a decorative banner wedged in the middle. */
 .tb-divider { width: min(100%, 1080px); height: 1px; margin: clamp(34px, 5vw, 60px) auto clamp(26px, 3.4vw, 40px); background: var(--line); }
-.batch-browse-head { text-align: center; }
+.batch-browse-head { display: grid; justify-items: center; gap: 8px; text-align: center; margin-bottom: clamp(22px, 3vw, 34px); }
 .batch-browse-head h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 2.8vw, 38px); letter-spacing: -.03em; }
-.batch-browse-head p { margin: 8px auto 0; color: var(--muted); font-size: var(--step-body-sm); }
+.batch-browse-head p { margin: 0; max-width: 52ch; color: var(--muted); font-size: var(--step-body-sm); }
 
 /* The section intro ran the full content width, so the lede under a 60px display heading
    stretched past 100 characters on one line. Centred, and held to a readable measure. */
@@ -4810,6 +4803,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
    Named directly, because every other section on this page is an answer to it. Numbered
    because it IS a sequence — applying got free, so the résumé got filtered on school, so
    the platforms encoded that. Each step causes the next. */
+body:not([data-audience="home"]) .slop-section { display: none; }
 .slop-section { padding: clamp(60px, 8vw, 116px) var(--page-gutter); background: #14120d; color: #ece7da; border-top: 1px solid #262219; }
 .slop-section > * { width: min(100%, var(--content)); margin-inline: auto; }
 .slop-head { text-align: center; }
@@ -4835,3 +4829,8 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 .slop-answer-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-light); }
 .slop-answer-list strong { color: #fff; font-weight: 650; }
 @media (max-width: 620px) { .slop-answer-list li { font-size: 15px; } }
+
+/* Batch cards fill their track, so a row reads as a row rather than five different heights. */
+.batch-grid > * { align-self: stretch; }
+.batch-card { display: flex; flex-direction: column; height: 100%; }
+.batch-card > p { flex: 1 1 auto; }

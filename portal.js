@@ -2249,7 +2249,7 @@ function consumeProjectSeed(){
   // No profile yet (brand-new signup mid-onboarding): keep the brief until a company profile exists.
 }
 function openApply(project){state.applyProject=project;const form=$('#applyForm');form.reset();form.elements.projectId.value=project.id;$('#applyTitle').textContent=`Apply to ${project.title}.`;$('#applySummary').textContent=project.summary;const ds=project.desired_skills;if(form.elements.skills)form.elements.skills.value=Array.isArray(ds)?ds.join(', '):(ds||'');setDialogMessage('#applyMessage','');form.elements.videoUrl.value='';videoStudio.mountPicker($('#applyVideoPicker'),form.elements.videoUrl,{maxSeconds:60,label:'Intro · '+project.title});$('#applyDialog').showModal();}
-function openSubmitWork(project){const form=$('#submitWorkForm');form.reset();form.elements.projectId.value=project.id;$('#submitWorkTitle').textContent=`Submit your work · ${project.title}`;setDialogMessage('#submitWorkMessage','');$('#submitWorkDialog').showModal();}
+function openSubmitWork(project){const form=$('#submitWorkForm');form.reset();workFiles=[];renderWorkFiles();form.elements.projectId.value=project.id;$('#submitWorkTitle').textContent=`Submit your work · ${project.title}`;setDialogMessage('#submitWorkMessage','');$('#submitWorkDialog').showModal();}
 function openReview(project){const form=$('#reviewForm');form.reset();form.elements.projectId.value=project.id;$('#reviewTitle').textContent=`Review · ${project.title}`;$('#reviewDeliverable').textContent=project.deliverable||'No deliverable text was provided.';const held=Number(project.credits_held)||0;
   $('#reviewSubmittedAt').textContent=[
     project.deliverable_submitted_at?`Submitted ${dateLabel(project.deliverable_submitted_at)}`:'',
@@ -2535,7 +2535,51 @@ $('#batchResumeInput')?.addEventListener('change',async event=>{
   }catch(error){batchResumeUrl='';renderBatchResumeChip('');setDialogMessage('#batchApplyMessage',error.message,true);}
 });
 
-$('#submitWorkForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#submitWorkMessage','Submitting your work…');const notes=form.elements.workNotes.value.trim();const summary=[form.elements.workSummary.value.trim(),notes&&`\n\nNotes for the reviewer: ${notes}`].filter(Boolean).join('');const links=form.elements.workLinks.value.split(/\n/).map(link=>link.trim()).filter(Boolean);try{await portalRequest({method:'POST',body:JSON.stringify({action:'submit-deliverable',projectId:form.elements.projectId.value,deliverable:summary,deliverableLinks:links})});$('#submitWorkDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#submitWorkMessage',error.message,true);}finally{button.disabled=false;}});
+// Deliverable uploads. Work is a video, a CSV, a deck, a zip of code — telling a student to
+// go host it somewhere first is where submissions get lost. Files upload as they are chosen
+// so pressing Submit is never a two-minute wait.
+let workFiles=[];
+function renderWorkFiles(){
+  const list=$('#workFileList');if(!list)return;
+  list.replaceChildren();
+  workFiles.forEach((f,i)=>{
+    const li=document.createElement('li');
+    li.className=f.url?'is-done':(f.error?'is-error':'is-busy');
+    const name=document.createElement('span');name.textContent=f.name;
+    const state=document.createElement('small');
+    state.textContent=f.error?f.error:(f.url?`${Math.round(f.sizeBytes/1024)} KB`:'Uploading…');
+    li.append(name,state);
+    if(f.url||f.error){
+      const x=document.createElement('button');x.type='button';x.setAttribute('aria-label','Remove '+f.name);x.textContent='×';
+      x.addEventListener('click',()=>{workFiles.splice(i,1);renderWorkFiles();});
+      li.append(x);
+    }
+    list.append(li);
+  });
+}
+$('#workFileInput')?.addEventListener('change',async event=>{
+  const picked=[...(event.target.files||[])];
+  event.target.value='';
+  const status=$('#workFileStatus');
+  for(const file of picked){
+    const entry={name:file.name,sizeBytes:file.size,url:null,error:null};
+    workFiles.push(entry);renderWorkFiles();
+    try{
+      const res=await fetch('/api/file-upload',{
+        method:'POST',
+        headers:{'Content-Type':file.type||'application/octet-stream','X-Covenda-Filename':file.name},
+        body:file,
+      });
+      const body=await res.json();
+      if(!res.ok||!body.ok)throw new Error(body.error||'Upload failed.');
+      entry.url=body.url;entry.sizeBytes=body.sizeBytes;
+    }catch(err){ entry.error=err.message||'Upload failed.'; }
+    renderWorkFiles();
+  }
+  if(status)status.textContent=workFiles.some(f=>f.error)?'Some files did not upload. Remove them or try again.':'';
+});
+
+$('#submitWorkForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#submitWorkMessage','Submitting your work…');const notes=form.elements.workNotes.value.trim();const summary=[form.elements.workSummary.value.trim(),notes&&`\n\nNotes for the reviewer: ${notes}`].filter(Boolean).join('');const links=form.elements.workLinks.value.split(/\n/).map(link=>link.trim()).filter(Boolean);const pending=workFiles.filter(f=>!f.url&&!f.error);if(pending.length){setDialogMessage('#submitWorkMessage','Wait for the uploads to finish.',true);button.disabled=false;return;}const deliverableFiles=workFiles.filter(f=>f.url).map(f=>({name:f.name,url:f.url}));try{await portalRequest({method:'POST',body:JSON.stringify({action:'submit-deliverable',projectId:form.elements.projectId.value,deliverable:summary,deliverableLinks:links})});$('#submitWorkDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#submitWorkMessage',error.message,true);}finally{button.disabled=false;}});
 $$('#reviewForm [data-decision]').forEach(button=>button.addEventListener('click',async()=>{const form=$('#reviewForm');const decision=button.dataset.decision;const note=form.elements.note.value.trim();if(decision==='revise'&&!note){setDialogMessage('#reviewMessage','Add a note so the student knows what to revise.',true);return;}const buttons=$$('#reviewForm [data-decision]');buttons.forEach(b=>b.disabled=true);setDialogMessage('#reviewMessage',decision==='accept'?'Accepting the deliverable…':'Sending the change request…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'review-deliverable',projectId:form.elements.projectId.value,decision,note})});$('#reviewDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#reviewMessage',error.message,true);}finally{buttons.forEach(b=>b.disabled=false);}}));
 $('#messageForm').addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const status=$('#messageFormStatus');
