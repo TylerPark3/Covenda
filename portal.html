@@ -78,7 +78,7 @@
         <button type="button" data-view="activity" data-roles="company university"><svg><use href="#p-inbox"/></svg><span>Submissions</span><b id="intakeCount">0</b></button>
         <button type="button" data-view="discover" data-roles="student"><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
         <button type="button" data-view="batches" id="batchesNav" data-roles="student company"><svg><use href="#p-spark"/></svg><span>Batches</span><b id="batchCount">0</b></button>
-        <button type="button" data-view="portfolio" data-roles="student company"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Your proof of work</span></button>
+        <button type="button" data-view="portfolio" data-roles="student company"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
         <button type="button" data-view="messages" data-roles="student company university"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
         <button type="button" data-view="wallet" data-roles="student company university"><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
       </nav>
@@ -87,6 +87,10 @@
     </aside>
 
     <header class="member-header">
+      <!-- Ambient gold field. Decorative and aria-hidden; it draws nothing the header does not
+           already say in words. Pauses when the tab is hidden and does not run at all under
+           prefers-reduced-motion. -->
+      <canvas class="header-field" id="headerField" aria-hidden="true"></canvas>
       <button class="mobile-menu" id="mobileMenu" type="button" aria-label="Open navigation"><span></span><span></span></button>
       <div><small id="memberBreadcrumb">Workspace / Overview</small><strong id="memberHeaderStatus">Private member account</strong></div>
       <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch theme" title="Switch theme">◐</button>
@@ -99,6 +103,10 @@
           <div class="overview-main">
             <div class="welcome-row"><div><p class="eyebrow" id="welcomeDate">Your workspace</p><h1 id="welcomeTitle">Good afternoon.</h1><p id="welcomeCopy">Here is what is moving across your Covenda work.</p></div><button class="portal-primary" id="primaryAction" type="button"><svg><use href="#p-plus"/></svg><span>Complete profile</span></button></div>
             <div class="company-segments" id="companySegments" hidden></div>
+            <!-- companyBriefing() has answered these four questions since it was written; the
+                 dashboard just never asked. Sits above the project list because "what is
+                 waiting on me" outranks "what exists". -->
+            <section class="briefing" id="briefingPanel" hidden></section>
             <section class="focus-section"><div class="section-heading"><div><p class="eyebrow">Current work</p><h2 id="focusTitle">Where each project stands</h2></div><button type="button" data-view="projects">View all</button></div><div id="focusProject"></div></section>
             <section class="plain-section"><div class="section-heading"><div><p class="eyebrow">At a glance</p><h2>What's moved recently</h2></div></div><div class="metrics-row" id="memberMetrics"></div></section>
           </div>
@@ -233,6 +241,25 @@
         <label>Headline<input name="headline" maxlength="180" placeholder="Researcher who turns messy questions into clear decisions"></label>
         <label>About<textarea name="bio" rows="4" maxlength="2000" placeholder="Share what you are learning, building, or looking for next."></textarea></label>
         <label>Skills <small>Separate with commas</small><input name="skills" placeholder="Market research, Excel, operations"></label>
+
+        <!-- The eight axes a company answers about the role. Nothing here is a proxy for
+             background, and every one is answerable by a first-year with no experience. Both
+             sides are optional on every axis: a blank is skipped, never counted against you. -->
+        <fieldset class="form-fieldset" data-student-profile><legend>How you like to work <small>Optional, and it makes your match scores far more accurate</small></legend>
+          <p class="fieldset-hint">Companies answer these same questions about the role. The more you answer, the finer the comparison gets, and a blank never counts against you.</p>
+          <div class="form-grid axis-grid">
+          <label>How you like work defined<select name="wsStructure"><option value="">No preference</option><option value="structured">Well-defined</option><option value="ambiguous">Figure it out</option></select></label>
+          <label>Supervision<select name="wsAutonomy"><option value="">No preference</option><option value="guided">Guided</option><option value="independent">Independent</option></select></label>
+          <label>Pace<select name="wsPace"><option value="">No preference</option><option value="steady">Steady</option><option value="fast">Fast</option></select></label>
+          <label>Alone or with someone<select name="wsCollaboration"><option value="">No preference</option><option value="solo">Solo</option><option value="paired">Paired</option></select></label>
+          <label>Feedback<select name="wsFeedback"><option value="">No preference</option><option value="frequent">Frequent</option><option value="light">Light touch</option></select></label>
+          <label>Communication<select name="wsCommunication"><option value="">No preference</option><option value="async">Async</option><option value="sync">Live</option></select></label>
+          <label>Scope<select name="wsScope"><option value="">No preference</option><option value="depth">One thing deeply</option><option value="breadth">A bit of everything</option></select></label>
+            <label>Company stage<select name="wsStage"><option value="">No preference</option><option value="idea">Idea</option><option value="seed">Seed</option><option value="growth">Growth</option></select></label>
+          </div>
+          <p class="fieldset-hint">Which of these sound like you? <small>Pick up to six.</small></p>
+          <div class="chip-check-row" id="studentTraitRow"></div>
+        </fieldset>
         <label class="visibility-row" data-student-profile><input name="portfolioVisibility" type="checkbox" value="members" checked><span>Let signed-in company members discover my portfolio.</span></label>
         <label class="visibility-row"><input name="emailNotifications" type="checkbox" checked><span>Email me about applications, decisions, and payouts.</span></label>
         <label class="visibility-row" data-student-profile><input name="spotlightConsent" type="checkbox"><span>Covenda may feature me publicly (photo, skills, projects, reviews) on the homepage and in marketing. Student of the Week. Off by default; withdraw anytime.</span></label>
@@ -251,6 +278,25 @@
 
   <dialog class="member-dialog compact-dialog" id="projectDialog">
     <form method="dialog" id="projectForm"><header><div><p class="eyebrow">New project</p><h2>Start with a useful outcome.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><label>Project title<input name="title" maxlength="160" required placeholder="Customer research synthesis"></label><label>What needs to get done?<textarea name="summary" rows="5" minlength="10" maxlength="5000" required></textarea></label><label>Useful deliverable<input name="deliverable" maxlength="2000" placeholder="A cited summary with clear recommendations"></label><label>Desired skills <small>Separate with commas</small><input name="desiredSkills" placeholder="Research, spreadsheets, writing"></label><div class="form-grid"><label>Target date<input name="targetDate" type="date"></label><label>Visibility<select name="visibility"><option value="private">Private draft</option><option value="members">Covenda members</option><option value="open">Open opportunity</option></select></label></div><label>Engagement rung <small>Start small, a micro-bounty is the de-risked first bet</small><select name="engagementRung"><option value="">Standard project</option><option value="micro">Micro-bounty, bounded ~5-hour task (~$100–200)</option><option value="project_short">Short project (~2 weeks)</option><option value="project_long">Longer project (~6 weeks)</option></select></label><label>Access stage <small>Stage 2 (deeper access) only opens to a student who finished a Stage 1 with you</small><select name="accessStage"><option value="1">Stage 1, work-trial, no systems access</option><option value="2">Stage 2, deeper access (earned)</option></select></label>
+
+    <fieldset class="form-fieldset"><legend>Your ideal intern <small>Optional, and it changes who ranks highest</small></legend>
+      <p class="fieldset-hint">Describe the person, not the r&eacute;sum&eacute;. Every answer here is matched against what a student said about themselves, so leaving one blank costs nothing but tells us nothing.</p>
+      <label>Why do you need this person? <small>The memo matters more than the skills list, it says what the work is FOR</small><textarea name="idealMemo" rows="3" maxlength="2000" placeholder="Our pricing page converts badly and nobody has owned it for six months."></textarea></label>
+      <label>Skills that would help <small>Separate with commas</small><input name="idealSkills" placeholder="SQL, copywriting, Figma"></label>
+      <p class="fieldset-hint">How they like to work <small>Self-declared on both sides, so this breaks ties rather than deciding anything.</small></p>
+      <div class="chip-check-row" id="idealTraitRow"></div>
+      <p class="fieldset-hint">What this role is actually like <small>Answer honestly, a mismatch found now is cheaper than one found in week two.</small></p>
+      <div class="form-grid axis-grid">
+        <label>How the work is defined<select name="envStructure"><option value="">No preference</option><option value="structured">Well-defined</option><option value="ambiguous">Figure it out</option></select></label>
+        <label>Supervision<select name="envAutonomy"><option value="">No preference</option><option value="guided">Guided</option><option value="independent">Independent</option></select></label>
+        <label>Pace<select name="envPace"><option value="">No preference</option><option value="steady">Steady</option><option value="fast">Fast</option></select></label>
+        <label>Working alone or with someone<select name="envCollaboration"><option value="">No preference</option><option value="solo">Solo</option><option value="paired">Paired</option></select></label>
+        <label>Feedback<select name="envFeedback"><option value="">No preference</option><option value="frequent">Frequent</option><option value="light">Light touch</option></select></label>
+        <label>Communication<select name="envCommunication"><option value="">No preference</option><option value="async">Async</option><option value="sync">Live</option></select></label>
+        <label>Scope<select name="envScope"><option value="">No preference</option><option value="depth">One thing deeply</option><option value="breadth">A bit of everything</option></select></label>
+        <label>Company stage<select name="envStage"><option value="">No preference</option><option value="idea">Idea</option><option value="seed">Seed</option><option value="growth">Growth</option></select></label>
+      </div>
+    </fieldset>
     <fieldset class="form-fieldset"><legend>Who you're looking for <small>Optional, targeting, never filters on protected traits</small></legend>
       <div class="form-grid">
         <label>Opportunity type<select name="opportunityType"><option value="project">The work itself</option><option value="internship">Internship</option><option value="part_time">Part-time</option></select></label>
@@ -333,8 +379,13 @@
         </div>
 
         <div class="batch-apply-step" data-ba-step="2">
-          <p class="batch-step-kicker">Your interest in the field</p>
+          <p class="batch-step-kicker">Questions</p>
           <div id="batchInterestQuestions" class="batch-interest-list"></div>
+          <!-- The concept and reasoning banks have existed in api/assessments.js for all 25
+               specialisations and nothing ever rendered them. Published on purpose: a question
+               that only works while it is secret is not measuring much. -->
+          <section class="ba-quiz" id="batchConcepts" hidden></section>
+          <section class="ba-quiz" id="batchReasoning" hidden></section>
         </div>
 
         <div class="batch-apply-step" data-ba-step="3">

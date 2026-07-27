@@ -424,6 +424,10 @@ export async function saveMemberProfile(member, input) {
     headline: cleanText(input.headline, 180) || null,
     bio: cleanText(input.bio, 2_000) || null,
     skills: cleanList(input.skills),
+    // The student half of the comparison. Both are optional and a blank is skipped, never
+    // counted against them.
+    work_style: cleanWorkStyle(input.workStyle),
+    traits: cleanTraits(input.traits),
     graduation_year: graduationYear,
     portfolio_visibility: input.portfolioVisibility === 'private' ? 'private' : 'members',
     onboarding_complete: true,
@@ -676,12 +680,38 @@ export const SCORER_VERSION = 'fit-2.0.0';
 // Weights cap at 100. startupFit > skills on purpose: for an ambiguous startup, environment fit
 // should be able to outrank raw skill (the adversarial case in the eval harness). Tunable via
 // the ablation test — evidence, not intuition.
-export const FIT_WEIGHTS = { vertical: 29, workType: 24, startupFit: 18, skills: 16, execution: 6, compensation: 4, deadline: 3 };
+export const FIT_WEIGHTS = { vertical: 28, workType: 23, startupFit: 18, skills: 16, traits: 3, execution: 6, compensation: 3, deadline: 3 };
 
 // Startup environment ↔ student work-style dimensions. Missing data on either side is skipped
 // (never lowers a score). No protected attributes appear here.
-const ENV_DIMS = [['env_structure', 'structure'], ['env_autonomy', 'autonomy'], ['env_pace', 'pace'], ['env_stage', 'stage']];
-export const WORK_STYLE_ENUMS = { structure: ['structured', 'ambiguous'], autonomy: ['guided', 'independent'], pace: ['steady', 'fast'], stage: ['idea', 'seed', 'growth'] };
+const ENV_DIMS = [
+  ['env_structure', 'structure'], ['env_autonomy', 'autonomy'], ['env_pace', 'pace'], ['env_stage', 'stage'],
+  // Four more axes. With only four, this component could land on five distinct values, which
+  // is why very different students kept scoring the same. Every one of these is about HOW
+  // someone likes to work and is answerable by a first-year with no experience.
+  ['env_collaboration', 'collaboration'], ['env_feedback', 'feedback'],
+  ['env_communication', 'communication'], ['env_scope', 'scope'],
+];
+export const WORK_STYLE_ENUMS = {
+  structure: ['structured', 'ambiguous'], autonomy: ['guided', 'independent'],
+  pace: ['steady', 'fast'], stage: ['idea', 'seed', 'growth'],
+  collaboration: ['solo', 'paired'], feedback: ['frequent', 'light'],
+  communication: ['async', 'sync'], scope: ['depth', 'breadth'],
+};
+// Traits a student can claim about how they work. Checked against a company's ideal_traits.
+// Self-declared on both sides, so this is a preference match, never evidence — which is why
+// it carries the smallest weight of anything in the score.
+export const TRAIT_OPTIONS = [
+  'comfortable with ambiguity', 'ships fast', 'detail-obsessed', 'asks questions early',
+  'works well unsupervised', 'strong writer', 'enjoys unglamorous work', 'learns a new tool quickly',
+  'pushes back when something is wrong', 'finishes what they start',
+];
+export function cleanTraits(value) {
+  const allowed = new Set(TRAIT_OPTIONS);
+  return (Array.isArray(value) ? value : [])
+    .map(v => String(v || '').toLowerCase().trim())
+    .filter(v => allowed.has(v)).slice(0, 6);
+}
 export function cleanWorkStyle(value) {
   if (!value || typeof value !== 'object') return null;
   const out = {};
@@ -714,7 +744,13 @@ export function computeFitScore(project, profile, context = {}) {
   const everything = pV.has('Not sure yet — show me everything');
   const projV = project.verticals || [];
   const projW = project.work_types || [];
-  const projS = (project.desired_skills ? String(project.desired_skills).split(/[,\n]/) : []).map(s => s.toLowerCase().trim()).filter(Boolean);
+  // desired_skills is what the posting asks for; ideal_skills is what the founder said when
+  // they described the person. Both are the company's own words, so they are one pool.
+  const idealSkills = Array.isArray(project.ideal_skills) ? project.ideal_skills : [];
+  const projS = [...new Set([
+    ...(project.desired_skills ? String(project.desired_skills).split(/[,\n]/) : []),
+    ...idealSkills,
+  ].map(s => String(s).toLowerCase().trim()).filter(Boolean))];
   let score = 0;
   if (projV.length && (everything || projV.some(v => pV.has(v)))) {
     score += FIT_WEIGHTS.vertical;
@@ -743,6 +779,17 @@ export function computeFitScore(project, profile, context = {}) {
     if (sfMatched) reasons.push(startupFitReason(sfMatchMap));
   }
 
+  const idealTraits = (Array.isArray(project.ideal_traits) ? project.ideal_traits : [])
+    .map(t => String(t).toLowerCase().trim()).filter(Boolean);
+  const studentTraits = new Set((profile?.traits || []).map(t => String(t).toLowerCase().trim()).filter(Boolean));
+  if (idealTraits.length && studentTraits.size) {
+    const hit = idealTraits.filter(t => studentTraits.has(t));
+    if (hit.length) {
+      score += Math.round(FIT_WEIGHTS.traits * Math.min(1, hit.length / idealTraits.length));
+      reasons.push(`How you work lines up: ${hit.slice(0, 2).join(', ')}`);
+    }
+  }
+
   // Execution: the student's own proven track record, with a cold-start guard. Under 2 completed
   // projects contributes nothing (no penalty) and says so honestly — the flywheel starts here.
   const completed = Number(context?.completedCount) || 0;
@@ -769,8 +816,14 @@ export function computeFitScore(project, profile, context = {}) {
   if (project.target_date) { const due = new Date(project.target_date); if (!Number.isNaN(due.getTime()) && due.getTime() > Date.now()) score += FIT_WEIGHTS.deadline; }
 
   if (!concerns.length) concerns.push('No major concern flagged — still your call to confirm fit.');
+  const bounded = Math.max(0, Math.min(100, score));
   return {
-    score: Math.max(0, Math.min(100, Math.round(score))),
+    score: Math.round(bounded),
+    // Rounded to one decimal rather than truncated, so 71.96 reads as 72.0 and not 71.9.
+    precise: Math.round(bounded * 10) / 10,
+    // How many of the eight axes both sides actually answered. A 78 built on two answers is
+    // not the same claim as a 78 built on eight, and hiding that would be the dishonest part.
+    comparedOn: sfConsidered,
     reasons,
     concerns,
     recommendedApproach: recommendApproach(project),
@@ -901,6 +954,21 @@ export async function createMemberProject(member, input) {
   // Work-trial ladder: only touch access_stage when explicitly Stage 2, so default (Stage 1)
   // project creation keeps working before the access_stage migration is applied.
   if (Number(input.accessStage) === 2) row.access_stage = 2;
+  // The environment axes. These are what computeFitScore compares a student's work_style
+  // against, and until now nothing wrote them, so the 18-point startup-fit component of every
+  // score was silently dead.
+  if (input.environment && typeof input.environment === 'object') {
+    for (const [col, key] of ENV_DIMS) {
+      const value = input.environment[key];
+      if (typeof value === 'string' && (WORK_STYLE_ENUMS[key] || []).includes(value)) row[col] = value;
+    }
+  }
+  // The ideal intern, as the founder describes them. Traits stay separate from skills: a
+  // skill can be evidenced from an artifact and a trait cannot, and merging them would let
+  // "ships fast" sit in the same list as a verified capability.
+  if (input.idealTraits !== undefined) row.ideal_traits = cleanTraits(input.idealTraits);
+  if (input.idealSkills !== undefined) row.ideal_skills = cleanList(input.idealSkills);
+  if (input.idealMemo !== undefined) row.ideal_memo = cleanText(input.idealMemo, 2_000) || null;
   // Engagement ladder rung (delta #2). 'micro' = bounded ~5-hour task, the de-risked first
   // bet. Only written when explicitly provided, so creation works before the migration.
   if (['micro', 'project_short', 'project_long', 'part_time', 'internship', 'full_time'].includes(input.engagementRung)) row.engagement_rung = input.engagementRung;
@@ -1114,6 +1182,22 @@ export async function applyToBatch(member, input) {
     // batch was asked them, which is the point: a shared question can be prepared once and
     // reused, and one anchored to a specific line of their own history cannot. The anchor
     // travels with the answer so a reviewer can see what prompted the question.
+    // Concept answers store the INDEX chosen, not whether it was right. Correctness is
+    // resolved server-side against the published bank at review time, so a client that lies
+    // about its own score changes nothing.
+    conceptAnswers: Array.isArray(input.conceptAnswers)
+      ? input.conceptAnswers.slice(0, 12).map(a => ({
+          question: cleanText(a?.question, 400),
+          choice: Number.isInteger(a?.choice) ? a.choice : null,
+        })).filter(a => a.question && a.choice !== null)
+      : [],
+    reasoningAnswers: Array.isArray(input.reasoningAnswers)
+      ? input.reasoningAnswers.slice(0, 8).map(a => ({
+          id: cleanText(a?.id, 60),
+          question: cleanText(a?.question, 600),
+          answer: cleanText(a?.answer, 2000),
+        })).filter(a => a.question && a.answer)
+      : [],
     resumeAnswers: Array.isArray(input.resumeAnswers)
       ? input.resumeAnswers.slice(0, 6).map(a => ({
           question: cleanText(a?.question, 400),

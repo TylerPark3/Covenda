@@ -197,7 +197,7 @@ function renderDashboard() {
   const active = $('nav [data-view].is-active');
   if (active && active.hidden) setView('overview');
   $$('[data-org-only]').forEach(el=>el.hidden=!['company','university'].includes(role));
-  $('#portfolioNavLabel').textContent=role==='company'?'Talent':'Your proof of work';
+  $('#portfolioNavLabel').textContent=role==='company'?'Talent':'Portfolio';
   $('#projectCount').textContent=projects.length;
   $('#intakeCount').textContent=intakes.length;
   $('#messageCount').textContent=messages.length;
@@ -211,11 +211,109 @@ function renderDashboard() {
   $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderCompanySegments(role); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderPipeline();renderIntroductions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
+  renderCompanySegments(role); renderBriefing(); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderPipeline();renderIntroductions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
 // Company home leads with the two jobs it does: delegate stuck work, and find elite talent.
+
+// The company briefing. `companyBriefing()` has answered these four questions since it was
+// written and nothing ever asked it. Ordered by who is waiting: what is blocked on this
+// company first, because that is the only list where inaction costs somebody else something.
+function renderBriefing(){
+  const host=$('#briefingPanel');
+  if(!host)return;
+  const d=state.dashboard;
+  const b=d&&d.briefing;
+  if(d?.profile?.role!=='company'||!b){host.hidden=true;host.replaceChildren();return;}
+  host.replaceChildren();
+
+  if(b.emptyReason){
+    // An empty dashboard full of zeros reads as failure. Say what is actually true instead.
+    const empty=document.createElement('p');empty.className='brf-empty';empty.textContent=b.emptyReason;
+    host.append(empty);host.hidden=false;return;
+  }
+
+  const wait=n=>!Number.isFinite(n)?'':n<=0?'today':n===1?'1 day':`${n} days`;
+
+  if((b.blocking||[]).length){
+    const sec=document.createElement('section');sec.className='brf-block is-urgent';
+    const h=document.createElement('h3');h.textContent='Waiting on you';
+    sec.append(h);
+    const list=document.createElement('ul');list.className='brf-list';
+    b.blocking.forEach(item=>{
+      const li=document.createElement('li');
+      const main=document.createElement('div');
+      const t=document.createElement('strong');
+      t.textContent=item.title||(item.kind==='applications'?'New applications':'Needs your attention');
+      const note=document.createElement('span');note.textContent=item.note||'';
+      main.append(t,note);
+      li.append(main);
+      const days=wait(item.waitingDays);
+      if(days){const d2=document.createElement('em');d2.className='brf-wait';d2.textContent=days;li.append(d2);}
+      if(item.projectId){
+        const go=document.createElement('button');go.type='button';go.className='brf-go';
+        go.textContent='Open';
+        go.addEventListener('click',()=>{setView('projects');});
+        li.append(go);
+      }
+      list.append(li);
+    });
+    sec.append(list);host.append(sec);
+  }
+
+  if((b.running||[]).length){
+    const sec=document.createElement('section');sec.className='brf-block';
+    const h=document.createElement('h3');h.textContent='Running without you';
+    sec.append(h);
+    const list=document.createElement('ul');list.className='brf-list';
+    b.running.forEach(r=>{
+      const li=document.createElement('li');
+      const main=document.createElement('div');
+      const t=document.createElement('strong');t.textContent=r.title;
+      const note=document.createElement('span');note.textContent=r.note||'';
+      main.append(t,note);li.append(main);
+      const days=wait(r.startedDays);
+      if(days){const d2=document.createElement('em');d2.className='brf-wait';d2.textContent=days;li.append(d2);}
+      list.append(li);
+    });
+    sec.append(list);host.append(sec);
+  }
+
+  const m=b.money||{};
+  const money=document.createElement('section');money.className='brf-block brf-money';
+  const mh=document.createElement('h3');mh.textContent='What it has cost';
+  money.append(mh);
+  const grid=document.createElement('div');grid.className='brf-figures';
+  // Held before released: a founder wants to know what is committed, not only what is gone.
+  [['Held in escrow',m.heldInEscrow],['Released on completed work',m.releasedOnCompletedWork],['Projects completed',m.completedProjects]]
+    .forEach(([label,value])=>{
+      const cell=document.createElement('div');
+      const n=document.createElement('strong');n.textContent=String(Number(value)||0);
+      const l=document.createElement('span');l.textContent=label;
+      cell.append(n,l);grid.append(cell);
+    });
+  money.append(grid);host.append(money);
+
+  const learned=document.createElement('section');learned.className='brf-block';
+  const lh=document.createElement('h3');lh.textContent='What we learned';
+  learned.append(lh);
+  if(b.learned){
+    const p=document.createElement('p');p.className='brf-learned';
+    const l=b.learned;
+    p.textContent=`${l.answered} ${l.answered===1?'survey':'surveys'} answered · ${l.wouldUseAgain} would use Covenda again`
+      +(Number.isFinite(l.avgShortlistRelevance)?` · shortlist relevance ${l.avgShortlistRelevance}/5`:'');
+    learned.append(p);
+  }else{
+    // No outcomes yet, and saying so beats rendering zeros that look like a bad result.
+    const p=document.createElement('p');p.className='brf-empty';
+    p.textContent='Nothing yet. This fills in after your first completed trial.';
+    learned.append(p);
+  }
+  host.append(learned);
+  host.hidden=false;
+}
+
 function renderCompanySegments(role){
   const root=$('#companySegments');if(!root)return;
   if(role!=='company'){root.hidden=true;root.replaceChildren();return;}
@@ -1813,6 +1911,86 @@ let batchInterestSpec=[];
 // All of them at once is a wall of textareas — a student skims, writes short answers to
 // everything, and the answers get worse the further down the page they are. One question,
 // one answer, then the next. The count is visible so nobody feels trapped.
+
+// Concept and reasoning questions. Both banks have existed in api/assessments.js for all 25
+// specialisations, reached the client on the brief, and were never rendered.
+//
+// They are published deliberately. A question that only works while it is secret is not
+// measuring much, and every distractor here is a real misconception rather than a filler
+// option, so recognising the right answer still requires knowing why the others are wrong.
+//
+// Nothing is marked for the student. batch-score.js keeps the composite operator-only and
+// non-binding, and showing a running score here would quietly turn the application into a
+// test people abandon halfway.
+let batchConceptSpec=[], batchReasoningSpec=[];
+function renderAssessmentQuestions(batch){
+  const brief=batchBriefFor(batch);
+  const a=brief&&brief.assessment;
+  batchConceptSpec=(a&&a.concepts)||[];
+  batchReasoningSpec=(a&&a.reasoning)||[];
+
+  const ch=$('#batchConcepts');
+  if(ch){
+    ch.replaceChildren();
+    if(!batchConceptSpec.length){ch.hidden=true;}
+    else{
+      ch.hidden=false;
+      ch.append(quizHead('Concepts',`${batchConceptSpec.length} multiple choice. Pick the one you would defend.`));
+      batchConceptSpec.forEach((c,i)=>{
+        const item=document.createElement('fieldset');item.className='ba-quiz-item';
+        const legend=document.createElement('legend');legend.textContent=c.q;
+        item.append(legend);
+        (c.options||[]).forEach((opt,oi)=>{
+          const lab=document.createElement('label');lab.className='ba-quiz-opt';
+          const radio=document.createElement('input');
+          radio.type='radio';radio.name=`concept-${i}`;radio.value=String(oi);
+          const txt=document.createElement('span');txt.textContent=opt;
+          lab.append(radio,txt);item.append(lab);
+        });
+        ch.append(item);
+      });
+    }
+  }
+
+  const rh=$('#batchReasoning');
+  if(rh){
+    rh.replaceChildren();
+    if(!batchReasoningSpec.length){rh.hidden=true;}
+    else{
+      rh.hidden=false;
+      rh.append(quizHead('Reasoning',`${batchReasoningSpec.length} short answers. An approach you can defend beats a right answer nobody can follow.`));
+      batchReasoningSpec.forEach((r,i)=>{
+        const wrap=document.createElement('label');wrap.className='ba-quiz-written';
+        const q=document.createElement('span');q.className='ba-quiz-q';q.textContent=r.q;
+        const area=document.createElement('textarea');area.rows=4;area.maxLength=2000;
+        area.placeholder='Think out loud. Partial reasoning is worth more than a guess.';
+        area.dataset.reasoning=String(i);
+        wrap.append(q,area);rh.append(wrap);
+      });
+    }
+  }
+}
+function quizHead(title,sub){
+  const head=document.createElement('div');head.className='ba-quiz-head';
+  const h=document.createElement('p');h.className='ba-quiz-cap';h.textContent=title;
+  const p=document.createElement('p');p.className='ba-quiz-sub';p.textContent=sub;
+  head.append(h,p);return head;
+}
+function readConceptAnswers(){
+  return batchConceptSpec.map((c,i)=>{
+    const picked=document.querySelector(`input[name="concept-${i}"]:checked`);
+    // Number(null) is 0, which would read as "picked the first option". Send null instead.
+    return {question:c.q,choice:picked?Number(picked.value):null};
+  }).filter(a=>a.choice!==null);
+}
+function readReasoningAnswers(){
+  const host=$('#batchReasoning');if(!host)return [];
+  return batchReasoningSpec.map((r,i)=>{
+    const area=host.querySelector(`textarea[data-reasoning="${i}"]`);
+    return {id:r.id||'',question:r.q,answer:(area&&area.value.trim())||''};
+  }).filter(a=>a.answer);
+}
+
 let baQIndex = 0;
 function renderBatchInterest(batch){
   const host=$('#batchInterestQuestions');if(!host)return;
@@ -2107,6 +2285,7 @@ function openBatchApply(batch){
   currentBatchPrompt=pickBatchPrompt(batch); // a fresh random prompt each time the form opens
   // Weights the résumé questions toward this batch's field without ignoring the rest.
   currentBatchVertical=[batch.discipline,batch.name].filter(Boolean)[0]||'';
+  renderAssessmentQuestions(batch);
   const promptEl=$('#batchVideoPrompt');if(promptEl)promptEl.textContent=currentBatchPrompt;
   const batchVideoInput=$('#batchVideoUrl');
   if(batchVideoInput){batchVideoInput.value='';
@@ -2937,30 +3116,48 @@ function renderCredibility(root,d){
   const held=key=>Boolean((v.signals||[]).find(x=>x.key===key)?.held);
   const vouched=held('club')||held('referral');
 
-  // Ordered by what a company weighs, not by what is easy to get.
+  // Ordered by what a company weighs, not by what is easy to get. `weight` is that ordering
+  // made visible, and `action` is what the row is for — a list of things you are missing with
+  // no way to act on any of them is just a scolding.
   const signals=[
-    { ok:completed>0,
+    { key:'work', weight:5,
+      ok:completed>0,
       on:`${completed} accepted ${completed===1?'deliverable':'deliverables'}`,
       off:'No accepted work yet',
+      todo:'Complete a trial',
       note:completed>0?'A company reviewed this work and accepted it. It is the strongest thing on your profile.'
-                      :'This is what companies look for first. Everything else is a proxy for it.' },
-    { ok:vouched,
+                      :'This is what companies look for first. Everything else is a proxy for it.',
+      go:{view:'discover',label:'Find a project'} },
+    { key:'vouch', weight:4,
+      ok:vouched,
       on:held('referral')?'A named referral stands behind you':'A club confirmed you',
       off:'Nobody has vouched for you yet',
+      todo:'Get one vouch',
       note:vouched?'Someone put their own name behind you, and companies can see whose.'
-                  :'A profile with no vouch reads as unverified, whatever else is on it.' },
-    { ok:ghSkills>0,
+                  :'A profile with no vouch reads as unverified, whatever else is on it.',
+      go:{view:'portfolio',label:'Add a referral'} },
+    { key:'code', weight:3,
+      ok:ghSkills>0,
       on:`${ghSkills} skill${ghSkills===1?'':'s'} evidenced from real code`,
       off:'No code analysed',
+      todo:'Link a repository',
       note:ghSkills>0?'Drawn from repositories you linked, not self-reported.'
-                     :'Self-reported skills carry no weight here. Analysed code does.' },
-    { ok:profileCompletion(p)>=100,
+                     :'Self-reported skills carry no weight here. Analysed code does.',
+      go:{view:'portfolio',label:'Link GitHub'} },
+    { key:'profile', weight:2,
+      ok:profileCompletion(p)>=100,
       on:'Profile reads complete',
       off:`Profile is ${profileCompletion(p)}% filled in`,
+      todo:'Finish your profile',
       note:profileCompletion(p)>=100?'Headline, context, and skills are all there.'
-                                    :'Gaps here are the first thing a reader notices.' },
+                                    :'Gaps here are the first thing a reader notices.',
+      go:{view:'portfolio',label:'Edit profile'} },
   ];
   const met=signals.filter(x=>x.ok).length;
+  const earned=signals.filter(x=>x.ok).reduce((n,x)=>n+x.weight,0);
+  const total=signals.reduce((n,x)=>n+x.weight,0);
+  // The single highest-weight thing still missing. One next step beats four.
+  const next=signals.filter(x=>!x.ok).sort((a,b)=>b.weight-a.weight)[0]||null;
 
   const sec=document.createElement('section');sec.className='cred-meter';
   const head=document.createElement('div');head.className='cred-meter-head';
@@ -2968,27 +3165,55 @@ function renderCredibility(root,d){
   const h=document.createElement('h3');h.textContent='What a company sees';
   const sub=document.createElement('p');sub.className='cred-meter-sub';
   sub.textContent=met===0
-    ? 'Your profile is live but carries no evidence yet.'
+    ? 'Nothing on your profile is verified yet. One thing changes that.'
+    : met===signals.length ? 'Everything a company checks, you have.'
     : 'How your profile reads today.';
   box.append(h,sub);
-  const tag=document.createElement('span');tag.className='cred-meter-tag';
-  tag.textContent=`${met} of ${signals.length}`;
-  head.append(box,tag);sec.append(head);
 
-  const track=document.createElement('div');track.className='cred-meter-track';
-  const fill=document.createElement('i');fill.style.width=`${(met/signals.length)*100}%`;
-  track.append(fill);sec.append(track);
+  // A ring rather than a fraction: weighted, so finishing the profile does not look like the
+  // same win as landing accepted work.
+  const ring=document.createElement('div');ring.className='cred-ring';
+  const pct=Math.round((earned/total)*100);
+  ring.style.setProperty('--pct',String(pct));
+  const rn=document.createElement('strong');rn.textContent=`${met}/${signals.length}`;
+  ring.append(rn);
+  head.append(box,ring);sec.append(head);
+
+  if(next){
+    // The quest. Promoted out of the list because a ranked list still reads as four chores.
+    const up=document.createElement('div');up.className='cred-next';
+    const cap=document.createElement('p');cap.className='cred-next-cap';cap.textContent='Do this next';
+    const t=document.createElement('strong');t.textContent=next.todo;
+    const why=document.createElement('p');why.className='cred-next-why';why.textContent=next.note;
+    const btn=document.createElement('button');btn.type='button';btn.className='cred-next-go';
+    btn.textContent=next.go.label;
+    btn.addEventListener('click',()=>setView(next.go.view));
+    // Weight, stated. A student deserves to know why this one is first.
+    const w=document.createElement('span');w.className='cred-next-weight';
+    w.textContent=`Counts most${signals.filter(x=>!x.ok).length>1?` of the ${signals.filter(x=>!x.ok).length} left`:''}`;
+    up.append(cap,t,why,btn,w);
+    sec.append(up);
+  }
 
   const list=document.createElement('ul');list.className='cred-meter-list';
   signals.forEach(sig=>{
     const li=document.createElement('li');li.className=sig.ok?'is-met':'';
+    if(next&&sig.key===next.key)li.classList.add('is-next');
     const mark=document.createElement('span');mark.className='cred-mark';
-    mark.textContent=sig.ok?'✓':'○';
+    mark.textContent=sig.ok?'✓':'';
     const div=document.createElement('div');
     const strong=document.createElement('strong');strong.textContent=sig.ok?sig.on:sig.off;
     const small=document.createElement('small');small.textContent=sig.note;
     div.append(strong,small);
-    li.append(mark,div);list.append(li);
+    li.append(mark,div);
+    // Every row goes somewhere. Even a met one — a student who landed a deliverable should be
+    // able to click through and look at it.
+    const go=document.createElement('button');go.type='button';go.className='cred-row-go';
+    go.setAttribute('aria-label',`${sig.ok?sig.on:sig.todo} — open`);
+    go.textContent='›';
+    go.addEventListener('click',()=>setView(sig.go.view));
+    li.append(go);
+    list.append(li);
   });
   sec.append(list);
 
@@ -3083,8 +3308,48 @@ function githubAnalysisCard(a){
   card.append(grid);return card;
 }
 
+
+// The eight comparison axes, shared by both forms. Company answers what the ROLE is like,
+// student answers what THEY like; computeFitScore walks the pairs. A blank on either side is
+// skipped rather than penalised, so an incomplete profile never reads as a bad one.
+const FIT_AXES=['structure','autonomy','pace','collaboration','feedback','communication','scope','stage'];
+const TRAIT_OPTIONS=[
+  'comfortable with ambiguity','ships fast','detail-obsessed','asks questions early',
+  'works well unsupervised','strong writer','enjoys unglamorous work','learns a new tool quickly',
+  'pushes back when something is wrong','finishes what they start',
+];
+function fieldName(prefix,key){return prefix+key[0].toUpperCase()+key.slice(1);}
+function readAxes(form,prefix){
+  const out={};
+  FIT_AXES.forEach(k=>{
+    const el=form.elements[fieldName(prefix,k)];
+    if(el&&el.value)out[k]=el.value;
+  });
+  return Object.keys(out).length?out:null;
+}
+function fillAxes(form,prefix,values){
+  const v=values&&typeof values==='object'?values:{};
+  FIT_AXES.forEach(k=>{const el=form.elements[fieldName(prefix,k)];if(el)el.value=v[k]||'';});
+}
+// Chips rather than a free-text box: a fixed list is the only way both sides can be compared
+// at all, and it stops "self-starter" and "self starter" reading as different traits.
+function mountTraitChips(hostId,name,selected){
+  const host=document.getElementById(hostId);if(!host)return;
+  host.replaceChildren();
+  const picked=new Set((selected||[]).map(t=>String(t).toLowerCase()));
+  TRAIT_OPTIONS.forEach(t=>{
+    const lab=document.createElement('label');lab.className='chip-check';
+    const box=document.createElement('input');box.type='checkbox';box.name=name;box.value=t;box.checked=picked.has(t);
+    const span=document.createElement('span');span.textContent=t;
+    lab.append(box,span);host.append(lab);
+  });
+}
+function readTraits(form,name){
+  return [...form.querySelectorAll(`input[name="${name}"]:checked`)].map(el=>el.value).slice(0,6);
+}
+
 function updateProfileFields(){const role=$('[name="role"]:checked',$('#profileForm'))?.value||state.dashboard?.profile?.role||'student';$$('[data-profile-field="organization"]').forEach(el=>el.hidden=role==='student');$$('[data-profile-field="school"],[data-profile-field="graduation"],[data-student-profile]').forEach(el=>el.hidden=role!=='student');}
-function openProfile({required=false}={}){const form=$('#profileForm');const p=state.dashboard?.profile;form.reset();if(p){form.elements.role.value=p.role;form.elements.displayName.value=p.display_name||'';form.elements.organizationName.value=p.organization_name||'';form.elements.schoolName.value=p.school_name||'';form.elements.graduationYear.value=p.graduation_year||'';form.elements.headline.value=p.headline||'';form.elements.bio.value=p.bio||'';form.elements.skills.value=(p.skills||[]).join(', ');form.elements.portfolioVisibility.checked=p.portfolio_visibility!=='private';if(form.elements.emailNotifications)form.elements.emailNotifications.checked=p.email_opt_out!==true;if(form.elements.spotlightConsent)form.elements.spotlightConsent.checked=p.spotlight_consent===true;
+function openProfile({required=false}={}){const form=$('#profileForm');const p=state.dashboard?.profile;form.reset();mountTraitChips('studentTraitRow','studentTrait',[]);if(p){form.elements.role.value=p.role;form.elements.displayName.value=p.display_name||'';form.elements.organizationName.value=p.organization_name||'';form.elements.schoolName.value=p.school_name||'';form.elements.graduationYear.value=p.graduation_year||'';form.elements.headline.value=p.headline||'';form.elements.bio.value=p.bio||'';form.elements.skills.value=(p.skills||[]).join(', ');form.elements.portfolioVisibility.checked=p.portfolio_visibility!=='private';fillAxes(form,'ws',p.work_style);mountTraitChips('studentTraitRow','studentTrait',p.traits);if(form.elements.emailNotifications)form.elements.emailNotifications.checked=p.email_opt_out!==true;if(form.elements.spotlightConsent)form.elements.spotlightConsent.checked=p.spotlight_consent===true;
   const appealBtn=document.getElementById('appealSubmitBtn');
   if(appealBtn&&!appealBtn.dataset.wired){appealBtn.dataset.wired='1';appealBtn.addEventListener('click',async()=>{
     const subject=form.elements.appealSubject?form.elements.appealSubject.value.trim():'';
@@ -3099,7 +3364,7 @@ function openProfile({required=false}={}){const form=$('#profileForm');const p=s
     }catch(error){if(status)status.textContent=error.message;}
     appealBtn.disabled=false;
   });}$$('[name="role"]',form).forEach(input=>input.disabled=true);}else{$$('[name="role"]',form).forEach(input=>input.disabled=false);const inferred=state.dashboard?.user?.metadata?.full_name||state.dashboard?.user?.metadata?.name||'';form.elements.displayName.value=inferred;}form.dataset.required=required?'true':'false';$$('[data-close-dialog]',form).forEach(button=>button.hidden=required);updateProfileFields();setDialogMessage('#profileMessage','');$('#profileDialog').showModal();}
-function openProject(){setDialogMessage('#projectMessage','');$('#projectForm').reset();$('#projectDialog').showModal();}
+function openProject(){setDialogMessage('#projectMessage','');$('#projectForm').reset();mountTraitChips('idealTraitRow','idealTrait',[]);$('#projectDialog').showModal();}
 // A "Create Project" click on the marketing site stashes the typed brief and routes here. Once
 // the visitor is signed in as a COMPANY, open the project intake pre-filled with that brief.
 // If they aren't a company yet (new signup picking a role, or a student account), we keep the
@@ -3378,9 +3643,9 @@ $('#intakePost')?.addEventListener('click',async()=>{const form=$('#intakeForm')
 $('#googleLogin').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;setLoginMessage('Opening Google sign-in…');try{const response=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'google-login'})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Google sign-in could not start.');location.assign(result.url);}catch(error){setLoginMessage(error.message,true);button.disabled=false;}});
 $('#memberEmailForm').addEventListener('submit',async event=>{event.preventDefault();const button=$('button',event.currentTarget);button.disabled=true;setLoginMessage('Requesting a secure sign-in link…');try{const response=await fetch('/api/portal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'request-link',email:event.currentTarget.elements.email.value})});const result=await response.json();if(!response.ok||!result.ok)throw new Error(result.error||'Could not request a sign-in link.');setLoginMessage(result.message);}catch(error){setLoginMessage(error.message,true);}finally{button.disabled=false;}});
 
-$('#profileForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#profileMessage','Saving your workspace…');const payload={action:'save-profile',role:form.elements.role.value,displayName:form.elements.displayName.value,organizationName:form.elements.organizationName.value,schoolName:form.elements.schoolName.value,graduationYear:form.elements.graduationYear.value,headline:form.elements.headline.value,bio:form.elements.bio.value,skills:form.elements.skills.value,portfolioVisibility:form.elements.portfolioVisibility.checked?'members':'private',emailOptOut:form.elements.emailNotifications?!form.elements.emailNotifications.checked:undefined,spotlightConsent:form.elements.spotlightConsent?form.elements.spotlightConsent.checked:undefined};try{await portalRequest({method:'PATCH',body:JSON.stringify(payload)});$('#profileDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#profileMessage',error.message,true);}finally{button.disabled=false;}});
+$('#profileForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#profileMessage','Saving your workspace…');const payload={action:'save-profile',role:form.elements.role.value,displayName:form.elements.displayName.value,organizationName:form.elements.organizationName.value,schoolName:form.elements.schoolName.value,graduationYear:form.elements.graduationYear.value,headline:form.elements.headline.value,bio:form.elements.bio.value,skills:form.elements.skills.value,portfolioVisibility:form.elements.portfolioVisibility.checked?'members':'private',emailOptOut:form.elements.emailNotifications?!form.elements.emailNotifications.checked:undefined,spotlightConsent:form.elements.spotlightConsent?form.elements.spotlightConsent.checked:undefined,workStyle:readAxes(form,'ws'),traits:readTraits(form,'studentTrait')};try{await portalRequest({method:'PATCH',body:JSON.stringify(payload)});$('#profileDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#profileMessage',error.message,true);}finally{button.disabled=false;}});
 
-$('#projectForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#projectMessage','Creating project…');const payload={action:'create-project',title:form.elements.title.value,summary:form.elements.summary.value,deliverable:form.elements.deliverable.value,desiredSkills:form.elements.desiredSkills.value,targetDate:form.elements.targetDate.value,visibility:form.elements.visibility.value,accessStage:form.elements.accessStage?Number(form.elements.accessStage.value):1,engagementRung:form.elements.engagementRung?form.elements.engagementRung.value:'',opportunityType:form.elements.opportunityType?form.elements.opportunityType.value:undefined,experienceRequirement:form.elements.experienceRequirement?form.elements.experienceRequirement.value:undefined,referralRequirement:form.elements.referralRequirement?form.elements.referralRequirement.value:undefined,founderTimeBudgetMinWeek:form.elements.founderTimeBudgetMinWeek&&form.elements.founderTimeBudgetMinWeek.value!==''?Number(form.elements.founderTimeBudgetMinWeek.value):undefined,talentSources:[...form.querySelectorAll('input[name="talentSource"]:checked')].map(el=>el.value)};try{await portalRequest({method:'POST',body:JSON.stringify(payload)});$('#projectDialog').close();await loadDashboard();setView('projects');}catch(error){setDialogMessage('#projectMessage',error.message,true);}finally{button.disabled=false;}});
+$('#projectForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#projectMessage','Creating project…');const payload={action:'create-project',title:form.elements.title.value,summary:form.elements.summary.value,deliverable:form.elements.deliverable.value,desiredSkills:form.elements.desiredSkills.value,targetDate:form.elements.targetDate.value,visibility:form.elements.visibility.value,accessStage:form.elements.accessStage?Number(form.elements.accessStage.value):1,engagementRung:form.elements.engagementRung?form.elements.engagementRung.value:'',opportunityType:form.elements.opportunityType?form.elements.opportunityType.value:undefined,experienceRequirement:form.elements.experienceRequirement?form.elements.experienceRequirement.value:undefined,referralRequirement:form.elements.referralRequirement?form.elements.referralRequirement.value:undefined,founderTimeBudgetMinWeek:form.elements.founderTimeBudgetMinWeek&&form.elements.founderTimeBudgetMinWeek.value!==''?Number(form.elements.founderTimeBudgetMinWeek.value):undefined,talentSources:[...form.querySelectorAll('input[name="talentSource"]:checked')].map(el=>el.value),environment:readAxes(form,'env'),idealTraits:readTraits(form,'idealTrait'),idealSkills:form.elements.idealSkills?form.elements.idealSkills.value:'',idealMemo:form.elements.idealMemo?form.elements.idealMemo.value:''};try{await portalRequest({method:'POST',body:JSON.stringify(payload)});$('#projectDialog').close();await loadDashboard();setView('projects');}catch(error){setDialogMessage('#projectMessage',error.message,true);}finally{button.disabled=false;}});
 
 $('#applyForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#applyMessage','Sending your interest…');const skills=form.elements.skills.value.split(',').map(s=>s.trim()).filter(Boolean);const referral={name:form.elements.referralName.value.trim(),code:form.elements.referralCode.value.trim()};try{await portalRequest({method:'POST',body:JSON.stringify({action:'apply',projectId:form.elements.projectId.value,note:form.elements.note.value,skills,demonstration:form.elements.demonstration.value.trim(),videoUrl:form.elements.videoUrl.value.trim(),referral})});$('#applyDialog').close();await loadDashboard();setView('activity');}catch(error){setDialogMessage('#applyMessage',error.message,true);}finally{button.disabled=false;}});
 $('#batchApplyForm')?.addEventListener('submit',async event=>{
@@ -3398,7 +3663,7 @@ $('#batchApplyForm')?.addEventListener('submit',async event=>{
   button.disabled=true;setDialogMessage('#batchApplyMessage','Submitting your application…');
   const skills=e.skills.value.split(',').map(s=>s.trim()).filter(Boolean);
   try{
-    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(),resumeAnswers:readResumeAnswers(),resumeUrl:batchResumeUrl,workSampleFiles:batchArtifacts.filter(f=>f.url).map(f=>({name:f.name,url:f.url})),exerciseUrl:($('#batchExerciseUrl')?.value||'').trim(),referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
+    await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(),conceptAnswers:readConceptAnswers(),reasoningAnswers:readReasoningAnswers(),resumeAnswers:readResumeAnswers(),resumeUrl:batchResumeUrl,workSampleFiles:batchArtifacts.filter(f=>f.url).map(f=>({name:f.name,url:f.url})),exerciseUrl:($('#batchExerciseUrl')?.value||'').trim(),referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
     $('#batchApplyDialog').close();await loadDashboard();setView('batches');
   }catch(error){setDialogMessage('#batchApplyMessage',error.message,true);}finally{button.disabled=false;}
 });
@@ -3863,4 +4128,84 @@ const videoStudio=(function(){
   }
 
   return { record, mountPicker, canRecord, library, canShareScreen: Boolean(navigator.mediaDevices?.getDisplayMedia) };
+})();
+
+// Ambient gold particles across the header strip.
+//
+// Purely decorative, so it earns its place only by costing almost nothing: it stops entirely
+// when the tab is hidden, never starts under prefers-reduced-motion, and holds a fixed number
+// of points regardless of screen width.
+//
+// The points drift and link to near neighbours, so the shapes are emergent rather than drawn —
+// constellations that form and dissolve. It reads as a network, which is what the product is.
+(function headerField(){
+  const canvas=document.getElementById('headerField');
+  if(!canvas)return;
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)');
+  if(reduce&&reduce.matches)return;
+  const ctx=canvas.getContext('2d');
+  if(!ctx)return;
+
+  const COUNT=26, LINK=104;
+  let w=0,h=0,dpr=1,points=[],raf=0,running=false;
+
+  function size(){
+    const r=canvas.getBoundingClientRect();
+    if(!r.width||!r.height)return false;
+    dpr=Math.min(window.devicePixelRatio||1,2);
+    w=r.width;h=r.height;
+    canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    return true;
+  }
+  function seed(){
+    points=Array.from({length:COUNT},(_,i)=>({
+      x:(i+0.5)/COUNT*w+(i%3-1)*9,
+      y:h*(0.22+((i*0.37)%1)*0.56),
+      vx:((i%5)-2)*0.045||0.03,
+      vy:((i%3)-1)*0.028||0.02,
+      r:i%7===0?1.9:1.15,
+    }));
+  }
+  function frame(){
+    if(!running)return;
+    ctx.clearRect(0,0,w,h);
+    const night=document.documentElement.dataset.theme==='night';
+    const dot=night?'217,169,78':'180,123,32';
+    for(const p of points){
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.x<-20)p.x=w+20; else if(p.x>w+20)p.x=-20;
+      if(p.y<2||p.y>h-2)p.vy*=-1;
+    }
+    for(let i=0;i<points.length;i++){
+      for(let j=i+1;j<points.length;j++){
+        const a=points[i],b=points[j];
+        const dx=a.x-b.x,dy=a.y-b.y;
+        const d=Math.hypot(dx,dy);
+        if(d>LINK)continue;
+        // Fades with distance, so a link appears and dissolves rather than snapping on.
+        ctx.strokeStyle=`rgba(${dot},${(1-d/LINK)*(night?0.30:0.20)})`;
+        ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+      }
+    }
+    for(const p of points){
+      ctx.fillStyle=`rgba(${dot},${night?0.62:0.42})`;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();
+    }
+    raf=requestAnimationFrame(frame);
+  }
+  function start(){
+    if(running)return;
+    if(!size())return;
+    if(!points.length||points.length!==COUNT)seed();
+    running=true;raf=requestAnimationFrame(frame);
+  }
+  function stop(){ running=false; if(raf)cancelAnimationFrame(raf); raf=0; }
+
+  // A decorative canvas that keeps painting behind a hidden tab is a battery bug.
+  document.addEventListener('visibilitychange',()=>{document.hidden?stop():start();});
+  window.addEventListener('resize',()=>{ if(size())seed(); },{passive:true});
+  if(reduce&&reduce.addEventListener)reduce.addEventListener('change',e=>{e.matches?stop():start();});
+  start();
 })();

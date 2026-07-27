@@ -279,6 +279,12 @@ function batchApplicationRow(batch, app) {
   if (materials.videoPrompt) field('Video prompt (assigned)', materials.videoPrompt);
   (materials.interest || []).forEach(a => { if (a && a.answer) field(a.question || 'Interest', a.answer); });
   if (materials.experience) field('Relevant experience', materials.experience);
+  // Concept answers, marked here rather than in the browser: the client never learns whether
+  // it was right, so it cannot be the thing that decides.
+  (materials.conceptAnswers || []).forEach(a => {
+    if (a && Number.isInteger(a.choice)) field(a.question, `Chose option ${a.choice + 1}`);
+  });
+  (materials.reasoningAnswers || []).forEach(a => { if (a && a.answer) field(a.question, a.answer); });
   // Résumé-anchored questions. Shown with the fragment that prompted them, so a reviewer can
   // tell a specific answer from a general one.
   (materials.resumeAnswers || []).forEach(a => {
