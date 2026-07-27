@@ -2169,6 +2169,8 @@ function renderExercise(batch){
       script,
     });
     go.disabled=false;
+    if(out&&out.error){ state.textContent=out.error; state.classList.add('is-warn'); return; }
+    state.classList.remove('is-warn');
     if(out&&out.url){
       const input=$('#batchExerciseUrl');if(input)input.value=out.url;
       state.textContent='Recorded and attached.';
@@ -3883,6 +3885,28 @@ const videoStudio=(function(){
   // Audio comes from the microphone as well as the tab, because thinking aloud is half of
   // what a rater is reading. A silent screen recording of correct answers tells you much
   // less than a narrated one that goes wrong twice.
+  // getDisplayMedia and getUserMedia reject with a DOMException whose NAME is the only
+  // reliable signal — the message is browser-specific and often empty. Each of these needs
+  // different advice, and collapsing them into one string is what made this undiagnosable.
+  function captureReason(err,mode){
+    const name=err&&err.name||'';
+    const screen=mode==='screen';
+    if(name==='NotAllowedError'){
+      return screen
+        ? 'Screen sharing was blocked or dismissed. Press the button again and pick a window or tab. On macOS you may also need to allow your browser under System Settings, Privacy & Security, Screen Recording.'
+        : 'Camera or microphone access was blocked. Allow it from your browser address bar, then try again.';
+    }
+    if(name==='NotFoundError'||name==='DevicesNotFoundError'){
+      return screen?'No screen source was available to share.':'No camera or microphone was found on this device.';
+    }
+    if(name==='NotReadableError')return 'Something else is already using it. Close any other call or recorder, then try again.';
+    if(name==='NotSupportedError'||name==='TypeError'){
+      return screen?'This browser cannot share a screen. Use Chrome, Edge or Safari on a computer, iPhone and iPad cannot do it.':'This browser cannot record. Try Chrome or Safari.';
+    }
+    if(name==='AbortError')return 'The capture stopped before it started. Try again.';
+    return (err&&err.message)||'Could not start the recording.';
+  }
+
   async function screenStream(){
     if(!navigator.mediaDevices?.getDisplayMedia) throw new Error('This browser cannot share a screen. Use Chrome, Edge or Safari.');
     const display=await navigator.mediaDevices.getDisplayMedia({
@@ -3907,8 +3931,8 @@ const videoStudio=(function(){
 
   function record({prompt='',maxSeconds=90,label='',mode='camera',script=null}={}){
     return new Promise(resolve=>{
-      let overlay=null,stream=null,recorder=null,chunks=[],timer=null,secs=0,blob=null,kept=0,settled=false;
-      const done=value=>{ if(settled)return; settled=true; cleanup(); resolve(value); };
+      let overlay=null,stream=null,recorder=null,chunks=[],timer=null,secs=0,blob=null,kept=0,settled=false,failure=null;
+      const done=value=>{ if(settled)return; settled=true; cleanup(); resolve(value===null&&failure?{error:failure}:value); };
       function stopStream(){
         if(!stream)return;
         stream.getTracks().forEach(t=>t.stop());
@@ -3935,6 +3959,15 @@ const videoStudio=(function(){
         +'<button type="button" class="portal-primary" id="recUse" hidden>Use this take</button>'
         +'<button type="button" class="portal-ghost" id="recCancel">Cancel</button>'
         +'</div></div>';
+      // Started BEFORE the dialog opens and before any await, so the click that got us here is
+      // still the browser's transient user activation. Opening a <dialog> and then asking is
+      // what made screen sharing fail outright: by then the activation is spent and Chrome
+      // rejects with NotAllowedError, which surfaced as "Nothing recorded."
+      const pending=mode==='screen'
+        ? screenStream()
+        : navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
+      pending.catch(()=>{});  // handled below; attached now so it is never an unhandled rejection
+
       document.body.append(overlay);
       overlay.showModal();
       overlay.addEventListener('cancel',e=>{e.preventDefault();done(null);});
@@ -3944,13 +3977,14 @@ const videoStudio=(function(){
       const hint=el('recHint');
       (async()=>{
         try{
-          stream=mode==='screen'
-            ? await screenStream()
-            : await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
+          stream=await pending;
         }catch(err){
-          hint.textContent=mode==='screen'
-            ? (err.message||'Screen sharing was declined. Nothing is recorded until you pick a window.')
-            : 'Camera or mic was blocked. Allow access, or paste a link.';
+          // The reason travels out. "Nothing recorded" made a blocked permission and a
+          // deliberate cancel look identical, which is why this looked like a missing feature.
+          failure=captureReason(err,mode);
+          hint.textContent=failure;
+          hint.classList.add('is-warn');
+          const back=el('recCancel'); if(back)back.textContent='Close';
           return;
         }
         video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
@@ -4021,7 +4055,7 @@ const videoStudio=(function(){
             stream=mode==='screen'
               ? await screenStream()
               : await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'},audio:true});
-          }catch{ hint.textContent='Capture was lost. Close and try again.'; return; }
+          }catch(err){ hint.textContent=captureReason(err,mode); hint.classList.add('is-warn'); return; }
           video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
           countIn();
         };

@@ -18,6 +18,8 @@
 
 import { assessmentFor as financeAssessment } from './finance-assessment.js';
 
+import { questionsFor } from './question-bank.js';
+
 export const ASSESSMENTS_VERSION = 'assessments-1.0.0';
 
 // ── Software & AI ─────────────────────────────────────────────────────────────────────
@@ -324,9 +326,14 @@ export function assessmentFor(vertical, slug) {
     vertical: v.vertical,
     medium: v.medium,
     exercise,
-    concepts: v.concepts,
-    reasoning: v.reasoning,
-    totalMinutes: exercise.minutes + v.concepts.length * 2 + v.reasoning.length * 5,
+    // The bank, not the two-or-three-question stub this shipped with. Three near-binary
+    // signals could not separate a guesser from a competent applicant.
+    ...(() => {
+      const bank = questionsFor(v.vertical);
+      const concepts = bank.concepts.length ? bank.concepts : v.concepts;
+      const reasoning = bank.reasoning.length ? bank.reasoning : v.reasoning;
+      return { concepts, reasoning, totalMinutes: exercise.minutes + concepts.length * 2 + reasoning.length * 5 };
+    })(),
     note: 'Covenda supplies everything here. You are not asked to invent a project.',
   };
 }

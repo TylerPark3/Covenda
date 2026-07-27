@@ -2198,6 +2198,41 @@ html.js-reveal .reveal.is-revealed { opacity: 1; transform: none; }
 /* Home-only, and first after the hero. The hero needs its own screen for the three paths, but
    this is the claim the rest of the page rests on, so it runs before anything else. */
 body:not([data-audience="home"]) .proof-contrast { display: none; }
+
+/* "Why us", home only. Numbered because it is a sequence a company moves through, not a
+   decorative device: vetting happens before recording, recording before scoring, scoring
+   before scoping. */
+body:not([data-audience="home"]) .quality-section { display: none; }
+.quality-section { padding: 88px 6vw 84px; border-bottom: 1px solid var(--line); }
+.quality-head { max-width: 1060px; margin: 0 auto 0 0; }
+.quality-kicker { margin: 0 0 16px; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-deep); }
+.quality-head h2 { margin: 0; font-size: clamp(30px, 3.9vw, 52px); line-height: 1.06; letter-spacing: -.035em; text-wrap: balance; }
+.quality-lede { margin: 20px 0 0; max-width: 60ch; font-size: clamp(17px, 1.5vw, 20px); line-height: 1.55; color: var(--soft); }
+
+.quality-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0; max-width: 1060px; margin: 52px auto 0 0; padding: 0; list-style: none;
+  border-top: 1px solid var(--rule, var(--line-strong));
+}
+.quality-grid li { padding: 28px 30px 30px 0; border-bottom: 1px solid var(--line); }
+.quality-grid li + li { border-left: 1px solid var(--line); padding-left: 30px; }
+.q-num { display: block; margin-bottom: 14px; font-size: 13px; font-weight: 700; letter-spacing: .1em; color: var(--gold); font-variant-numeric: tabular-nums; }
+.quality-grid h3 { margin: 0 0 10px; font-size: 21px; font-weight: 650; line-height: 1.22; letter-spacing: -.022em; text-wrap: balance; }
+.quality-grid p { margin: 0; font-size: 16.5px; line-height: 1.55; color: var(--soft); }
+
+/* The honesty line. Set quietly and deliberately not hidden — it is the reason the four
+   claims above are worth believing. */
+.quality-foot {
+  max-width: 74ch; margin: 34px auto 0 0; padding-left: 16px;
+  border-left: 3px solid var(--gold);
+  font-size: 15.5px; line-height: 1.6; color: var(--soft);
+}
+@media (max-width: 900px) {
+  .quality-section { padding: 56px 6vw 52px; }
+  .quality-grid li, .quality-grid li + li { padding: 24px 0; border-left: 0; padding-left: 0; }
+  .quality-grid { margin-top: 34px; }
+}
+
 .proof-contrast {
   padding: 84px 6vw 78px;
   border-bottom: 1px solid var(--line);

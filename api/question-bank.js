@@ -1,0 +1,456 @@
+// A real bank of objective questions, per vertical.
+//
+// ── WHY THIS EXISTS ───────────────────────────────────────────────────────────────────
+// The assessment shipped with two or three multiple-choice questions and one short answer per
+// vertical. That is not enough to separate anybody: with three binary-ish signals, a guesser
+// and a competent applicant land in the same band often enough that the number means nothing.
+//
+// ── WHAT MAKES A QUESTION USEFUL HERE ─────────────────────────────────────────────────
+// Every distractor is a real misconception — something a person who half-knows the subject
+// actually believes — rather than a filler option nobody would pick. That is the whole design.
+// It means recognising the right answer still requires knowing why the others are wrong, which
+// is why publishing the bank costs little: reading the answer key teaches you the material.
+//
+// Short answers are graded on reasoning, not on matching a key. Each carries `reveals` (what a
+// rater is actually reading for), `weak`, and `strong`, so two raters converge without needing
+// the same background.
+//
+// ── WHAT IS DELIBERATELY NOT HERE ─────────────────────────────────────────────────────
+// Nothing that tests recall of a trivia fact, a memorised formula, or a brand-name tool. None
+// of that predicts whether someone can do the work, and all of it correlates with how expensive
+// their education was.
+
+export const QUESTION_BANK_VERSION = 'question-bank-1.0.0';
+
+const SOFTWARE = {
+  concepts: [
+    { q: 'A test passes locally and fails in CI. The most common cause is:',
+      options: ['A compiler difference', 'Undeclared dependence on local state or ordering', 'CI being slower', 'A flaky assertion library'],
+      answer: 1,
+      why: 'Hidden state — env vars, file paths, test ordering. Blaming CI speed is the instinct that stops people looking.' },
+    { q: 'Your API p50 is 40ms and p99 is 4s. What does that most likely indicate?',
+      options: ['The server is underpowered overall', 'A subset of requests hits a different, slower path', 'Network latency to clients', 'The database needs more RAM'],
+      answer: 1,
+      why: 'A healthy p50 with a terrible p99 is a tail problem: a cache miss path, an N+1 on certain inputs, lock contention. Averages hide it, which is why p99 exists.' },
+    { q: 'You add an index and the query gets slower. The most likely reason:',
+      options: ['Indexes always slow writes, and this was a write', 'The planner now chooses the index when a scan was cheaper', 'The index is corrupt', 'Indexes need a rebuild before use'],
+      answer: 1,
+      why: 'On low-selectivity columns a full scan beats index lookups plus random I/O. The planner is not infallible, and "add an index" is not free.' },
+    { q: 'A `git rebase` and a `git merge` differ mainly in that rebase:',
+      options: ['Is faster', 'Rewrites commits, producing new hashes', 'Cannot cause conflicts', 'Deletes the source branch'],
+      answer: 1,
+      why: 'Rewriting is the whole point and the whole danger. It is why rebasing shared branches breaks other people’s history.' },
+    { q: 'Which of these is NOT fixed by adding a database read replica?',
+      options: ['Read-heavy load on the primary', 'Analytics queries competing with production', 'Write throughput limits', 'Geographic read latency'],
+      answer: 2,
+      why: 'Replicas take reads. Writes still funnel to the primary, so a write bottleneck is untouched — a common and expensive misdiagnosis.' },
+    { q: 'A function is "idempotent" when:',
+      options: ['It has no side effects', 'Calling it twice has the same effect as calling it once', 'It always returns the same value', 'It is thread-safe'],
+      answer: 1,
+      why: 'Not the same as pure. `DELETE /user/5` has a side effect and is still idempotent, which is exactly why retries are safe on it.' },
+    { q: 'You see a race condition in production but cannot reproduce it locally. The best first move:',
+      options: ['Add a sleep to slow the code down', 'Add logging with timestamps and request IDs around the suspect window', 'Wrap the whole path in a mutex', 'Increase server resources'],
+      answer: 1,
+      why: 'You cannot fix what you cannot observe. Locking blindly usually moves the bug or trades it for a deadlock.' },
+    { q: 'Your model gets 99% accuracy on a fraud dataset where 1% of rows are fraud. This tells you:',
+      options: ['The model is excellent', 'Almost nothing — predicting "not fraud" always scores 99%', 'The data needs more features', 'You should use a bigger model'],
+      answer: 1,
+      why: 'Class imbalance. Accuracy is the wrong metric here; precision, recall, or AUC on the minority class is what matters.' },
+    { q: 'Data leakage in a machine-learning pipeline most often means:',
+      options: ['A memory leak during training', 'Information from outside the training window reached the features', 'The dataset was exposed publicly', 'Gradients exploded'],
+      answer: 1,
+      why: 'Scaling before splitting, or a feature computed using future data. It produces suspiciously good validation scores and a model that fails in production.' },
+    { q: 'A code review comment says "this is O(n²)". When does that NOT matter?',
+      options: ['Never, it always matters', 'When n is small and bounded, and the code is clearer this way', 'When the language is compiled', 'When it runs asynchronously'],
+      answer: 1,
+      why: 'Complexity is about growth. For a bounded n of 20, the quadratic version can be both faster and more readable. Knowing when not to optimise is the harder skill.' },
+  ],
+  reasoning: [
+    { id: 'rate-limit',
+      q: 'A service must allow 100 requests per minute per user. Describe an approach that does not require storing every request timestamp.',
+      reveals: 'Whether they reach for a counter with a window, and whether they notice the burst problem at a window boundary.',
+      weak: 'Stores all timestamps and filters. Correct and does not scale, and they do not notice.',
+      strong: 'Sliding window or token bucket, and names the boundary-burst tradeoff without prompting.' },
+    { id: 'cache-invalidate',
+      q: 'You cache a user’s profile for 10 minutes. They change their name and it does not update. Walk through your options and what each costs.',
+      reveals: 'Whether they can hold more than one option and price them, rather than reaching for the first fix.',
+      weak: 'Just lower the TTL. No mention of what that costs.',
+      strong: 'Invalidate on write, or write-through, or a shorter TTL, with the load and complexity tradeoff of each named.' },
+    { id: 'debug-intermittent',
+      q: 'One in a thousand requests returns a 500 and the logs show nothing useful. How do you find it?',
+      reveals: 'Whether they instrument before guessing.',
+      weak: 'Guesses at causes and starts changing code.',
+      strong: 'Correlation IDs, structured logging at the boundary, capture the failing request shape, then narrow.' },
+    { id: 'schema-change',
+      q: 'You must rename a column that a live service reads and writes, with no downtime. What is your sequence?',
+      reveals: 'Whether they have shipped anything that could not be turned off.',
+      weak: 'Rename it and deploy.',
+      strong: 'Expand and contract: add the new column, dual-write, backfill, migrate reads, then drop. Explicitly reversible at each step.' },
+    { id: 'ai-assisted',
+      q: 'You used an AI assistant to write a function and it works. What do you check before opening the pull request?',
+      reveals: 'Whether they treat generated code as a draft. This is not a trick question and AI use is not penalised here.',
+      weak: 'It passes the tests, so it is fine.',
+      strong: 'Reads it line by line, checks edge cases and error paths, questions dependencies it introduced, verifies it matches the surrounding conventions.' },
+    { id: 'estimate',
+      q: 'You are asked how long a feature will take and you genuinely do not know. What do you say?',
+      reveals: 'Honesty under pressure, and whether they can decompose uncertainty rather than pick a number to satisfy the room.',
+      weak: 'Picks a number. Or refuses to answer at all.',
+      strong: 'Names what is known and unknown, offers a timeboxed spike, gives a range with the assumption that would break it.' },
+  ],
+};
+
+const FINANCE = {
+  concepts: [
+    { q: 'A company is profitable but running out of cash. The most likely explanation:',
+      options: ['The tax rate rose', 'Working capital is absorbing cash faster than earnings generate it', 'Depreciation is too high', 'Interest expense is understated'],
+      answer: 1,
+      why: 'Growing receivables and inventory consume cash that the income statement never shows. This is how profitable businesses die.' },
+    { q: 'Depreciation increases by $100. Ignoring all else, at a 25% tax rate, cash changes by:',
+      options: ['−$100', '$0', '+$25', '−$75'],
+      answer: 2,
+      why: 'Non-cash expense reduces taxable income, so tax falls by $25. Cash rises by the tax shield. The classic three-statement question.' },
+    { q: 'Which is NOT a reason a DCF gives a misleading answer?',
+      options: ['Terminal value dominates the total', 'Discount rate is an assumption, not a fact', 'It uses cash flows rather than earnings', 'Small WACC changes swing the result enormously'],
+      answer: 2,
+      why: 'Using cash flow is a strength. The other three are real fragilities, and terminal value routinely carries 70%+ of the number.' },
+    { q: 'EV/EBITDA is often preferred to P/E when comparing companies because:',
+      options: ['It is simpler to calculate', 'It is neutral to capital structure and tax differences', 'It accounts for growth', 'It is less volatile'],
+      answer: 1,
+      why: 'EV covers all capital providers and EBITDA sits above interest and tax, so two companies with different leverage stay comparable.' },
+    { q: 'A LBO returns depend most on:',
+      options: ['The interest rate alone', 'Entry multiple, debt paydown, and exit multiple', 'The size of the fund', 'The number of bidders'],
+      answer: 1,
+      why: 'Buy well, delever with cash flow, exit at a decent multiple. Multiple expansion is a hope, not a plan.' },
+    { q: 'Working capital increases. On the cash flow statement, this appears as:',
+      options: ['A cash inflow', 'A cash outflow', 'No effect', 'An investing activity'],
+      answer: 1,
+      why: 'Money tied up in receivables and inventory has left the building. Getting the sign wrong here breaks a whole model.' },
+    { q: 'Two companies have identical EBITDA. One is far more capital-intensive. EBITDA:',
+      options: ['Fairly compares them', 'Overstates the capital-intensive one’s economics', 'Understates it', 'Is unaffected by capital intensity'],
+      answer: 1,
+      why: 'EBITDA ignores the capex the business must keep spending to exist. This is the substance of the "EBITDA is not cash flow" objection.' },
+    { q: 'You are told to "just make the model work" and the balance sheet does not balance. First check:',
+      options: ['Increase the plug', 'Trace the cash flow statement, since the error almost always lives there', 'Rebuild the model', 'Change the assumptions'],
+      answer: 1,
+      why: 'A plug hides the error and guarantees a wrong answer that looks right. Sign errors in the cash flow statement are the usual culprit.' },
+    { q: 'Accretion/dilution in an all-stock deal turns primarily on:',
+      options: ['Deal size', 'The relative P/E of acquirer and target', 'Synergies alone', 'The advisory fee'],
+      answer: 1,
+      why: 'A higher-multiple acquirer buying a lower-multiple target is accretive before any synergies. That is arithmetic, not value creation.' },
+    { q: 'Which is the strongest evidence a revenue figure is real?',
+      options: ['It appears in the pitch deck', 'Cash collected matches it over the period', 'It is audited', 'It grew consistently'],
+      answer: 1,
+      why: 'Revenue is an accounting judgement; cash is a fact. Audits matter, but reconciling to collections is the check you can do yourself.' },
+  ],
+  reasoning: [
+    { id: 'margin-drop',
+      q: 'Gross margin fell from 62% to 54% over four quarters. List the possible causes and how you would tell them apart.',
+      reveals: 'Whether they decompose price, mix, and cost rather than naming one cause.',
+      weak: 'Says "costs went up" and stops.',
+      strong: 'Splits price versus volume versus mix versus input cost, and names the data that would distinguish them.' },
+    { id: 'assumption',
+      q: 'You inherit a model with a 3% terminal growth rate. What do you check before you trust it?',
+      reveals: 'Whether they know terminal growth above long-run GDP is a claim the business outlives the economy.',
+      weak: 'Accepts it as standard.',
+      strong: 'Benchmarks against long-run GDP and inflation, tests sensitivity, and notes how much of the value the terminal carries.' },
+    { id: 'bad-news',
+      q: 'You find an error in a model that has already gone to a client. What do you do?',
+      reveals: 'Judgement under pressure. This is the one question here that is not technical.',
+      weak: 'Quietly fixes it, or waits to be asked.',
+      strong: 'Quantifies the impact first, tells the senior immediately with the corrected number, and says how it happened.' },
+    { id: 'comparables',
+      q: 'You are building a comps set and only two companies are genuinely comparable. What do you do?',
+      reveals: 'Whether they pad the set to look rigorous.',
+      weak: 'Adds loosely similar names to get to eight.',
+      strong: 'Keeps the set honest, states why the others were excluded, and triangulates with a second method.' },
+    { id: 'cash-vs-profit',
+      q: 'A founder tells you the business is profitable. What three things do you ask for?',
+      reveals: 'Whether they instinctively separate accounting profit from cash.',
+      weak: 'Asks only for the income statement.',
+      strong: 'Bank statements or cash flow, receivables ageing, and what is capitalised versus expensed.' },
+    { id: 'excel-hygiene',
+      q: 'Someone hands you a model with hardcoded numbers inside formulas. Why does that matter, beyond neatness?',
+      reveals: 'Whether they understand a model is an argument, and an argument you cannot audit is not one.',
+      weak: 'Says it looks unprofessional.',
+      strong: 'Cannot be sensitised, cannot be audited, breaks silently when someone changes an assumption they cannot find.' },
+  ],
+};
+
+const PROFESSIONAL = {
+  concepts: [
+    { q: 'A client says "revenue is down, fix it". Your first move should be:',
+      options: ['Propose a growth strategy', 'Decompose revenue into its drivers and find which one moved', 'Benchmark against competitors', 'Interview the sales team'],
+      answer: 1,
+      why: 'Revenue equals volume times price times mix. Without knowing which moved, every recommendation is a guess dressed as advice.' },
+    { q: 'MECE means a breakdown is:',
+      options: ['Comprehensive and detailed', 'Mutually exclusive and collectively exhaustive', 'Measurable and evidence-based', 'Modelled end-to-end'],
+      answer: 1,
+      why: 'Overlapping buckets double-count and gaps hide the answer. It is a test of the structure, not the analysis.' },
+    { q: 'Two variables are strongly correlated. The most common analytical error is:',
+      options: ['Assuming the correlation is too weak to matter', 'Assuming one causes the other', 'Using the wrong chart', 'Not having enough data'],
+      answer: 1,
+      why: 'A third variable, reverse causation, or coincidence. This is the single most expensive mistake in commercial analysis.' },
+    { q: 'A survey of 40 customers shows 70% want feature X. The safest reading:',
+      options: ['70% of all customers want X', 'A signal worth testing, with a wide confidence interval', 'X should be built immediately', 'The survey is worthless'],
+      answer: 1,
+      why: 'n=40 gives roughly ±15 points. Directionally useful, not decisive — and who was surveyed matters more than how many.' },
+    { q: 'When sizing a market bottom-up rather than top-down, you:',
+      options: ['Start from total industry revenue and take a share', 'Build from unit counts and price per unit', 'Use analyst reports', 'Extrapolate from growth rates'],
+      answer: 1,
+      why: 'Bottom-up forces you to state assumptions you can be wrong about specifically, which is why it survives scrutiny better.' },
+    { q: 'A recommendation with no downside is usually a sign that:',
+      options: ['The analysis was thorough', 'The tradeoff has not been found yet', 'The client will approve it', 'The problem was simple'],
+      answer: 1,
+      why: 'Real decisions cost something. A costless recommendation usually means the cost is sitting somewhere you have not looked.' },
+    { q: 'The most useful thing in a client interview is often:',
+      options: ['The prepared question list', 'What they mention unprompted at the end', 'Their org chart', 'The slide they present'],
+      answer: 1,
+      why: 'The unprompted aside is where the real constraint lives, because it is the thing they have not learned to package yet.' },
+    { q: '"80% of revenue comes from 20% of customers" is most actionable when you also know:',
+      options: ['The total customer count', 'The cost to serve each segment', 'The industry average', 'The growth rate'],
+      answer: 1,
+      why: 'Concentration is not automatically good or bad. Profit per segment is the number that changes what you do.' },
+    { q: 'A process map is most valuable when it captures:',
+      options: ['The documented process', 'What actually happens, including the workarounds', 'The ideal future state', 'Who owns each step'],
+      answer: 1,
+      why: 'The gap between documented and actual IS the finding. Mapping the policy tells you nothing new.' },
+    { q: 'You are asked to be "data-driven" but the data is bad. The right response:',
+      options: ['Use it anyway with caveats in the appendix', 'Say what the data can and cannot support, then triangulate', 'Refuse to proceed', 'Collect new data regardless of timeline'],
+      answer: 1,
+      why: 'Bad data with a footnote still gets quoted as fact. Naming the limit up front is what keeps the recommendation honest.' },
+  ],
+  reasoning: [
+    { id: 'constraint',
+      q: 'A support queue has a backlog. Adding two people did not clear it. What are you now looking for?',
+      reveals: 'Whether they think in constraints rather than capacity.',
+      weak: 'Suggests hiring more people or working harder.',
+      strong: 'Finds where work actually waits: an approval step, a specialist dependency, rework from upstream.' },
+    { id: 'disagree',
+      q: 'Your analysis contradicts what the client already decided. How do you handle it?',
+      reveals: 'Whether they can be useful and honest at once.',
+      weak: 'Softens the finding, or delivers it without regard for how it lands.',
+      strong: 'Leads with the evidence and what would change their mind, separates the finding from the recommendation.' },
+    { id: 'scope',
+      q: 'Halfway through, you realise the question you were asked is not the question that matters. What do you do?',
+      reveals: 'Whether they can raise a scope problem without stopping work.',
+      weak: 'Finishes the original scope silently, or downs tools.',
+      strong: 'Says so early with evidence, offers to answer both, and lets the client choose.' },
+    { id: 'assumption-test',
+      q: 'Your model rests on one assumption you cannot verify. How do you present it?',
+      reveals: 'Whether they surface fragility or bury it.',
+      weak: 'Buries it in an appendix.',
+      strong: 'States it on the page, sensitises it, and names the value at which the recommendation flips.' },
+    { id: 'first-week',
+      q: 'You have five days and no domain knowledge. What do you do on day one?',
+      reveals: 'How someone gets oriented, which is most of what junior work actually is.',
+      weak: 'Reads everything available.',
+      strong: 'Finds the person who does the work, watches it happen, and forms a question to test.' },
+    { id: 'synthesis',
+      q: 'You have forty pages of findings and one slide. What survives?',
+      reveals: 'Whether they can distinguish what is interesting from what changes a decision.',
+      weak: 'Summarises everything shorter.',
+      strong: 'Keeps what changes the decision, cuts the rest, and can say why each cut was safe.' },
+  ],
+};
+
+const CONSUMER = {
+  concepts: [
+    { q: 'Conversion fell 20% overnight with no marketing change. First thing to check:',
+      options: ['Run a customer survey', 'Whether tracking or the funnel itself broke', 'Competitor pricing', 'Seasonality'],
+      answer: 1,
+      why: 'Overnight step changes are almost always instrumentation or a deploy. Behaviour rarely moves that fast.' },
+    { q: 'CAC payback of 18 months is concerning mainly because:',
+      options: ['It is above the industry average', 'Cash is tied up for 18 months before it returns', 'It means the product is bad', 'LTV must be low'],
+      answer: 1,
+      why: 'It is a cash-flow constraint. A long payback can still be fine with capital and low churn; without either it kills growth.' },
+    { q: 'An A/B test shows a 3% lift with p = 0.20. The correct conclusion:',
+      options: ['Ship it, 3% is 3%', 'Not enough evidence — the result is consistent with no effect', 'Reverse the change', 'Run it on more segments'],
+      answer: 1,
+      why: 'p = 0.20 means you would see this by chance one time in five. Shipping on it is how teams accumulate imaginary wins.' },
+    { q: 'Which cohort chart pattern most suggests a real product problem?',
+      options: ['Retention declining in every cohort at the same rate', 'Newer cohorts retaining worse than older ones', 'Flat retention after month 3', 'A spike in month 1'],
+      answer: 1,
+      why: 'Degrading new-cohort retention usually means the audience you are acquiring has drifted, or the product got worse.' },
+    { q: 'Your best-selling SKU has the lowest margin. Dropping it would:',
+      options: ['Always improve profit', 'Risk losing traffic and basket that the SKU brings in', 'Have no effect', 'Improve inventory turns only'],
+      answer: 1,
+      why: 'Loss leaders exist. The question is basket contribution, not the SKU’s own margin line.' },
+    { q: 'Attribution says paid search drove 60% of conversions. The most likely distortion:',
+      options: ['Under-counting paid search', 'Last-click credits the channel people use to navigate to a brand they already knew', 'The tracking window is too long', 'Organic is misattributed as direct'],
+      answer: 1,
+      why: 'Branded search captures demand created elsewhere. It is the single most over-credited channel in last-click.' },
+    { q: 'Inventory turns doubled and stockouts rose. This indicates:',
+      options: ['Pure improvement', 'You cut inventory past the point of serving demand', 'Demand fell', 'Suppliers got faster'],
+      answer: 1,
+      why: 'Turns are a means, not a goal. Optimising the metric while losing the sale is the classic version of this error.' },
+    { q: 'A landing page test wins on click-through but loses on revenue. You should:',
+      options: ['Ship it, click-through is the primary metric', 'Treat revenue as the decision metric and investigate the gap', 'Run it longer', 'Test a third variant'],
+      answer: 1,
+      why: 'A proxy metric that moves against the real one has stopped being a proxy. Usually the copy attracted worse-fit traffic.' },
+    { q: 'Repeat purchase rate is flat but revenue per customer is up. Most likely:',
+      options: ['More customers', 'Basket size or price rose, not loyalty', 'Retention improved', 'Churn fell'],
+      answer: 1,
+      why: 'Same people buying the same number of times, spending more each time. Reading it as loyalty leads to the wrong investment.' },
+    { q: 'The strongest evidence that a growth channel is working:',
+      options: ['Impressions grew', 'Incremental conversions when the channel is switched off and on', 'Reported ROAS in the ad platform', 'Cost per click fell'],
+      answer: 1,
+      why: 'Platforms grade their own homework. A holdout or geo test is the only measurement they cannot flatter.' },
+  ],
+  reasoning: [
+    { id: 'funnel-drop',
+      q: 'Checkout completion is 40%. How do you find out where and why people leave?',
+      reveals: 'Whether they instrument before theorising.',
+      weak: 'Guesses at causes and redesigns the page.',
+      strong: 'Step-by-step drop-off, segmented by device and traffic source, then session recordings on the worst step.' },
+    { id: 'test-design',
+      q: 'You want to test a price increase. Design it so the result is trustworthy.',
+      reveals: 'Whether they think about fairness, sample, and what they will not learn.',
+      weak: 'Raises the price for everyone for a week and compares.',
+      strong: 'Randomised at customer level or geo-split, defines the metric and horizon up front, and names the ethical and churn risks.' },
+    { id: 'vanity',
+      q: 'Your team celebrates a 300% traffic increase. What would make you sceptical?',
+      reveals: 'Whether they check that a headline number means anything.',
+      weak: 'Accepts it as good news.',
+      strong: 'Asks where it came from, whether it converted, and whether it was bots or one referral spike.' },
+    { id: 'no-data',
+      q: 'You have no analytics and a launch in two weeks. What do you set up first?',
+      reveals: 'Prioritisation under real constraints.',
+      weak: 'Tries to instrument everything.',
+      strong: 'One conversion event and its funnel steps, plus a way to tell traffic sources apart. Everything else later.' },
+    { id: 'trade-off',
+      q: 'A change would improve conversion and increase refunds. How do you decide?',
+      reveals: 'Whether they can reason about net effect rather than one metric.',
+      weak: 'Optimises conversion.',
+      strong: 'Nets it out in contribution margin, and weighs the support cost and trust damage refunds carry.' },
+    { id: 'unglamorous',
+      q: 'Describe a time the answer turned out to be something boring, like a broken form or a bad redirect.',
+      reveals: 'Whether they have actually done this work. Real growth work is mostly unglamorous.',
+      weak: 'Only has strategy stories.',
+      strong: 'Has a specific one, and can describe how they found it.' },
+  ],
+};
+
+const HEALTHCARE = {
+  concepts: [
+    { q: 'A clinic’s no-show rate is 22%. The intervention most likely to help:',
+      options: ['Charge a no-show fee', 'Find which appointment types and slots concentrate the no-shows first', 'Overbook every slot', 'Send more reminders'],
+      answer: 1,
+      why: 'No-shows cluster by slot time, lead time, and population. A blanket policy penalises the patients least able to absorb it.' },
+    { q: 'Which of these is protected health information?',
+      options: ['A count of patients seen last week', 'An appointment date tied to a named individual', 'A department’s average wait time', 'The number of exam rooms'],
+      answer: 1,
+      why: 'PHI is health information linked to an identifiable person. Dates of service are among the 18 identifiers, which surprises people.' },
+    { q: 'Denials rose after a new coding process launched. First check:',
+      options: ['Retrain all staff', 'Whether denials concentrate in specific codes or payers', 'Appeal every denial', 'Revert the process'],
+      answer: 1,
+      why: 'Aggregate rates hide the cause. A single payer rule change or one miscoded procedure usually explains most of the jump.' },
+    { q: 'Days in AR rising while collections stay flat most likely means:',
+      options: ['Revenue is falling', 'Claims are going out or getting paid more slowly', 'Patients stopped paying', 'Contracts were renegotiated'],
+      answer: 1,
+      why: 'It is a timing signal, not a volume one. The cause is usually submission lag or a rise in pended claims.' },
+    { q: 'A workflow change reduced average visit time but staff satisfaction fell. This suggests:',
+      options: ['Staff resist all change', 'The saved time may have come from work now absorbed elsewhere', 'The measurement is wrong', 'The change should be reversed'],
+      answer: 1,
+      why: 'Time rarely disappears. It usually moves to documentation after hours, which is invisible in the visit metric.' },
+    { q: 'The most reliable way to learn what actually happens in a clinical workflow:',
+      options: ['Read the policy document', 'Observe it, then ask why each deviation exists', 'Survey the staff', 'Review the EHR audit log'],
+      answer: 1,
+      why: 'Deviations are usually rational adaptations to a constraint the policy ignores. Removing them without understanding them breaks things.' },
+    { q: 'You are asked to analyse patient data for an operations project. The right posture:',
+      options: ['Use the full dataset, it is internal', 'Use the minimum necessary, de-identified wherever the question allows', 'Refuse all patient data', 'Anonymise names only'],
+      answer: 1,
+      why: 'Minimum necessary is the standard. Removing names alone does not de-identify — dates, ZIP, and rare diagnoses re-identify people.' },
+    { q: 'Prior authorisation delays are worst on Mondays. The most useful next question:',
+      options: ['How do we work faster on Mondays?', 'What accumulates over the weekend, and where does it queue?', 'Should we add Monday staff?', 'Is this seasonal?'],
+      answer: 1,
+      why: 'A day-of-week pattern is a queueing artefact. Staffing the symptom costs more than fixing the accumulation.' },
+    { q: 'A quality metric improved but the underlying outcome did not. Most likely:',
+      options: ['The outcome measure is broken', 'Documentation or coding improved rather than care', 'Random variation', 'The metric lags the outcome'],
+      answer: 1,
+      why: 'Measured performance and real performance separate the moment the measure has consequences. Worth naming plainly.' },
+    { q: 'The strongest evidence a process change worked:',
+      options: ['Staff report it feels better', 'The metric moved and held after the attention stopped', 'It was implemented on schedule', 'Leadership approved it'],
+      answer: 1,
+      why: 'Almost everything improves while it is being watched. Persistence after the spotlight moves is the real test.' },
+  ],
+  reasoning: [
+    { id: 'exception',
+      q: 'A step in a workflow keeps getting skipped. Everyone knows it is required. Why might that be rational?',
+      reveals: 'Whether they treat frontline behaviour as information rather than non-compliance.',
+      weak: 'Recommends training and enforcement.',
+      strong: 'Assumes the step conflicts with something real, goes to find out what, then redesigns around it.' },
+    { id: 'floor-vs-data',
+      q: 'The data says wait times are fine. The staff say they are terrible. How do you resolve it?',
+      reveals: 'Whether they can hold both and find the definition gap.',
+      weak: 'Sides with the data and treats the staff account as noise, or the reverse.',
+      strong: 'Checks what the metric actually measures, when the clock starts, and whose experience it excludes.' },
+    { id: 'phi-boundary',
+      q: 'You are given a spreadsheet with more patient detail than your question requires. What do you do?',
+      reveals: 'Whether minimum-necessary is instinct or a rule they recite. This matters more here than any analytical skill.',
+      weak: 'Uses it because it was provided.',
+      strong: 'Asks for a reduced extract, works from de-identified data, and flags that the wider file was shared.' },
+    { id: 'pilot',
+      q: 'You have one department willing to pilot a change. How do you set it up so the result means something?',
+      reveals: 'Whether they think about comparison and confounding in a real setting.',
+      weak: 'Runs it and compares before and after.',
+      strong: 'Names a comparison unit, baselines first, sets the measure and duration up front, and accounts for the attention effect.' },
+    { id: 'bad-news-clinical',
+      q: 'Your analysis suggests a change leadership championed made things worse. What do you do?',
+      reveals: 'Judgement, and whether they can be trusted with an inconvenient finding.',
+      weak: 'Softens it, delays it, or leads with the caveats.',
+      strong: 'Brings it early and privately, with the evidence, the uncertainty, and a proposed next test.' },
+    { id: 'anecdote',
+      q: 'Describe a process you changed where someone pushed back. Were they right?',
+      reveals: 'Whether they have actually done the work, and whether they can say they were wrong.',
+      weak: 'Every story ends with them being vindicated.',
+      strong: 'A specific instance, what the objection was, and an honest account of who turned out to be right.' },
+  ],
+};
+
+
+// Options are authored with the correct answer wherever it read most naturally, which turned
+// out to mean index 1 almost every time — "always pick B" scored about 90%. Rotating by a
+// per-question offset fixes the position bias without hand-editing every question and risking
+// an off-by-one in the key.
+//
+// Deterministic on purpose: a student who reloads must see the same order, and two raters
+// looking at the same submission must be looking at the same lettering.
+function rotate(question, index) {
+  const shift = index % question.options.length;
+  if (!shift) return question;
+  const options = question.options.slice(shift).concat(question.options.slice(0, shift));
+  const answer = (question.answer - shift + question.options.length) % question.options.length;
+  return { ...question, options, answer };
+}
+function debias(concepts) {
+  return concepts.map(rotate);
+}
+
+const BANK = {
+  'Software & AI': SOFTWARE,
+  'Accounting & finance': FINANCE,
+  'Professional services': PROFESSIONAL,
+  'Consumer & retail': CONSUMER,
+  'Healthcare operations': HEALTHCARE,
+};
+
+const DEBIASED = Object.fromEntries(
+  Object.entries(BANK).map(([k, v]) => [k, { concepts: debias(v.concepts), reasoning: v.reasoning }]),
+);
+
+export function bankFor(vertical) {
+  return DEBIASED[vertical] || null;
+}
+
+// Every question is asked; nothing is sampled. A bank this size is not a secret, and drawing a
+// random subset would mean two applicants are graded on different questions and compared as if
+// they were not.
+export function questionsFor(vertical) {
+  const b = bankFor(vertical);
+  if (!b) return { concepts: [], reasoning: [] };
+  return { concepts: b.concepts, reasoning: b.reasoning };
+}
+
+export function bankCounts() {
+  return Object.fromEntries(Object.entries(DEBIASED).map(([k, v]) => [k, { concepts: v.concepts.length, reasoning: v.reasoning.length }]));
+}
