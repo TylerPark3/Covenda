@@ -1826,25 +1826,6 @@ function renderProfileBanner() {
 }
 // The quick-join interest chips are the same industry domains the full profile uses, so a
 // tap here pre-selects the long form later. Rendered from INDUSTRY_TREE so they never drift.
-function renderQuickInterests() {
-  const host = $('#quickJoinInterests');
-  if (!host) return;
-  host.innerHTML = '';
-  Object.keys(INDUSTRY_TREE).forEach(name => {
-    const chip = document.createElement('button');
-    chip.type = 'button'; chip.className = 'quick-chip'; chip.textContent = name;
-    chip.setAttribute('aria-pressed', 'false');
-    chip.addEventListener('click', () => {
-      const on = chip.getAttribute('aria-pressed') === 'true';
-      chip.setAttribute('aria-pressed', String(!on));
-      chip.classList.toggle('is-on', !on);
-    });
-    host.append(chip);
-  });
-}
-function selectedQuickInterests() {
-  return $$('#quickJoinInterests .quick-chip[aria-pressed="true"]').map(chip => chip.textContent);
-}
 let quickJoinDirection = null;
 function openQuickJoin({ includeDirection = false } = {}) {
   const done = $('#quickJoinDone');
@@ -1862,12 +1843,6 @@ function openQuickJoin({ includeDirection = false } = {}) {
       ? `Your direction: ${quickJoinDirection.vertical} · ${quickJoinDirection.specialty}`
       : '';
   }
-  // Asking "what are you into?" after someone has already chosen a vertical and a specialty
-  // asks the same question twice. The chips only appear on the join-without-choosing path,
-  // where they are the only signal of direction there is.
-  const interestsBlock = document.getElementById('quickJoinInterestsBlock');
-  if (interestsBlock) interestsBlock.hidden = Boolean(quickJoinDirection);
-  renderQuickInterests();
   quickJoinForm.dataset.startedAt = String(Date.now());
   quickJoinDialog.showModal();
   window.setTimeout(() => $('[name="quickName"]', quickJoinForm)?.focus(), 60);
@@ -1911,7 +1886,7 @@ if (quickJoinForm) {
     if (!name || !emailVal || !consent) { message.textContent = 'Please add your name, email, and agree to be contacted.'; return; }
     const submit = $('button[type="submit"]', quickJoinForm);
     submit.disabled = true; submit.textContent = 'Joining…';
-    const industries = selectedQuickInterests();
+    const industries = [];
     const directionInterest = quickJoinDirection
       ? `${quickJoinDirection.vertical} · ${quickJoinDirection.specialty}`
       : '';
@@ -1924,7 +1899,7 @@ if (quickJoinForm) {
         contact: { name, email: emailVal },
         school: formValue(quickJoinForm, 'quickSchool'),
         industries,
-        interest: [directionInterest, industries.join(', ')].filter(Boolean).join(' · '),
+        interest: directionInterest,
       });
       writeStorage(QUICK_KEY, { name, email: emailVal, school: formValue(quickJoinForm, 'quickSchool'), industries, direction: quickJoinDirection, reference: result.reference, stage: 'quick_added', at: new Date().toISOString() });
       saveSubmission({
