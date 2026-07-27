@@ -88,10 +88,10 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .portal-view { display:none; padding:clamp(30px,4vw,58px); }
 .portal-view.is-active { display:block; animation:view-in .32s ease both; }
 @keyframes view-in { from { opacity:0; transform:translateY(7px); } }
-.overview-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(310px,360px); gap:clamp(35px,5vw,80px); max-width:1440px; margin:auto; }
+.overview-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(310px,360px); gap:clamp(35px,5vw,80px); max-width:none; margin:0 auto 0 0; }
 .welcome-row,.page-heading,.section-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:22px; }
 .welcome-row h1,.page-heading h1 { margin:0; font-family:var(--font-display); font-weight:500; font-size:clamp(36px,4.1vw,58px); line-height:1.02; letter-spacing:-.03em; }
-.welcome-row > div > p:last-child,.page-heading > div > p:last-child { max-width:650px; margin:14px 0 0; color:var(--muted); font-size: var(--step-body-sm); line-height:1.7; }
+.welcome-row > div > p:last-child,.page-heading > div > p:last-child { max-width:96ch; margin:14px 0 0; color:var(--muted); font-size: var(--step-body-sm); line-height:1.7; }
 .welcome-row .portal-primary { flex:0 0 auto; margin-top:4px; }
 .company-segments { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:36px; }
 .company-segment { display:flex; flex-direction:column; padding:24px; border:1px solid var(--line); border-radius: 0; background:linear-gradient(180deg,var(--gold-pale),#fff 62%); }
@@ -107,7 +107,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .section-heading button { padding:5px 0; border:0; background:transparent; color:var(--gold-deep); font-size: 14px; font-weight:700; cursor:pointer; }
 .project-focus { display:grid; grid-template-columns:1fr auto; gap:22px; padding:25px 0; border-bottom:1px solid var(--line); }
 .project-focus h3 { margin:0 0 7px; font-size: 17px; letter-spacing:-.03em; }
-.project-focus p { max-width:620px; margin:0; color:var(--muted); font-size: 14.5px; line-height:1.65; }
+.project-focus p { max-width:92ch; margin:0; color:var(--muted); font-size: 14.5px; line-height:1.65; }
 .project-focus-meta { display:flex; align-items:center; gap:8px; margin-top:15px; }
 .status-pill,.skill-pill { display:inline-flex; padding:5px 8px; border:1px solid var(--line); border-radius: 0; color:var(--muted); font-size: 13.5px; font-weight:650; text-transform:capitalize; }
 .status-pill[data-status="in_progress"],.status-pill[data-status="open"] { border-color:rgba(36,117,58,.25); background:#f4faf5; color:var(--success); }
@@ -151,11 +151,11 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 /* Every view's column is pinned LEFT, matching Wallet, which was the only one that was.
    `0 auto X 0` is four values on purpose: right auto, left zero. Beware `margin: X 0 0`,
    which sets BOTH sides to zero and has silently broken centring here three times. */
-.page-heading { max-width:1240px; margin:0 auto 42px 0; align-items:flex-end; }
-.project-list,.opportunity-list,#portfolioContent { max-width:1240px; margin:0 auto 0 0; }
+.page-heading { max-width:none; margin:0 auto 42px 0; align-items:flex-end; }
+.project-list,.opportunity-list,#portfolioContent { max-width:none; margin:0 auto 0 0; }
 /* §6 brokered request list (company view) */
 .page-heading-actions { display:flex; gap:8px; align-items:center; }
-.request-list { max-width:1240px; margin:0 auto 4px 0; }
+.request-list { max-width:none; margin:0 auto 4px 0; }
 .request-list:not(:empty) { padding-bottom:8px; }
 .request-list-head { margin:16px 0 10px; color:var(--gold-deep); font-size: 14.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
 .request-row { padding:16px 18px; margin-bottom:10px; border:1px solid var(--line); border-radius: 0; background:#fff; }
@@ -246,7 +246,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 /* Proof of work · GitHub skill analysis (student profile). */
 .proof-of-work { margin:22px 0 0; padding:22px; border:1px solid var(--line); border-radius: 0; background:#fff; }
 .proof-of-work h3 { margin:0; font-size: 15px; letter-spacing:-.02em; }
-.pow-sub { margin:6px 0 14px; color:var(--muted); font-size: var(--step-body-sm); line-height:1.6; max-width:640px; }
+.pow-sub { margin:6px 0 14px; color:var(--muted); font-size: var(--step-body-sm); line-height:1.6; max-width:92ch; }
 .pow-row { display:flex; gap:10px; flex-wrap:wrap; }
 .pow-input { flex:1 1 260px; min-height:44px; padding:11px 13px; border:1px solid var(--line-strong); border-radius: 0; background:#fff; color:var(--ink); }
 .pow-input:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(180,123,32,.1); outline:0; }
@@ -270,7 +270,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .pow-conf[data-conf="medium"] { color:var(--gold-deep); }
 .pow-evidence { margin:0; color:var(--muted); font-size: 13px; line-height:1.5; }
 /* Work-trial ladder: names the "proof precedes access" model on the projects view. */
-.work-trial-ladder { display:flex; align-items:stretch; gap:14px; max-width:1240px; margin:0 auto 24px 0; }
+.work-trial-ladder { display:flex; align-items:stretch; gap:14px; max-width:none; margin:0 auto 24px 0; }
 .wtl-step { flex:1; display:flex; align-items:flex-start; gap:12px; padding:16px 18px; border:1px solid var(--line); border-radius: 0; background:#fff; }
 .wtl-step:last-of-type { border-color:rgba(180,123,32,.4); background:linear-gradient(180deg,var(--gold-pale),#fff 65%); }
 .wtl-num { flex:0 0 auto; display:grid; place-items:center; width:26px; height:26px; border-radius: 0; background:var(--gold); color:#1c1300; font-size: 14.5px; font-weight:700; }
@@ -305,11 +305,11 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .list-empty p { max-width:500px; margin:10px auto 0; color:var(--muted); font-size: 14.5px; line-height:1.6; }
 .empty-cta { margin-top:18px; min-height:38px; padding:9px 18px; border:1px solid var(--gold-deep); border-radius: 0; background:var(--gold); color:#fff; font-size: var(--step-body-sm); font-weight:650; cursor:pointer; }
 .empty-cta:hover { background:var(--gold-deep); }
-.filter-line { display:flex; max-width:1240px; min-height:54px; align-items:center; justify-content:space-between; margin:0 auto 0 0; padding:0 4px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); color:var(--soft); font-size: 14px; }
+.filter-line { display:flex; max-width:none; min-height:54px; align-items:center; justify-content:space-between; margin:0 auto 0 0; padding:0 4px; border-top:1px solid var(--line); border-bottom:1px solid var(--line); color:var(--soft); font-size: 14px; }
 .filter-line label { display:flex; align-items:center; gap:9px; }
 .filter-line input { min-height:34px; width:230px; padding:7px 10px; font-size: 14px; }
 /* §3 discovery: tabs + filter rail + fit-scored cards + detail panel (flat, scannable) */
-.discover-tabs { display:flex; gap:6px; max-width:1240px; margin:14px auto 0 0; padding:0 4px; }
+.discover-tabs { display:flex; gap:6px; max-width:none; margin:14px auto 0 0; padding:0 4px; }
 .discover-tab { display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border:1px solid var(--line-strong); border-radius: 0; background:#fff; color:var(--muted); font-size: 13px; font-weight:650; cursor:pointer; }
 .discover-tab.is-active { border-color:var(--gold); background:var(--gold-pale); color:var(--gold-deep); }
 .discover-tab b { display:inline-grid; min-width:16px; height:16px; place-items:center; padding:0 4px; border-radius: 0; background:var(--gold-pale); color:var(--gold-deep); font-size: 14px; }
@@ -409,7 +409,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .applicant-links a { color:var(--gold-deep); font-size: 13px; font-weight:700; text-decoration:underline; }
 .applicant-actions { display:flex; gap:8px; margin-top:16px; }
 .applicant-actions .portal-primary,.applicant-actions .portal-secondary { min-height:34px; padding:7px 16px; font-size: 13px; }
-.activity-grid { display:grid; max-width:1240px; margin:0 auto 0 0; gap:48px; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.activity-grid { display:grid; max-width:none; margin:0 auto 0 0; gap:48px; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .activity-section { min-width:0; }
 .activity-section .section-heading > span { color:var(--soft); font-size: 14px; }
 .activity-row { display:grid; grid-template-columns:40px minmax(0,1fr); gap:14px; align-items:start; padding:22px 0; border-bottom:1px solid var(--line); }
@@ -481,7 +481,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .visually-hidden { position:absolute!important; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 @media (prefers-reduced-motion: reduce){ .avatar-overlay { transition:none; } }
 .portfolio-profile h2 { margin:0; font-size: 30px; letter-spacing:-.055em; }
-.portfolio-profile > div > p { max-width:680px; margin:10px 0 18px; color:var(--muted); font-size: var(--step-body-sm); line-height:1.7; }
+.portfolio-profile > div > p { max-width:96ch; margin:10px 0 18px; color:var(--muted); font-size: var(--step-body-sm); line-height:1.7; }
 .skills { display:flex; flex-wrap:wrap; gap:7px; }
 .talent-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-top:1px solid var(--line); }
 .talent-row { padding:25px 22px 25px 0; border-bottom:1px solid var(--line); }
@@ -490,14 +490,14 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .talent-row h3 { margin:0 0 5px; font-size: 15px; }
 .talent-row p { margin:0 0 13px; color:var(--muted); font-size: 14px; line-height:1.6; }
 /* §3 company talent directory: filter bar + candidate cards */
-.talent-bar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; max-width:1240px; margin:0 auto 18px 0; }
+.talent-bar { display:flex; flex-wrap:wrap; align-items:center; gap:10px; max-width:none; margin:0 auto 18px 0; }
 .talent-search { flex:1; min-width:220px; min-height:40px; padding:9px 13px; border:1px solid var(--line-strong); border-radius: 0; background:#fff; color:var(--ink); font:inherit; font-size: 13.5px; outline:0; }
 .talent-vsel { min-height:40px; padding:9px 12px; border:1px solid var(--line-strong); border-radius: 0; background:#fff; color:var(--ink); font:inherit; font-size: 13.5px; outline:0; }
 .talent-search:focus,.talent-vsel:focus { border-color:var(--gold); box-shadow:0 0 0 3px rgba(180,123,32,.1); }
 .talent-check { display:inline-flex; align-items:center; gap:7px; color:var(--muted); font-size: 13px; font-weight:600; cursor:pointer; }
 .talent-check input { width:15px; height:15px; accent-color:var(--gold); }
 .talent-count { margin-left:auto; color:var(--soft); font-size: 13px; }
-.talent-grid { display:grid; gap:12px; max-width:1240px; margin:0 auto 0 0; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
+.talent-grid { display:grid; gap:12px; max-width:none; margin:0 auto 0 0; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); }
 .talent-card { padding:18px; border:1px solid var(--line); border-radius: 0; background:#fff; }
 .talent-card-head { display:flex; align-items:center; gap:12px; }
 .talent-avatar { flex:0 0 auto; width:44px; height:44px; display:grid; place-items:center; border-radius:50%; border:1px solid var(--line-strong); background:var(--gold-pale); background-size:cover; background-position:center; color:var(--gold-deep); font-size: 16px; font-weight:700; }
@@ -664,7 +664,6 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 /* The wallet grid/ledger are full-width (not capped at 1240 like other views), so the
    heading must be full-width too — otherwise it's centered and looks inset with side
    whitespace while the content below spans wider. Flush-left, no side margins. */
-[data-portal-view="wallet"] .page-heading { max-width:none; margin-left:0; margin-right:0; }
 [data-portal-view="wallet"] .page-heading > div > p:last-child { max-width:900px; }
 .wallet-grid { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr); gap:22px; align-items:start; }
 .wallet-balance-card { padding:26px; border:1px solid #eadfca; border-radius: 0; background:linear-gradient(160deg,var(--gold-pale),#fff); }
