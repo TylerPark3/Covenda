@@ -1822,7 +1822,7 @@ function renderVettingSteps(batch){
   const host=$('#batchVetting');
   if(!host)return;
   const brief=batchBriefFor(batch);
-  const v=brief&&brief.vetting;
+  const v=brief&&brief.vettingProcess;
   const stages=(brief&&brief.vettingStages)||[];
   if(!v||!stages.length){host.hidden=true;return;}
   host.replaceChildren();

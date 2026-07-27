@@ -787,3 +787,21 @@ test('an optional read degrades to empty instead of failing the dashboard', asyn
   // that would be worse than a 503.
   assert.match(src, /checked\(\s*\n?\s*supabase\.from\('member_projects'/);
 });
+
+// Attaching the per-vertical process to a brief must not clobber `vetting`, which already
+// exists and holds the rails. The first version overwrote it and broke sign-in for everyone
+// with "brief.vetting.rails is not iterable".
+test('the vetting process is added alongside the rails, never over them', async () => {
+  const { BATCH_CATALOG, batchBrief } = await import('../api/batches.js');
+  const { summarise, processFor } = await import('../api/vetting.js');
+  const src = await readFile(new URL('../api/portal.js', import.meta.url), 'utf8');
+
+  assert.doesNotMatch(src, /vetting: summariseVetting/, 'must not overwrite brief.vetting');
+  assert.match(src, /vettingProcess: summariseVetting/);
+
+  for (const b of BATCH_CATALOG) {
+    const brief = { ...batchBrief(b), vettingProcess: summarise(b.discipline) };
+    assert.ok(Array.isArray(brief.vetting.rails), `${b.slug}: rails must stay iterable`);
+    assert.equal(typeof brief.vetting.apiVerified, 'boolean', b.slug);
+  }
+});
