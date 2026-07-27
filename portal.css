@@ -112,7 +112,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .status-pill,.skill-pill { display:inline-flex; padding:5px 8px; border:1px solid var(--line); border-radius: 0; color:var(--muted); font-size: 13.5px; font-weight:650; text-transform:capitalize; }
 .status-pill[data-status="in_progress"],.status-pill[data-status="open"] { border-color:rgba(36,117,58,.25); background:#f4faf5; color:var(--success); }
 .project-progress { min-width:150px; align-self:center; }
-.project-progress div { height:5px; overflow:hidden; border-radius: 0; background:#eeeae2; }
+.project-progress div { height:5px; overflow:hidden; border-radius: 0; background:var(--surface-2); }
 .project-progress i { display:block; height:100%; border-radius: 0; background:linear-gradient(90deg,var(--gold),#e0b252); }
 .project-progress span { display:block; margin-top:8px; color:var(--soft); font-size: 13.5px; text-align:right; }
 .empty-line { padding:34px 0; border-bottom:1px solid var(--line); }
@@ -335,7 +335,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .fit-pill { flex:0 0 auto; padding:4px 9px; border-radius: 0; font-size: 14.5px; font-weight:700; white-space:nowrap; }
 .fit-pill.is-high { background:#f4faf5; color:var(--success); border:1px solid rgba(36,117,58,.25); }
 .fit-pill.is-mid { background:var(--gold-pale); color:var(--gold-deep); border:1px solid rgba(180,123,32,.3); }
-.fit-pill.is-low { background:#f6f5f2; color:var(--soft); border:1px solid var(--line-strong); }
+.fit-pill.is-low { background:var(--surface-2); color:var(--soft); border:1px solid var(--line-strong); }
 .discover-meta { display:flex; flex-wrap:wrap; gap:16px; margin:12px 0; }
 .discover-chip { display:grid; gap:2px; }
 .discover-chip small { color:var(--soft); font-size: 13.5px; font-weight:650; letter-spacing:.06em; text-transform:uppercase; }
@@ -422,7 +422,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 [data-portal-view="messages"] { padding-top:34px; }
 [data-portal-view="messages"] .page-heading { margin-bottom:24px; }
 .message-workspace { display:grid; width:min(1240px,100%); height:calc(100vh - 237px); min-height:480px; max-height:700px; margin:auto; border:1px solid var(--line); border-radius: 0; overflow:hidden; grid-template-columns:280px minmax(0,1fr); }
-.message-projects { padding:12px; border-right:1px solid var(--line); background:#fcfbf8; }
+.message-projects { padding:12px; border-right:1px solid var(--line); background:var(--surface-2); }
 .message-projects button { display:grid; width:100%; gap:6px; padding:15px 14px; border:1px solid transparent; border-radius: 0; background:transparent; cursor:pointer; text-align:left; }
 .message-projects button:hover,.message-projects button.is-active { border-color:#e8dfcb; background:var(--surface-1); box-shadow:0 8px 24px rgba(62,46,17,.05); }
 .message-projects button.is-active { box-shadow:inset 2px 0 var(--gold),0 8px 24px rgba(62,46,17,.05); }
@@ -763,7 +763,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .intake-step { display:none; }
 .intake-step.is-active { display:block; }
 .intake-step > label { display:block; margin-bottom:16px; }
-.intake-consent { display:flex; align-items:flex-start; gap:14px; padding:18px 20px; border:1px solid var(--line-strong); border-radius: 0; background:#fffdf8; font-size: 14.5px; color:var(--text); line-height:1.6; cursor:pointer; transition:border-color .14s ease, background .14s ease, box-shadow .14s ease; }
+.intake-consent { display:flex; align-items:flex-start; gap:14px; padding:18px 20px; border:1px solid var(--line-strong); border-radius: 0; background:var(--surface-2); font-size: 14.5px; color:var(--text); line-height:1.6; cursor:pointer; transition:border-color .14s ease, background .14s ease, box-shadow .14s ease; }
 .intake-consent:hover { border-color:var(--gold); }
 .intake-consent:has(input:checked) { border-color:var(--gold-deep); background:var(--gold-pale); box-shadow:0 0 0 3px rgba(180,123,32,.1); }
 .intake-consent input { appearance:none; -webkit-appearance:none; width:24px; min-height:24px; height:24px; flex:0 0 auto; margin-top:1px; border:2px solid var(--line-strong); border-radius: 0; background:var(--surface-1); cursor:pointer; display:grid; place-items:center; transition:border-color .14s ease, background .14s ease; }
@@ -973,7 +973,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-vetting .batch-rail-badge.is-api { border-color: #b47b20; background: #fbf7ed; color: #8b5709; }
 .batch-rail { margin-top: 14px; padding-left: 14px; border-left: 2px solid #eadfca; }
 .batch-rail strong { display: block; font-size: 15.5px; }
-.batch-rail p { margin: 5px 0 0; font-size: 15px; line-height: 1.6; color: #5c5c57; }
+.batch-rail p { margin: 5px 0 0; font-size: 15px; line-height: 1.6; color: var(--text-2); }
 .batch-rail-defeats { color: #8b5709 !important; }
 
 .batch-standing-line { margin: 0 0 12px; font-size: 15px; font-weight: 650; color: #8b5709; }
@@ -982,7 +982,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-req-list li.is-met { border-color: #bcd9c3; background: #f4faf5; }
 .batch-req-list li.is-open { border-color: #eadfca; background: #fffdf9; }
 .batch-req-list li strong { display: block; font-size: 15.5px; }
-.batch-req-list li p { margin: 5px 0 0; font-size: 15px; line-height: 1.6; color: #5c5c57; }
+.batch-req-list li p { margin: 5px 0 0; font-size: 15px; line-height: 1.6; color: var(--text-2); }
 .batch-req-gap { color: #8b5709 !important; font-weight: 600; }
 .batch-req-note { margin: 12px 0 0; font-size: var(--step-body-sm); line-height: 1.6; color: #6c6c67; }
 
@@ -990,7 +990,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-workflow-list li { display: grid; grid-template-columns: 30px 1fr; gap: 13px; align-items: start; }
 .batch-step-n { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #b47b20; border-radius: 50%; color: #8b5709; font-size: 14.5px; font-weight: 700; }
 .batch-workflow-list strong { display: block; font-size: 15.5px; }
-.batch-workflow-list p { margin: 4px 0 0; font-size: 15px; line-height: 1.6; color: #5c5c57; }
+.batch-workflow-list p { margin: 4px 0 0; font-size: 15px; line-height: 1.6; color: var(--text-2); }
 
 /* Talent view: the credit-gated batches sit above the open directory, so the vetted
    subset is what a company sees first and the full list reads as the wider pool. */
@@ -1036,7 +1036,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 
 /* The screening questions need room to answer and a line saying how they are judged. */
 .batch-interest-q { display: grid; gap: 6px; }
-.batch-interest-label { font-size: 15.5px; font-weight: 650; line-height: 1.45; color: #31312e; }
+.batch-interest-label { font-size: 15.5px; font-weight: 650; line-height: 1.45; color: var(--text); }
 .batch-interest-hint { color: var(--muted); font-size: 14px; line-height: 1.5; }
 .batch-interest-q textarea { min-height: 96px; }
 
@@ -1250,7 +1250,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .compat-pill { flex:none; padding:5px 10px; border-radius:0; font-size: 14px; font-weight:700; white-space:nowrap; font-variant-numeric:tabular-nums; }
 .compat-pill.is-high { background:#f4faf5; color:var(--success); border:1px solid rgba(36,117,58,.28); }
 .compat-pill.is-mid { background:var(--gold-pale); color:var(--gold-deep); border:1px solid rgba(180,123,32,.3); }
-.compat-pill.is-low { background:#f6f5f2; color:var(--soft); border:1px solid var(--line-strong); }
+.compat-pill.is-low { background:var(--surface-2); color:var(--soft); border:1px solid var(--line-strong); }
 .compat-why { margin:8px 0 0; color:var(--muted); font-size: 14px; line-height:1.5; }
 
 /* The filter is appended INTO .batch-list, which is a grid, so without this it becomes one
@@ -1278,7 +1278,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .company-form-group { min-width: 0; margin: 0; padding: 16px 18px; border: 1px solid var(--line); }
 .company-form-group legend { padding: 0 8px; font-size: 13px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); }
 .company-form-grid { display: grid; gap: 14px 18px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
-.company-field { display: grid; gap: 7px; min-width: 0; font-size: 13px; font-weight: 650; color: #2b2924; }
+.company-field { display: grid; gap: 7px; min-width: 0; font-size: 13px; font-weight: 650; color: var(--text); }
 .company-field.is-wide { grid-column: 1 / -1; }
 .company-field small { margin-left: 5px; color: var(--soft); font-weight: 500; }
 .company-field input, .company-field textarea { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 0; background:var(--surface-1); color: var(--ink); font: inherit; font-size: 14.5px; outline: 0; }
@@ -1595,22 +1595,22 @@ body { background: var(--surface); }
 #batchApplyDialog { background:var(--surface-1); }
 #batchApplyDialog .dialog-body { background:var(--surface-1); max-width: 720px; }
 #batchApplyDialog header { border-bottom: 1px solid #ebe8e1; background:var(--surface-1); }
-#batchApplyDialog header h2 { font-size: 30px; letter-spacing: -.025em; color: #000; }
+#batchApplyDialog header h2 { font-size: 30px; letter-spacing: -.025em; color: var(--text); }
 #batchApplyDialog .eyebrow { color: #8a8479; letter-spacing: .1em; }
 
 /* Type sized to be read, not scanned. */
-#batchApplyDialog .batch-step-kicker { margin: 0 0 22px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: #000; }
-#batchApplyDialog .batch-step-hint { font-size: 16px; line-height: 1.65; color: #55524a; }
-#batchApplyDialog label { font-size: 16px; font-weight: 600; color: #000; }
+#batchApplyDialog .batch-step-kicker { margin: 0 0 22px; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); }
+#batchApplyDialog .batch-step-hint { font-size: 16px; line-height: 1.65; color: var(--text-2); }
+#batchApplyDialog label { font-size: 16px; font-weight: 600; color: var(--text); }
 #batchApplyDialog label small { font-size: 14.5px; font-weight: 400; color: #7d7870; }
 #batchApplyDialog input, #batchApplyDialog textarea, #batchApplyDialog select {
-  font-size: 17px; line-height: 1.6; color: #000;
+  font-size: 17px; line-height: 1.6; color: var(--text);
   padding: 14px 16px; min-height: 56px;
   border: 1px solid #d8d4cb; border-radius: 0; background:var(--surface-1);
 }
 #batchApplyDialog textarea { min-height: 0; }
 #batchApplyDialog input:focus, #batchApplyDialog textarea:focus, #batchApplyDialog select:focus {
-  border-color: #000; box-shadow: none; outline: 2px solid #000; outline-offset: -2px;
+  border-color: var(--text); box-shadow: none; outline: 2px solid #000; outline-offset: -2px;
 }
 #batchApplyDialog input::placeholder, #batchApplyDialog textarea::placeholder { color: #a8a39a; }
 
@@ -1619,9 +1619,9 @@ body { background: var(--surface); }
 #batchApplyDialog .batch-prompt-box,
 #batchApplyDialog .batch-vetting,
 #batchApplyDialog .ba-referral { background:var(--surface-1); border: 1px solid #ebe8e1; }
-#batchApplyDialog .batch-prompt-box p { font-size: 19px; line-height: 1.5; color: #000; }
+#batchApplyDialog .batch-prompt-box p { font-size: 19px; line-height: 1.5; color: var(--text); }
 #batchApplyDialog .batch-prompt-tag { color: #8a8479; }
-#batchApplyDialog .ba-referral-cap { font-size: 22px; color: #000; }
+#batchApplyDialog .ba-referral-cap { font-size: 22px; color: var(--text); }
 #batchApplyDialog .ba-referral-note { font-size: 15.5px; color: #7d7870; }
 
 /* One question at a time. */
@@ -1633,7 +1633,7 @@ body { background: var(--surface); }
 .bq-dots i.is-current { background: var(--gold); }
 .bq-card { display: grid; gap: 0; }
 .bq-q { display: grid; gap: 12px; }
-.bq-label { font-size: 22px; font-weight: 600; line-height: 1.35; letter-spacing: -.015em; color: #000; }
+.bq-label { font-size: 22px; font-weight: 600; line-height: 1.35; letter-spacing: -.015em; color: var(--text); }
 .bq-hint { font-size: 15px; line-height: 1.6; color: #7d7870; font-weight: 400; }
 .bq-nav { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
 .bq-nav .portal-primary, .bq-nav .portal-secondary { min-height: 48px; padding: 0 22px; font-size: 15.5px; }
@@ -1642,8 +1642,8 @@ body { background: var(--surface); }
 /* Progress rail and footer, quieted to match. */
 #batchApplyDialog .ba-progress { border-bottom-color: #ebe8e1; background:var(--surface-1); }
 #batchApplyDialog .ba-progress button { font-size: 15px; }
-#batchApplyDialog .ba-progress li.is-current button { border-bottom-color: #000; color: #000; }
-#batchApplyDialog .ba-progress li.is-done button { color: #55524a; }
+#batchApplyDialog .ba-progress li.is-current button { border-bottom-color: var(--text); color: var(--text); }
+#batchApplyDialog .ba-progress li.is-done button { color: var(--text-2); }
 #batchApplyDialog footer { border-top: 1px solid #ebe8e1; background:var(--surface-1); }
 #batchApplyDialog .ba-count { font-size: 15px; color: #7d7870; }
 #batchApplyDialog footer button { min-height: 52px; font-size: 16px; }
@@ -1668,7 +1668,7 @@ body { background: var(--surface); }
 .ba-part + .ba-part { padding-top: 34px; border-top: 1px solid #ebe8e1; }
 .ba-part-head {
   display: flex; align-items: baseline; gap: 10px; margin: 0;
-  font-size: 24px; font-weight: 650; letter-spacing: -.02em; color: #000;
+  font-size: 24px; font-weight: 650; letter-spacing: -.02em; color: var(--text);
 }
 .ba-part-head::before {
   content: counter(bapart);
@@ -1677,7 +1677,7 @@ body { background: var(--surface); }
   font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums;
   transform: translateY(2px);
 }
-.ba-part-what { margin: -4px 0 0 44px; max-width: 62ch; font-size: 17px; line-height: 1.5; color: #555049; }
+.ba-part-what { margin: -4px 0 0 44px; max-width: 62ch; font-size: 17px; line-height: 1.5; color: var(--text-2); }
 .ba-part > :not(.ba-part-head):not(.ba-part-what) { margin-left: 44px; }
 /* Résumé-anchored questions. Visually set apart from the standard fields because they are
    the one part of the application nobody else in the batch was asked. */
@@ -1744,38 +1744,38 @@ body { background: var(--surface); }
 .ba-quiz { display: grid; gap: 20px; margin: 26px 0 0; padding: 24px; border: 1px solid #ebe8e1; background:var(--surface-1); }
 .ba-quiz-head { display: grid; gap: 4px; }
 .ba-quiz-cap { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--gold-deep); }
-.ba-quiz-sub { margin: 0; max-width: 62ch; font-size: 16px; line-height: 1.5; color: #5b554c; }
+.ba-quiz-sub { margin: 0; max-width: 62ch; font-size: 16px; line-height: 1.5; color: var(--text-2); }
 .ba-quiz-item { display: grid; gap: 9px; margin: 0; padding: 0; border: 0; }
-.ba-quiz-item legend { padding: 0 0 6px; font-size: 18px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; color: #000; text-wrap: pretty; }
+.ba-quiz-item legend { padding: 0 0 6px; font-size: 18px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; color: var(--text); text-wrap: pretty; }
 .ba-quiz-opt { display: flex; align-items: flex-start; gap: 11px; padding: 12px 14px; border: 1px solid #e0dcd2; cursor: pointer; font-size: 16px; line-height: 1.45; }
 .ba-quiz-opt:hover { border-color: var(--gold-deep); background: var(--gold-pale); }
 .ba-quiz-opt input { flex: none; margin: 3px 0 0; accent-color: var(--gold-deep); }
 .ba-quiz-opt:has(input:checked) { border-color: var(--gold-deep); background: var(--gold-pale); }
 .ba-quiz-written { display: grid; gap: 8px; }
-.ba-quiz-q { font-size: 18px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; color: #000; text-wrap: pretty; }
+.ba-quiz-q { font-size: 18px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; color: var(--text); text-wrap: pretty; }
 .ba-quiz-written textarea { width: 100%; padding: 13px 14px; border: 1px solid #cfcabf; background:var(--surface-1); font: inherit; font-size: 16px; line-height: 1.5; resize: vertical; }
 .ba-quiz-written textarea:focus { outline: 2px solid var(--gold-deep); outline-offset: -1px; border-color: var(--gold-deep); }
 
 .ba-rq { display: grid; gap: 18px; margin: 6px 0 26px; padding: 24px; border: 1px solid var(--gold-line, #d8cdae); background: var(--gold-pale, #faf7ef); }
 .ba-rq-head { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-deep); }
-.ba-rq-why { margin: -10px 0 0; max-width: 62ch; font-size: 16px; line-height: 1.5; color: #5b554c; }
-.ba-rq-note { margin: 0; font-size: 16px; color: #5b554c; }
+.ba-rq-why { margin: -10px 0 0; max-width: 62ch; font-size: 16px; line-height: 1.5; color: var(--text-2); }
+.ba-rq-note { margin: 0; font-size: 16px; color: var(--text-2); }
 .ba-rq-item { display: grid; gap: 8px; }
-.ba-rq-q { font-size: 18px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; color: #000; text-wrap: balance; }
+.ba-rq-q { font-size: 18px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; color: var(--text); text-wrap: balance; }
 .ba-rq-item textarea { width: 100%; padding: 13px 14px; border: 1px solid #cfcabf; background:var(--surface-1); font: inherit; font-size: 16px; line-height: 1.5; resize: vertical; }
 .ba-rq-item textarea:focus { outline: 2px solid var(--gold-deep); outline-offset: -1px; border-color: var(--gold-deep); }
 .ba-rq-follow { font-size: 14.5px; color: #6d675e; }
 
-.opt { display:inline-block; margin-left:4px; padding:1px 6px; background:#f2f0eb; color:var(--text-2); font-size:13.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+.opt { display:inline-block; margin-left:4px; padding:1px 6px; background:var(--surface-2); color:var(--text-2); font-size:13.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
 @media (max-width: 620px) {
   .ba-part-what, .ba-part > :not(.ba-part-head):not(.ba-part-what) { margin-left: 0; }
 }
 
 .ba-upload { display: grid; gap: 10px; margin-bottom: 0; padding: 22px 24px; border: 1px solid #ebe8e1; background:var(--surface-1); }
-.ba-upload-cap { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: #000; }
-.ba-upload-note { margin: 0; max-width: 62ch; font-size: 15.5px; line-height: 1.6; color: #55524a; }
+.ba-upload-cap { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.015em; color: var(--text); }
+.ba-upload-note { margin: 0; max-width: 62ch; font-size: 15.5px; line-height: 1.6; color: var(--text-2); }
 .ba-upload input[type="file"] { width: 100%; padding: 16px; border: 1px dashed #cfcabf; background:var(--surface-1); font-size: 15.5px; cursor: pointer; }
-.ba-upload input[type="file"]:hover { border-color: #000; }
+.ba-upload input[type="file"]:hover { border-color: var(--text); }
 .ba-upload-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .ba-upload-list li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid #ebe8e1; font-size: 15px; }
 .ba-upload-list li span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1795,25 +1795,25 @@ body { background: var(--surface); }
 /* Concept questions: one per screen, options big enough to hit. */
 .mcq { display: grid; gap: 12px; margin-top: 6px; }
 .mcq label { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px; border: 1px solid #d8d4cb; background:var(--surface-1); font-size: 16.5px; font-weight: 500; cursor: pointer; }
-.mcq label:hover { border-color: #000; }
-.mcq input { margin: 3px 0 0; width: 20px; height: 20px; accent-color: #000; }
-.mcq label:has(input:checked) { border-color: #000; box-shadow: inset 3px 0 0 #000; }
+.mcq label:hover { border-color: var(--text); }
+.mcq input { margin: 3px 0 0; width: 20px; height: 20px; accent-color: var(--text); }
+.mcq label:has(input:checked) { border-color: var(--text); box-shadow: inset 3px 0 0 #000; }
 
 /* A brainteaser gets its own framing so nobody reads it as trivia. */
 .teaser { display: grid; gap: 12px; padding: 24px; border: 1px solid #000; background:var(--surface-1); }
 .teaser-tag { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #7d7870; }
-.teaser-q { margin: 0; font-size: 20px; line-height: 1.5; color: #000; }
+.teaser-q { margin: 0; font-size: 20px; line-height: 1.5; color: var(--text); }
 .teaser-note { margin: 0; font-size: 15px; color: #7d7870; }
 
 /* The supplied exercise. Work happens on screen, so the recording is of a screen. */
 .batch-exercise { display: grid; gap: 16px; margin-bottom: 26px; padding: 26px 28px; border: 1px solid #000; background:var(--surface-1); }
-.ex-head h4 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 24px; letter-spacing: -.02em; color: #000; }
+.ex-head h4 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 24px; letter-spacing: -.02em; color: var(--text); }
 .ex-meta { margin: 0; font-size: 15px; color: #7d7870; font-variant-numeric: tabular-nums; }
 .ex-block { display: grid; gap: 6px; padding: 16px 18px; border: 1px solid #ebe8e1; }
-.ex-block.is-task { border-color: #000; }
+.ex-block.is-task { border-color: var(--text); }
 .ex-block strong { font-size: 13px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #7d7870; }
-.ex-block p { margin: 0; font-size: 16.5px; line-height: 1.6; color: #000; }
-.ex-how { margin: 0; font-size: 15.5px; line-height: 1.6; color: #55524a; }
+.ex-block p { margin: 0; font-size: 16.5px; line-height: 1.6; color: var(--text); }
+.ex-how { margin: 0; font-size: 15.5px; line-height: 1.6; color: var(--text-2); }
 .batch-exercise .portal-primary { justify-self: start; min-height: 54px; padding: 0 26px; font-size: 16.5px; }
 .ex-state { margin: 0; font-size: 15px; color: var(--gold-deep); }
 
@@ -1992,7 +1992,7 @@ body { background: var(--surface); }
 :root[data-theme="night"] .portal-primary {
   background: linear-gradient(180deg, #d9a94e, #b8873a);
   border-color: #e6c47a;
-  color: #14120c;
+  color: var(--text);
 }
 .portal-primary:hover { filter: brightness(1.06); }
 .portal-secondary { border-color: var(--accent); color: var(--accent-text); }
@@ -2120,3 +2120,23 @@ body { background: var(--surface); }
 :root[data-theme="night"] .fit-why { background:var(--surface-2); border-color:var(--edge); }
 :root[data-theme="night"] .fit-why summary { color:var(--gold-deep); }
 :root[data-theme="night"] .fit-reasons span { background:var(--surface-2); color:var(--text-2); border-color:var(--edge); }
+
+/* Status tints keep their meaning at night rather than being flattened into a surface: a
+   success chip that turns grey has stopped signalling. Dark grounds, lifted text. */
+:root[data-theme="night"] [style*="#f4faf5"],
+:root[data-theme="night"] .is-ok { background:#12211a; }
+:root[data-theme="night"] .is-warn { background:#251a13; }
+/* The batch application was written against a white ground, so its own surfaces need night
+   values even after the text tokens were fixed. */
+:root[data-theme="night"] .ba-part + .ba-part,
+:root[data-theme="night"] .ba-quiz,
+:root[data-theme="night"] .ba-upload,
+:root[data-theme="night"] .ba-rq,
+:root[data-theme="night"] .batch-exercise,
+:root[data-theme="night"] .batch-prompt-box { background:var(--surface-2); border-color:var(--edge); }
+:root[data-theme="night"] .ba-quiz-opt { background:var(--surface-1); border-color:var(--edge-strong); color:var(--text); }
+:root[data-theme="night"] .ba-quiz-opt:has(input:checked) { background:var(--gold-pale); border-color:var(--gold); }
+:root[data-theme="night"] .ba-quiz-written textarea,
+:root[data-theme="night"] .ba-rq-item textarea { background:var(--surface-1); border-color:var(--edge-strong); color:var(--text); }
+:root[data-theme="night"] .ex-file { background:var(--surface-1); color:var(--gold-deep); border-color:var(--gold-deep); }
+:root[data-theme="night"] .opt { background:var(--surface-2); color:var(--text-3); }
