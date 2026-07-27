@@ -2448,6 +2448,108 @@ async function saveBriefEdit(project,field,value,reason){
   await loadDashboard();
 }
 
+// ── Payout setup, company referrals, ATS ──────────────────────────────────────────────
+// Three backends that shipped without a way to reach them.
+
+// Students: set up where the money goes. Stripe's hosted flow, so we never see bank details.
+function renderPayoutSetup(root){
+  const d=state.dashboard;
+  if(d?.profile?.role!=='student')return;
+  const sec=document.createElement('section');sec.className='payout-setup';
+  const h=document.createElement('h3');h.textContent='Getting paid';
+  const p=document.createElement('p');p.id='payoutSetupNote';p.textContent='Checking…';
+  const go=document.createElement('button');go.type='button';go.className='portal-primary compact';go.hidden=true;
+  sec.append(h,p,go);root.append(sec);
+
+  fetch('/api/stripe-connect').then(r=>r.json()).then(mode=>{
+    if(!mode.automated){ p.textContent=mode.note; return; }
+    return fetch('/api/stripe-connect',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'status'})})
+      .then(r=>r.json()).then(st=>{
+        p.textContent=st.message||'';
+        if(!st.canReceive){
+          go.hidden=false;go.textContent=st.state==='none'?'Set up payouts':'Finish setup';
+          go.addEventListener('click',async()=>{
+            go.disabled=true;
+            try{
+              const r=await fetch('/api/stripe-connect',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'start'})});
+              const out=await r.json();
+              if(out.url)window.location.href=out.url;else throw new Error(out.error||'Could not start setup.');
+            }catch(err){go.disabled=false;p.textContent=err.message;}
+          });
+        }
+      });
+  }).catch(()=>{ p.textContent='Could not check your payout setup. Try again shortly.'; });
+}
+
+// Companies: refer another company. Rewarded only after they do something real.
+function renderCompanyReferrals(root){
+  const d=state.dashboard;
+  if(d?.profile?.role!=='company')return;
+  const refs=d.companyReferrals||[];
+  const sec=document.createElement('section');sec.className='coref';
+  const head=document.createElement('div');head.className='coref-head';
+  const box=document.createElement('div');
+  const h=document.createElement('h3');h.textContent='Refer another startup';
+  const p=document.createElement('p');p.textContent='Pays out once they confirm a work email, post a real brief, reach out to someone, and hire or pay.';
+  box.append(h,p);
+  const make=document.createElement('button');make.type='button';make.className='portal-primary compact';make.textContent='Create a link';
+  make.addEventListener('click',async()=>{
+    make.disabled=true;
+    try{ await portalRequest({method:'POST',body:JSON.stringify({action:'create-company-referral'})}); await loadDashboard(); }
+    catch(error){ make.disabled=false; alert(error.message); }
+  });
+  head.append(box,make);sec.append(head);
+
+  refs.forEach(r=>{
+    const row=document.createElement('article');row.className='coref-row';
+    const code=document.createElement('input');code.readOnly=true;code.className='verif-link';
+    code.value=location.origin+'/?ref='+r.code;
+    code.addEventListener('focus',()=>code.select());
+    const bar=document.createElement('div');bar.className='coref-gates';
+    // Four gates, shown as gates — a founder can see exactly what is still outstanding.
+    [['Verified',r.verified_at],['Brief',r.brief_at],['Intro',r.introduced_at],['Hired or paid',r.converted_at]]
+      .forEach(([label,at])=>{
+        const g=document.createElement('span');g.className='coref-gate'+(at?' is-done':'');g.textContent=label;bar.append(g);
+      });
+    const note=document.createElement('small');note.textContent=r.standing?.summary||'';
+    row.append(code,bar,note);sec.append(row);
+  });
+  if(!refs.length){
+    const empty=document.createElement('p');empty.className='coref-empty';
+    empty.textContent='No referral links yet.';sec.append(empty);
+  }
+  root.append(sec);
+}
+
+// Companies: push a candidate into the ATS they already use.
+function renderAtsPanel(root){
+  if(state.dashboard?.profile?.role!=='company')return;
+  const sec=document.createElement('section');sec.className='ats-panel';
+  const h=document.createElement('h3');h.textContent='Your ATS';
+  const p=document.createElement('p');p.textContent='Checking…';
+  const row=document.createElement('div');row.className='ats-actions';
+  sec.append(h,p,row);root.append(sec);
+
+  fetch('/api/ats-push',{headers:{Authorization:`Bearer ${session().accessToken}`}})
+    .then(r=>r.json()).then(out=>{
+      p.textContent=out.note||'';
+      if(out.connected)return;
+      (out.providers||[]).forEach(prov=>{
+        const b=document.createElement('button');b.type='button';b.className='portal-secondary compact';b.textContent=prov.label;
+        b.addEventListener('click',async()=>{
+          b.disabled=true;
+          try{
+            const r=await fetch('/api/ats-push',{method:'POST',headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},body:JSON.stringify({action:'connect',provider:prov.id})});
+            const res=await r.json();
+            p.textContent=res.note||res.error||'';
+            row.replaceChildren();
+          }catch(err){ b.disabled=false; p.textContent=err.message; }
+        });
+        row.append(b);
+      });
+    }).catch(()=>{ p.textContent='Could not check your ATS connection.'; });
+}
+
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
   $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Students who opted into discovery.';$('#editProfile').hidden=true;
   const batches=document.createElement('section');batches.className='talent-batches';
@@ -2480,8 +2582,8 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   bar.append(search,vsel,skl,msel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderVideoLibrary(root);renderProofOfWork(root,profile);}
-  if(profile?.role==='company'){renderCompanyVerification(root);renderCompanyProfileForm(root);}}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderVideoLibrary(root);renderPayoutSetup(root);renderProofOfWork(root,profile);}
+  if(profile?.role==='company'){renderCompanyVerification(root);renderAtsPanel(root);renderCompanyReferrals(root);renderCompanyProfileForm(root);}}
 
 // Live credibility meter — a checklist of REAL, earned signals (identity, completeness, proven
 // GitHub skills, completed reviewed work-trials). Not a black-box score; each rung is concrete
