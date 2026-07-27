@@ -989,7 +989,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .verif-head p, .ms-sub { margin: 5px 0 0; color: var(--muted); font-size: var(--step-body-sm); }
 
 .verif-list { display: grid; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }
-.verif-list li { display: grid; grid-template-columns: 22px 1fr; gap: 11px; align-items: start; }
+.verif-list li { display: block; }
 .verif-mark { display: grid; place-items: center; width: 20px; height: 20px; color: var(--soft); font-size: 15px; }
 .verif-list li.is-held .verif-mark { color: var(--gold-deep); }
 .verif-list li.is-held .verif-mark svg { width: 18px; height: 18px; }
@@ -1029,15 +1029,22 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 
 /* ── Verification ──────────────────────────────────────────────────────────────────── */
 .verif-list li { padding:0; }
-.verif-row { display:flex; align-items:flex-start; gap:12px; width:100%; padding:13px 12px; border:0; border-radius:0; background:none; text-align:left; font:inherit; color:inherit; cursor:pointer; transition:background .14s ease; }
+.verif-row { display:grid; grid-template-columns:20px minmax(0,1fr); gap:5px 11px; width:100%; padding:12px 10px; border:0; border-radius:0; background:none; text-align:left; font:inherit; color:inherit; cursor:pointer; transition:background .14s ease; }
 .verif-row:hover { background:var(--gold-pale); }
 .verif-row:focus-visible { outline:2px solid var(--gold); outline-offset:-2px; }
-.verif-row > div { flex:1 1 auto; min-width:0; display:grid; gap:3px; }
-.verif-row strong { font-size: 13px; }
-.verif-row small { color:var(--muted); font-size: 11.5px; line-height:1.5; }
-.verif-go { flex:none; align-self:center; padding:5px 11px; border:1px solid var(--line-strong); font-size: 13px; font-weight:650; color:var(--gold-deep); white-space:nowrap; }
+.verif-row .verif-mark { grid-column:1; grid-row:1; }
+.verif-row > div { grid-column:2; grid-row:1; min-width:0; display:grid; gap:3px; }
+.verif-row strong { font-size: 14px; }
+.verif-row small { color:var(--muted); font-size: 12.5px; line-height:1.5; }
+.verif-go { grid-column:2; grid-row:2; justify-self:start; margin-top:2px; padding:5px 12px; border:1px solid var(--line-strong); font-size: 12.5px; font-weight:650; color:var(--gold-deep); white-space:nowrap; }
 .verif-row:hover .verif-go { border-color:var(--gold); background:#fff; }
 .verif-list li.is-held .verif-go { color:var(--soft); }
+
+/* Same rail, same constraint — the journey rows stack their action too. */
+.journey-row { display:grid; grid-template-columns:26px minmax(0,1fr); gap:5px 12px; padding:12px 10px; }
+.journey-row .journey-mark { grid-column:1; grid-row:1; }
+.journey-row > div { grid-column:2; grid-row:1; }
+.journey-go { grid-column:2; grid-row:2; justify-self:start; align-self:start; margin-top:2px; }
 
 .verif-dialog { width:min(560px,calc(100% - 28px)); padding:0; border:1px solid var(--line-strong); border-radius:0; background:#fff; box-shadow:0 35px 100px rgba(30,25,16,.18); }
 .verif-dialog::backdrop { background:rgba(24,22,17,.28); backdrop-filter:blur(7px); }
