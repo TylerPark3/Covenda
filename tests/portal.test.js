@@ -283,8 +283,13 @@ test('account-number detection catches raw numbers but allows emails and handles
   assert.equal(looksLikeAccountNumber('@maya'), false);
 });
 
+// Settling now reads the request first and refuses one that is already resolved, so the
+// fixture has to offer a live request rather than a settled one.
 test('only a listed operator can settle a payout', async () => {
-  const supabase = queuedSupabase([{ result: { id: 'req-1', status: 'paid' } }]);
+  const supabase = queuedSupabase([
+    { result: { id: 'req-1', status: 'requested', credits: 100, user_id: 'stu' } },
+    { result: { id: 'req-1', status: 'paid' } },
+  ]);
   await assert.rejects(
     fulfilPayout({ user: { id: 'stu', email: 'student@example.com' }, supabase }, { requestId: PROJECT_UUID }, { COVENDA_ADMIN_EMAILS: 'ops@covenda.app' }),
     /Only a Covenda operator/,
@@ -738,4 +743,30 @@ test('computeReadinessScore is explainable, versioned, and never a gate', async 
   assert.ok(weak.projectClarity.score < strong.projectClarity.score);
   assert.ok(weak.projectClarity.concerns.some(c => /goal/i.test(c)));
   assert.equal(weak.nextStep, 'Submit your project to Covenda');
+});
+
+// Money moves before the ledger says it did. The other order can mark a student paid and
+// then fail the transfer, which is the one mistake that is expensive to unwind.
+test('a payout will not settle for a student who has not finished Stripe onboarding', async () => {
+  const supabase = queuedSupabase([
+    { result: { id: 'req-1', status: 'requested', credits: 100, user_id: 'stu' } },
+    { result: { stripe_account_id: null, stripe_payouts_enabled: false } },
+  ]);
+  await assert.rejects(
+    fulfilPayout(
+      { user: { id: 'op', email: 'ops@covenda.app' }, supabase },
+      { requestId: PROJECT_UUID },
+      { COVENDA_ADMIN_EMAILS: 'ops@covenda.app', STRIPE_SECRET_KEY: 'sk_test', STRIPE_CONNECT_ENABLED: 'true' },
+    ),
+    /has not finished setting up payouts/,
+  );
+  assert.equal(supabase.rpcCalls.length, 0, 'the ledger is untouched when the transfer cannot happen');
+});
+
+test('an already-settled request cannot be settled twice', async () => {
+  const supabase = queuedSupabase([{ result: { id: 'req-1', status: 'paid', credits: 100, user_id: 'stu' } }]);
+  await assert.rejects(
+    fulfilPayout({ user: { id: 'op', email: 'ops@covenda.app' }, supabase }, { requestId: PROJECT_UUID }, { COVENDA_ADMIN_EMAILS: 'ops@covenda.app' }),
+    /already been resolved/,
+  );
 });

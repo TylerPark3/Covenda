@@ -13,6 +13,7 @@ import { classifyCompanyEmail, domainMatchesCompany, companyVerificationStanding
 import { readinessFor, categoriseOpportunity } from './readiness.js';
 import { recordRevision, briefVersion, evaluateBrief } from './brief-engine.js';
 import { checkIntroduction, applyResponse, normaliseOutcome, referralStatus, OUTCOME_QUESTIONS } from './introductions.js';
+import { checkPayout, creditsToCents, transferIdempotencyKey, payoutsMode } from './payouts.js';
 import { buildMilestoneSchedule, evaluateMilestones, reassignmentDecision, founderTimeVariance } from './milestones.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
@@ -563,10 +564,48 @@ export async function fulfilPayout(member, input, env = process.env) {
   if (!operatorEmails(env).includes(member.user.email || '')) throw new Error('Only a Covenda operator can settle payouts.');
   const id = cleanText(input.requestId, 50);
   if (!PROJECT_ID_PATTERN.test(id)) throw new Error('Choose a valid payout request.');
+  const mode = payoutsMode(env);
+  const request = await checked(member.supabase.from('payout_requests').select('*').eq('id', id).maybeSingle(), null);
+  if (!request) throw new Error('That payout request is no longer available.');
+  if (request.status !== 'requested') throw new Error('This payout request has already been resolved.');
+
+  // Move the money BEFORE the ledger records it as sent. The other order can mark a student
+  // paid and then fail the transfer, which is the one mistake that is expensive to unwind.
+  let transferId = null;
+  if (mode.automated) {
+    const payee = await checked(member.supabase.from('member_profiles')
+      .select('stripe_account_id,stripe_payouts_enabled').eq('user_id', request.user_id).maybeSingle(), null);
+    if (!payee?.stripe_account_id || !payee.stripe_payouts_enabled) {
+      throw new Error('That student has not finished setting up payouts. They need to complete Stripe onboarding first.');
+    }
+    const params = new URLSearchParams({
+      amount: String(creditsToCents(request.credits)),
+      currency: 'usd',
+      destination: payee.stripe_account_id,
+      'metadata[payout_request_id]': request.id,
+    });
+    const response = await fetch('https://api.stripe.com/v1/transfers', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${env.STRIPE_SECRET_KEY}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        // Stripe retries; a transfer that runs twice pays twice.
+        'Idempotency-Key': transferIdempotencyKey(request.id),
+      },
+      body: params.toString(),
+    });
+    const json = await response.json();
+    if (!response.ok) throw new Error(json?.error?.message || 'Stripe would not send that transfer.');
+    transferId = json.id;
+  }
+
   const settled = await checked(
     member.supabase.rpc('fulfil_payout_request', { p_request_id: id, p_operator_id: member.user.id, p_note: cleanText(input.note, 500) || null }),
     null,
   );
+  if (transferId) {
+    await member.supabase.from('payout_requests').update({ stripe_transfer_id: transferId }).eq('id', id);
+  }
   return Array.isArray(settled) ? settled[0] : settled;
 }
 
