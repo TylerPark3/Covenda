@@ -1852,3 +1852,64 @@ body { background: var(--surface); }
 @media (prefers-reduced-motion: reduce) {
   .portal-primary:hover { filter: none; }
 }
+
+/* The prompt that appears mid-recording. Sits over the video, high contrast, and clears
+   itself — a prompt that stays covers the work it is asking about. */
+.rec-beat {
+  position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+  max-width: min(680px, 92%); margin: 0; padding: 14px 20px;
+  background: rgba(14,13,10,.94); border-left: 3px solid var(--gold);
+  color: #f4f1e8; font-size: 18px; line-height: 1.45; text-align: left;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+}
+.rec-stage { position: relative; }
+
+/* ══ GOLD, MADE VISIBLE ════════════════════════════════════════════════════════════════
+   The previous pass used border-image, which several browsers drop silently, and gradients
+   at 70% transparency that read as nothing on a white page. This is the version you can
+   actually see. */
+.member-nav {
+  background: linear-gradient(180deg, #fffdf8, #fff 30%);
+  border-right: 2px solid var(--gold);
+}
+.member-nav nav button.is-active {
+  background: linear-gradient(90deg, rgba(180,123,32,.14), transparent);
+  box-shadow: inset 4px 0 0 var(--gold);
+  color: var(--gold-deep); font-weight: 700;
+}
+.member-nav nav button.is-active svg { color: var(--gold-deep); }
+
+/* Every panel gets a real gold cap, not a gradient that fades to nothing. */
+.panel-card, .company-form, .video-library, .coref, .ats-panel, .payout-setup,
+.pipeline-panel, .brief-review, .cred-meter {
+  border-top: 3px solid var(--gold);
+  border-image: none;
+}
+.member-header { border-bottom: 2px solid var(--gold); background: linear-gradient(180deg, #fffdf8, #fff); }
+
+/* Headings sit on a gold rule. */
+.panel-card > h3, .company-form-head h3, .pipe-head h3, .video-library-head h3 {
+  padding-bottom: 10px; border-bottom: 1px solid rgba(180,123,32,.35);
+}
+.panel-card > h3::after, .company-form-head h3::after, .pipe-head h3::after { display: none; }
+
+/* Numbers a founder scans, in gold. */
+.metric strong, .roster-total b, .pipe-col-top span, .journey-count,
+.brief-version, .cred-meter-tag, .fit-pill.is-mid { color: var(--gold-deep); font-weight: 700; }
+
+/* Night mode: the gold has room to actually glow. */
+:root[data-theme="night"] .member-nav {
+  background: linear-gradient(180deg, #221d13, #17150f 40%);
+  border-right-color: var(--gold);
+}
+:root[data-theme="night"] .member-header {
+  background: linear-gradient(180deg, #221d13, #17150f);
+  border-bottom-color: var(--gold);
+}
+:root[data-theme="night"] .member-nav nav button.is-active {
+  background: linear-gradient(90deg, rgba(217,169,78,.22), transparent);
+  color: #e6c47a;
+}
+:root[data-theme="night"] .panel-card,
+:root[data-theme="night"] .company-form,
+:root[data-theme="night"] .pipeline-panel { border-top-color: var(--gold); }

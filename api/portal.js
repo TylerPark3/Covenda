@@ -8,6 +8,7 @@ import { presentScore, normalizeAppeal } from './hardening.js';
 import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility } from './batches.js';
 import { summarise as summariseVetting, processFor } from './vetting.js';
 import { assessmentFor as supplierAssessment } from './assessments.js';
+import { scriptFor } from './session-script.js';
 import { VERIFICATION_TIERS, REFERRER_VALUE, CLUB_VERIFICATION_VERSION, evaluateClubVerification, memberStanding } from './clubs.js';
 import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES } from './talent-profile.js';
 import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normaliseEmail } from './verification.js';
@@ -352,7 +353,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
-    batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: supplierAssessment(b.discipline, b.slug) })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -399,7 +400,7 @@ export async function loadMemberDashboard(member, env = process.env) {
   return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, briefing: await companyBriefing(member), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
-    batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: supplierAssessment(b.discipline, b.slug) })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
 }
 
 export async function saveMemberProfile(member, input) {

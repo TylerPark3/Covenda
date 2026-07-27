@@ -1933,11 +1933,15 @@ function renderExercise(batch){
   }
   go.addEventListener('click',async()=>{
     go.disabled=true;state.textContent='Waiting for you to pick a window…';
+    const script=a.script||null;
     const out=await videoStudio.record({
-      mode:'screen',
+      // Robotics and clinical ops are conversations, not screen shares — the work happened
+      // on hardware months ago and there is nothing useful to share.
+      mode:script&&script.capture==='camera'?'camera':'screen',
       maxSeconds:a.exercise.minutes*60,
       prompt:a.exercise.task,
       label:`${batch.name} · ${a.exercise.title}`,
+      script,
     });
     go.disabled=false;
     if(out&&out.url){
@@ -3521,7 +3525,7 @@ const videoStudio=(function(){
     return merged;
   }
 
-  function record({prompt='',maxSeconds=90,label='',mode='camera'}={}){
+  function record({prompt='',maxSeconds=90,label='',mode='camera',script=null}={}){
     return new Promise(resolve=>{
       let overlay=null,stream=null,recorder=null,chunks=[],timer=null,secs=0,blob=null,kept=0,settled=false;
       const done=value=>{ if(settled)return; settled=true; cleanup(); resolve(value); };
@@ -3542,7 +3546,8 @@ const videoStudio=(function(){
         '<div class="rec-shell">'
         +(prompt?'<div class="rec-prompt"><span>Your prompt</span><p>'+prompt.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</p></div>':'')
         +'<div class="rec-stage"><video id="recPreview" playsinline muted></video><span class="rec-count" id="recCount" hidden></span>'
-        +'<span class="rec-timer" id="recTimer" hidden>0:00</span></div>'
+        +'<span class="rec-timer" id="recTimer" hidden>0:00</span>'
+        +'<p class="rec-beat" id="recBeat" hidden></p></div>'
         +'<p class="rec-hint" id="recHint">Camera starting…</p>'
         +'<div class="rec-actions">'
         +'<button type="button" class="portal-primary" id="recStart" disabled>Start recording</button>'
@@ -3603,6 +3608,11 @@ const videoStudio=(function(){
           hint.textContent='Watch it back. Retake as often as you like, only the take you keep is uploaded.';
           el('recRetake').hidden=false; el('recUse').hidden=false;
         };
+        // Scripted prompts. They fire on elapsed seconds and stay long enough to answer
+        // without covering the work.
+        const beats=(script&&script.beats)||[];
+        let beatIndex=0;
+        const beatEl=overlay.querySelector('#recBeat');
         recorder.start();
         timerEl.hidden=false; timerEl.textContent='0:00';
         hint.textContent='Recording…';
@@ -3611,6 +3621,16 @@ const videoStudio=(function(){
         stopBtn.onclick=()=>{ if(recorder&&recorder.state==='recording')recorder.stop(); stopBtn.hidden=true; };
         timer=setInterval(()=>{
           secs+=1; timerEl.textContent=fmt(secs);
+          while(beatIndex<beats.length&&secs>=beats[beatIndex].atSeconds){
+            const b=beats[beatIndex++];
+            if(beatEl){
+              beatEl.textContent=b.say;
+              beatEl.hidden=false;
+              // Long enough to hear and answer, short enough not to sit over the work.
+              clearTimeout(beatEl.__t);
+              beatEl.__t=setTimeout(()=>{beatEl.hidden=true;},14000);
+            }
+          }
           if(secs>=maxSeconds&&recorder.state==='recording'){recorder.stop();stopBtn.hidden=true;}
         },1000);
 

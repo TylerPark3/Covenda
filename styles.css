@@ -4877,3 +4877,12 @@ body:not([data-audience="home"]) .slop-section { display: none; }
   font-family: var(--font-display); font-weight: 400;
   font-size: clamp(19px, 2vw, 26px); letter-spacing: -.02em; color: var(--muted);
 }
+
+/* The batch board: filter in a rail, cards using the width that box was wasting. */
+.batch-board { display: grid; grid-template-columns: minmax(200px, 230px) minmax(0, 1fr); gap: clamp(20px, 2.5vw, 36px); width: min(100%, var(--content)); margin-inline: auto; align-items: start; }
+@media (max-width: 900px) { .batch-board { grid-template-columns: 1fr; } }
+.batch-rail { display: grid; gap: 10px; padding: 20px; border: 1px solid var(--line); border-top: 3px solid var(--gold); background: #fff; position: sticky; top: 90px; }
+.batch-rail-cap { margin: 0; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-deep); }
+.batch-rail input[type="range"] { width: 100%; accent-color: var(--gold); }
+.batch-rail b { font-size: 22px; color: var(--gold-deep); font-variant-numeric: tabular-nums; }
+.batch-rail-note { margin: 0; font-size: 13px; line-height: 1.5; color: var(--soft); }
