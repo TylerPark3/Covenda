@@ -221,11 +221,14 @@ function renderCompanySegments(role){
 }
 
 function renderFocus(){
+  // A proposed trial waiting on the founder outranks everything else on this page.
+
   const root=$('#focusProject');root.replaceChildren();const role=state.dashboard.profile?.role;
   const project=state.dashboard.projects.find(item=>!['complete','archived'].includes(item.status))||state.dashboard.projects[0];
   $('#focusTitle').textContent=role==='student'?'Your project tracker':'Project operations';
   if(role==='student')root.append(rungBadge());
   if(!project){const empty=document.createElement('div');empty.className='empty-line';const h=document.createElement('h3');h.textContent=role==='student'?'No assigned project yet.':'No project posted yet.';const p=document.createElement('p');p.textContent=role==='student'?'Browse open work, or finish your profile while we route a fit.':'Create a private draft first, then make it visible when the scope is ready.';const button=document.createElement('button');button.type='button';button.textContent=role==='student'?'Browse open projects →':'Start a project →';button.addEventListener('click',()=>role==='student'?setView('discover'):openIntake());empty.append(h,p,button);root.append(empty);return;}
+  if(role==='company')renderBriefReview(root,project);
   const row=document.createElement('article');row.className='project-focus';const copy=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;const meta=document.createElement('div');meta.className='project-focus-meta';meta.append(pill(statusLabels[project.status]||project.status,'status-pill',project.status));if(project.target_date)meta.append(pill(`Due ${dateLabel(project.target_date)}`));copy.append(h,p,meta);const actions=projectActionNode(project);if(actions)copy.append(actions);const progress=document.createElement('div');progress.className='project-progress';const track=document.createElement('div');const fill=document.createElement('i');fill.style.width=`${statusProgress[project.status]||10}%`;track.append(fill);const label=document.createElement('span');label.textContent=`${statusProgress[project.status]||10}% through workflow`;progress.append(track,label);row.append(copy,progress);root.append(row);
 }
 function pill(label,className='skill-pill',status=''){const span=document.createElement('span');span.className=className;span.textContent=label;if(status)span.dataset.status=status;return span;}
@@ -2062,6 +2065,116 @@ async function openCompanyProfile(ownerUserId,fallbackName){
     }
     d.open();
   }catch(error){ d.say(error.message,true); d.open(); }
+}
+
+// ── The proposed brief, and the founder's right to change it ──────────────────────────
+// Shown with the diagnosis and the discriminating signals visible, so a founder can see WHY
+// each part is there rather than approving a black box. Every edit demands a reason before
+// it saves — those reasons are the point, not paperwork.
+function briefField(label,value,onSave){
+  const wrap=document.createElement('div');wrap.className='brief-field';
+  const cap=document.createElement('strong');cap.textContent=label;
+  const val=document.createElement('p');val.textContent=value||'—';
+  const edit=document.createElement('button');edit.type='button';edit.className='brief-edit';edit.textContent='Change';
+  wrap.append(cap,val,edit);
+  edit.addEventListener('click',()=>{
+    if(wrap.querySelector('.brief-editor'))return;
+    const box=document.createElement('div');box.className='brief-editor';
+    const ta=document.createElement('textarea');ta.rows=3;ta.value=value||'';
+    const why=document.createElement('input');why.type='text';why.placeholder='Why are you changing it? (required)';
+    const save=document.createElement('button');save.type='button';save.className='portal-primary compact';save.textContent='Save change';
+    const msg=document.createElement('p');msg.className='brief-msg';
+    save.addEventListener('click',async()=>{
+      if(!why.value.trim()){msg.textContent='Say why. The reason is the part worth keeping.';return;}
+      save.disabled=true;msg.textContent='Saving…';
+      try{ await onSave(ta.value.trim(),why.value.trim()); }
+      catch(error){ save.disabled=false; msg.textContent=error.message; }
+    });
+    box.append(ta,why,save,msg);wrap.append(box);ta.focus();
+  });
+  return wrap;
+}
+
+function renderBriefReview(root,project){
+  if(!project||!project.value_to_company)return;
+  const sec=document.createElement('section');sec.className='brief-review';
+  const head=document.createElement('div');head.className='brief-review-head';
+  const box=document.createElement('div');
+  const h=document.createElement('h3');h.textContent='Your proposed trial';
+  const p=document.createElement('p');
+  p.textContent=project.brief_approved_at?'Approved. Edit anything and it returns here for approval.':'A draft. Nothing goes out until you approve it.';
+  box.append(h,p);
+  const ver=document.createElement('span');ver.className='brief-version';ver.textContent='v'+(project.brief_version||1);
+  head.append(box,ver);sec.append(head);
+
+  // The diagnosis first — a founder should see what we think the problem is before what we
+  // propose doing about it, and be able to say we are wrong.
+  if(project.stated_problem||project.likely_problem){
+    const dg=document.createElement('div');dg.className='brief-diagnosis';
+    const t=document.createElement('p');t.className='brief-diagnosis-tag';t.textContent='What we think is going on';
+    dg.append(t);
+    if(project.stated_problem&&project.likely_problem&&project.stated_problem!==project.likely_problem){
+      const note=document.createElement('p');note.className='brief-diverge';
+      note.textContent='You said one thing; the evidence points somewhere else. You can overrule us.';
+      dg.append(note);
+    }
+    dg.append(briefField('You said',project.stated_problem,(v,r)=>saveBriefEdit(project,'statedProblem',v,r)));
+    dg.append(briefField('We think',project.likely_problem,(v,r)=>saveBriefEdit(project,'likelyProblem',v,r)));
+    if(project.root_cause_class){
+      const cls=document.createElement('p');cls.className='brief-cause';
+      cls.textContent=project.root_cause_class==='structural'
+        ? 'Structural — the process is wrong for the work, so the trial redesigns it.'
+        : 'Behavioural — the process is fine, so the trial instruments it.';
+      dg.append(cls);
+    }
+    sec.append(dg);
+  }
+
+  sec.append(briefField('What you get out of it',project.value_to_company,(v,r)=>saveBriefEdit(project,'valueToCompany',v,r)));
+
+  // What separates a strong candidate from a weak one, stated per trait — including the
+  // traits this brief honestly does not test.
+  const signals=project.discriminating_signal||[];
+  if(signals.length){
+    const sg=document.createElement('div');sg.className='brief-signals';
+    const t=document.createElement('p');t.className='brief-diagnosis-tag';t.textContent='What this actually tests';
+    sg.append(t);
+    signals.forEach(sig=>{
+      const li=document.createElement('div');li.className='brief-signal'+(sig.discriminates===false?' is-off':'');
+      const name=document.createElement('strong');name.textContent=sig.trait;
+      li.append(name);
+      if(sig.discriminates===false){
+        const off=document.createElement('small');off.textContent='This brief does not test it. Said plainly rather than implied.';li.append(off);
+      }else{
+        const el=document.createElement('small');el.textContent=sig.element;li.append(el);
+        const w=document.createElement('small');w.className='brief-weak';w.textContent='Weak: '+sig.weakLooksLike;
+        const st=document.createElement('small');st.className='brief-strong';st.textContent='Strong: '+sig.strongLooksLike;
+        li.append(w,st);
+      }
+      sg.append(li);
+    });
+    sec.append(sg);
+  }
+
+  if(!project.brief_approved_at){
+    const foot=document.createElement('div');foot.className='brief-approve';
+    const go=document.createElement('button');go.type='button';go.className='portal-primary';go.textContent='Approve and send it out';
+    const msg=document.createElement('p');msg.className='brief-msg';
+    go.addEventListener('click',async()=>{
+      go.disabled=true;msg.textContent='Approving…';
+      try{
+        await portalRequest({method:'POST',body:JSON.stringify({action:'approve-brief',projectId:project.id})});
+        await loadDashboard();
+      }catch(error){ go.disabled=false; msg.textContent=error.message; }
+    });
+    foot.append(go,msg);sec.append(foot);
+  }
+  root.append(sec);
+}
+
+async function saveBriefEdit(project,field,value,reason){
+  await portalRequest({method:'POST',body:JSON.stringify({action:'revise-brief',projectId:project.id,field,value,reason})});
+  await loadDashboard();
 }
 
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){

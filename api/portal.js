@@ -11,6 +11,7 @@ import { buildTalentRequirement, REQUIREMENT_VERTICALS, REQUIREMENT_WORK_TYPES }
 import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normaliseEmail } from './verification.js';
 import { classifyCompanyEmail, domainMatchesCompany, companyVerificationStanding } from './company-verification.js';
 import { readinessFor, categoriseOpportunity } from './readiness.js';
+import { recordRevision, briefVersion, evaluateBrief } from './brief-engine.js';
 import { buildMilestoneSchedule, evaluateMilestones, reassignmentDecision, founderTimeVariance } from './milestones.js';
 import { evidenceMetaFromTimeline } from './connectors.js';
 
@@ -1389,6 +1390,77 @@ export async function loadPublicCompanyProfile(member, ownerUserId) {
   };
 }
 
+// ── Stage 3: the founder in the loop ──────────────────────────────────────────────────
+// A proposed brief is a draft until the founder says otherwise. They can change scope, add
+// constraints, reject a deliverable, or correct the diagnosis — and every edit is stored
+// with its reason, because those reasons are the best signal we will ever get about what
+// founders actually want. Same rule as human_rationale on matches: no reason, no save.
+const BRIEF_EDITABLE = {
+  statedProblem: 'stated_problem',
+  likelyProblem: 'likely_problem',
+  valueToCompany: 'value_to_company',
+  rootCauseClass: 'root_cause_class',
+};
+
+export async function reviseBrief(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(member.supabase.from('member_projects').select('*').eq('id', projectId).maybeSingle(), null);
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the company that owns this brief can change it.');
+
+  const field = cleanText(input.field, 60);
+  const column = BRIEF_EDITABLE[field];
+  if (!column) throw new Error('That part of the brief cannot be edited here.');
+  const value = cleanText(input.value, 4000);
+  const reason = cleanText(input.reason, 1000);
+
+  // recordRevision throws without a reason; let that message reach the founder unchanged.
+  const history = recordRevision(project.brief_revisions || [], {
+    field, from: project[column], to: value, reason,
+    by: member.user.id, at: new Date().toISOString(),
+  });
+
+  return checked(member.supabase.from('member_projects').update({
+    [column]: value || null,
+    brief_revisions: history,
+    brief_version: briefVersion(history),
+    // Any edit reopens approval — a founder should never be shown as having approved
+    // something they then changed.
+    brief_approved_at: null,
+    updated_at: new Date().toISOString(),
+  }).eq('id', project.id).select('*').single(), null);
+}
+
+export async function approveBrief(member, input) {
+  const projectId = cleanText(input.projectId, 50);
+  if (!PROJECT_ID_PATTERN.test(projectId)) throw new Error('Choose a valid project.');
+  const project = await checked(member.supabase.from('member_projects').select('*').eq('id', projectId).maybeSingle(), null);
+  if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the company that owns this brief can approve it.');
+
+  // Re-check at the gate. A brief edited into uselessness should not ship because it passed
+  // when it was first proposed.
+  const verdict = evaluateBrief({
+    valueToCompany: project.value_to_company,
+    discriminatingSignal: project.discriminating_signal || [],
+    inputsRequired: project.inputs_required || [],
+    founderTimeRequired: project.founder_time_budget_min_week,
+    gradingRubric: (project.grading_rubric || {}).anchors,
+    rubricSkill: (project.grading_rubric || {}).skill,
+    estimatedHours: project.estimated_hours,
+    title: project.title, deliverable: project.deliverable,
+  });
+  if (!verdict.ok) {
+    const err = new Error(verdict.refusal.reasons[0]);
+    err.reasons = verdict.refusal.reasons;
+    throw err;
+  }
+
+  return checked(member.supabase.from('member_projects').update({
+    brief_approved_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }).eq('id', project.id).select('*').single(), null);
+}
+
 export async function loadVerificationStanding(member) {
   try {
     const [profile, clubs] = await Promise.all([
@@ -2143,6 +2215,8 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'confirm-work-email') return res.status(200).json({ ok: true, ...(await confirmCompanyVerification(member, input)) });
     if (req.method === 'POST' && input.action === 'save-company-profile') return res.status(200).json({ ok: true, companyProfile: await saveCompanyProfile(member, input) });
     if (req.method === 'POST' && input.action === 'company-profile') return res.status(200).json({ ok: true, ...(await loadPublicCompanyProfile(member, input.ownerUserId)) });
+    if (req.method === 'POST' && input.action === 'revise-brief') return res.status(200).json({ ok: true, project: await reviseBrief(member, input) });
+    if (req.method === 'POST' && input.action === 'approve-brief') return res.status(200).json({ ok: true, project: await approveBrief(member, input) });
     if (req.method === 'POST' && input.action === 'save-video') return res.status(201).json({ ok: true, video: await saveMemberVideo(member, input) });
     if (req.method === 'POST' && input.action === 'delete-video') return res.status(200).json({ ok: true, ...(await deleteMemberVideo(member, input)) });
     if (req.method === 'POST' && input.action === 'register-club') return res.status(201).json({ ok: true, club: await registerClub(member, input) });
