@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, cleanWorkStyle, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, deleteApplication, deleteProject, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestMemberLink, requestPayout, respondToPacket, reviewDeliverable, saveMemberProfile, saveStudentEvidence, SCORER_VERSION, sendProjectMessage, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
+import { acceptApplication, applyToProject, authorizeMember, buyCredits, cancelProject, cleanWorkStyle, computeFitScore, createMemberProject, createProjectRequest, creditBalance, declineApplication, deleteApplication, deleteProject, fulfilPayout, loadMemberIntakes, loadNewMessages, looksLikeAccountNumber, memberAuthReadiness, projectCreditCost, rankOpportunities, recordConversion, requestGoogleLogin, requestIntroduction, requestMemberLink, requestPayout, requestVisibilityReview, respondToPacket, reviewDeliverable, saveMemberProfile, saveStudentEvidence, SCORER_VERSION, sendProjectMessage, studentVisibilityReadiness, submitDeliverable, verifiedPartnersFromEnv } from '../api/portal.js';
 
 test('accepting a packet funds it — escrow held, status opens', async () => {
   const cap = {};
@@ -80,6 +80,39 @@ const PROJECT_UUID = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
 const APPLICATION_UUID = 'a1b2c3d4-7607-4c38-a1e1-095c34ad4f11';
 
 const authEnv = { SUPABASE_URL:'https://project.supabase.co', SUPABASE_PUBLISHABLE_KEY:'publishable', SUPABASE_SECRET_KEY:'secret' };
+
+test('student visibility stays private until an eligible student explicitly requests review', async () => {
+  const profile={role:'student',display_name:'Sam',school_name:'Columbia',headline:'Data builder',capability_areas:['AI & data'],identity_verified:true};
+  assert.equal(studentVisibilityReadiness(profile,[]).eligible,false);
+  const captures={};
+  const supabase=queuedSupabase([
+    {result:profile},
+    {result:[{id:'evidence-1',review_state:'unreviewed'}]},
+    {result:null},
+    {result:{id:PROJECT_UUID,status:'pending'},capture:value=>{captures.review=value;}},
+    {result:{user_id:'student-1'},capture:value=>{captures.profile=value;}},
+  ]);
+  const review=await requestVisibilityReview({user:{id:'student-1'},supabase},{});
+  assert.equal(review.status,'pending');
+  assert.equal(captures.review.student_user_id,'student-1');
+  assert.equal(captures.profile.portfolio_visibility,'private');
+  assert.equal(captures.profile.profile_state,'profile_complete');
+  assert.equal(captures.profile.discovery_opt_in,true);
+});
+
+test('a company cannot bypass review by posting an introduction to a private student id', async () => {
+  const supabase=queuedSupabase([
+    {result:{role:'company'}},
+    {result:{user_id:'student-1',role:'student',discovery_opt_in:false,profile_state:'profile_complete'}},
+  ]);
+  await assert.rejects(
+    requestIntroduction({user:{id:'company-1'},supabase},{
+      studentUserId:'student-1',roleSummary:'Research sprint',whyRelevant:'Prior work',
+      compensation:'$500',timeCommitment:'10 hours',nextStep:'20-minute call',
+    }),
+    /not currently open/,
+  );
+});
 
 test('member magic link creates a user and returns to the current portal URL', async () => {
   let input;

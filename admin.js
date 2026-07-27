@@ -5,6 +5,7 @@ const statusLabels = { received:'Received', reviewing:'In human review', needs_i
 const typeLabels = { student_interest:'Student', employer_intake:'Company', university_partner:'University', call_request:'Call request' };
 let submissions = [];
 let requests = [];
+let visibilityReviews = [];
 let batches = [];
 let companies = [];
 let members = [];
@@ -290,15 +291,70 @@ function batchApplicationRow(batch, app) {
   return row;
 }
 
+function renderVisibilityReviews(){
+  const root=$('#adminVisibilityReviews');const count=$('#adminVisibilityCount');
+  if(!root||!count)return;
+  const ordered=[...visibilityReviews].sort((a,b)=>{
+    if((a.status==='pending')!==(b.status==='pending'))return a.status==='pending'?-1:1;
+    return new Date(b.requested_at||0)-new Date(a.requested_at||0);
+  });
+  count.textContent=String(ordered.filter(review=>review.status==='pending').length);
+  root.replaceChildren();
+  if(!ordered.length){
+    const empty=document.createElement('p');empty.className='admin-requests-empty';empty.textContent='No student visibility requests yet.';root.append(empty);return;
+  }
+  ordered.forEach(review=>{
+    const card=document.createElement('article');card.className='visibility-review-card';card.dataset.status=review.status;
+    const head=document.createElement('div');head.className='visibility-review-head';
+    const who=document.createElement('div');const name=document.createElement('strong');name.textContent=review.student?.display_name||'Student';
+    const meta=document.createElement('small');meta.textContent=[review.student?.school_name,review.student?.headline].filter(Boolean).join(' · ')||'Profile details unavailable';
+    who.append(name,meta);
+    const pill=document.createElement('span');pill.className='roster-pill';pill.dataset.tone=review.status==='approved'?'good':review.status==='pending'?'warn':'';
+    pill.textContent=labelize(review.status);head.append(who,pill);card.append(head);
+    const facts=document.createElement('div');facts.className='visibility-review-facts';
+    const snapshot=review.profile_snapshot||{};const evidenceCount=review.evidence?.length||snapshot.evidenceCount||0;
+    [['Capabilities',(snapshot.capabilityAreas||review.student?.capability_areas||[]).join(', ')||'None'],['Evidence',`${evidenceCount} card${evidenceCount===1?'':'s'}`],['Verification',(review.student?.identity_verified||review.student?.school_email_verified_at)?'Confirmed':'Missing']]
+      .forEach(([label,value])=>{const item=document.createElement('div');const dt=document.createElement('span');dt.textContent=label;const dd=document.createElement('b');dd.textContent=value;item.append(dt,dd);facts.append(item);});
+    card.append(facts);
+    if(review.evidence?.length){
+      const evidence=document.createElement('div');evidence.className='visibility-review-evidence';
+      review.evidence.forEach(item=>{const row=document.createElement('div');const title=document.createElement('strong');title.textContent=item.title;const detail=document.createElement('p');detail.textContent=item.contribution;row.append(title,detail);if(item.artifact_url){const link=document.createElement('a');link.href=item.artifact_url;link.target='_blank';link.rel='noopener';link.textContent='Open evidence';row.append(link);}evidence.append(row);});
+      card.append(evidence);
+    }
+    if(review.status==='pending'){
+      const form=document.createElement('form');form.className='visibility-review-form';
+      const note=document.createElement('textarea');note.rows=3;note.maxLength=2000;note.required=true;note.placeholder='Why is this ready, or what specifically needs to change?';
+      const actions=document.createElement('div');actions.className='visibility-review-actions';const status=document.createElement('span');status.setAttribute('aria-live','polite');
+      [['approved','Approve visibility','admin-primary'],['needs_changes','Request changes','portal-ghost'],['declined','Decline','intro-decline']].forEach(([decision,label,cls])=>{
+        const button=document.createElement('button');button.type='button';button.className=cls;button.textContent=label;
+        button.addEventListener('click',async()=>{
+          if(!note.value.trim()){status.textContent='Record the reason first.';note.focus();return;}
+          $$('button',actions).forEach(item=>item.disabled=true);status.textContent='Saving…';
+          try{
+            const result=await adminRequest({method:'PATCH',body:JSON.stringify({action:'review-student-visibility',reviewId:review.id,decision,note:note.value.trim()})});
+            const index=visibilityReviews.findIndex(item=>item.id===review.id);if(index>=0)visibilityReviews[index]={...visibilityReviews[index],...result.review};
+            renderVisibilityReviews();
+          }catch(error){$$('button',actions).forEach(item=>item.disabled=false);status.textContent=error.message;}
+        });
+        actions.append(button);
+      });
+      actions.append(status);form.append(note,actions);card.append(form);
+    }else if(review.operator_note){
+      const note=document.createElement('p');note.className='visibility-review-note';note.textContent=`Decision note: ${review.operator_note}`;card.append(note);
+    }
+    root.append(card);
+  });
+}
+
 async function loadInbox({ announce = false } = {}) {
   showInbox();
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {
-    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; batches=result.batches||[]; companies=result.companies||[]; members=result.users||[]; projects=result.projects||[]; appeals=result.appeals||[]; $('#operatorEmail').textContent=result.operator.email;
+    const result=await adminRequest(); submissions=result.submissions; requests=result.requests||[]; visibilityReviews=result.visibilityReviews||[]; batches=result.batches||[]; companies=result.companies||[]; members=result.users||[]; projects=result.projects||[]; appeals=result.appeals||[]; $('#operatorEmail').textContent=result.operator.email;
     if (!selectedReference && submissions[0]) selectedReference=submissions[0].reference;
     if (selectedReference && !submissions.some(item=>item.reference===selectedReference)) selectedReference=submissions[0]?.reference || '';
-    updateQueueSummary(); renderRows(); renderRequests(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies(); renderMembers(); renderProjects(); renderMatcherOptions(); renderAppeals();
+    updateQueueSummary(); renderRows(); renderRequests(); renderVisibilityReviews(); renderBatches(); renderMetrics(result.metrics); renderPacketCompanies(); renderMembers(); renderProjects(); renderMatcherOptions(); renderAppeals();
     $('#adminSyncStatus').textContent=`Updated ${new Date().toLocaleTimeString([], { hour:'numeric', minute:'2-digit' })}`;
   } finally { refresh.disabled=false; refresh.classList.remove('is-loading'); }
 }

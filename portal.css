@@ -1234,11 +1234,17 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .company-form-head p { margin: 0; max-width: 58ch; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .company-form-state { flex: none; padding: 5px 11px; border: 1px solid var(--line-strong); font-size: 13px; font-weight: 700; color: var(--soft); }
 .company-form-state[data-published="yes"] { border-color: rgba(36,117,58,.35); background: #f4faf5; color: var(--success); }
+.company-form-state[data-published="pending"] { border-color: rgba(180,123,32,.35); background: var(--pale); color: var(--gold-deep); }
 .student-profile-state { display:grid; gap:16px; margin-top:22px; padding:22px 24px; border:1px solid var(--line); background:#fff; }
 .student-profile-state-head { display:flex; justify-content:space-between; align-items:flex-start; gap:18px; }
 .student-profile-state-head .eyebrow { margin:0 0 5px; }
 .student-profile-state-head h3 { margin:0 0 5px; font-family:var(--font-display); font-size:21px; font-weight:500; }
 .student-profile-state-head p:not(.eyebrow) { margin:0; max-width:62ch; color:var(--muted); font-size:14px; line-height:1.55; }
+.visibility-checklist { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 18px; margin:0; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); list-style:none; }
+.visibility-checklist li { color:var(--muted); font-size:13px; }
+.visibility-checklist li[data-complete="yes"] { color:var(--success); }
+.visibility-actions { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+.visibility-actions .dialog-message { margin:0; }
 .student-evidence-list { display:grid; gap:10px; }
 .student-evidence-card { padding:16px 18px; border:1px solid var(--line); background:var(--paper); }
 .student-evidence-card > div { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
@@ -1252,7 +1258,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .student-evidence-form { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
 .student-evidence-form .onboard-field:nth-child(-n+2) { grid-column:1 / -1; }
 .student-evidence-form .portal-primary,.student-evidence-form .dialog-message { align-self:end; }
-@media (max-width:680px) { .student-profile-state-head,.student-evidence-card > div { flex-direction:column; } .student-evidence-form { grid-template-columns:1fr; } .student-evidence-form .onboard-field { grid-column:1 !important; } }
+@media (max-width:680px) { .student-profile-state-head,.student-evidence-card > div { flex-direction:column; } .visibility-checklist { grid-template-columns:1fr; } .student-evidence-form { grid-template-columns:1fr; } .student-evidence-form .onboard-field { grid-column:1 !important; } }
 .company-form-body { display: grid; gap: 20px; }
 .company-form-group { min-width: 0; margin: 0; padding: 16px 18px; border: 1px solid var(--line); }
 .company-form-group legend { padding: 0 8px; font-size: 13px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); }
@@ -1409,6 +1415,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
    a student who feels pressured needs an obvious exit, not one buried in a menu. */
 .intro-panel { display: grid; gap: 12px; border-color: var(--gold-light); background: var(--gold-pale); }
 .intro-panel h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; }
+.intro-approval-copy { margin:-5px 0 2px; max-width:64ch; color:var(--muted); font-size:13px; line-height:1.5; }
 .intro-card { display: grid; gap: 10px; padding: 15px 16px; border: 1px solid var(--line); background: #fff; }
 .intro-card > strong { font-size: 15px; }
 .intro-terms { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }

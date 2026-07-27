@@ -251,6 +251,32 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .admin-users-controls select { min-height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 0; background: #fff; font: inherit; font-size: var(--step-body-sm); }
 .admin-users-shown { color: var(--soft); font-size: 11.5px; }
 .admin-users { display: grid; gap: 8px; }
+.admin-visibility { display:grid; gap:12px; margin-top:16px; }
+.visibility-review-card { display:grid; gap:14px; padding:18px; border:1px solid var(--line); background:#fff; }
+.visibility-review-card[data-status="pending"] { border-left:3px solid var(--gold); }
+.visibility-review-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+.visibility-review-head strong,.visibility-review-head small { display:block; }
+.visibility-review-head strong { font-size:14px; }
+.visibility-review-head small { margin-top:3px; color:var(--muted); font-size:11.5px; }
+.visibility-review-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.visibility-review-facts > div { display:grid; gap:4px; padding:11px 12px; border-right:1px solid var(--line); }
+.visibility-review-facts > div:last-child { border-right:0; }
+.visibility-review-facts span { color:var(--soft); font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.visibility-review-facts b { font-size:12px; font-weight:600; }
+.visibility-review-evidence { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:8px; }
+.visibility-review-evidence > div { padding:12px; border:1px solid var(--line); background:var(--paper); }
+.visibility-review-evidence strong { font-size:12.5px; }
+.visibility-review-evidence p { margin:5px 0; color:var(--muted); font-size:11.5px; line-height:1.5; }
+.visibility-review-evidence a { color:var(--gold-deep); font-size:11px; font-weight:700; }
+.visibility-review-form { display:grid; gap:10px; }
+.visibility-review-form textarea { width:100%; box-sizing:border-box; padding:10px 11px; border:1px solid var(--line-strong); border-radius:0; font:inherit; font-size:12px; line-height:1.5; resize:vertical; }
+.visibility-review-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.visibility-review-actions button { min-height:36px; padding:8px 12px; border-radius:0; font-size:11.5px; font-weight:700; cursor:pointer; }
+.visibility-review-actions .portal-ghost { border:1px solid var(--line-strong); background:#fff; color:var(--ink); }
+.visibility-review-actions .intro-decline { border:1px solid rgba(180,35,31,.3); background:#fff; color:#b4231f; }
+.visibility-review-actions button:disabled { opacity:.55; cursor:wait; }
+.visibility-review-actions span { color:var(--muted); font-size:11px; }
+.visibility-review-note { margin:0; padding:10px 12px; border-left:3px solid var(--gold); background:var(--pale); color:var(--body); font-size:12px; line-height:1.5; }
 .admin-user-row { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 0; background: #fff; }
 .admin-user-info { min-width: 0; flex: 1; }
 .admin-user-info strong { display: block; font-size: 13px; }
@@ -262,7 +288,7 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .admin-user-delete { flex: 0 0 auto; min-height: 34px; padding: 7px 14px; border: 1px solid rgba(180,35,31,.3); border-radius: 0; background: #fff; color: #b4231f; font-size: 12px; font-weight: 650; cursor: pointer; }
 .admin-user-delete:hover { background: #fdecec; }
 .admin-user-delete:disabled { opacity: .5; cursor: wait; }
-@media (max-width: 620px) { .admin-user-row { flex-wrap: wrap; } .admin-user-meta { order: 3; } }
+@media (max-width: 620px) { .admin-user-row { flex-wrap: wrap; } .admin-user-meta { order: 3; } .visibility-review-head { flex-direction:column; } .visibility-review-facts { grid-template-columns:1fr; } .visibility-review-facts > div { border-right:0; border-bottom:1px solid var(--line); } .visibility-review-facts > div:last-child { border-bottom:0; } }
 
 /* §9 partner digest operator tools */
 .admin-digest-section { max-width: 1240px; margin: 0 auto; padding: 8px 26px 64px; }

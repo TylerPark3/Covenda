@@ -786,8 +786,11 @@ function renderIntroductions(){
   if(d?.profile?.role!=='student'||!intros.length){host.hidden=true;host.replaceChildren();return;}
   host.replaceChildren();
   const h=document.createElement('h3');
-  h.textContent=intros.length===1?'A company reached out':intros.length+' companies reached out';
+  h.textContent=intros.length===1?'Your approval is needed':'Your approval is needed';
   host.append(h);
+  const approvalCopy=document.createElement('p');approvalCopy.className='intro-approval-copy';
+  approvalCopy.textContent='No introduction moves forward until you choose. Review the terms, then accept, ask, decline, or report.';
+  host.append(approvalCopy);
 
   intros.forEach(intro=>{
     const card=document.createElement('article');card.className='intro-card';
@@ -2792,9 +2795,31 @@ function renderStudentProfileState(root,profile,evidenceItems=[]){
   const copy=document.createElement('div');const kicker=document.createElement('p');kicker.className='eyebrow';kicker.textContent='Profile visibility';
   const title=document.createElement('h3');
   const visible=profile?.profile_state==='company_visible'&&profile?.discovery_opt_in===true;
-  title.textContent=visible?'Company-visible':'Private profile';
-  const detail=document.createElement('p');detail.textContent=visible?'Approved company members can discover this profile. Covenda still asks before a direct introduction.':'Only you and Covenda can see this profile. Add evidence and complete verification before requesting company visibility.';
-  copy.append(kicker,title,detail);const badge=document.createElement('span');badge.className='company-form-state';badge.dataset.published=visible?'yes':'no';badge.textContent=visible?'Visible':'Private';head.append(copy,badge);section.append(head);
+  const review=state.dashboard?.visibilityReview;
+  const pending=review?.status==='pending';
+  const needsChanges=review?.status==='needs_changes';
+  title.textContent=visible?'Company-visible':pending?'Review requested':needsChanges?'Changes requested':'Private profile';
+  const detail=document.createElement('p');detail.textContent=visible?'Approved company members can discover this profile. Every direct introduction still waits for your approval.':pending?'Covenda is checking the evidence and context below. Companies cannot see you while this is pending.':needsChanges?(review.operator_note||'Covenda needs more context before companies can discover this profile.'):'Only you and Covenda can see this profile until you request and pass a review.';
+  copy.append(kicker,title,detail);const badge=document.createElement('span');badge.className='company-form-state';badge.dataset.published=visible?'yes':pending?'pending':'no';badge.textContent=visible?'Visible':pending?'In review':'Private';head.append(copy,badge);section.append(head);
+  const readiness=state.dashboard?.visibilityReadiness;
+  if(readiness?.checks?.length){
+    const checklist=document.createElement('ul');checklist.className='visibility-checklist';
+    readiness.checks.forEach(item=>{const li=document.createElement('li');li.dataset.complete=item.complete?'yes':'no';li.textContent=`${item.complete?'✓':'○'} ${item.label}`;checklist.append(li);});
+    section.append(checklist);
+  }
+  const visibilityActions=document.createElement('div');visibilityActions.className='visibility-actions';
+  const actionStatus=document.createElement('p');actionStatus.className='dialog-message';actionStatus.setAttribute('aria-live','polite');
+  if(visible){
+    const pause=document.createElement('button');pause.type='button';pause.className='portal-secondary compact';pause.textContent='Pause company discovery';
+    pause.addEventListener('click',async()=>{pause.disabled=true;actionStatus.textContent='Making your profile private…';try{await portalRequest({method:'POST',body:JSON.stringify({action:'pause-company-discovery'})});await loadDashboard();renderPortfolio();}catch(error){pause.disabled=false;actionStatus.textContent=error.message;actionStatus.classList.add('is-error');}});
+    visibilityActions.append(pause);
+  }else if(!pending){
+    const request=document.createElement('button');request.type='button';request.className='portal-primary compact';request.textContent=needsChanges?'Request another review':'Request company visibility';
+    request.disabled=readiness?.eligible!==true;
+    request.addEventListener('click',async()=>{request.disabled=true;actionStatus.textContent='Sending for review…';try{await portalRequest({method:'POST',body:JSON.stringify({action:'request-visibility-review'})});await loadDashboard();renderPortfolio();}catch(error){request.disabled=false;actionStatus.textContent=error.message;actionStatus.classList.add('is-error');}});
+    visibilityActions.append(request);
+  }
+  visibilityActions.append(actionStatus);section.append(visibilityActions);
   if(evidenceItems.length){
     const evidence=document.createElement('div');evidence.className='student-evidence-list';
     evidenceItems.forEach(item=>{const card=document.createElement('article');card.className='student-evidence-card';const top=document.createElement('div');const h=document.createElement('h4');h.textContent=item.title;const state=document.createElement('span');state.textContent=item.review_state==='confirmed'?'Confirmed':'Student-authored, unreviewed';top.append(h,state);const contribution=document.createElement('p');contribution.textContent=item.contribution;if(item.artifact_url){const link=document.createElement('a');link.href=item.artifact_url;link.target='_blank';link.rel='noopener';link.textContent='Open work sample';card.append(top,contribution,link);}else card.append(top,contribution);const ai=document.createElement('small');ai.textContent=`AI use: ${String(item.ai_use||'none').replace('_',' ')}`;card.append(ai);evidence.append(card);});

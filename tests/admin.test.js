@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import adminHandler, { AdminOperationalError, authorizeAdmin, caseStudyMetrics, deleteAdminProject, deleteAdminUser, listAdminProjects, listAdminRequests, listAdminSubmissions, requestAdminLink, summarizeLedger, updateAdminRequest, updateAdminSubmission, verifyAdminCode } from '../api/admin.js';
+import adminHandler, { AdminOperationalError, authorizeAdmin, caseStudyMetrics, deleteAdminProject, deleteAdminUser, listAdminProjects, listAdminRequests, listAdminSubmissions, requestAdminLink, reviewStudentVisibility, summarizeLedger, updateAdminRequest, updateAdminSubmission, verifyAdminCode } from '../api/admin.js';
 
 test('deleteAdminUser removes a member but never the operator themselves', async () => {
   const uid = 'f65be0ad-7607-4c38-a1e1-095c34ad4f11';
@@ -271,6 +271,28 @@ test('admin request triage validates and updates status + resolution, and lists 
   // listAdminRequests returns [] when the table isn't there yet, so the inbox never breaks.
   const rows = await listAdminRequests({ from() { return { select() { return this; }, order() { return this; }, async limit() { return { data: null, error: { message: 'relation "project_requests" does not exist' } }; } }; } });
   assert.deepEqual(rows, []);
+});
+
+test('operator visibility approval requires a rationale and rechecks the objective gates', async () => {
+  const reviewId='f65be0ad-7607-4c38-a1e1-095c34ad4f11';
+  const calls=[];
+  const rows={
+    student_visibility_reviews:{id:reviewId,student_user_id:'student-1',status:'pending'},
+    member_profiles:{display_name:'Sam',school_name:'Columbia',headline:'Data builder',capability_areas:['AI & data'],identity_verified:true},
+    student_evidence_items:[{id:'evidence-1'}],
+  };
+  const supabase={
+    from(table){
+      const query={select(){return query;},eq(){return query;},limit(){return query;},maybeSingle:async()=>({data:rows[table],error:null}),then(resolve){return Promise.resolve({data:rows[table],error:null}).then(resolve);}};
+      return query;
+    },
+    async rpc(name,args){calls.push({name,args});return {data:{id:reviewId,status:'approved'},error:null};},
+  };
+  await assert.rejects(reviewStudentVisibility(supabase,{reviewId,decision:'approved',note:''},'ops@covenda.com'),/Record the reason/);
+  const result=await reviewStudentVisibility(supabase,{reviewId,decision:'approved',note:'Evidence is attributable and the profile is complete.'},'ops@covenda.com');
+  assert.equal(result.status,'approved');
+  assert.equal(calls[0].name,'review_student_visibility');
+  assert.equal(calls[0].args.p_reviewed_by,'ops@covenda.com');
 });
 
 test('admin workflow update validates and records private follow-up context', async () => {

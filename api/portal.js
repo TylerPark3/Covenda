@@ -387,8 +387,8 @@ export async function loadMemberDashboard(member, env = process.env) {
     const matchedCount = rankedOpportunities.filter(project => project.matched).length;
     // Students hold credits too once escrow is released, so they get a balance (the
     // Wallet view itself stays company/university only).
-    const [walletBalance, creditLedger, payoutRequests, batches, batchApplications, videos, evidenceItems] = await Promise.all([
-      creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member), loadBatches(member), loadBatchApplications(member), loadMemberVideos(member), loadStudentEvidence(member),
+    const [walletBalance, creditLedger, payoutRequests, batches, batchApplications, videos, evidenceItems, visibilityReview] = await Promise.all([
+      creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member), loadBatches(member), loadBatchApplications(member), loadMemberVideos(member), loadStudentEvidence(member), loadVisibilityReview(member),
     ]);
     const batchStanding = await loadBatchStanding(member);
     const verification = await loadVerificationStanding(member);
@@ -403,7 +403,7 @@ export async function loadMemberDashboard(member, env = process.env) {
         { skills: profile.skills || [], verticals: profile.verticals || [], evidencedSkills },
       ),
     }));
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, evidenceItems, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, evidenceItems, visibilityReview, visibilityReadiness: studentVisibilityReadiness(profile, evidenceItems), introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -550,6 +550,80 @@ export async function loadStudentEvidence(member) {
     [],
     'student_evidence_items',
   );
+}
+
+export function studentVisibilityReadiness(profile = {}, evidenceItems = []) {
+  const checks = [
+    { id: 'profile', label: 'Name, school, and headline', complete: Boolean(profile.display_name && profile.school_name && profile.headline) },
+    { id: 'capabilities', label: 'At least one capability', complete: Array.isArray(profile.capability_areas) && profile.capability_areas.length > 0 },
+    { id: 'evidence', label: 'At least one evidence card', complete: Array.isArray(evidenceItems) && evidenceItems.length > 0 },
+    { id: 'verification', label: 'Verified identity or school email', complete: Boolean(profile.identity_verified || profile.school_email_verified_at) },
+  ];
+  return { eligible: checks.every(check => check.complete), checks };
+}
+
+export async function loadVisibilityReview(member) {
+  const rows = await optional(
+    member.supabase.from('student_visibility_reviews').select('*').eq('student_user_id', member.user.id).order('requested_at', { ascending: false }).limit(1),
+    [],
+    'student_visibility_reviews',
+  );
+  return rows[0] || null;
+}
+
+export async function requestVisibilityReview(member, input) {
+  const profile = await checked(member.supabase.from('member_profiles').select('*').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'student') throw new Error('Only student accounts can request company visibility.');
+  const evidenceItems = await loadStudentEvidence(member);
+  const readiness = studentVisibilityReadiness(profile, evidenceItems);
+  if (!readiness.eligible) {
+    const missing = readiness.checks.filter(check => !check.complete).map(check => check.label.toLowerCase());
+    throw new Error(`Complete ${missing.join(', ')} before requesting company visibility.`);
+  }
+  const pending = await optional(
+    member.supabase.from('student_visibility_reviews').select('id,status').eq('student_user_id', member.user.id).eq('status', 'pending').maybeSingle(),
+    null,
+    'student_visibility_reviews',
+  );
+  if (pending) throw new Error('Your profile is already awaiting review.');
+
+  const snapshot = {
+    displayName: profile.display_name,
+    schoolName: profile.school_name,
+    headline: profile.headline,
+    capabilityAreas: profile.capability_areas || [],
+    evidenceCount: evidenceItems.length,
+    confirmedEvidenceCount: evidenceItems.filter(item => item.review_state === 'confirmed').length,
+    identityVerified: Boolean(profile.identity_verified),
+    schoolEmailVerified: Boolean(profile.school_email_verified_at),
+  };
+  const review = await checked(member.supabase.from('student_visibility_reviews').insert({
+    student_user_id: member.user.id,
+    student_note: cleanText(input.note, 1_000) || null,
+    profile_snapshot: snapshot,
+  }).select('*').single(), null);
+  await checked(member.supabase.from('member_profiles').update({
+    discovery_opt_in: true,
+    portfolio_visibility: 'private',
+    profile_state: 'profile_complete',
+    updated_at: new Date().toISOString(),
+  }).eq('user_id', member.user.id).select('user_id').single(), null);
+  return review;
+}
+
+export async function pauseCompanyDiscovery(member) {
+  const profile = await checked(member.supabase.from('member_profiles').select('role').eq('user_id', member.user.id).maybeSingle(), null);
+  if (profile?.role !== 'student') throw new Error('Only student accounts can change student discovery.');
+  await checked(member.supabase.from('student_visibility_reviews').update({
+    status: 'withdrawn',
+    updated_at: new Date().toISOString(),
+  }).eq('student_user_id', member.user.id).eq('status', 'pending'), []);
+  return checked(member.supabase.from('member_profiles').update({
+    discovery_opt_in: false,
+    portfolio_visibility: 'private',
+    profile_state: 'paused',
+    updated_at: new Date().toISOString(),
+  }).eq('user_id', member.user.id).select('*').single(), null);
 }
 
 // ---- Credits. 1 credit = $1. Public posts are free; a hyper-narrow (vertical +
@@ -1791,6 +1865,12 @@ export async function requestIntroduction(member, input) {
 
   const studentUserId = cleanText(input.studentUserId, 60);
   if (!studentUserId) throw new Error('Choose a student.');
+  const student = await checked(member.supabase.from('member_profiles')
+    .select('user_id,role,discovery_opt_in,profile_state')
+    .eq('user_id', studentUserId).maybeSingle(), null);
+  if (student?.role !== 'student' || student.discovery_opt_in !== true || student.profile_state !== 'company_visible') {
+    throw new Error('This student is not currently open to company introductions.');
+  }
   const projectId = cleanText(input.projectId, 50);
 
   const row = {
@@ -2625,6 +2705,8 @@ export default async function handler(req, res, dependencies = {}) {
     }
     if (req.method === 'PATCH' && input.action === 'save-profile') return res.status(200).json({ ok: true, profile: await saveMemberProfile(member, input) });
     if (req.method === 'POST' && input.action === 'save-student-evidence') return res.status(200).json({ ok: true, evidence: await saveStudentEvidence(member, input) });
+    if (req.method === 'POST' && input.action === 'request-visibility-review') return res.status(201).json({ ok: true, review: await requestVisibilityReview(member, input) });
+    if (req.method === 'POST' && input.action === 'pause-company-discovery') return res.status(200).json({ ok: true, profile: await pauseCompanyDiscovery(member) });
     if (req.method === 'POST' && input.action === 'verify-school-email') return res.status(200).json({ ok: true, ...(await requestSchoolVerification(member, input, dependencies)) });
     if (req.method === 'POST' && input.action === 'confirm-school-email') return res.status(200).json({ ok: true, ...(await confirmSchoolVerification(member, input)) });
     if (req.method === 'POST' && input.action === 'verify-work-email') return res.status(200).json({ ok: true, ...(await requestCompanyVerification(member, input, dependencies)) });

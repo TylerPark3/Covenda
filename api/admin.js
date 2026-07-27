@@ -332,6 +332,78 @@ export async function updateAdminRequest(supabase, input, operatorEmail = '') {
   return data;
 }
 
+const VISIBILITY_DECISIONS = new Set(['approved', 'needs_changes', 'declined']);
+
+export async function listVisibilityReviews(supabase) {
+  const { data, error } = await supabase.from('student_visibility_reviews')
+    .select('*').order('requested_at', { ascending: true }).limit(100);
+  if (error) return [];
+  const reviews = Array.isArray(data) ? data : [];
+  const studentIds = [...new Set(reviews.map(review => review.student_user_id).filter(Boolean))];
+  if (!studentIds.length) return reviews;
+  const [{ data: profiles }, { data: evidence }] = await Promise.all([
+    supabase.from('member_profiles')
+      .select('user_id,display_name,school_name,headline,capability_areas,identity_verified,school_email_verified_at,profile_state,discovery_opt_in')
+      .in('user_id', studentIds),
+    supabase.from('student_evidence_items')
+      .select('id,student_user_id,title,contribution,artifact_url,observer_name,ai_use,review_state')
+      .in('student_user_id', studentIds),
+  ]);
+  const byStudent = new Map((profiles || []).map(profile => [profile.user_id, profile]));
+  const evidenceByStudent = new Map();
+  for (const item of evidence || []) {
+    const items = evidenceByStudent.get(item.student_user_id) || [];
+    items.push(item);
+    evidenceByStudent.set(item.student_user_id, items);
+  }
+  return reviews.map(review => ({
+    ...review,
+    student: byStudent.get(review.student_user_id) || null,
+    evidence: evidenceByStudent.get(review.student_user_id) || [],
+  }));
+}
+
+export async function reviewStudentVisibility(supabase, input, operatorEmail = '') {
+  const reviewId = text(input.reviewId, 50);
+  if (!UUID_PATTERN.test(reviewId)) throw new Error('Choose a valid visibility review.');
+  const decision = text(input.decision, 40);
+  if (!VISIBILITY_DECISIONS.has(decision)) throw new Error('Choose a valid visibility decision.');
+  const note = text(input.note, 2_001);
+  if (note.length > 2_000) throw new Error('Keep the review note under 2,000 characters.');
+  if (!note) throw new Error('Record the reason for this visibility decision.');
+
+  const { data: review, error: reviewError } = await supabase.from('student_visibility_reviews')
+    .select('id,student_user_id,status').eq('id', reviewId).maybeSingle();
+  if (reviewError) throw reviewError;
+  if (!review || review.status !== 'pending') throw new Error('Choose a visibility request that is still pending.');
+
+  if (decision === 'approved') {
+    const [{ data: profile, error: profileError }, { data: evidence, error: evidenceError }] = await Promise.all([
+      supabase.from('member_profiles').select('display_name,school_name,headline,capability_areas,identity_verified,school_email_verified_at')
+        .eq('user_id', review.student_user_id).maybeSingle(),
+      supabase.from('student_evidence_items').select('id').eq('student_user_id', review.student_user_id).limit(1),
+    ]);
+    if (profileError) throw profileError;
+    if (evidenceError) throw evidenceError;
+    const ready = Boolean(
+      profile?.display_name && profile?.school_name && profile?.headline
+      && Array.isArray(profile.capability_areas) && profile.capability_areas.length
+      && (evidence || []).length
+      && (profile.identity_verified || profile.school_email_verified_at),
+    );
+    if (!ready) throw new Error('Please request changes because this profile no longer meets the visibility checklist.');
+  }
+
+  const { data, error } = await supabase.rpc('review_student_visibility', {
+    p_review_id: reviewId,
+    p_decision: decision,
+    p_operator_note: note || null,
+    p_reviewed_by: email(operatorEmail) || null,
+  });
+  if (error) throw error;
+  return data;
+}
+
 // §13 slice 2: operator batch management. All degrade to [] if the batches tables aren't
 // migrated yet, so the inbox never breaks before the migration is applied.
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f-]{27}$/i;
@@ -1042,10 +1114,10 @@ export default async function handler(req, res, dependencies = {}) {
     if (!admin) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
 
     if (req.method === 'GET') {
-      const [submissions, requests, batches, metrics, companies, users, projects, appeals] = await Promise.all([
-        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase), listAdminCompanies(admin.supabase), listAdminUsers(admin.supabase), listAdminProjects(admin.supabase), listScoreAppeals(admin.supabase),
+      const [submissions, requests, visibilityReviews, batches, metrics, companies, users, projects, appeals] = await Promise.all([
+        listAdminSubmissions(admin.supabase), listAdminRequests(admin.supabase), listVisibilityReviews(admin.supabase), listAdminBatches(admin.supabase), loadAdminMetrics(admin.supabase), listAdminCompanies(admin.supabase), listAdminUsers(admin.supabase), listAdminProjects(admin.supabase), listScoreAppeals(admin.supabase),
       ]);
-      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, batches, metrics, companies, users, projects, appeals });
+      return res.status(200).json({ ok: true, operator: { email: admin.email }, submissions, requests, visibilityReviews, batches, metrics, companies, users, projects, appeals });
     }
 
     const patchInput = body(req);
@@ -1057,6 +1129,9 @@ export default async function handler(req, res, dependencies = {}) {
     }
     if (patchInput.action === 'review-batch-application') {
       return res.status(200).json({ ok: true, application: await reviewBatchApplication(admin.supabase, patchInput, admin.email) });
+    }
+    if (patchInput.action === 'review-student-visibility') {
+      return res.status(200).json({ ok: true, review: await reviewStudentVisibility(admin.supabase, patchInput, admin.email) });
     }
     if (patchInput.action === 'delete-user') {
       return res.status(200).json({ ok: true, result: await deleteAdminUser(admin.supabase, patchInput, admin.email) });

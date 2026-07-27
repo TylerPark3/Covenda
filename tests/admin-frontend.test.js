@@ -38,6 +38,10 @@ test('operator inbox has passwordless sign-in and a complete review surface', ()
   assert.match(styles, /\.admin-detail/);
   assert.match(styles, /\.admin-summary/);
   assert.match(styles, /\.detail-workflow/);
+  assert.match(html, /id="adminVisibilityReviews"/);
+  assert.match(script, /review-student-visibility/);
+  assert.match(script, /Record the reason first/);
+  assert.match(styles, /\.visibility-review-card/);
 });
 
 test('operator UI stays code-native and contains no server credentials', () => {

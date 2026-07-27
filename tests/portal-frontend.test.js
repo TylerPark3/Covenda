@@ -42,6 +42,11 @@ test('student onboarding uses the shared industry hierarchy and remains skippabl
   assert.match(script,/industrySectors:v\.industrySectors/);
   assert.match(script,/portfolioVisibility:'private'/);
   assert.match(script,/introductionApprovalRequired/);
+  assert.match(script,/Request company visibility/);
+  assert.match(script,/request-visibility-review/);
+  assert.match(script,/Pause company discovery/);
+  assert.match(script,/No introduction moves forward until you choose/);
+  assert.match(styles,/\.visibility-checklist/);
   assert.match(script,/renderProfileInterestEditor/);
   assert.match(styles,/\.profile-interests/);
 });

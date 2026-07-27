@@ -46,6 +46,10 @@ const v1Onboarding = readFileSync(
   new URL('../supabase/migrations/20260727900000_v1_onboarding_profiles.sql', import.meta.url),
   'utf8',
 ).toLowerCase();
+const visibilityReviews = readFileSync(
+  new URL('../supabase/migrations/20260727190245_visibility_reviews_and_intro_approval.sql', import.meta.url),
+  'utf8',
+).toLowerCase();
 const projectTargeting = readFileSync(
   new URL('../supabase/migrations/20260724300000_project_targeting_and_files.sql', import.meta.url),
   'utf8',
@@ -194,6 +198,18 @@ test('V1 onboarding migration keeps student evidence server-only and discovery p
   assert.match(v1Onboarding, /alter table public\.student_evidence_items force row level security/);
   assert.match(v1Onboarding, /revoke all on table public\.student_evidence_items from public, anon, authenticated/);
   assert.doesNotMatch(v1Onboarding, /create policy|grant [^;]* to (anon|authenticated)/);
+});
+
+test('visibility reviews are private, auditable, and approve discovery atomically', () => {
+  assert.match(visibilityReviews, /create table if not exists public\.student_visibility_reviews/);
+  assert.match(visibilityReviews, /where status = 'pending'/);
+  assert.match(visibilityReviews, /student_visibility_reviews_decision_note/);
+  assert.match(visibilityReviews, /alter table public\.student_visibility_reviews force row level security/);
+  assert.match(visibilityReviews, /revoke all on table public\.student_visibility_reviews from public, anon, authenticated/);
+  assert.match(visibilityReviews, /create or replace function public\.review_student_visibility/);
+  assert.match(visibilityReviews, /security definer/);
+  assert.match(visibilityReviews, /profile_state = case[\s\S]*'company_visible'/);
+  assert.doesNotMatch(visibilityReviews, /grant [^;]* to (anon|authenticated)|create policy|grant delete/);
 });
 
 test('credit ledger is append-only, guards double payouts, and stays server-only', () => {
