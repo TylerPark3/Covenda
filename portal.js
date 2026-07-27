@@ -1614,27 +1614,81 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
 // Live credibility meter — a checklist of REAL, earned signals (identity, completeness, proven
 // GitHub skills, completed reviewed work-trials). Not a black-box score; each rung is concrete
 // and links to how to earn it. Honest by construction: it only counts things that actually happened.
+// This panel used to be a third to-do list: profile completion is already the ring on the
+// overview and step 3 of the journey, and the work-trial is step 5. Restating them here
+// told a student nothing new and made the portal feel like homework in triplicate.
+//
+// It has one job nothing else does. It lives on the portfolio page — the page about how you
+// are presented — so it answers the question that page raises: what does a company actually
+// see when they open this? Facts about the profile as it stands, strongest first, and an
+// honest line about what is missing rather than an instruction to go fix it. The journey rail
+// owns "what to do next"; this owns "how you read right now".
 function renderCredibility(root,d){
   const p=d?.profile; if(p?.role!=='student') return;
   const completed=(d.projects||[]).filter(x=>x.status==='complete').length;
   const ghSkills=githubSkills(p).length;
+  const v=d.verification||{};
+  const held=key=>Boolean((v.signals||[]).find(x=>x.key===key)?.held);
+  const vouched=held('club')||held('referral');
+
+  // Ordered by what a company weighs, not by what is easy to get.
   const signals=[
-    {ok:!!p.identity_verified,label:'Identity verified',hint:'Verify your identity to add trust.'},
-    {ok:profileCompletion(p)>=100,label:'Profile complete',hint:'Fill out your headline, bio, and skills.'},
-    {ok:ghSkills>0,label:ghSkills?`${ghSkills} proven skill${ghSkills===1?'':'s'} from real work`:'Proven skills from real work',hint:'Analyze a GitHub repo below.'},
-    {ok:completed>0,label:completed?`${completed} completed work-trial${completed===1?'':'s'}`:'Completed a reviewed work-trial',hint:'Clear a Stage 1 work-trial to compound your record.'},
+    { ok:completed>0,
+      on:`${completed} accepted ${completed===1?'deliverable':'deliverables'}`,
+      off:'No accepted work yet',
+      note:completed>0?'A company reviewed this work and accepted it. It is the strongest thing on your profile.'
+                      :'This is what companies look for first. Everything else is a proxy for it.' },
+    { ok:vouched,
+      on:held('referral')?'A named referral stands behind you':'A club confirmed you',
+      off:'Nobody has vouched for you yet',
+      note:vouched?'Someone put their own name behind you, and companies can see whose.'
+                  :'A profile with no vouch reads as unverified, whatever else is on it.' },
+    { ok:ghSkills>0,
+      on:`${ghSkills} skill${ghSkills===1?'':'s'} evidenced from real code`,
+      off:'No code analysed',
+      note:ghSkills>0?'Drawn from repositories you linked — not self-reported.'
+                     :'Self-reported skills carry no weight here. Analysed code does.' },
+    { ok:profileCompletion(p)>=100,
+      on:'Profile reads complete',
+      off:`Profile is ${profileCompletion(p)}% filled in`,
+      note:profileCompletion(p)>=100?'Headline, context, and skills are all there.'
+                                    :'Gaps here are the first thing a reader notices.' },
   ];
-  const met=signals.filter(s=>s.ok).length;
+  const met=signals.filter(x=>x.ok).length;
+
   const sec=document.createElement('section');sec.className='cred-meter';
   const head=document.createElement('div');head.className='cred-meter-head';
-  const h=document.createElement('h3');h.textContent='Your credibility';
-  const tag=document.createElement('span');tag.className='cred-meter-tag';tag.textContent=`${met} of ${signals.length} signals`;
-  head.append(h,tag);sec.append(head);
-  const track=document.createElement('div');track.className='cred-meter-track';const fill=document.createElement('i');fill.style.width=`${(met/signals.length)*100}%`;track.append(fill);sec.append(track);
+  const box=document.createElement('div');
+  const h=document.createElement('h3');h.textContent='What a company sees';
+  const sub=document.createElement('p');sub.className='cred-meter-sub';
+  sub.textContent=met===0
+    ? 'Your profile is live but carries no evidence yet. Here is how it reads to someone opening it today.'
+    : 'How your profile reads to someone opening it today.';
+  box.append(h,sub);
+  const tag=document.createElement('span');tag.className='cred-meter-tag';
+  tag.textContent=`${met} of ${signals.length}`;
+  head.append(box,tag);sec.append(head);
+
+  const track=document.createElement('div');track.className='cred-meter-track';
+  const fill=document.createElement('i');fill.style.width=`${(met/signals.length)*100}%`;
+  track.append(fill);sec.append(track);
+
   const list=document.createElement('ul');list.className='cred-meter-list';
-  signals.forEach(s=>{const li=document.createElement('li');li.className=s.ok?'is-met':'';const mark=document.createElement('span');mark.className='cred-mark';mark.textContent=s.ok?'✓':'○';const txt=document.createElement('div');const strong=document.createElement('strong');strong.textContent=s.label;txt.append(strong);if(!s.ok){const hint=document.createElement('small');hint.textContent=s.hint;txt.append(hint);}li.append(mark,txt);list.append(li);});
+  signals.forEach(sig=>{
+    const li=document.createElement('li');li.className=sig.ok?'is-met':'';
+    const mark=document.createElement('span');mark.className='cred-mark';
+    mark.textContent=sig.ok?'✓':'○';
+    const div=document.createElement('div');
+    const strong=document.createElement('strong');strong.textContent=sig.ok?sig.on:sig.off;
+    const small=document.createElement('small');small.textContent=sig.note;
+    div.append(strong,small);
+    li.append(mark,div);list.append(li);
+  });
   sec.append(list);
-  const note=document.createElement('p');note.className='cred-meter-note';note.textContent='Not a black-box score — every signal is something you earned through real work or a vouch.';sec.append(note);
+
+  const note=document.createElement('p');note.className='cred-meter-note';
+  note.textContent='Nothing here is scored by us. Each line is a fact about your profile that a company can check for itself.';
+  sec.append(note);
   root.append(sec);
 }
 
