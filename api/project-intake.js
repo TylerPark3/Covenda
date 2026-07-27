@@ -1,5 +1,6 @@
 import { get } from '@vercel/blob';
 import { normaliseDiagnosis, diagnosisGaps, evaluateBrief, BRIEF_ENGINE_VERSION } from './brief-engine.js';
+import { decompositionGuide, trialEnvelope, checkAgainstEnvelope } from './frameworks.js';
 
 import { authorizeMember, creditBalance, VERTICALS, WORK_TYPES } from './portal.js';
 
@@ -348,6 +349,7 @@ export default async function handler(req, res, dependencies = {}) {
     if (body.action === 'diagnose') {
       const result = await generateDiagnosedBrief({
         problemText: body.problem, traits: Array.isArray(body.traits) ? body.traits : [],
+        vertical: body.vertical || null,
         env, fetchImpl: dependencies.fetchImpl || fetch,
       });
       return res.status(200).json({ ok: true, ...result });
@@ -449,7 +451,7 @@ const DIAGNOSE_SCHEMA = {
   },
 };
 
-export async function generateDiagnosedBrief({ problemText, traits = [], env = process.env, fetchImpl = fetch }) {
+export async function generateDiagnosedBrief({ problemText, traits = [], vertical = null, env = process.env, fetchImpl = fetch }) {
   const text = String(problemText || '').trim();
   if (text.length < 40) {
     return { ok: false, needsMore: true, questions: diagnosisGaps(normaliseDiagnosis({})), reason: 'Tell us a bit more about the problem first.' };
@@ -457,9 +459,28 @@ export async function generateDiagnosedBrief({ problemText, traits = [], env = p
   const key = env.ANTHROPIC_API_KEY;
   if (!key) throw new IntakeConfigError('Project drafting is not configured on this deployment yet.');
 
+  // The framework for THIS industry, so the decomposition is specific rather than three
+  // branches that would fit any company anywhere.
+  const guide = decompositionGuide(vertical);
+  const envelope = trialEnvelope(vertical);
+  const frameworkBlock = guide ? [
+    '',
+    `INDUSTRY FRAMEWORK — ${guide.vertical}`,
+    guide.instruction,
+    ...guide.dimensions.map(d => `- ${d.label} — ${d.probe}`),
+    '',
+    `Check this first: ${guide.checkFirst}`,
+    `Structural looks like: ${guide.structuralVsBehavioral.structural}`,
+    `Behavioral looks like: ${guide.structuralVsBehavioral.behavioral}`,
+    '',
+    `A trial here can realistically produce: ${envelope.can.join('; ')}.`,
+    `It cannot use: ${envelope.cannot}`,
+  ].join('\n') : '';
+
   const prompt = `The founder wrote:
 
 ${text}
+${frameworkBlock}
 
 ${traits.length ? `Traits they said they care about: ${traits.join(', ')}` : 'They did not name specific traits — infer at most three from the problem itself and label them.'}`;
   const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
@@ -485,6 +506,19 @@ ${traits.length ? `Traits they said they care about: ${traits.join(', ')}` : 'Th
   }
   // The engine decides whether the trial is shippable. A refusal is returned intact.
   const verdict = evaluateBrief({ ...(parsed.brief || {}), rubricSkill: parsed.brief?.rubricSkill }, { traits });
+  // The prompt states the constraints; this enforces them. A model told not to require PII
+  // will still occasionally require PII.
+  const envCheck = vertical ? checkAgainstEnvelope(vertical, {
+    deliverable: parsed.brief?.deliverable || '',
+    inputsRequired: parsed.brief?.inputsRequired || [],
+  }) : { ok: true };
+  if (!envCheck.ok) {
+    return {
+      ok: false, engineVersion: BRIEF_ENGINE_VERSION, diagnosis, openQuestions: gaps,
+      brief: parsed.brief || null,
+      refusal: { reasons: [envCheck.reason], guidance: 'Redesign the task, or tell the founder what is missing. Do not pad it.' },
+    };
+  }
   return {
     ok: verdict.ok,
     engineVersion: BRIEF_ENGINE_VERSION,

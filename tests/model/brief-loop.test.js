@@ -61,3 +61,18 @@ test('the UI shows the diagnosis and the signals, not just the ask', () => {
   // A trait the brief does not test is stated plainly rather than implied.
   assert.match(ui, /This brief does not test it/);
 });
+
+// A generic decomposition is what produces the consulting parody. The prompt now carries the
+// framework for the founder's actual industry.
+test('the diagnosis prompt is industry-specific, not generic', () => {
+  assert.match(intake, /INDUSTRY FRAMEWORK/);
+  assert.match(intake, /decompositionGuide\(vertical\)/);
+  assert.match(intake, /Check this first:/);
+  assert.match(intake, /It cannot use:/);
+});
+
+// A model told not to require PII will still occasionally require PII.
+test('the vertical hard constraints are enforced on output, not just stated in the prompt', () => {
+  assert.match(intake, /checkAgainstEnvelope\(vertical/);
+  assert.match(intake, /this enforces them/);
+});
