@@ -435,8 +435,16 @@ function setAudience(audience) {
 }
 
 let audienceTransitionTimer = 0;
+// Labels the wipe. Each path deserves the same entry — the student route got the animation
+// and the other two snapped, which made the two the product actually sells to feel secondary.
+const AUDIENCE_TRANSITION_LABEL = {
+  student: 'For students',
+  company: 'For companies',
+  university: 'For referrers',
+};
+
 function transitionAudience(audience) {
-  if (audience !== 'student') return;
+  if (!AUDIENCE_TRANSITION_LABEL[audience]) return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.clearTimeout(audienceTransitionTimer);
   if (reduceMotion || audience === state.audience) {
@@ -447,7 +455,7 @@ function transitionAudience(audience) {
   }
 
   const label = $('#audienceTransitionLabel');
-  if (label) label.textContent = 'For students';
+  if (label) label.textContent = AUDIENCE_TRANSITION_LABEL[audience];
   document.body.classList.remove('is-audience-transitioning');
   void document.body.offsetWidth;
   document.body.classList.add('is-audience-transitioning');
@@ -2383,7 +2391,7 @@ $('#rosterList')?.addEventListener('click', event => {
 
 $$('[data-audience-option]').forEach(button => button.addEventListener('click', () => {
   const audience = button.dataset.audienceOption;
-  if (audience === 'student' && button.matches('[data-student-hero-entry]') && state.audience === 'home') {
+  if (button.matches('[data-hero-entry]') && state.audience === 'home') {
     transitionAudience('student');
   } else {
     showAudience(audience);

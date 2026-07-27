@@ -686,15 +686,28 @@ test('the qualification rail is shorter and visually distinct from the trial car
   assert.match(styles, /\.batch-funnel\.is-playing \.bf-stage-4 \{ transition-delay: \.54s; \}/);
 });
 
-test('only the homepage student path uses the folded-sheet transition', () => {
+test('all three homepage paths get the folded-sheet transition, and it respects reduced motion', () => {
   assert.match(html, /id="audienceTransition"/);
-  assert.match(html, /class="home-path" data-audience-option="student" data-student-hero-entry/);
+  // Every path deserves the same entry. The student route used to get the animation while the
+  // other two snapped, which made the two the product actually sells to feel secondary.
+  for (const audience of ['student', 'company', 'university']) {
+    assert.match(
+      html,
+      new RegExp(`data-audience-option="${audience}" data-hero-entry`),
+      `the ${audience} path must enter through the transition`,
+    );
+  }
   assert.match(script, /function transitionAudience\(audience\)/);
-  assert.match(script, /if \(audience !== 'student'\) return/);
-  assert.match(script, /button\.matches\('\[data-student-hero-entry\]'\)/);
-  assert.match(script, /else \{\s*showAudience\(audience\)/);
+  // Gated on the attribute alone now — it means "entering from the home hero", which is when
+  // the wipe makes sense — rather than on a hardcoded audience name.
+  assert.match(script, /button\.matches\('\[data-hero-entry\]'\)/);
+  assert.doesNotMatch(script, /audience !== 'student'/, 'the student-only gate is gone');
+  // The label has to name the audience being entered, or the wipe says the wrong thing.
+  assert.match(script, /AUDIENCE_TRANSITION_LABEL\[audience\]/);
+  for (const label of ['For students', 'For companies', 'For referrers']) {
+    assert.ok(script.includes(label), `missing transition label: ${label}`);
+  }
   assert.match(script, /document\.body\.classList\.add\('is-audience-transitioning'\)/);
-  assert.match(script, /window\.setTimeout\(\(\) => \{\s*setAudience\(audience\)/);
   assert.match(styles, /@keyframes audience-sheet-a/);
   assert.match(styles, /@keyframes audience-sheet-b/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.audience-transition \{ display: none; \}/);
