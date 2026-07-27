@@ -932,7 +932,13 @@
             <p>A company posts a bounded, paid piece of real work. You apply, do it, and a named reviewer accepts or asks for changes. Open to anyone — no batch needed.</p>
             <p class="tb-out"><b>What you get:</b> paid, plus accepted work on your record.</p>
           </article>
-          <div class="tb-arrow" aria-hidden="true"><span>feeds</span></div>
+          <div class="tb-arrow" aria-hidden="true">
+            <svg viewBox="0 0 64 24" role="presentation" focusable="false">
+              <line x1="2" y1="12" x2="50" y2="12"/>
+              <path d="M48 5.5 L60 12 L48 18.5 Z"/>
+            </svg>
+            <span>feeds</span>
+          </div>
           <article class="tb-side is-batch">
             <p class="tb-tag">A batch</p>
             <h3>The vetted list companies search</h3>
@@ -941,8 +947,12 @@
           </article>
         </div>
         <p class="tb-note"><svg><use href="#icon-lock"/></svg>Start with trials if you have nothing yet — that is what they are for. A batch is where the work you have already done gets you seen.</p>
-        <div class="gold-tile gold-tile--banner batches-tile" data-gold-tile data-kicker="Meaningful Connection" aria-hidden="true"></div>
-        <p class="batch-pick-hint">Select the batches you’re considering.</p>
+
+        <div class="tb-divider" role="presentation"></div>
+        <div class="section-heading batch-browse-head">
+          <h3>The batches</h3>
+          <p>Five per field. Select the ones you’re considering.</p>
+        </div>
         <div class="batch-web" id="batchWeb">
           <canvas id="batchWebCanvas" aria-hidden="true"></canvas>
           <div class="batch-grid" id="batchGrid" data-batch-grid></div>
