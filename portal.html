@@ -328,12 +328,13 @@
           <input type="file" id="batchResumeInput" accept=".pdf,.doc,.docx" hidden>
           <span id="batchResumeChip" class="batch-resume-chip" hidden></span>
         </div>
-        <div class="form-grid">
-          <label>Referred by <small>Optional — professor, club</small><input name="referralName" placeholder="Prof. Lee"></label>
-          <label>Referral code <small>Optional</small><input name="referralCode" placeholder="REF-XXXX"></label>
+        <div class="ba-referral">
+          <p class="ba-referral-cap">Who vouches for you?</p>
+          <p class="ba-referral-note">Optional — but it is the strongest thing on this application.</p>
+          <label>Their name<input name="referralName" placeholder="Prof. Lee"></label>
+          <label>Referral code <small>if they gave you one</small><input name="referralCode" placeholder="REF-XXXX"></label>
         </div>
         <p class="dialog-message" id="batchApplyMessage" aria-live="polite"></p>
-        <p class="intake-hint">Your profile — verticals and work types — is attached automatically.</p>
       </div>
       <footer class="ba-footer"><button class="portal-secondary" type="button" id="baBack" hidden>Back</button><span class="ba-count" id="baCount"></span><button class="portal-primary" type="button" id="baNext">Continue<svg><use href="#p-arrow"/></svg></button><button class="portal-primary" type="submit" id="baSubmit" hidden>Submit application<svg><use href="#p-arrow"/></svg></button></footer>
     </form>

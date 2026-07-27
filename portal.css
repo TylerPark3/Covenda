@@ -1469,3 +1469,22 @@ body { background: var(--surface); }
 .coref-gate.is-done { border-color: rgba(31,122,77,.35); background: var(--grow-pale); color: var(--grow); }
 .coref-row small { color: var(--soft); font-size: 13px; }
 .coref-empty { color: var(--soft); font-size: 14px; }
+
+/* The referral is the strongest signal on a batch application, and it was two cramped fields
+   sharing a row at the bottom of the last step. Its own block, with room. */
+.ba-referral { display: grid; gap: 12px; margin-top: 26px; padding: 22px 24px; border: 1px solid var(--gold-light); background: var(--gold-pale); }
+.ba-referral-cap { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; color: var(--ink); }
+.ba-referral-note { margin: -6px 0 4px; color: var(--muted); font-size: 14.5px; }
+.ba-referral label { display: grid; gap: 8px; font-size: 14px; font-weight: 650; }
+.ba-referral input { width: 100%; min-height: 50px; padding: 12px 14px; border: 1px solid var(--line-strong); background: #fff; font: inherit; font-size: 15.5px; }
+.ba-referral input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(180,123,32,.1); outline: 0; }
+
+/* The batch application reads at document size, not form-label size. */
+#batchApplyDialog .dialog-body { font-size: 15.5px; }
+#batchApplyDialog label { font-size: 14px; }
+#batchApplyDialog label small { font-size: 13px; }
+#batchApplyDialog input, #batchApplyDialog textarea, #batchApplyDialog select { font-size: 15.5px; min-height: 50px; }
+#batchApplyDialog textarea { min-height: 0; }
+#batchApplyDialog .batch-step-kicker { font-size: 15px; }
+#batchApplyDialog .batch-step-hint { font-size: 14.5px; line-height: 1.6; }
+#batchApplyDialog .batch-prompt-box p { font-size: 16px; line-height: 1.55; }
