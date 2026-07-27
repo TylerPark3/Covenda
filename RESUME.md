@@ -11,7 +11,7 @@ Working tree is clean; nothing is lost by closing the terminal.
 cd ~/Documents/GitHub/ProofPath
 
 npm run sql        # bundles every migration, copies to clipboard → paste into Supabase
-npm run check      # 680 tests + syntax across every API file
+npm run check      # 718 tests + syntax across every API file
 ```
 
 Deploy (two steps — the second is required, the domain does not follow production):
@@ -25,7 +25,7 @@ npx vercel alias set <the-deployment-url-it-printed> covenda.app
 
 ## State right now
 
-- **680 tests green**
+- **718 tests green**
 - Live at covenda.app
 - Blob store is **private**, and playback now works: `api/media.js` authorises the caller
   against rows, then mints a 15-minute read-only signed URL. Wired into the student's video
@@ -42,8 +42,7 @@ npx vercel alias set <the-deployment-url-it-printed> covenda.app
 1. Wire `companyBriefing` into the company dashboard UI (backend done, nothing renders it)
 2. Wire the supplied assessments into the batch application UI (all 25 exist in
    `api/assessments.js`, nothing shows them)
-3. Remaining docs: `ASSESSMENT_PLATFORM_MATRIX`, `EVIDENCE_GRAPH`, `VETTING_RAILS`,
-   `PHI_INTAKE_GATE` (currently inside `VETTING_HEALTHCARE.md`)
+
 
 ---
 
