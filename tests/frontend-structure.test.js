@@ -123,6 +123,50 @@ test('production home keeps the approved clean banner and talent-to-proof hero',
   assert.match(script, /spawnSignal\(now\)/);
 });
 
+test('homepage explains Covenda through one evidence-backed talent search', () => {
+  const demo = html.match(/<section class="home-product-demo"[\s\S]*?<div class="home-explainer"/)?.[0] || '';
+  assert.match(demo, /Find students by what[\s\S]*they’ve actually done\./);
+  assert.match(demo, /A Talent Brief becomes a small, explainable shortlist\./);
+  assert.match(demo, /Illustrative product preview/);
+  assert.equal((demo.match(/data-demo-candidate=/g) || []).length, 3);
+  assert.match(demo, /1 · Talent Brief/);
+  assert.match(demo, /2 · Matching students/);
+  assert.match(demo, /3 · Evidence/);
+  assert.match(demo, /Supported/);
+  assert.match(demo, /Confirmed/);
+  assert.match(demo, /Self-reported/);
+  assert.match(demo, /Request introduction/);
+  assert.match(demo, /before deciding whether to connect/);
+  assert.doesNotMatch(demo, /\d+% match|match score|top \d+%/i);
+});
+
+test('homepage supporting story stays short, differentiated, and action-oriented', () => {
+  assert.match(html, /id="defineSignal"[\s\S]*Tell us what would make you trust a candidate\./);
+  assert.match(html, /id="reviewEvidence"[\s\S]*See what they did, not just where they worked\./);
+  assert.match(html, /id="meetCandidate"[\s\S]*Meet the few worth evaluating\./);
+  assert.match(html, /id="whyCovendaSimple"[\s\S]*A smaller candidate pool\.[\s\S]*A clearer reason to talk\./);
+  assert.match(html, /Your résumé says where you were\.[\s\S]*Covenda shows what you did\./);
+  assert.match(html, /Self-reported[\s\S]*Artifact linked[\s\S]*Contribution confirmed[\s\S]*Employer confirmed/);
+  assert.match(html, /Find student talent/);
+  assert.match(html, /Build your profile/);
+  assert.match(styles, /body\[data-audience="home"\] \[data-legacy-home-section\]/);
+  assert.match(styles, /\.home-explainer-row \{[\s\S]*grid-template-columns/);
+  assert.match(styles, /@media \(max-width: 560px\) \{[\s\S]*\.student-before-after \{ grid-template-columns: 1fr; \}/);
+});
+
+test('homepage product preview supports shortlist, evidence, and introduction states', () => {
+  assert.match(script, /function initTalentDemo\(\)/);
+  assert.match(script, /function selectCandidate\(key, moveFocus = false\)/);
+  assert.match(script, /function showEvidence\(\)/);
+  assert.match(script, /demo\.dataset\.demoState = 'loading'/);
+  assert.match(script, /demo\.dataset\.demoState = 'evidence'/);
+  assert.match(script, /demo\.dataset\.demoState = 'requested'/);
+  assert.match(script, /introRequested\.hidden = false/);
+  assert.match(script, /const candidate = candidates\[selectedCandidateKey\]/);
+  assert.match(script, /evidenceToggle\.setAttribute\('aria-expanded'/);
+  assert.match(styles, /\.talent-demo\[data-demo-state="evidence"\]/);
+});
+
 // Reframed from "approved Project Packet" to vetted-talent-then-trial. The managed workflow
 // and the risk boundary are unchanged — only the framing around them moved.
 test('company story preserves the managed workflow and risk boundary', () => {

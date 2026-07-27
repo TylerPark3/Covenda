@@ -5925,6 +5925,192 @@ function initBatchWeb() {
 })();
 
 
+// The homepage preview is intentionally a small, legible product loop rather than a
+// decorative dashboard: define the need, inspect evidence, then request a mutual intro.
+(function initTalentDemo() {
+  const demo = document.getElementById('talentDemo');
+  if (!demo) return;
+
+  const candidateButtons = Array.from(demo.querySelectorAll('[data-demo-candidate]'));
+  const findButton = document.getElementById('demoFindTalent');
+  const evidenceToggle = document.getElementById('demoEvidenceToggle');
+  const viewEvidence = document.getElementById('demoViewEvidence');
+  const requestIntro = document.getElementById('demoRequestIntro');
+  const resetIntro = document.getElementById('demoResetIntro');
+  const evidenceBody = document.getElementById('demoEvidenceBody');
+  const introRequested = document.getElementById('demoIntroRequested');
+  const evidenceTitle = document.getElementById('talentEvidenceTitle');
+  const candidateRole = document.getElementById('demoCandidateRole');
+  const candidateAvailability = document.getElementById('demoCandidateAvailability');
+  const evidenceList = document.getElementById('demoEvidenceList');
+  const unverifiedList = document.getElementById('demoUnverifiedList');
+  const evidenceTable = document.getElementById('demoEvidenceTable');
+  const introCopy = document.getElementById('demoIntroCopy');
+  if (!candidateButtons.length || !findButton || !evidenceToggle || !viewEvidence ||
+      !requestIntro || !resetIntro || !evidenceBody || !introRequested || !evidenceTitle ||
+      !candidateRole || !candidateAvailability || !evidenceList || !unverifiedList ||
+      !evidenceTable || !introCopy) return;
+
+  const candidates = {
+    maya: {
+      name: 'Maya Chen',
+      role: 'Frontend product builder',
+      availability: 'Available 12 hours per week',
+      evidence: [
+        'Built an event platform used by four campus organizations.',
+        'Owned onboarding, dashboard, and mobile navigation.',
+        'React and TypeScript visible in a public repository.',
+        'Contribution confirmed by the project’s technical lead.',
+      ],
+      unverified: ['API integration experience is self-reported.', 'No employer-confirmed startup work yet.'],
+      rows: [
+        ['Shipped React product', 'Live event platform', 'Supported', 'is-supported'],
+        ['Personal contribution', 'Product lead confirmation', 'Confirmed', 'is-confirmed'],
+        ['API integrations', 'Student claim only', 'Self-reported', 'is-self'],
+        ['10 hours weekly', 'Available 12 hours', 'Met', 'is-confirmed'],
+      ],
+    },
+    ethan: {
+      name: 'Ethan Park',
+      role: 'Frontend developer',
+      availability: 'Available 15 hours per week',
+      evidence: [
+        'Shipped a React inventory tool for a student-run retailer.',
+        'Owned the component library and responsive checkout flow.',
+        'Pull requests and deployment are linked for review.',
+        'Contribution confirmed by the organization’s product lead.',
+      ],
+      unverified: ['Formal usability testing is self-reported.', 'No employer-confirmed startup work yet.'],
+      rows: [
+        ['Shipped React product', 'Live inventory tool', 'Supported', 'is-supported'],
+        ['Personal contribution', 'Pull requests and lead note', 'Confirmed', 'is-confirmed'],
+        ['API integrations', 'Repository evidence', 'Supported', 'is-supported'],
+        ['10 hours weekly', 'Available 15 hours', 'Met', 'is-confirmed'],
+      ],
+    },
+    aisha: {
+      name: 'Aisha Patel',
+      role: 'Frontend engineer',
+      availability: 'Available 10 hours per week',
+      evidence: [
+        'Built a scheduling interface used by two campus programs.',
+        'Owned accessibility fixes and the mobile interaction model.',
+        'Live product and component tests are linked.',
+        'Project role confirmed by a faculty program director.',
+      ],
+      unverified: ['TypeScript depth is supported by one project only.', 'No employer-confirmed startup work yet.'],
+      rows: [
+        ['Shipped React product', 'Live scheduling interface', 'Supported', 'is-supported'],
+        ['Personal contribution', 'Faculty confirmation', 'Confirmed', 'is-confirmed'],
+        ['API integrations', 'Not yet demonstrated', 'Unverified', 'is-self'],
+        ['10 hours weekly', 'Available 10 hours', 'Met', 'is-confirmed'],
+      ],
+    },
+  };
+  let selectedCandidateKey = 'maya';
+
+  function replaceList(list, items) {
+    list.replaceChildren(...items.map(item => {
+      const li = document.createElement('li');
+      li.textContent = item;
+      return li;
+    }));
+  }
+
+  function showEvidence() {
+    evidenceBody.hidden = false;
+    introRequested.hidden = true;
+    evidenceToggle.setAttribute('aria-expanded', 'true');
+    evidenceToggle.firstChild.nodeValue = 'Collapse';
+    demo.dataset.demoState = 'evidence';
+  }
+
+  function selectCandidate(key, moveFocus = false) {
+    const candidate = candidates[key];
+    if (!candidate) return;
+    selectedCandidateKey = key;
+    candidateButtons.forEach(button => {
+      const selected = button.dataset.demoCandidate === key;
+      button.classList.toggle('is-selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+      if (selected && moveFocus) button.focus();
+    });
+    evidenceTitle.textContent = `Evidence for ${candidate.name}`;
+    candidateRole.textContent = candidate.role;
+    candidateAvailability.textContent = candidate.availability;
+    replaceList(evidenceList, candidate.evidence);
+    replaceList(unverifiedList, candidate.unverified);
+
+    evidenceTable.querySelectorAll('.evidence-table-row:not(.evidence-table-head)').forEach(row => row.remove());
+    candidate.rows.forEach(([requirement, proof, status, statusClass]) => {
+      const row = document.createElement('div');
+      row.className = 'evidence-table-row';
+      row.setAttribute('role', 'row');
+      const requirementCell = document.createElement('span');
+      requirementCell.setAttribute('role', 'cell');
+      requirementCell.textContent = requirement;
+      const proofCell = document.createElement('span');
+      proofCell.setAttribute('role', 'cell');
+      proofCell.textContent = proof;
+      const statusCell = document.createElement('b');
+      statusCell.className = statusClass;
+      statusCell.setAttribute('role', 'cell');
+      statusCell.textContent = status;
+      row.append(requirementCell, proofCell, statusCell);
+      evidenceTable.append(row);
+    });
+    showEvidence();
+  }
+
+  candidateButtons.forEach(button => {
+    button.addEventListener('click', () => selectCandidate(button.dataset.demoCandidate));
+  });
+
+  findButton.addEventListener('click', () => {
+    if (findButton.disabled) return;
+    findButton.disabled = true;
+    findButton.firstChild.nodeValue = 'Reviewing evidence…';
+    demo.dataset.demoState = 'loading';
+    window.setTimeout(() => {
+      selectCandidate('maya');
+      demo.dataset.demoState = 'shortlist';
+      findButton.disabled = false;
+      findButton.firstChild.nodeValue = '3 matching students found';
+    }, window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 420);
+  });
+
+  evidenceToggle.addEventListener('click', () => {
+    const expanded = evidenceToggle.getAttribute('aria-expanded') === 'true';
+    evidenceBody.hidden = expanded;
+    evidenceToggle.setAttribute('aria-expanded', String(!expanded));
+    evidenceToggle.firstChild.nodeValue = expanded ? 'Expand' : 'Collapse';
+    demo.dataset.demoState = expanded ? 'shortlist' : 'evidence';
+  });
+
+  viewEvidence.addEventListener('click', () => {
+    showEvidence();
+    viewEvidence.textContent = 'Evidence open';
+    evidenceBody.focus({ preventScroll: true });
+  });
+
+  requestIntro.addEventListener('click', () => {
+    const candidate = candidates[selectedCandidateKey];
+    introCopy.textContent = `${candidate.name} will review the company, role, compensation, and message before deciding whether to connect.`;
+    evidenceBody.hidden = true;
+    introRequested.hidden = false;
+    evidenceToggle.setAttribute('aria-expanded', 'false');
+    evidenceToggle.firstChild.nodeValue = 'Expand';
+    demo.dataset.demoState = 'requested';
+    resetIntro.focus({ preventScroll: true });
+  });
+
+  resetIntro.addEventListener('click', () => {
+    showEvidence();
+    requestIntro.focus({ preventScroll: true });
+  });
+})();
+
+
 // The batch filter, made physical. A crowd of pale dots with a few gold ones; hovering sweeps
 // the pale ones away from the cursor outward until only the gold remain, then they drift back
 // when you leave. That is the batch in one gesture — most of a pool is not the product.

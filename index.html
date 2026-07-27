@@ -93,7 +93,7 @@
         <button type="button" data-audience-option="student" aria-pressed="false">Students</button>
         <button type="button" data-audience-option="company" aria-pressed="false">Companies</button>
         <button type="button" data-audience-option="university" aria-pressed="false">Referrals</button>
-        <a href="#whyCovenda" data-nav-target="whyCovenda" data-nav-audience="home">About</a>
+        <a href="#whyCovendaSimple" data-nav-target="whyCovendaSimple" data-nav-audience="home">About</a>
       </nav>
       <div class="header-actions">
         <a class="member-login-link" href="/portal.html"><svg><use href="#icon-lock"/></svg><span>Member sign in</span></a>
@@ -129,9 +129,211 @@
         <a class="scroll-cue" href="#bridgeStory"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
+      <!-- Home product story. One visible transaction from company need → evidence-backed
+           shortlist → student-controlled introduction. All people and companies are explicitly
+           illustrative; no fake marketplace activity or outcome metrics. -->
+      <section class="home-product-demo" id="bridgeStory" aria-labelledby="homeDemoTitle">
+        <div class="home-story-heading">
+          <h2 id="homeDemoTitle">Find students by what<br>they’ve actually done.</h2>
+          <p>A Talent Brief becomes a small, explainable shortlist.</p>
+        </div>
+        <p class="home-preview-label">Illustrative product preview</p>
+
+        <div class="talent-demo" id="talentDemo" data-demo-state="shortlist">
+          <div class="talent-demo-bar" aria-hidden="true"><i></i><i></i><i></i><span>Covenda · Talent search</span></div>
+          <div class="talent-demo-grid">
+            <section class="talent-brief-panel" aria-labelledby="talentBriefTitle">
+              <p class="product-step-label">1 · Talent Brief</p>
+              <h3 id="talentBriefTitle">Frontend intern for an early-stage SaaS company</h3>
+              <p class="product-subhead">What we need</p>
+              <ul class="talent-requirements">
+                <li><svg><use href="#icon-check"/></svg>Shipped React product</li>
+                <li><svg><use href="#icon-check"/></svg>Clear personal contribution</li>
+                <li><svg><use href="#icon-check"/></svg>Small-team experience</li>
+                <li><svg><use href="#icon-check"/></svg>At least 10 hours per week</li>
+                <li><svg><use href="#icon-check"/></svg>Available in August</li>
+              </ul>
+              <p class="product-subhead">Evidence we trust</p>
+              <p class="talent-trust-copy">Live product · Public repository · Project lead confirmation</p>
+              <button class="demo-outline-button" id="demoFindTalent" type="button">Find matching students<svg><use href="#icon-arrow-right"/></svg></button>
+            </section>
+
+            <section class="talent-shortlist-panel" aria-labelledby="talentShortlistTitle">
+              <div class="product-panel-head">
+                <p class="product-step-label" id="talentShortlistTitle">2 · Matching students</p>
+                <output id="demoCandidateCount">3 found</output>
+              </div>
+              <div class="talent-candidates" role="list">
+                <button class="talent-candidate is-selected" type="button" data-demo-candidate="maya" aria-pressed="true">
+                  <span class="candidate-select" aria-hidden="true"></span>
+                  <span><strong>Maya Chen</strong><small>Frontend product builder</small><em>Available 12 hours per week</em></span>
+                  <svg><use href="#icon-chevron"/></svg>
+                </button>
+                <button class="talent-candidate" type="button" data-demo-candidate="ethan" aria-pressed="false">
+                  <span class="candidate-select" aria-hidden="true"></span>
+                  <span><strong>Ethan Park</strong><small>Frontend developer</small><em>Available 15 hours per week</em></span>
+                  <svg><use href="#icon-chevron"/></svg>
+                </button>
+                <button class="talent-candidate" type="button" data-demo-candidate="aisha" aria-pressed="false">
+                  <span class="candidate-select" aria-hidden="true"></span>
+                  <span><strong>Aisha Patel</strong><small>Frontend engineer</small><em>Available 10 hours per week</em></span>
+                  <svg><use href="#icon-chevron"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <section class="talent-evidence-panel" aria-labelledby="talentEvidenceTitle">
+              <div class="product-panel-head">
+                <div><p class="product-step-label">3 · Evidence</p><h3 id="talentEvidenceTitle">Evidence for Maya Chen</h3></div>
+                <button class="demo-text-button" id="demoEvidenceToggle" type="button" aria-expanded="true">Collapse<svg><use href="#icon-chevron"/></svg></button>
+              </div>
+              <div class="talent-evidence-body" id="demoEvidenceBody" tabindex="-1">
+                <p class="candidate-availability"><strong id="demoCandidateRole">Frontend product builder</strong><span id="demoCandidateAvailability">Available 12 hours per week</span></p>
+                <div class="candidate-proof-summary">
+                  <div>
+                    <p class="product-subhead">Evidence</p>
+                    <ul id="demoEvidenceList">
+                      <li>Built an event platform used by four campus organizations.</li>
+                      <li>Owned onboarding, dashboard, and mobile navigation.</li>
+                      <li>React and TypeScript visible in a public repository.</li>
+                      <li>Contribution confirmed by the project’s technical lead.</li>
+                    </ul>
+                  </div>
+                  <aside>
+                    <p class="product-subhead">Still unverified</p>
+                    <ul id="demoUnverifiedList"><li>API integration experience is self-reported.</li><li>No employer-confirmed startup work yet.</li></ul>
+                  </aside>
+                </div>
+                <div class="evidence-table" id="demoEvidenceTable" role="table" aria-label="Company requirements and candidate evidence">
+                  <div class="evidence-table-row evidence-table-head" role="row"><span role="columnheader">Requirement</span><span role="columnheader">Candidate evidence</span><span role="columnheader">Status</span></div>
+                  <div class="evidence-table-row" role="row"><span role="cell">Shipped React product</span><span role="cell">Live event platform</span><b class="is-supported" role="cell">Supported</b></div>
+                  <div class="evidence-table-row" role="row"><span role="cell">Personal contribution</span><span role="cell">Product lead confirmation</span><b class="is-confirmed" role="cell">Confirmed</b></div>
+                  <div class="evidence-table-row" role="row"><span role="cell">API integrations</span><span role="cell">Student claim only</span><b class="is-self" role="cell">Self-reported</b></div>
+                  <div class="evidence-table-row" role="row"><span role="cell">10 hours weekly</span><span role="cell">Available 12 hours</span><b class="is-confirmed" role="cell">Met</b></div>
+                </div>
+                <div class="talent-demo-actions">
+                  <button class="demo-outline-button" id="demoViewEvidence" type="button">View evidence</button>
+                  <button class="demo-gold-button" id="demoRequestIntro" type="button">Request introduction<svg><use href="#icon-arrow-right"/></svg></button>
+                </div>
+              </div>
+              <div class="intro-requested" id="demoIntroRequested" hidden>
+                <svg><use href="#icon-check"/></svg>
+                <div><strong>Introduction requested</strong><p id="demoIntroCopy">Maya will review the company, role, compensation, and message before deciding whether to connect.</p></div>
+                <button class="demo-text-button" id="demoResetIntro" type="button">Back to evidence</button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <div class="home-explainer" aria-label="How Covenda works">
+        <section class="home-explainer-row" id="defineSignal" aria-labelledby="defineSignalTitle">
+          <div class="home-explainer-copy">
+            <p class="home-step-label">01 · Define what matters</p>
+            <h2 id="defineSignalTitle">Tell us what would make you trust a candidate.</h2>
+            <p>Choose the work, availability, and evidence that matter. Covenda does not invent your definition of qualified.</p>
+            <button class="demo-outline-button" type="button" data-audience-option="company">Build your Talent Brief<svg><use href="#icon-arrow-right"/></svg></button>
+          </div>
+          <div class="product-window brief-builder-preview">
+            <div class="product-window-bar" aria-hidden="true"><i></i><i></i><i></i><span>Talent Brief builder</span></div>
+            <div class="brief-preview-body">
+              <label>What will this person do?<span>Build approved React interfaces and connect them to existing APIs.</span></label>
+              <label>What should they accomplish?<span>Ship two product screens and resolve the mobile-layout backlog.</span></label>
+              <fieldset><legend>What evidence would you trust?</legend>
+                <label><input type="checkbox" checked disabled>Live product</label>
+                <label><input type="checkbox" checked disabled>GitHub repository</label>
+                <label><input type="checkbox" checked disabled>Contribution confirmed by a project lead</label>
+                <label><input type="checkbox" disabled>Previous startup experience</label>
+                <label><input type="checkbox" disabled>Portfolio walkthrough</label>
+              </fieldset>
+            </div>
+          </div>
+        </section>
+
+        <section class="home-explainer-row is-reversed" id="reviewEvidence" aria-labelledby="reviewEvidenceTitle">
+          <div class="home-explainer-copy">
+            <p class="home-step-label">02 · Review the evidence</p>
+            <h2 id="reviewEvidenceTitle">See what they did, not just where they worked.</h2>
+            <p>Every profile separates the project, personal contribution, supporting artifact, outcome, and observer.</p>
+          </div>
+          <div class="product-window evidence-card-preview">
+            <div class="product-window-bar" aria-hidden="true"><i></i><i></i><i></i><span>Evidence · Campus budgeting product</span></div>
+            <dl>
+              <div><dt>What the project was</dt><dd>A budgeting application designed for university students.</dd></div>
+              <div><dt>Personal contribution</dt><dd>Built the onboarding flow, transaction dashboard, and mobile navigation.</dd></div>
+              <div><dt>Supporting work</dt><dd><a href="#reviewEvidence">Live product</a> · <a href="#reviewEvidence">GitHub repository</a> · Product walkthrough</dd></div>
+              <div><dt>Outcome</dt><dd>Used by approximately 180 students during its pilot. <em>Self-reported</em></dd></div>
+              <div><dt>Observed by</dt><dd>Technical lead, Columbia Product Association</dd></div>
+              <div><dt>Evidence status</dt><dd><b class="is-confirmed">Artifact linked</b> · <b class="is-confirmed">Contribution confirmed</b></dd></div>
+              <div><dt>AI use</dt><dd>Copilot used for boilerplate and debugging; final code personally reviewed and integrated.</dd></div>
+            </dl>
+          </div>
+        </section>
+
+        <section class="home-explainer-row" id="meetCandidate" aria-labelledby="meetCandidateTitle">
+          <div class="home-explainer-copy">
+            <p class="home-step-label">03 · Meet the candidate</p>
+            <h2 id="meetCandidateTitle">Meet the few worth evaluating.</h2>
+            <p>Request an introduction, and the student chooses whether to connect. Your interview, assessment, portfolio review, or paid trial comes next.</p>
+          </div>
+          <div class="product-window introduction-preview">
+            <div class="product-window-bar" aria-hidden="true"><i></i><i></i><i></i><span>Introduction request</span></div>
+            <div class="introduction-preview-body">
+              <h3>Atlas AI would like to meet Maya</h3>
+              <dl><div><dt>Opportunity</dt><dd>Frontend Product Intern</dd></div><div><dt>Compensation</dt><dd>$28 per hour</dd></div><div><dt>Commitment</dt><dd>12 hours per week for 12 weeks</dd></div></dl>
+              <div class="intro-reason"><span>Why they selected you</span><p>Your React product, confirmed frontend contribution, and availability match their Talent Brief.</p></div>
+              <div class="intro-reason"><span>Next step</span><p>Thirty-minute conversation with the product lead.</p></div>
+              <div class="introduction-actions"><button type="button">Accept introduction</button><button type="button">Ask a question</button><button type="button">Decline</button></div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="home-comparison" id="whyCovendaSimple" aria-labelledby="comparisonTitle">
+        <p class="home-step-label">Why Covenda</p>
+        <h2 id="comparisonTitle">A smaller candidate pool.<br>A clearer reason to talk.</h2>
+        <div class="comparison-frame">
+          <div><h3>The current process</h3><ul><li>Hundreds of similar résumés</li><li>Self-written skill claims</li><li>Generic cover letters</li><li>Manual portfolio checking</li><li>References requested late</li><li>Limited visibility into personal contribution</li></ul></div>
+          <span class="comparison-arrow" aria-hidden="true"><svg><use href="#icon-arrow-right"/></svg></span>
+          <div class="is-covenda"><h3>With Covenda</h3><ul><li>A small relevant shortlist</li><li>Capability claims linked to work</li><li>Personal contribution made explicit</li><li>Structured endorsements</li><li>Evidence gaps clearly labeled</li><li>Consent-based introductions</li></ul></div>
+        </div>
+        <div class="comparison-principles"><strong>Specific work</strong><strong>Traceable evidence</strong><strong>Mutual introductions</strong></div>
+      </section>
+
+      <section class="home-student-value" aria-labelledby="studentValueTitle">
+        <div class="home-student-copy">
+          <p class="home-step-label">For students</p>
+          <h2 id="studentValueTitle">Your résumé says where you were.<br>Covenda shows what you did.</h2>
+          <p>Add one project, explain your contribution, link the work, and optionally ask someone who observed it to confirm your role.</p>
+          <button class="demo-outline-button" type="button" data-audience-option="student">Add your first project<svg><use href="#icon-arrow-right"/></svg></button>
+          <small>Free for students. Private by default. No opportunity guarantee.</small>
+        </div>
+        <div class="student-before-after" aria-label="Résumé compared with a Covenda evidence record">
+          <article><p>Before · résumé entry</p><h3>Product Developer</h3><span>Columbia Student Organization</span><small>Built features for a budgeting web app.</small></article>
+          <svg aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+          <article class="is-after"><p>After · Covenda evidence</p><h3>Built onboarding and dashboard interfaces for a student budgeting product.</h3><span>Owned React components and two API integrations.</span><small><svg><use href="#icon-verified"/></svg>Contribution confirmed by the project lead.</small></article>
+        </div>
+      </section>
+
+      <section class="home-evidence-states" aria-labelledby="evidenceStatesTitle">
+        <p class="home-step-label">Evidence states</p>
+        <h2 id="evidenceStatesTitle">Clear about what is verified and what is not.</h2>
+        <ol>
+          <li class="is-self"><span>01</span><strong>Self-reported</strong><p>The student entered the claim.</p></li>
+          <li><span>02</span><strong>Artifact linked</strong><p>Supporting work can be inspected.</p></li>
+          <li class="is-confirmed"><span>03</span><strong>Contribution confirmed</strong><p>A project lead confirmed the role.</p></li>
+          <li class="is-confirmed"><span>04</span><strong>Employer confirmed</strong><p>A company confirmed a completed outcome.</p></li>
+        </ol>
+      </section>
+
+      <section class="home-final-actions" aria-label="Get started with Covenda">
+        <article><p class="home-step-label">For companies</p><h2>Tell us the person you need.<br>See the evidence behind the shortlist.</h2><button class="demo-gold-button" type="button" data-audience-option="company">Find student talent<svg><use href="#icon-arrow-right"/></svg></button></article>
+        <article><p class="home-step-label">For students</p><h2>Make your actual work<br>easier to understand.</h2><button class="demo-outline-button" type="button" data-audience-option="student">Build your profile<svg><use href="#icon-arrow-right"/></svg></button></article>
+      </section>
+
       <!-- Home-only. One two-way exchange: the company contributes real work, referred
            talent contributes execution, and the trial returns value to both sides. -->
-      <section class="exchange-section" id="bridgeStory" aria-labelledby="exchangeTitle">
+      <section class="exchange-section" data-legacy-home-section aria-labelledby="exchangeTitle">
         <div class="exchange-head">
           <h2 id="exchangeTitle">One project. <span class="word-gold">Two sides win.</span></h2>
           <p>Referred talent, real work, one trial both sides can trust.</p>
