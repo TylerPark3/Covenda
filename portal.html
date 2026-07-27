@@ -280,20 +280,21 @@
   <dialog class="member-dialog compact-dialog" id="batchApplyDialog">
     <form method="dialog" id="batchApplyForm">
       <header><div><p class="eyebrow">Batch application</p><h2 id="batchApplyTitle">Apply to this batch.</h2><p id="batchApplySummary" class="dialog-sub"></p></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <ol class="ba-progress" id="baProgress" aria-label="Application steps"></ol>
       <div class="dialog-body">
         <input name="batchId" type="hidden">
-        <div class="batch-apply-detail">
+        <div class="batch-apply-detail" data-ba-step="0">
           <div class="batch-detail-block"><h4>Who this cohort is for</h4><p id="batchApplyWho"></p></div>
           <div class="batch-detail-block"><h4>Where admitted students go</h4><p id="batchApplySamples"></p></div>
         </div>
 
-        <div class="batch-apply-step">
-          <p class="batch-step-kicker">Step 1 · Your 90-second walkthrough <b class="req">Required</b></p>
+        <div class="batch-apply-step" data-ba-step="1">
+          <p class="batch-step-kicker">Your 90-second walkthrough <b class="req">Required</b></p>
           <div class="batch-prompt-box">
             <span class="batch-prompt-tag">Your assigned prompt</span>
             <p id="batchVideoPrompt"></p>
           </div>
-          <p class="batch-step-hint">Record it here, unscripted, answering the prompt above. Reviewers watch the first ninety seconds — that is what the recorder gives you. Retake as many times as you like; only the take you keep is saved.</p>
+          <p class="batch-step-hint">Unscripted, answering the prompt above. Retake as often as you like — only the take you keep is saved.</p>
           <div class="video-field" data-video-field="batch">
             <div class="video-picker" id="batchVideoPicker"></div>
             <input name="videoUrl" type="hidden" required id="batchVideoUrl">
@@ -301,13 +302,13 @@
           </div>
         </div>
 
-        <div class="batch-apply-step">
-          <p class="batch-step-kicker">Step 2 · Your interest in the field</p>
+        <div class="batch-apply-step" data-ba-step="2">
+          <p class="batch-step-kicker">Your interest in the field</p>
           <div id="batchInterestQuestions" class="batch-interest-list"></div>
         </div>
 
-        <div class="batch-apply-step">
-          <p class="batch-step-kicker">Step 3 · About you</p>
+        <div class="batch-apply-step" data-ba-step="3">
+          <p class="batch-step-kicker">About you</p>
           <label>Why this cohort? <b class="req">Required</b><textarea name="note" rows="4" minlength="40" maxlength="2000" required placeholder="What draws you to this discipline, and what do you want to get out of the cohort?"></textarea></label>
           <label>Relevant experience <small>What you've built, studied, or worked on</small><textarea name="experience" rows="4" maxlength="2000" placeholder="Coursework, internships, projects, competitions — anything that shows you can do this work."></textarea></label>
           <label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Python, financial modeling, research"></label>
@@ -332,7 +333,7 @@
         <p class="dialog-message" id="batchApplyMessage" aria-live="polite"></p>
         <p class="intake-hint">Your profile — verticals and work types — is attached automatically.</p>
       </div>
-      <footer><button class="portal-primary" type="submit">Submit application<svg><use href="#p-arrow"/></svg></button></footer>
+      <footer class="ba-footer"><button class="portal-secondary" type="button" id="baBack" hidden>Back</button><span class="ba-count" id="baCount"></span><button class="portal-primary" type="button" id="baNext">Continue<svg><use href="#p-arrow"/></svg></button><button class="portal-primary" type="submit" id="baSubmit" hidden>Submit application<svg><use href="#p-arrow"/></svg></button></footer>
     </form>
   </dialog>
 

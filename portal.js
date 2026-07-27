@@ -1607,7 +1607,59 @@ function renderBatchInterest(batch){
 function readBatchInterest(form){
   return batchInterestSpec.map(q=>({id:q.id,question:q.label,answer:(form.elements['interest_'+q.id]?.value||'').trim()})).filter(a=>a.answer);
 }
+// The batch application, one step at a time.
+//
+// Everything visible at once made a real application read as a wall — the founder-facing
+// version of the same complaint. A student now sees where they are, one thing to do, and
+// how much is left. Step 0 is the cohort context, so nobody starts answering before they
+// know what they are applying to.
+const BA_STEPS=['What this is','Your walkthrough','Your interest','About you'];
+let baStep=0;
+function baPanels(){ return $$('#batchApplyDialog [data-ba-step]'); }
+function renderBatchWizard(){
+  const dlg=$('#batchApplyDialog'); if(!dlg) return;
+  const panels=baPanels(); if(!panels.length) return;
+  const last=panels.length-1;
+  baStep=Math.max(0,Math.min(baStep,last));
+  panels.forEach(p=>{ p.hidden=Number(p.dataset.baStep)!==baStep; });
+
+  const rail=$('#baProgress');
+  if(rail){
+    rail.replaceChildren();
+    BA_STEPS.slice(0,panels.length).forEach((label,i)=>{
+      const li=document.createElement('li');
+      li.className=i===baStep?'is-current':(i<baStep?'is-done':'');
+      const b=document.createElement('button');b.type='button';
+      b.textContent=label;
+      // Going back is always allowed; jumping ahead is not, so nobody skips the recording.
+      b.disabled=i>baStep;
+      b.addEventListener('click',()=>{baStep=i;renderBatchWizard();});
+      li.append(b);rail.append(li);
+    });
+  }
+  const back=$('#baBack'),next=$('#baNext'),submit=$('#baSubmit'),count=$('#baCount');
+  if(back)back.hidden=baStep===0;
+  if(next)next.hidden=baStep===last;
+  if(submit)submit.hidden=baStep!==last;
+  if(count)count.textContent=`Step ${baStep+1} of ${panels.length}`;
+  const body=$('#batchApplyDialog .dialog-body'); if(body)body.scrollTop=0;
+}
+$('#baNext')?.addEventListener('click',()=>{
+  // The walkthrough is the one thing a model cannot do for you, so it is the one gate.
+  if(baStep===1){
+    const url=$('#batchVideoUrl');
+    if(url&&!url.value.trim()){
+      setDialogMessage('#batchApplyMessage','Record your walkthrough, or pick one you already made.',true);
+      return;
+    }
+  }
+  setDialogMessage('#batchApplyMessage','');
+  baStep+=1;renderBatchWizard();
+});
+$('#baBack')?.addEventListener('click',()=>{ baStep-=1; setDialogMessage('#batchApplyMessage',''); renderBatchWizard(); });
+
 function openBatchApply(batch){
+  baStep=0;
   const form=$('#batchApplyForm');if(!form)return;
   form.reset();batchResumeUrl='';renderBatchResumeChip('');
   form.elements.batchId.value=batch.id;
@@ -1626,6 +1678,7 @@ function openBatchApply(batch){
       onChange:url=>{const st=$('#batchVideoState');if(st)st.textContent=url?'Attached to this application.':'';}});}
   renderBatchInterest(batch);
   setDialogMessage('#batchApplyMessage','');
+  renderBatchWizard();
   $('#batchApplyDialog').showModal();
 }
 function renderBriefDocument(root,brief,fallbackSummary){
