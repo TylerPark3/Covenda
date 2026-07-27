@@ -495,7 +495,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 .hero-company { display: none; }
 /* Company hero: two clear segments — delegate work, and find talent. */
 /* Delegate card wider than the talent card, so the problem composer has room to breathe. */
-.company-jobs { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(280px, 1fr); gap: clamp(20px, 2.6vw, 34px); margin: clamp(30px, 4vw, 46px) 0 0; width: min(100%, var(--content)); text-align: left; align-items: start; }
+.company-jobs { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(400px, 1fr); gap: clamp(20px, 2.6vw, 34px); margin: clamp(30px, 4vw, 46px) 0 0; width: min(100%, var(--content)); text-align: left; align-items: start; }
 @media (max-width: 800px) { .company-jobs { grid-template-columns: 1fr; } }
 .company-job { display: flex; flex-direction: column; padding: clamp(22px, 2.6vw, 32px); border: 1px solid var(--line); border-radius: 0; background: #fff; }
 .company-job-talent { border-color: var(--gold-light); background: linear-gradient(180deg, var(--gold-pale), #fff 62%); }
@@ -510,7 +510,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
    competing with it: the list of criteria below is still the thing being read. */
 .sift { margin: 18px 0 4px; padding: 0; }
 .sift canvas {
-  display: block; width: 100%; height: 132px;
+  display: block; width: 100%; height: clamp(150px, 15vw, 230px);
   background: var(--gold-pale);
   border: 1px solid var(--line);
   cursor: crosshair;
@@ -522,7 +522,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 .sift-hint { letter-spacing: .04em; text-transform: uppercase; font-weight: 650; font-size: 10px; }
 .sift-count { font-variant-numeric: tabular-nums; color: var(--gold-deep); font-weight: 600; }
 @media (hover: none) { .sift-hint { visibility: hidden; } }
-@media (max-width: 720px) { .sift canvas { height: 104px; } }
+@media (max-width: 720px) { .sift canvas { height: 128px; } }
 
 .company-job-points { list-style: none; margin: 20px 0 auto; padding: 0; display: grid; gap: 12px; }
 .company-job-points li { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink); }

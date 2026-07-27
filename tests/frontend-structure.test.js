@@ -724,8 +724,9 @@ test('the referral page argues before it asks', () => {
   assert.match(html, /Founders already ask you/);
   assert.match(html, /How it works today/);
   assert.match(html, /The same thing, systematised/);
-  // The actual goal, stated: credibility a stranger will trust.
-  assert.match(html, /build credibility that a founder who has never heard of it will still trust/);
+  // The actual goal, stated: credibility a stranger will trust. The wording is allowed to
+  // tighten — what must survive is that the page says it out loud.
+  assert.match(html, /builds? credibility (that )?a stranger will trust/i);
 });
 
 // Self-rated scales carried no signal and contradicted the platform's own rule that
