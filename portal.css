@@ -982,3 +982,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-interest-label { font-size: 14.5px; font-weight: 650; line-height: 1.45; color: #31312e; }
 .batch-interest-hint { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
 .batch-interest-q textarea { min-height: 96px; }
+
+/* Verified seal, portal side. Same shape and colour as the marketing site. */
+.verified-seal { display: inline-block; width: 1em; height: 1em; margin-left: .3em; color: var(--gold-deep, #8b5709); vertical-align: -.12em; }
+.verified-seal.is-lg { width: 1.25em; height: 1.25em; }

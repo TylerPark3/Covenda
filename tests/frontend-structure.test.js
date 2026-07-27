@@ -711,7 +711,7 @@ test('the referral section shows the outcome, labelled illustrative', () => {
 // It now leads with the demonstration: how a founder hires undergraduates today, and what
 // changes when the same thing is systematised.
 test('the referral page argues before it asks', () => {
-  assert.match(html, /This already works/);
+  assert.match(html, /Founders already ask you/);
   assert.match(html, /How it works today/);
   assert.match(html, /The same thing, systematised/);
   // The actual goal, stated: credibility a stranger will trust.
