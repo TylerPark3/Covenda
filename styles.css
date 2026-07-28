@@ -3406,6 +3406,17 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .club-form .form-message { margin-top: 14px; }
 .club-form .gold-button { margin-top: 18px; }
 
+
+/* The optional half of the club form, collapsed. Three visible fields is the difference
+   between a form an officer fills in between classes and one they leave for later. */
+.club-more { margin: 4px 0 12px; }
+.club-more summary { cursor: pointer; font-size: 15px; font-weight: 600; color: var(--gold-deep); list-style: none; }
+.club-more summary::-webkit-details-marker { display: none; }
+.club-more summary::before { content: "+ "; font-weight: 700; }
+.club-more[open] summary::before { content: "\2212 "; }
+.club-more summary span { font-weight: 400; color: var(--soft); font-size: 14px; }
+.club-more .field-grid { margin-top: 14px; }
+
 .club-ladder { padding: clamp(22px, 2.8vw, 32px); border: 1px solid var(--gold-light); background: var(--gold-pale); }
 .club-ladder h3 { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 500; letter-spacing: -.02em; }
 .club-ladder-note { margin: 10px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; }

@@ -1230,16 +1230,24 @@
         </div>
         <div class="club-grid">
           <form class="club-form" id="clubRegisterForm" novalidate>
+            <!-- Three fields, because only three are actually required and six presented as
+                 equals reads as six things to fill in. An officer registering between classes
+                 should be able to finish this in under a minute. -->
             <div class="field-grid">
-              <label class="wide">Club name<input name="clubName" autocomplete="organization" placeholder="e.g. Columbia Robotics"></label>
-              <label>School<input name="clubSchool" autocomplete="organization"></label>
-              <label>Your role<input name="clubRole" placeholder="President, VP, officer"></label>
-              <label class="wide">Vertical this club feeds<select name="clubVertical" id="clubVerticalSelect"><option value="">Choose one</option></select></label>
-              <label>Contact email<input name="clubEmail" type="email" autocomplete="email"></label>
-              <label>Members you'd put forward<input name="clubSize" type="number" min="1" max="500" inputmode="numeric" placeholder="8"></label>
+              <label class="wide">Club name<input name="clubName" autocomplete="organization" placeholder="e.g. Columbia Robotics" required></label>
+              <label>School<input name="clubSchool" autocomplete="organization" placeholder="Columbia"></label>
+              <label>Your email<input name="clubEmail" type="email" autocomplete="email" placeholder="you@columbia.edu" required></label>
             </div>
+            <details class="club-more">
+              <summary>Add more detail <span>Optional, and it speeds up verification</span></summary>
+              <div class="field-grid">
+                <label>Your role<input name="clubRole" placeholder="President, VP, officer"></label>
+                <label>Members you'd put forward<input name="clubSize" type="number" min="1" max="500" inputmode="numeric" placeholder="8"></label>
+                <label class="wide">Vertical this club feeds<select name="clubVertical" id="clubVerticalSelect"><option value="">Choose one</option></select></label>
+              </div>
+            </details>
             <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
-            <label class="consent-row"><input name="clubConsent" type="checkbox"><span>Covenda may contact me about verifying this club. No student details are shared here.</span></label>
+            <label class="consent-row"><input name="clubConsent" type="checkbox" required><span>Covenda may contact me about verifying this club. No student details are shared here.</span></label>
             <div class="form-message" id="clubFormMessage" role="status" aria-live="polite"></div>
             <button class="gold-button" type="submit">Register this club<svg><use href="#icon-arrow-right"/></svg></button>
           </form>

@@ -5302,17 +5302,20 @@ function renderReadiness(readiness) {
   var form = document.getElementById('clubRegisterForm');
   var tiersHost = document.getElementById('clubTiers');
   var select = document.getElementById('clubVerticalSelect');
-  if (!form || !tiersHost || !select) return;
+  // The vertical select sits inside an optional disclosure now, so its absence is not fatal.
+  if (!form || !tiersHost) return;
 
   fetch('/api/portal', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'club-tiers' }),
   }).then(function (res) { return res.ok ? res.json() : null; }).then(function (data) {
     if (!data || !data.ok) return;
-    (data.verticals || []).forEach(function (v) {
-      var o = document.createElement('option');
-      o.value = v.slug; o.textContent = v.name; select.append(o);
-    });
+    if (select) {
+      (data.verticals || []).forEach(function (v) {
+        var o = document.createElement('option');
+        o.value = v.slug; o.textContent = v.name; select.append(o);
+      });
+    }
     (data.tiers || []).forEach(function (tier) {
       var li = document.createElement('li');
       var head = document.createElement('strong'); head.textContent = tier.label;
@@ -5365,7 +5368,10 @@ function renderReadiness(readiness) {
     }).then(function (res) { return res.json().catch(function () { return null; }); })
       .then(function (body) {
         if (body && body.reference) {
-          message.textContent = 'Registered, reference ' + body.reference + '. We will be in touch about verifying this club.';
+          // Says what happens next and roughly when. "We will be in touch" leaves an officer
+          // wondering whether to chase, and a club that chases once and hears nothing is gone.
+          message.textContent = 'Registered. A person reads this and replies within two working days, '
+            + 'usually with two questions about how your club selects members. Reference ' + body.reference + '.';
           message.classList.add('is-success');
           form.reset();
         } else {
@@ -5988,4 +5994,26 @@ window.requestAnimationFrame(() => openIntro());
       setMode(next.dataset.companyDemoTab, true);
     });
   });
+})();
+
+// Deep link for club outreach. A cold email to a club officer cannot ask them to land on a
+// homepage, switch audience, and scroll to find a form — most will not. covenda.app/#clubs
+// puts them on it directly.
+//
+// Runs before the audience system settles so the switch is invisible rather than a flash of
+// the wrong page.
+(function clubDeepLink() {
+  const target = (window.location.hash || '').toLowerCase();
+  if (target !== '#clubs' && target !== '#club' && target !== '#clubregister') return;
+  const go = () => {
+    showAudience('university');
+    document.body.dataset.audienceSwitched = 'true';
+    const section = document.getElementById('clubRegister');
+    if (!section) return;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Focus the first field, so a keyboard or screen-reader user lands where the page is about.
+    document.querySelector('#clubRegisterForm [name="clubName"]')?.focus({ preventScroll: true });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true });
+  else go();
 })();
