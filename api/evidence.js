@@ -222,3 +222,56 @@ export function acceptThirdParty({ vendor, skill, proctored = false, resultUrl =
       : `${vendor} result, unproctored. Treat as a claim the student can defend rather than a verified capability.`,
   };
 }
+
+// ── The bridge to presentation ────────────────────────────────────────────────────────
+// Two vocabularies exist and they are not duplicates, despite the similar names:
+//
+//   evidence.js  claimed -> artifact -> referral -> trial     what a source can ESTABLISH
+//   hardening.js self_reported -> bronze -> silver -> gold    how wide the DISPLAYED band is
+//
+// The first is a fact about provenance. The second is a statement about confidence, and it
+// controls how much uncertainty a company sees around a number.
+//
+// They were bridged by two hardcoded checks in portal.js — completed work meant gold, a linked
+// repo meant bronze — which meant the ceilings in this file governed nothing a company
+// actually saw. This is the mapping, in one place, derived from the ladder.
+const TIER_TO_BAND = {
+  trial: 'gold',        // a named reviewer accepted real work
+  referral: 'silver',   // someone put their name to a specific claim
+  artifact: 'bronze',   // a file or account exists and was read
+  claimed: 'self_reported',
+};
+
+// The band follows the STRONGEST evidence on file, not an average. A student with one accepted
+// trial and nine self-reported claims has proved something, and averaging would hide it.
+export function presentationBand(claims = []) {
+  let best = 'claimed';
+  for (const entry of claims) {
+    // normaliseEvidence returns { ok, claim }, and the tier it settled on after applying the
+    // source ceiling lives on claim.verification_tier. Reading a raw `tier` here would silently
+    // ignore every ceiling, which is the one thing this file exists to enforce.
+    const tier = entry?.claim?.verification_tier || entry?.verification_tier;
+    if (TIERS.indexOf(tier) > TIERS.indexOf(best)) best = tier;
+  }
+  return TIER_TO_BAND[best] || 'self_reported';
+}
+
+// What a profile's evidence actually supports, read from the profile rather than guessed.
+// Anything not backed by a source stays `claimed`, which is the whole point of the ceilings.
+export function claimsFromProfile(profile = {}, { completedCount = 0 } = {}) {
+  const claims = [];
+  if (Number(completedCount) > 0) {
+    claims.push(normaliseEvidence({ source: 'covenda_trial', skill: 'delivery', tier: 'trial', pointer: 'covenda' }));
+  }
+  const github = profile?.skill_signals?.github;
+  if (Array.isArray(github) && github.length) {
+    claims.push(normaliseEvidence({ source: 'connected_repo', skill: 'code', tier: 'artifact', pointer: 'github' }));
+  }
+  if (profile?.referral_verified || profile?.club_confirmed) {
+    claims.push(normaliseEvidence({
+      source: profile.referral_verified ? 'structured_referral' : 'club_confirmation',
+      skill: 'general', tier: profile.referral_verified ? 'referral' : 'claimed', pointer: 'covenda',
+    }));
+  }
+  return claims.filter(entry => entry && entry.ok !== false);
+}

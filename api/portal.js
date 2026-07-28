@@ -4,6 +4,7 @@ import { recordError } from './limits.js';
 import { scoreCandidate } from './scoring.js';
 import { requestAccommodation, saveTranscript } from './transcripts.js';
 import { reviewerLine } from './reviewers.js';
+import { claimsFromProfile, presentationBand } from './evidence.js';
 
 import { supabaseConfiguration } from './submissions.js';
 import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail, recordDelivery, deliverableSubmittedEmail, deliverableReviewedEmail, trialStartedEmail, introductionEmail } from './notify.js';
@@ -898,11 +899,13 @@ export function computeFitScore(project, profile, context = {}) {
 // P1 hardening: the tier a student's displayed scores carry, derived only from VERIFIED
 // evidence available at the call site — completed Covenda projects are trial-tier (gold),
 // analyzed GitHub history is artifact-tier (bronze), everything else is self-reported.
+// The confidence band a company sees around a score, derived from the evidence ladder rather
+// than guessed at. This used to be two hardcoded checks — completed work meant gold, a linked
+// repo meant bronze — which meant every per-source ceiling in api/evidence.js governed nothing
+// a company actually saw. A club confirmation, for instance, was silently worth as much as a
+// connected repository; now it caps at self_reported, which is what the registry always said.
 export function studentEvidenceTier(profile, completedCount = 0) {
-  if (Number(completedCount) > 0) return 'gold';
-  const github = profile && profile.skill_signals && profile.skill_signals.github;
-  if (Array.isArray(github) && github.length) return 'bronze';
-  return 'self_reported';
+  return presentationBand(claimsFromProfile(profile, { completedCount: Number(completedCount) || 0 }));
 }
 
 export function rankOpportunities(opportunities, profile, context = {}) {
