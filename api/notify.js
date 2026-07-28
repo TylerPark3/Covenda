@@ -41,17 +41,17 @@ export function applicationDecisionEmail({ to, from, projectTitle, accepted, por
   if (accepted) {
     return {
       from, to: [to],
-      subject: `You're in — “${title}”`,
-      text: `Good news — you were selected for “${title}” on Covenda. Open your portal to see the project and start the thread${portalUrl ? `: ${portalUrl}` : '.'}\n`,
-      html: shell(`<h1 style="font-size:20px;margin:0 0 10px">You were selected 🎉</h1><p>You've been accepted for <strong>${escapeHtml(title)}</strong>. The project is now in your workspace — open the thread to align on scope.</p>${button(portalUrl, 'Open the project')}`),
+      subject: `You're in, “${title}”`,
+      text: `Good news, you were selected for “${title}” on Covenda. Open your portal to see the project and start the thread${portalUrl ? `: ${portalUrl}` : '.'}\n`,
+      html: shell(`<h1 style="font-size:20px;margin:0 0 10px">You were selected 🎉</h1><p>You've been accepted for <strong>${escapeHtml(title)}</strong>. The project is now in your workspace, open the thread to align on scope.</p>${button(portalUrl, 'Open the project')}`),
       tags: TAGS,
     };
   }
   return {
     from, to: [to],
-    subject: `Update on your application — “${title}”`,
-    text: `Thanks for applying to “${title}”. The company went with another student this time. Your profile and proof stay with you — keep applying${portalUrl ? `: ${portalUrl}` : '.'}\n`,
-    html: shell(`<h1 style="font-size:20px;margin:0 0 10px">Not this one — keep going</h1><p>The company chose another student for <strong>${escapeHtml(title)}</strong>. It's not a mark against you; fit is project-specific. New opportunities open regularly.</p>${button(portalUrl, 'Find your next project')}`),
+    subject: `Update on your application, “${title}”`,
+    text: `Thanks for applying to “${title}”. The company went with another student this time. Your profile and proof stay with you, keep applying${portalUrl ? `: ${portalUrl}` : '.'}\n`,
+    html: shell(`<h1 style="font-size:20px;margin:0 0 10px">Not this one, keep going</h1><p>The company chose another student for <strong>${escapeHtml(title)}</strong>. It's not a mark against you; fit is project-specific. New opportunities open regularly.</p>${button(portalUrl, 'Find your next project')}`),
     tags: TAGS,
   };
 }
@@ -60,26 +60,26 @@ export function batchDecisionEmail({ to, from, batchName, decision, portalUrl = 
   if (decision === 'accepted') {
     return {
       from, to: [to],
-      subject: `You're in — ${name}`,
-      text: `Congratulations — you've been admitted to ${name} on Covenda. Open your portal to see next steps${portalUrl ? `: ${portalUrl}` : '.'}\n`,
-      html: shell(`<h1 style="font-size:20px;margin:0 0 10px">You're in 🎉</h1><p>You've been admitted to <strong>${escapeHtml(name)}</strong>. Admitted students are surfaced to partner companies — keep your profile sharp.</p>${button(portalUrl, 'Open your batches')}`),
+      subject: `You're in, ${name}`,
+      text: `Congratulations, you've been admitted to ${name} on Covenda. Open your portal to see next steps${portalUrl ? `: ${portalUrl}` : '.'}\n`,
+      html: shell(`<h1 style="font-size:20px;margin:0 0 10px">You're in 🎉</h1><p>You've been admitted to <strong>${escapeHtml(name)}</strong>. Admitted students are surfaced to partner companies, keep your profile sharp.</p>${button(portalUrl, 'Open your batches')}`),
       tags: TAGS,
     };
   }
   if (decision === 'waitlisted') {
     return {
       from, to: [to],
-      subject: `Waitlisted — ${name}`,
+      subject: `Waitlisted, ${name}`,
       text: `You've been waitlisted for ${name} on Covenda. If a spot opens, you'll be the first to know. Your profile and proof stay with you${portalUrl ? `: ${portalUrl}` : '.'}\n`,
-      html: shell(`<h1 style="font-size:20px;margin:0 0 10px">Waitlisted for ${escapeHtml(name)}</h1><p>You made a strong case — you're on the waitlist. If a seat opens, we'll reach out. In the meantime, keep building proof through real projects.</p>${button(portalUrl, 'Find a project')}`),
+      html: shell(`<h1 style="font-size:20px;margin:0 0 10px">Waitlisted for ${escapeHtml(name)}</h1><p>You made a strong case, you're on the waitlist. If a seat opens, we'll reach out. In the meantime, keep building proof through real projects.</p>${button(portalUrl, 'Find a project')}`),
       tags: TAGS,
     };
   }
   return {
     from, to: [to],
     subject: `Update on your ${name} application`,
-    text: `Thanks for applying to ${name}. It wasn't a match this round — cohorts are small and fit is specific. Your profile and proof stay with you, and new cohorts open regularly${portalUrl ? `: ${portalUrl}` : '.'}\n`,
-    html: shell(`<h1 style="font-size:20px;margin:0 0 10px">Not this cohort — keep going</h1><p>You weren't selected for <strong>${escapeHtml(name)}</strong> this round. Cohorts are small and fit is project-specific; it's not a mark against you. New cohorts open regularly.</p>${button(portalUrl, 'Explore Covenda')}`),
+    text: `Thanks for applying to ${name}. It wasn't a match this round, cohorts are small and fit is specific. Your profile and proof stay with you, and new cohorts open regularly${portalUrl ? `: ${portalUrl}` : '.'}\n`,
+    html: shell(`<h1 style="font-size:20px;margin:0 0 10px">Not this cohort, keep going</h1><p>You weren't selected for <strong>${escapeHtml(name)}</strong> this round. Cohorts are small and fit is project-specific; it's not a mark against you. New cohorts open regularly.</p>${button(portalUrl, 'Explore Covenda')}`),
     tags: TAGS,
   };
 }
@@ -151,4 +151,62 @@ export async function notifyOperatorEvent({
   } catch (error) {
     return { sent: false, reason: String(error?.message || error).slice(0, 200) };
   }
+}
+
+// ── The trial lifecycle ───────────────────────────────────────────────────────────────
+// A trial has four moments where one side acts and the other has no way to know: the work is
+// submitted, the work is reviewed, the trial starts, and an introduction is offered. Silence
+// at any of them is how a first trial dies — not from a bug, but from somebody waiting on
+// somebody who never found out it was their turn.
+//
+// Every subject line says WHO must act, because an email that only reports a state change
+// leaves the reader to work out whether it concerns them.
+
+export function deliverableSubmittedEmail({ to, from, projectTitle, studentName, portalUrl = '' }) {
+  const title = projectTitle || 'your project';
+  const who = studentName || 'The student';
+  return {
+    from, to: [to],
+    subject: `${who} submitted work for “${title}”, your review`,
+    text: `${who} submitted the deliverable for “${title}”.\n\nReviewing it is the last step: accepting issues their verified work record.\n\nOpen it${portalUrl ? `: ${portalUrl}` : '.'}\n`,
+    html: shell(`<h1 style="font-size:20px;margin:0 0 10px">Work submitted</h1><p><strong>${escapeHtml(who)}</strong> submitted the deliverable for <strong>${escapeHtml(title)}</strong>.</p><p>Reviewing it is the last step. Accepting issues their verified work record.</p>${button(portalUrl, 'Review the work')}`),
+    tags: TAGS,
+  };
+}
+
+export function deliverableReviewedEmail({ to, from, projectTitle, accepted, note = '', portalUrl = '' }) {
+  const title = projectTitle || 'your project';
+  return {
+    from, to: [to],
+    subject: accepted ? `Your work on “${title}” was accepted` : `Changes requested on “${title}”`,
+    text: accepted
+      ? `Your deliverable for “${title}” was accepted. You now hold a verified work record for it.\n\n${portalUrl}\n`
+      : `The reviewer asked for changes on “${title}”.\n\n${note ? `What they asked for: ${note}\n\n` : ''}${portalUrl}\n`,
+    html: shell(accepted
+      ? `<h1 style="font-size:20px;margin:0 0 10px">Accepted</h1><p>Your deliverable for <strong>${escapeHtml(title)}</strong> was accepted. You now hold a verified work record for it, and it is the strongest thing on your profile.</p>${button(portalUrl, 'See your record')}`
+      : `<h1 style="font-size:20px;margin:0 0 10px">Changes requested</h1><p>The reviewer asked for changes on <strong>${escapeHtml(title)}</strong>.</p>${note ? `<p style="padding:12px 14px;background:#faf6ec;border-left:3px solid #a8761c">${escapeHtml(note)}</p>` : ''}${button(portalUrl, 'Open the project')}`),
+    tags: TAGS,
+  };
+}
+
+export function trialStartedEmail({ to, from, projectTitle, portalUrl = '' }) {
+  const title = projectTitle || 'the project';
+  return {
+    from, to: [to],
+    subject: `“${title}” has started`,
+    text: `Work on “${title}” has started. Scope, deadline and payment are on the project page.\n\n${portalUrl}\n`,
+    html: shell(`<h1 style="font-size:20px;margin:0 0 10px">Trial started</h1><p>Work on <strong>${escapeHtml(title)}</strong> has started. Scope, deadline and payment are on the project page, and questions belong in the project thread so nothing gets lost.</p>${button(portalUrl, 'Open the project')}`),
+    tags: TAGS,
+  };
+}
+
+export function introductionEmail({ to, from, companyName, roleSummary, portalUrl = '' }) {
+  const who = companyName || 'A company';
+  return {
+    from, to: [to],
+    subject: `${who} would like an introduction`,
+    text: `${who} asked to be introduced to you.\n\n${roleSummary || ''}\n\nYou decide whether to accept. Nothing is shared until you do.\n\n${portalUrl}\n`,
+    html: shell(`<h1 style="font-size:20px;margin:0 0 10px">An introduction</h1><p><strong>${escapeHtml(who)}</strong> asked to be introduced to you.</p>${roleSummary ? `<p>${escapeHtml(roleSummary)}</p>` : ''}<p>You decide whether to accept. Nothing is shared until you do.</p>${button(portalUrl, 'See the request')}`),
+    tags: TAGS,
+  };
 }

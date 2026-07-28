@@ -5,7 +5,7 @@ import { scoreCandidate } from './scoring.js';
 import { requestAccommodation, saveTranscript } from './transcripts.js';
 
 import { supabaseConfiguration } from './submissions.js';
-import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail } from './notify.js';
+import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail, deliverableSubmittedEmail, deliverableReviewedEmail, trialStartedEmail, introductionEmail } from './notify.js';
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
@@ -1829,7 +1829,16 @@ export async function requestIntroduction(member, input) {
     .eq('project_id', row.project_id).maybeSingle(), null);
   if (existing) throw new Error('You have already reached out to this student about this. Wait for their answer.');
 
-  return checked(member.supabase.from('introductions').insert(row).select('*').single(), null);
+  const intro = await checked(member.supabase.from('introductions').insert(row).select('*').single(), null);
+  // An introduction the student never sees is an introduction that never happened. They
+  // decide whether to accept, so they have to be told it exists.
+  await notifyMember(member.supabase, {
+    toUserId: studentUserId,
+    idempotencyKey: `covenda-intro-${intro?.id || studentUserId}`,
+    build: ({ to, from, portalUrl }) => introductionEmail({ to, from, companyName: null, roleSummary: row.role_summary || null, portalUrl }),
+    env: process.env,
+  });
+  return intro;
 }
 
 export async function respondToIntroduction(member, input) {
@@ -2326,11 +2335,22 @@ export async function startTrial(member, input) {
 
   const now = new Date().toISOString();
   const milestones = buildMilestoneSchedule(project, { startAt: now });
-  return checked(member.supabase.from('member_projects').update({
+  const started = await checked(member.supabase.from('member_projects').update({
     status: 'in_progress',
     updated_at: now,
     ...(milestones.length ? { milestones } : {}),
   }).eq('id', project.id).select('*').single(), null);
+
+  // Both sides need to know the clock has started, or a deadline arrives as a surprise.
+  for (const toUserId of [started?.assigned_student_user_id, started?.owner_user_id].filter(Boolean)) {
+    await notifyMember(member.supabase, {
+      toUserId,
+      idempotencyKey: `covenda-trial-start-${project.id}-${toUserId}`,
+      build: ({ to, from, portalUrl }) => trialStartedEmail({ to, from, projectTitle: started?.title, portalUrl }),
+      env: process.env,
+    });
+  }
+  return started;
 }
 
 export async function declineApplication(member, input) {
@@ -2403,10 +2423,21 @@ export async function submitDeliverable(member, input) {
   const body = parts.join('\n\n');
   const now = new Date().toISOString();
   // Clear any prior revision note so a stale "changes requested" message does not linger after resubmission.
-  return checked(
+  const submitted = await checked(
     member.supabase.from('member_projects').update({ deliverable: body, status: 'review', deliverable_submitted_at: now, review_note: null, updated_at: now }).eq('id', projectId).select('*').single(),
     null,
   );
+  // The moment a trial most often stalls: the student is finished and the company has no way
+  // to know. Best-effort — a mail failure must never lose the submission itself.
+  if (submitted?.owner_user_id) {
+    await notifyMember(member.supabase, {
+      toUserId: submitted.owner_user_id,
+      idempotencyKey: `covenda-submitted-${projectId}-${now}`,
+      build: ({ to, from, portalUrl }) => deliverableSubmittedEmail({ to, from, projectTitle: submitted.title, portalUrl }),
+      env: process.env,
+    });
+  }
+  return submitted;
 }
 
 export async function reviewDeliverable(member, input) {
@@ -2417,7 +2448,7 @@ export async function reviewDeliverable(member, input) {
   const note = cleanText(input.note, 2_000);
   if (decision === 'revise' && !note) throw new Error('Add a note so the student knows what to revise.');
   const project = await checked(
-    member.supabase.from('member_projects').select('id,owner_user_id,status').eq('id', projectId).maybeSingle(),
+    member.supabase.from('member_projects').select('id,owner_user_id,status,assigned_student_user_id,title').eq('id', projectId).maybeSingle(),
     null,
   );
   if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can review a deliverable.');
@@ -2437,10 +2468,20 @@ export async function reviewDeliverable(member, input) {
 
   if (decision === 'revise') {
     // No credit movement — the escrow stays held while the student reworks it.
-    return checked(
+    const revised = await checked(
       member.supabase.from('member_projects').update({ status: 'in_progress', review_note: note, updated_at: now }).eq('id', projectId).select('*').single(),
       null,
     );
+    // A change request nobody is told about is a project that quietly stops.
+    if (revised?.assigned_student_user_id) {
+      await notifyMember(member.supabase, {
+        toUserId: revised.assigned_student_user_id,
+        idempotencyKey: `covenda-revise-${projectId}-${now}`,
+        build: ({ to, from, portalUrl }) => deliverableReviewedEmail({ to, from, projectTitle: revised.title, accepted: false, note, portalUrl }),
+        env: process.env,
+      });
+    }
+    return revised;
   }
 
   // Accepting settles money, so the ledger writes and the status change must commit
@@ -2454,6 +2495,16 @@ export async function reviewDeliverable(member, input) {
     await logMatchEvent(member, { projectId, eventType: 'closeout_rating', matchId: projectId, meta: { wouldRequestAgain } });
   }
   const released = await checked(member.supabase.rpc('release_project_escrow', { p_project_id: projectId, p_owner_id: member.user.id }), null);
+  // Acceptance is what the student has been waiting weeks for, and it is what issues their
+  // verified work record. Telling them is not optional.
+  if (project.assigned_student_user_id) {
+    await notifyMember(member.supabase, {
+      toUserId: project.assigned_student_user_id,
+      idempotencyKey: `covenda-accepted-${projectId}-${now}`,
+      build: ({ to, from, portalUrl }) => deliverableReviewedEmail({ to, from, projectTitle: project.title, accepted: true, portalUrl }),
+      env: process.env,
+    });
+  }
   return Array.isArray(released) ? released[0] : released;
 }
 
