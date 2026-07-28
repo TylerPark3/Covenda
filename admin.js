@@ -59,6 +59,95 @@ function authHeaders() { return { Authorization: `Bearer ${token()}`, 'Content-T
 // The rater reads decisions in order, each with what that choice was authored to reveal. The
 // reveal text was written when the scenario was designed, not invented while reading a
 // transcript, which is what stops two raters inventing two different standards.
+
+// Who is actually on the platform, grouped by vertical.
+//
+// The submissions table has one row per click, so reading it as a list of people gives a wrong
+// count and a wrong picture. This reads the people_directory view instead: one row per email,
+// with every vertical that person has expressed across every form they filled in.
+async function renderPeopleDirectory() {
+  const host = document.getElementById('adminPeople');
+  if (!host) return;
+  let data;
+  try {
+    data = await adminRequest({ method: 'POST', body: JSON.stringify({ action: 'people-directory' }) });
+  } catch { host.hidden = true; return; }
+  if (!data || !data.groups) { host.hidden = true; return; }
+
+  host.replaceChildren();
+  host.hidden = false;
+
+  const head = document.createElement('div');
+  head.className = 'people-head';
+  const h = document.createElement('h3');
+  h.textContent = `${data.total} ${data.total === 1 ? 'person' : 'people'}`;
+  const note = document.createElement('span');
+  // Both numbers, because the gap between them is the thing that was confusing.
+  note.textContent = `${data.submissions} submissions · one row per person here, not per click`;
+  head.append(h, note);
+  host.append(head);
+
+  // Same name, different emails. Surfaced, never merged: two real people do share names.
+  if (data.duplicates?.length) {
+    const warn = document.createElement('div');
+    warn.className = 'people-dupes';
+    const cap = document.createElement('strong');
+    cap.textContent = `${data.duplicates.length} possible duplicate${data.duplicates.length === 1 ? '' : 's'}`;
+    const why = document.createElement('p');
+    why.textContent = 'Same name, different email addresses. Nothing is merged automatically, because two real people do share a name.';
+    warn.append(cap, why);
+    data.duplicates.forEach(d => {
+      const row = document.createElement('p');
+      row.className = 'people-dupe';
+      row.textContent = `${d.name} — ${(d.emails || []).join(' · ')}`;
+      warn.append(row);
+    });
+    host.append(warn);
+  }
+
+  data.groups.forEach(group => {
+    const section = document.createElement('div');
+    section.className = 'people-group' + (group.vertical === 'Not stated' ? ' is-unstated' : '');
+    const gh = document.createElement('div');
+    gh.className = 'people-group-head';
+    const name = document.createElement('strong');
+    name.textContent = group.vertical;
+    const count = document.createElement('span');
+    count.textContent = group.count;
+    gh.append(name, count);
+    section.append(gh);
+
+    group.members.forEach(person => {
+      const row = document.createElement('div');
+      row.className = 'person-row';
+      const who = document.createElement('div');
+      const nm = document.createElement('strong');
+      nm.textContent = person.name || person.email;
+      const meta = document.createElement('span');
+      meta.textContent = [person.organisation, person.email].filter(Boolean).join(' · ');
+      who.append(nm, meta);
+      row.append(who);
+
+      if (person.latest_interest) {
+        const interest = document.createElement('span');
+        interest.className = 'person-interest';
+        interest.textContent = person.latest_interest;
+        row.append(interest);
+      }
+      // Shown because more than one means they came back, which is worth noticing.
+      if (Number(person.submissions) > 1) {
+        const n = document.createElement('span');
+        n.className = 'person-count';
+        n.textContent = `${person.submissions}×`;
+        n.title = 'Submitted more than once';
+        row.append(n);
+      }
+      section.append(row);
+    });
+    host.append(section);
+  });
+}
+
 async function renderSimulationRuns() {
   const host = document.getElementById('adminSims');
   if (!host) return;
@@ -487,6 +576,7 @@ async function loadInbox({ announce = false } = {}) {
   // Never awaited into the main load: a health check failing must not stop the inbox rendering.
   renderDeliveryHealth().catch(() => {});
   renderSimulationRuns().catch(() => {});
+  renderPeopleDirectory().catch(() => {});
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {

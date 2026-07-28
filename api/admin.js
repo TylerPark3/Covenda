@@ -1017,6 +1017,36 @@ export default async function handler(req, res, dependencies = {}) {
       // Every other POST action mutates operator data and requires an authenticated operator.
       const operator = await authorizeAdmin(req, dependencies);
       if (!operator) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
+      if (input.action === 'people-directory') {
+        // Reads the view, not the log: one row per person rather than one per click.
+        const [{ data: people }, { data: dupes }] = await Promise.all([
+          supabase.from('people_directory').select('*').order('last_seen', { ascending: false }).limit(500),
+          supabase.from('people_possible_duplicates').select('*').limit(50),
+        ]);
+
+        // Grouped by vertical, because "who do we have in software" is the question actually
+        // being asked. Someone with two verticals appears under both, which is correct: they
+        // are available for both.
+        const byVertical = {};
+        for (const person of people || []) {
+          const verticals = Array.isArray(person.verticals) && person.verticals.length
+            ? person.verticals
+            : ['Not stated'];
+          for (const v of verticals) (byVertical[v] ||= []).push(person);
+        }
+        const groups = Object.entries(byVertical)
+          .map(([vertical, members]) => ({ vertical, count: members.length, members }))
+          // Largest first, with unstated last however large it is: it is a gap to close, not a
+          // segment to work.
+          .sort((a, b) => (a.vertical === 'Not stated') - (b.vertical === 'Not stated') || b.count - a.count);
+
+        return res.status(200).json({ ok: true,
+          total: (people || []).length,
+          submissions: (people || []).reduce((n, p) => n + Number(p.submissions || 0), 0),
+          groups,
+          duplicates: dupes || [],
+        });
+      }
       if (input.action === 'simulation-runs') {
         const { data } = await supabase.from('simulation_runs')
           .select('id, user_id, scenario_id, specialization, status, started_at, completed_at, state, defense')
