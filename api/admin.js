@@ -1,4 +1,5 @@
 import { deliveryConfig } from './notify.js';
+import { scenarioById } from './simulation-run.js';
 import { createClient } from '@supabase/supabase-js';
 
 import { supabaseConfiguration } from './submissions.js';
@@ -1016,6 +1017,43 @@ export default async function handler(req, res, dependencies = {}) {
       // Every other POST action mutates operator data and requires an authenticated operator.
       const operator = await authorizeAdmin(req, dependencies);
       if (!operator) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
+      if (input.action === 'simulation-runs') {
+        const { data } = await supabase.from('simulation_runs')
+          .select('id, user_id, scenario_id, specialization, status, started_at, completed_at, state, defense')
+          .eq('status', 'completed').order('completed_at', { ascending: false }).limit(50);
+
+        // A rater has to see what the candidate saw at the moment they decided, not what the
+        // scenario says now. The decision carries its own step and option, and the scenario is
+        // read at the stored version to resolve the labels.
+        const runs = (data || []).map(row => {
+          const scenario = scenarioById(row.scenario_id);
+          const steps = scenario?.steps || [];
+          return {
+            id: row.id,
+            userId: row.user_id,
+            title: scenario?.title || row.scenario_id,
+            specialization: row.specialization,
+            completedAt: row.completed_at,
+            minutes: row.completed_at && row.started_at
+              ? Math.round((Date.parse(row.completed_at) - Date.parse(row.started_at)) / 60000) : null,
+            decisions: (row.state?.decisions || []).map(d => {
+              const step = steps.find(s => s.id === d.stepId);
+              const option = (step?.options || []).find(o => o.id === d.optionId);
+              return {
+                question: step?.title || d.stepId,
+                chose: option?.label || d.optionId,
+                // The whole point of the reviewer view: what the choice reveals, written when
+                // the scenario was authored rather than invented while reading.
+                reveals: option?.reveals || null,
+                secondsTaken: d.secondsTaken ?? null,
+              };
+            }),
+            artifacts: (row.state?.artifacts || []),
+            defense: row.defense || [],
+          };
+        });
+        return res.status(200).json({ ok: true, runs });
+      }
       if (input.action === 'delivery-health') {
         const config = deliveryConfig(env);
         // Recent failures, so "configured" and "actually working" are answered separately —

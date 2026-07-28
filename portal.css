@@ -1267,6 +1267,40 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 
 /* Applied state. A check reads as done at a glance across twenty-five cards; a status pill
    reads as one more label to parse. */
+
+/* The simulation runner. Wider than a form dialog because a scenario is read, not filled in. */
+.sim-dialog { width:min(760px,94vw); max-width:none; }
+.sim-shell { display:grid; gap:0; }
+.sim-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:24px 28px 18px; }
+.sim-head h2 { margin:4px 0 0; font-size:24px; letter-spacing:-.025em; }
+.sim-progress { height:3px; background:var(--line); }
+.sim-progress-fill { height:100%; background:var(--gold-deep); transition:width .3s ease; }
+.sim-brief { margin:0; padding:16px 28px; background:var(--surface-2); font-size:15px; line-height:1.55; color:var(--text-2); border-bottom:1px solid var(--line); }
+.sim-brief:empty { display:none; }
+.sim-body { padding:24px 28px; display:grid; gap:14px; }
+.sim-step-title { margin:0; font-size:20px; letter-spacing:-.02em; color:var(--text); }
+.sim-step-body { margin:0; font-size:16px; line-height:1.6; color:var(--text-2); max-width:64ch; }
+
+/* Selectable and changeable before it is committed: a misclick must not become a permanent
+   part of the record. */
+.sim-options { display:grid; gap:9px; }
+.sim-option { display:flex; align-items:flex-start; gap:11px; padding:14px 16px; border:1px solid var(--line-strong); background:var(--surface-1); cursor:pointer; font-size:16px; line-height:1.5; }
+.sim-option:hover { border-color:var(--gold-deep); background:var(--gold-pale); }
+.sim-option:has(input:checked) { border-color:var(--gold-deep); background:var(--gold-pale); }
+.sim-option input { flex:none; margin:4px 0 0; accent-color:var(--gold-deep); }
+.sim-input { width:100%; padding:12px 14px; border:1px solid var(--line-strong); background:var(--surface-1); color:var(--text); font:inherit; font-size:16px; line-height:1.55; resize:vertical; }
+.sim-input:focus { outline:2px solid var(--gold-deep); outline-offset:-1px; }
+
+.sim-defense { padding:14px 16px; border-left:3px solid var(--gold); background:var(--gold-pale); }
+.sim-defense-q { margin:0; font-size:16px; line-height:1.5; font-weight:600; color:var(--text); }
+.sim-done { padding:20px 22px; border:1px solid var(--gold-deep); background:var(--gold-pale); }
+.sim-done strong { display:block; font-size:19px; margin-bottom:7px; color:var(--text); }
+.sim-done p { margin:0; font-size:15px; line-height:1.55; color:var(--text-2); }
+.sim-message { margin:0; padding:0 28px; font-size:14.5px; color:var(--gold-deep); }
+.sim-message.is-error { color:var(--danger,#a8402a); }
+.sim-foot { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 28px 24px; border-top:1px solid var(--line); }
+.sim-count { font-size:14px; color:var(--text-2); font-variant-numeric:tabular-nums; }
+
 .batch-applied { display:inline-flex; align-items:center; gap:8px; padding:7px 13px; border:1px solid var(--gold-deep); background:var(--gold-pale); color:var(--gold-deep); font-size:14px; font-weight:650; }
 .batch-applied i { display:grid; place-items:center; width:19px; height:19px; border-radius:50%; background:var(--gold-deep); color:#fff; font-size:11px; font-style:normal; line-height:1; }
 .batch-applied.is-accepted { border-color:var(--success,#3f6b45); background:rgba(63,107,69,.08); color:var(--success,#3f6b45); }

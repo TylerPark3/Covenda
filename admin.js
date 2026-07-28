@@ -53,6 +53,99 @@ function authHeaders() { return { Authorization: `Bearer ${token()}`, 'Content-T
 // Delivery health. The failure this exists for is silence: with no RESEND_API_KEY every
 // notification returns not-configured and the product behaves normally, so the first anyone
 // learns of it is a company saying they never heard back.
+
+// Completed simulation runs, for review.
+//
+// The rater reads decisions in order, each with what that choice was authored to reveal. The
+// reveal text was written when the scenario was designed, not invented while reading a
+// transcript, which is what stops two raters inventing two different standards.
+async function renderSimulationRuns() {
+  const host = document.getElementById('adminSims');
+  if (!host) return;
+  let runs;
+  try {
+    const result = await adminRequest({ method: 'POST', body: JSON.stringify({ action: 'simulation-runs' }) });
+    runs = result.runs || [];
+  } catch { host.hidden = true; return; }
+  if (!runs.length) { host.hidden = true; return; }
+
+  host.replaceChildren();
+  host.hidden = false;
+  const head = document.createElement('div');
+  head.className = 'sims-head';
+  const h = document.createElement('h3');
+  h.textContent = `Simulation runs to review (${runs.length})`;
+  head.append(h);
+  host.append(head);
+
+  runs.forEach(run => {
+    const card = document.createElement('article');
+    card.className = 'sim-run';
+
+    const top = document.createElement('div');
+    top.className = 'sim-run-top';
+    const title = document.createElement('strong');
+    title.textContent = run.title;
+    const meta = document.createElement('span');
+    meta.textContent = [run.specialization, run.minutes != null ? `${run.minutes} min` : null].filter(Boolean).join(' · ');
+    top.append(title, meta);
+    card.append(top);
+
+    // Decisions in order. Time is shown because it is context, never because it is a score.
+    run.decisions.forEach((d, i) => {
+      const row = document.createElement('div');
+      row.className = 'sim-run-decision';
+      const q = document.createElement('p');
+      q.className = 'srd-q';
+      q.textContent = `${i + 1}. ${d.question}`;
+      const chose = document.createElement('p');
+      chose.className = 'srd-chose';
+      chose.textContent = d.chose + (d.secondsTaken != null ? ` · ${d.secondsTaken}s` : '');
+      row.append(q, chose);
+      if (d.reveals) {
+        const reveals = document.createElement('p');
+        reveals.className = 'srd-reveals';
+        reveals.textContent = d.reveals;
+        row.append(reveals);
+      }
+      card.append(row);
+    });
+
+    (run.defense || []).forEach((entry, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'sim-run-defense';
+      const q = document.createElement('p');
+      q.className = 'srd-q';
+      q.textContent = entry.question;
+      wrap.append(q);
+      if (entry.reads) {
+        const reads = document.createElement('p');
+        reads.className = 'srd-reveals';
+        reads.textContent = `Reading for: ${entry.reads}`;
+        wrap.append(reads);
+      }
+      card.append(wrap);
+    });
+
+    (run.artifacts || []).forEach(a => {
+      if (!a.ref && !a.answer) return;
+      const p = document.createElement('p');
+      p.className = 'srd-artifact';
+      p.textContent = a.ref ? `Submitted: ${a.ref}` : a.answer;
+      card.append(p);
+    });
+
+    // Said on every card, because a reviewer under time pressure will otherwise read a
+    // simulation as a track record.
+    const note = document.createElement('p');
+    note.className = 'srd-limit';
+    note.textContent = 'Observed under conditions we set. It shows how they decided here, not that they have done this work in a real role.';
+    card.append(note);
+
+    host.append(card);
+  });
+}
+
 async function renderDeliveryHealth() {
   const host = document.getElementById('adminHealth');
   if (!host) return;
@@ -393,6 +486,7 @@ async function loadInbox({ announce = false } = {}) {
   showInbox();
   // Never awaited into the main load: a health check failing must not stop the inbox rendering.
   renderDeliveryHealth().catch(() => {});
+  renderSimulationRuns().catch(() => {});
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {

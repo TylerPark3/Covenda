@@ -5,6 +5,7 @@ import { scoreCandidate } from './scoring.js';
 import { requestAccommodation, saveTranscript } from './transcripts.js';
 import { reviewerLine } from './reviewers.js';
 import { claimsFromProfile, presentationBand } from './evidence.js';
+import { advanceSimulation, loadSimulations, startSimulation } from './simulation-run.js';
 
 import { supabaseConfiguration } from './submissions.js';
 import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail, recordDelivery, deliverableSubmittedEmail, deliverableReviewedEmail, trialStartedEmail, introductionEmail } from './notify.js';
@@ -456,7 +457,10 @@ export async function loadMemberDashboard(member, env = process.env) {
   const [companyProfile, companyVerification] = profile.role === 'company'
     ? await Promise.all([loadCompanyProfile(member), loadCompanyStanding(member, profile)])
     : [null, null];
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, briefing: await companyBriefing(member), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, briefing: await companyBriefing(member),
+    // Degrades to an empty list before the migration lands, rather than taking the dashboard
+    // down with it. That mistake has already caused two outages.
+    simulations: await loadSimulations(member).catch(() => []), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -2805,6 +2809,8 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });
+    if (req.method === 'POST' && input.action === 'start-simulation') return res.status(200).json({ ok: true, ...(await startSimulation(member, input)) });
+    if (req.method === 'POST' && input.action === 'advance-simulation') return res.status(200).json({ ok: true, ...(await advanceSimulation(member, input)) });
     if (req.method === 'POST' && input.action === 'save-transcript') return res.status(200).json({ ok: true, result: await saveTranscript(member, input) });
     if (req.method === 'POST' && input.action === 'request-accommodation') return res.status(200).json({ ok: true, result: await requestAccommodation(member, input) });
     if (req.method === 'POST' && input.action === 'cancel-project') return res.status(200).json({ ok: true, project: await cancelProject(member, input) });

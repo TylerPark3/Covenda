@@ -1631,6 +1631,121 @@ function batchFitSteps(fits){
   return [{value:0,label:'All'},...marks.map(v=>({value:v,label:`${v}%+`}))];
 }
 
+
+// ── The simulation runner ─────────────────────────────────────────────────────────────
+// A scenario is a sitting rather than a form. State lives on the server, so leaving is safe
+// and resuming is exact, and the client never posts its own state: it posts a decision and is
+// told what happens next. A client that could post state could post a state where it decided
+// differently.
+let simRun=null;
+
+async function openSimulation({specialization,scenarioId,batchId}={}){
+  const dlg=$('#simDialog'); if(!dlg)return;
+  $('#simBody').replaceChildren();
+  $('#simTitle').textContent='Starting…';
+  setDialogMessage('#simMessage','');
+  dlg.showModal();
+  try{
+    const out=await portalRequest({method:'POST',body:JSON.stringify({action:'start-simulation',specialization,scenarioId,batchId})});
+    simRun={id:out.id,view:out.view};
+    if(out.resumed)setDialogMessage('#simMessage','Picked up where you left off.');
+    paintSimulation();
+  }catch(error){ setDialogMessage('#simMessage',error.message,true); }
+}
+
+function paintSimulation(){
+  if(!simRun)return;
+  const v=simRun.view;
+  $('#simTitle').textContent=v.title||'Simulation';
+  $('#simEyebrow').textContent=v.minutes?`Simulation · about ${v.minutes} minutes`:'Simulation';
+  $('#simBrief').textContent=v.brief||'';
+  const pct=v.stepsTotal?Math.round((v.stepsDone/v.stepsTotal)*100):0;
+  $('#simProgressFill').style.width=pct+'%';
+  $('#simCount').textContent=v.done?'Finished':`Step ${Math.min(v.stepsDone+1,v.stepsTotal)} of ${v.stepsTotal}`;
+
+  const body=$('#simBody'); body.replaceChildren();
+  const next=$('#simNext');
+
+  if(v.done){
+    const done=document.createElement('div'); done.className='sim-done';
+    const h=document.createElement('strong'); h.textContent='Submitted.';
+    const p=document.createElement('p');
+    p.textContent='A reviewer reads your decisions alongside your answers. What you did is recorded with what it shows and what it does not, and nothing here is scored automatically.';
+    done.append(h,p); body.append(done);
+    next.textContent='Close'; next.onclick=()=>{ $('#simDialog').close(); loadDashboard(); };
+    return;
+  }
+
+  const step=v.step; if(!step)return;
+  const h=document.createElement('h3'); h.className='sim-step-title'; h.textContent=step.title||'';
+  body.append(h);
+  if(step.body){ const p=document.createElement('p'); p.className='sim-step-body'; p.textContent=step.body; body.append(p); }
+
+  if(step.kind==='decide'){
+    // Radio rather than buttons: a decision should be selectable and changeable before it is
+    // committed. Committing on click would make a misclick a permanent part of the record.
+    const list=document.createElement('div'); list.className='sim-options';
+    step.options.forEach(o=>{
+      const lab=document.createElement('label'); lab.className='sim-option';
+      const input=document.createElement('input'); input.type='radio'; input.name='sim-option'; input.value=o.id;
+      const txt=document.createElement('span'); txt.textContent=o.label;
+      lab.append(input,txt); list.append(lab);
+    });
+    body.append(list);
+    next.textContent='Commit this decision';
+    next.onclick=()=>{
+      const picked=body.querySelector('input[name="sim-option"]:checked');
+      if(!picked){ setDialogMessage('#simMessage','Choose one before continuing.',true); return; }
+      stepSimulation({optionId:picked.value});
+    };
+  }else if(step.kind==='produce'){
+    const area=document.createElement('textarea'); area.className='sim-input'; area.rows=3;
+    area.placeholder='A link to the work, or paste it here.';
+    body.append(area);
+    next.textContent='Submit the work';
+    next.onclick=()=>{
+      if(!area.value.trim()){ setDialogMessage('#simMessage','Add the work, or a link to it.',true); return; }
+      stepSimulation({artifact:area.value.trim()});
+    };
+  }else if(step.kind==='defend'){
+    const note=document.createElement('p'); note.className='sim-step-body';
+    note.textContent='These come from the choices you actually made, so nobody else gets them.';
+    body.append(note);
+    const area=document.createElement('textarea'); area.className='sim-input'; area.rows=5;
+    area.placeholder='Answer in your own words.';
+    body.append(area);
+    next.textContent='Submit and finish';
+    next.onclick=()=>stepSimulation({answer:area.value.trim()});
+  }else{
+    next.textContent='Continue';
+    next.onclick=()=>stepSimulation({});
+  }
+}
+
+async function stepSimulation(input){
+  const next=$('#simNext'); next.disabled=true;
+  setDialogMessage('#simMessage','');
+  try{
+    const out=await portalRequest({method:'POST',body:JSON.stringify({action:'advance-simulation',runId:simRun.id,...input})});
+    simRun.view=out.view;
+    // The defense questions arrive with the final step, so they are asked about decisions that
+    // are already on the record rather than ones the candidate could still change.
+    if(out.defense&&out.defense.length)simRun.defense=out.defense;
+    paintSimulation();
+    if(simRun.defense&&simRun.view.step&&simRun.view.step.kind==='defend')paintDefense();
+  }catch(error){ setDialogMessage('#simMessage',error.message,true); }
+  next.disabled=false;
+}
+
+function paintDefense(){
+  const body=$('#simBody');
+  (simRun.defense||[]).forEach(q=>{
+    const wrap=document.createElement('div'); wrap.className='sim-defense';
+    const qs=document.createElement('p'); qs.className='sim-defense-q'; qs.textContent=q.question;
+    wrap.append(qs); body.insertBefore(wrap,body.querySelector('.sim-input'));
+  });
+}
+
 function renderBatchFilter(root){
   const d=state.dashboard;
   const open=(d.batches||[]).filter(b=>b.status==='open'||b.status==='reviewing');

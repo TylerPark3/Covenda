@@ -487,6 +487,29 @@
     <form method="dialog" id="submitWorkForm"><header><div><p class="eyebrow">Submit work</p><h2 id="submitWorkTitle">Send your work for review</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><label>What you did<textarea name="workSummary" rows="4" minlength="10" maxlength="4000" required placeholder="Summarize what you completed and how."></textarea></label><div class="work-files"><p class="work-files-label">Upload your work <small>Video, code, CSV, slides, docs, up to 50MB each</small></p><input type="file" id="workFileInput" multiple accept=".pdf,.csv,.txt,.md,.json,.zip,.docx,.xlsx,.pptx,.png,.jpg,.jpeg,.webm,.mp4,.mov"><ul class="work-file-list" id="workFileList"></ul><p class="work-file-status" id="workFileStatus" aria-live="polite"></p></div><label>Or link to it <small>One per line, if the work lives somewhere else</small><textarea name="workLinks" rows="2" placeholder="https://…"></textarea></label><label>Anything the reviewer should know <small>Optional</small><textarea name="workNotes" rows="2" maxlength="1000" placeholder="Assumptions, open questions, or where to focus."></textarea></label><p class="dialog-message" id="submitWorkMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Submit for review<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
+  <!-- The simulation runner. Its own dialog because a scenario is a sitting, not a form: it
+       has state on the server, it can be resumed, and leaving mid-way is a real thing that
+       happens rather than an error. -->
+  <dialog class="member-dialog sim-dialog" id="simDialog">
+    <div class="sim-shell">
+      <header class="sim-head">
+        <div>
+          <p class="eyebrow" id="simEyebrow">Simulation</p>
+          <h2 id="simTitle">Loading…</h2>
+        </div>
+        <button type="button" data-close-dialog aria-label="Leave, your progress is saved"><svg><use href="#p-close"/></svg></button>
+      </header>
+      <div class="sim-progress"><div class="sim-progress-fill" id="simProgressFill"></div></div>
+      <p class="sim-brief" id="simBrief"></p>
+      <div class="sim-body" id="simBody"></div>
+      <p class="sim-message" id="simMessage" aria-live="polite"></p>
+      <footer class="sim-foot">
+        <span class="sim-count" id="simCount"></span>
+        <button class="portal-primary" type="button" id="simNext">Continue<svg><use href="#p-arrow"/></svg></button>
+      </footer>
+    </div>
+  </dialog>
+
   <dialog class="member-dialog compact-dialog" id="reviewDialog">
     <form method="dialog" id="reviewForm"><header><div><p class="eyebrow">Review deliverable</p><h2 id="reviewTitle">Check before you send</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p class="review-submitted" id="reviewSubmittedAt"></p><div class="review-deliverable" id="reviewDeliverable"></div><label>Note to the student <small>Required to request changes</small><textarea name="note" rows="3" maxlength="2000" placeholder="What is strong, and what to change."></textarea></label><section class="closeout" id="closeoutGate" hidden>
       <p class="closeout-q">Would you request this student for future work?</p>
