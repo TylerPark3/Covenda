@@ -15,6 +15,7 @@ import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
 import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility, SPECIALISATION_SKILLS } from './batches.js';
 import { verticalFor } from './vertical-map.js';
+import { technicalClaimsFromProfile, technicalProfile, technicalGaps } from './technical-evidence.js';
 import { summarise as summariseVetting, processFor } from './vetting.js';
 import { assessmentFor as supplierAssessment } from './assessments.js';
 import { scriptFor } from './session-script.js';
@@ -401,6 +402,10 @@ export async function loadMemberDashboard(member, env = process.env) {
     // help, not an admission signal — evaluateBatchAdmission remains the only gate.
     const evidencedSkills = Object.keys(((profile.skill_signals || {}).github || [])
       .reduce((acc, a) => { (a.skills || []).forEach(sk => { acc[sk.skill] = true; }); return acc; }, {}));
+    // The technical evidence graph. Built for every student because breadth and gaps are
+    // useful to anyone, though it only has anything to say once a repo is connected.
+    const technicalBase = technicalProfile(technicalClaimsFromProfile(profile));
+    const technical = { ...technicalBase, gaps: technicalGaps(technicalBase) };
     // The DB row carries snake_case columns and no verticalSlug or summary, so grafting only
     // `requirements` left the matcher blind to the vertical (its bonus could never fire for
     // anyone) and short of the words it matches against. Merge the whole catalog entry, with
@@ -419,7 +424,7 @@ export async function loadMemberDashboard(member, env = process.env) {
         }),
       };
     });
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), practitionerAsk: commitmentFor(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
