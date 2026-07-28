@@ -91,14 +91,36 @@ test('no scenario option is a throwaway', () => {
 test('anchors never leak into a scenario a candidate reads', () => {
   // Whole words, not substrings: "EY" lives inside "money" and short anchors would fail on
   // ordinary prose. Same trap as "age" inside "stage".
+  //
+  // Case-SENSITIVE, which the first version was not. Lowercasing both sides threw away the
+  // only thing separating the retailer Target from "growth target", "add-on target" and
+  // "target segment", so five scenarios failed for using an ordinary English noun. A company
+  // name in prose is capitalised; the common noun is not, and that is the whole signal.
   const words = new Set(
-    JSON.stringify(SCENARIOS).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean),
+    JSON.stringify(SCENARIOS).split(/[^A-Za-z0-9]+/).filter(Boolean),
   );
   const anchors = [...new Set(Object.values(VERTICALS).flatMap(v => v.anchors))];
   for (const anchor of anchors) {
-    const parts = anchor.toLowerCase().split(/\s+/);
+    const parts = anchor.split(/\s+/);
     // A multi-word anchor only counts as leaked if every word of it is present.
     const leaked = parts.every(part => words.has(part));
     assert.ok(!leaked, `${anchor} appears inside a scenario a candidate reads`);
+  }
+});
+
+// The case-sensitive rule above has one hole: a sentence STARTING with a common-noun anchor
+// capitalises it and reads as the company. Cheaper to forbid than to detect.
+test('no scenario sentence opens with a word that is also a company anchor', () => {
+  const anchors = new Set(Object.values(VERTICALS).flatMap(v => v.anchors).map(a => a.split(/\s+/)[0]));
+  for (const scenario of Object.values(SCENARIOS)) {
+    for (const [, value] of Object.entries(scenario.steps.flatMap(s => [
+      ['body', s.body], ['title', s.title],
+      ...(s.options || []).flatMap(o => [['reveals', o.reveals], ['defense', o.defense]]),
+    ]).filter(([, v]) => v))) {
+      for (const sentence of String(value).split(/(?<=[.?!])\s+/)) {
+        const first = sentence.trim().split(/[^A-Za-z0-9]+/)[0];
+        assert.ok(!anchors.has(first), `"${sentence.slice(0, 60)}" opens with the anchor ${first} in ${scenario.id}`);
+      }
+    }
   }
 });

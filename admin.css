@@ -399,6 +399,10 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .people-dupes { padding: 14px 18px; margin-bottom: 14px; border: 1px solid #e2ded3; border-left: 4px solid #8a6a1c; background: #faf4e4; }
 .people-dupes strong { display: block; font-size: 14.5px; margin-bottom: 5px; }
 .people-dupes p { margin: 0 0 6px; font-size: 13.5px; line-height: 1.5; color: #6f6b62; }
+/* A failure the operator can read and act on, rather than a panel that silently vanishes. */
+.people-error { padding: 16px 18px; border: 1px solid #e2ded3; border-left: 4px solid #a43124; background: #fdf5f4; }
+.people-error strong { display: block; font-size: 14.5px; margin-bottom: 5px; }
+.people-error p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.55; color: #6f6b62; }
 .people-dupe { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px !important; color: #14140f !important; }
 .people-group { margin-bottom: 12px; border: 1px solid #e2ded3; background: #fff; }
 .people-group.is-unstated { opacity: .78; }

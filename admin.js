@@ -71,7 +71,27 @@ async function renderPeopleDirectory() {
   let data;
   try {
     data = await adminRequest({ method: 'POST', body: JSON.stringify({ action: 'people-directory' }) });
-  } catch { host.hidden = true; return; }
+  } catch (error) {
+    // Hiding the panel on failure is why this read as "the admin is broken": no directory, no
+    // error, nothing to click. An operator cannot fix what the page will not tell them.
+    host.replaceChildren();
+    host.hidden = false;
+    const box = document.createElement('div');
+    box.className = 'people-error';
+    const cap = document.createElement('strong');
+    cap.textContent = 'The people directory could not load';
+    const why = document.createElement('p');
+    why.textContent = error?.message || 'The request failed.';
+    box.append(cap, why);
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'ghost compact';
+    retry.textContent = 'Try again';
+    retry.addEventListener('click', renderPeopleDirectory);
+    box.append(retry);
+    host.append(box);
+    return;
+  }
   if (!data || !data.groups) { host.hidden = true; return; }
 
   host.replaceChildren();

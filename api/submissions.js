@@ -582,6 +582,44 @@ export async function primaryStorageHealth({
   };
 }
 
+// How long after a submission an identical one from the same person counts as the same act
+// rather than a new one. A form resent because the button did nothing visible, or because the
+// page was refreshed on a slow connection, lands inside this. A genuine second submission
+// hours or days later does not.
+export const DOUBLE_SUBMIT_WINDOW_MS = 3 * 60 * 1000;
+
+// Was this already recorded moments ago?
+//
+// The submissions table is an event log and stays one: two DIFFERENT submissions from the same
+// person are two real events, each with its own consent timestamp, and collapsing them would
+// destroy the record that a specific person agreed to a specific thing on a specific day.
+// What this catches is narrower — the SAME form, from the SAME email, with the SAME summary,
+// inside a three-minute window. That is one act recorded twice, not two acts.
+//
+// Fails open: if the lookup errors, the submission is written. Losing a real submission to
+// protect against a duplicate is the worse trade.
+export async function findRecentDuplicate(supabase, record, { now = record.createdAt, logger = console } = {}) {
+  const row = submissionRow(record);
+  const email = String(row.submitter_email || '').trim().toLowerCase();
+  if (!email) return null;
+  const since = new Date(new Date(now).getTime() - DOUBLE_SUBMIT_WINDOW_MS).toISOString();
+  try {
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('reference,created_at,summary')
+      .eq('submission_type', row.submission_type)
+      .ilike('submitter_email', email)
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    if (error) return null;
+    return (data || []).find(r => (r.summary || '') === (row.summary || '')) || null;
+  } catch (error) {
+    logger.error('Duplicate check failed; writing the submission anyway.', { reference: record.reference });
+    return null;
+  }
+}
+
 export async function persistSubmission(record, {
   env = process.env,
   createSupabaseClient = createClient,
@@ -595,6 +633,19 @@ export async function persistSubmission(record, {
       const supabase = createSupabaseClient(configuration.url, configuration.secret, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
       });
+      // A double-click used to write two rows, and the operator directory then showed one
+      // person twice. Caught here rather than in the view, because a row that should never
+      // have existed is better not created than filtered out afterwards.
+      const duplicate = await findRecentDuplicate(supabase, record, { logger });
+      if (duplicate) {
+        logger.log('Duplicate submission ignored.', { reference: record.reference, matched: duplicate.reference });
+        return {
+          backend: 'supabase',
+          route: 'data-api',
+          destination: supabaseDestination(configuration.url),
+          duplicateOf: duplicate.reference,
+        };
+      }
       const { error } = await supabase.from('submissions').insert(submissionRow(record));
       if (!error) {
         return {

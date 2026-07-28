@@ -1019,10 +1019,28 @@ export default async function handler(req, res, dependencies = {}) {
       if (!operator) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
       if (input.action === 'people-directory') {
         // Reads the view, not the log: one row per person rather than one per click.
-        const [{ data: people }, { data: dupes }] = await Promise.all([
+        const [peopleResult, dupeResult] = await Promise.all([
           supabase.from('people_directory').select('*').order('last_seen', { ascending: false }).limit(500),
           supabase.from('people_possible_duplicates').select('*').limit(50),
         ]);
+        // The error used to be destructured away, so a view that does not exist yet rendered
+        // as an empty directory: no people, no duplicates, no explanation, and nothing to
+        // distinguish "the migration has not been run" from "nobody has signed up". An
+        // operator staring at a blank page cannot act on either.
+        if (peopleResult.error) {
+          const missing = /does not exist|schema cache|relation/i.test(peopleResult.error.message || '');
+          return res.status(missing ? 503 : 500).json({ ok: false,
+            error: missing
+              ? 'The people directory view is not in the database yet. Run `npm run sql` and apply the 20260728600000_people_directory migration, then reload.'
+              : 'The people directory could not be read.',
+            detail: peopleResult.error.message || null,
+            needsMigration: missing,
+          });
+        }
+        const people = peopleResult.data;
+        // A missing duplicates view is not fatal — the directory is still worth showing, so
+        // this degrades to an empty flag list rather than taking the whole page down with it.
+        const dupes = dupeResult.error ? [] : dupeResult.data;
 
         // Grouped by vertical, because "who do we have in software" is the question actually
         // being asked. Someone with two verticals appears under both, which is correct: they

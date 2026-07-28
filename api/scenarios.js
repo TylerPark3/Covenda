@@ -9,8 +9,12 @@
 // generalises. That is the only reason to build two before building twenty-five.
 //
 // Every scenario here is synthetic. No real company, transaction, or codebase appears in it.
+// The architecture did generalise: all 25 specialisations run on this engine with no special
+// cases. Phases 3-6 are in ./scenarios-2.js.
 
-export const SCENARIOS_VERSION = 'scenarios-1.0.0';
+import { SCENARIOS_2 } from './scenarios-2.js';
+
+export const SCENARIOS_VERSION = 'scenarios-1.1.0';
 
 // ── Investment banking ────────────────────────────────────────────────────────────────
 export const DEAL_ROOM = {
@@ -287,14 +291,24 @@ export const HARDWARE = {
           reveals: 'Changes the frequency the noise appears at rather than removing it.',
           defense: 'A slower loop moves the oscillation. Does it remove it?' },
       ] },
-    { id: 'tradeoff', kind: 'reveal', next: 'defend',
+    { id: 'tradeoff', kind: 'reveal', next: 'produce',
       title: 'The tradeoff nobody avoids',
       body: 'Every option costs either responsiveness or phase margin. There is no setting that gives both.' },
+    // This scenario used to run reveal -> defend with nothing in between, so it was the only
+    // one of the twenty-five that never asked the student to commit to anything before being
+    // questioned on it. There is nothing to defend if nothing was produced.
+    { id: 'produce', kind: 'produce', next: 'defend',
+      title: 'The change you would make',
+      body: 'State the change you would actually push to the rig, and the one measurement you would take first to confirm it worked.' },
     { id: 'defend', kind: 'defend', title: 'Talk through a time this happened to you' },
   ],
 };
 
-export const SCENARIOS = Object.fromEntries([DEAL_ROOM, CODEBASE, LEAK, ROWS, INCIDENT, HARDWARE].map(s => [s.id, s]));
+// Phases 3-6 live in a second file so neither is unreadable. They are the same shape and are
+// registered here, so scenarioFor() and every consumer see one flat catalogue.
+export const SCENARIOS = Object.fromEntries(
+  [DEAL_ROOM, CODEBASE, LEAK, ROWS, INCIDENT, HARDWARE, ...SCENARIOS_2].map(s => [s.id, s]),
+);
 
 export function scenarioFor(specialization) {
   return Object.values(SCENARIOS).find(s => s.specialization === specialization) || null;
