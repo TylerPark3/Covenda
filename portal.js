@@ -4284,24 +4284,46 @@ const videoStudio=(function(){
   // with no status code and nothing in the logs.
   async function uploadRecording(blob,kind='video'){
     const contentType=(blob.type||'video/webm').split(';')[0].trim();
-    const token=await fetch('/api/upload-token',{
-      method:'POST',
-      headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},
-      body:JSON.stringify({kind,contentType}),
-    });
-    const grant=await token.json().catch(()=>({}));
-    if(!token.ok||!grant.uploadUrl)throw new Error(grant.error||'Could not start the upload.');
 
-    const put=await fetch(grant.uploadUrl,{method:'PUT',headers:{'Content-Type':contentType},body:blob});
-    if(!put.ok){
-      const detail=await put.text().catch(()=>'');
-      // Size is the failure worth naming, because it is the one the student can act on.
-      if(put.status===413)throw new Error('That recording is too large to upload. Record a shorter take.');
-      throw new Error(`The upload was rejected (${put.status}). ${detail.slice(0,120)}`);
+    // Preferred path: a short-lived PUT URL, so the file goes straight to storage and its size
+    // stops mattering. The old route buffered the whole thing in a serverless function and cut
+    // the connection past 30 MB.
+    try{
+      const token=await fetch('/api/upload-token',{
+        method:'POST',
+        headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':'application/json'},
+        body:JSON.stringify({kind,contentType}),
+      });
+      const grant=await token.json().catch(()=>({}));
+      if(!token.ok||!grant.uploadUrl)throw new Error(grant.error||'No upload URL.');
+
+      const put=await fetch(grant.uploadUrl,{method:'PUT',headers:{'Content-Type':contentType},body:blob});
+      if(!put.ok){
+        if(put.status===413)throw new Error('TOO_LARGE');
+        throw new Error(`Direct upload rejected (${put.status}).`);
+      }
+      const stored=await put.json().catch(()=>({}));
+      if(stored.url)return stored.url;
+      throw new Error('Direct upload returned no URL.');
+    }catch(directError){
+      if(String(directError.message)==='TOO_LARGE'){
+        throw new Error('That recording is too large to upload. Record a shorter take.');
+      }
+      // Falling back rather than failing. The server route works for anything under about
+      // 30 MB, which covers every camera take and most short screen shares, so a student is
+      // not blocked by a problem in the faster path.
+      console.warn('Direct upload failed, falling back to the server route:', directError.message);
+      const res=await fetch('/api/video-upload',{
+        method:'POST',
+        headers:{Authorization:`Bearer ${session().accessToken}`,'Content-Type':contentType},
+        body:blob,
+      });
+      const body=await res.json().catch(()=>({}));
+      if(res.ok&&body.url)return body.url;
+      // Both paths failed, so say which limit was hit rather than a generic failure.
+      if(res.status===413)throw new Error('That recording is too long to upload. Record a shorter take, or share a link instead.');
+      throw new Error(body.error||`Upload failed (${res.status}). Try again, or paste a link instead.`);
     }
-    const stored=await put.json().catch(()=>({}));
-    if(!stored.url)throw new Error('The upload finished but no URL came back.');
-    return stored.url;
   }
 
   async function screenStream(){
@@ -4345,11 +4367,13 @@ const videoStudio=(function(){
       overlay.className='rec-overlay';
       overlay.innerHTML=
         '<div class="rec-shell">'
-        +(prompt?'<div class="rec-prompt"><span>Your prompt</span><p>'+prompt.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</p></div>':'')
-        +'<div class="rec-stage"><video id="recPreview" playsinline muted></video><span class="rec-count" id="recCount" hidden></span>'
+        +(prompt?'<div class="rec-prompt"><span>'+(mode==='screen'?'The task':'Your prompt')+'</span><p>'+prompt.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]))+'</p></div>':'')
+        +'<div class="rec-stage" data-capture="'+(mode==='screen'?'screen':'camera')+'"><video id="recPreview" playsinline muted></video><span class="rec-count" id="recCount" hidden></span>'
         +'<span class="rec-timer" id="recTimer" hidden>0:00</span>'
         +'<p class="rec-beat" id="recBeat" hidden></p></div>'
-        +'<p class="rec-hint" id="recHint">Camera starting…</p>'
+        +'<p class="rec-hint" id="recHint">'+(mode==='screen'
+        ?'Pick the window with your work in it, not this tab. Tick “Also share tab audio” if the picker offers it.'
+        :'Camera starting…')+'</p>'
         +'<div class="rec-actions">'
         +'<button type="button" class="portal-primary" id="recStart" disabled>Start recording</button>'
         +'<button type="button" class="portal-ghost" id="recRetake" hidden>Retake</button>'
@@ -4386,7 +4410,7 @@ const videoStudio=(function(){
         }
         video.srcObject=stream; video.muted=true; await video.play().catch(()=>{});
         hint.textContent=mode==='screen'
-          ? 'Share the window you are working in. Talk through what you are doing, reviewers score the method, not just the result.'
+          ? 'Sharing. Press Start, then talk through what you are doing as you work. Reviewers score the method, so thinking out loud counts for more than finishing.'
           : 'Up to '+maxSeconds+' seconds, unscripted. Reviewers listen for how you think.';
         const start=el('recStart'); start.disabled=false;
         start.addEventListener('click',()=>countIn());
@@ -4424,6 +4448,16 @@ const videoStudio=(function(){
           blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});
           stopStream();
           video.srcObject=null; video.src=URL.createObjectURL(blob); video.muted=false; video.controls=true;
+          // A MediaRecorder WebM carries no duration in its header until something forces the
+          // browser to scan the whole file, so the player reports 0:00, will not seek, and
+          // shows a black frame. Seeking past the end makes it compute the real duration; then
+          // seek back to the start so there is a visible first frame to look at.
+          video.addEventListener('loadedmetadata',()=>{
+            if(video.duration!==Infinity&&!Number.isNaN(video.duration))return;
+            const settle=()=>{ video.removeEventListener('timeupdate',settle); video.currentTime=0; };
+            video.addEventListener('timeupdate',settle);
+            video.currentTime=1e101;
+          },{once:true});
           timerEl.hidden=true;
           hint.textContent='Watch it back. Retake as often as you like, only the take you keep is uploaded.';
           el('recRetake').hidden=false; el('recUse').hidden=false;

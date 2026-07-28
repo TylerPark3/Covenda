@@ -9,7 +9,10 @@ import { put } from '@vercel/blob';
 
 export const config = { api: { bodyParser: false } };
 
-const MAX_BYTES = 30 * 1024 * 1024; // ~30 MB ceiling for a ~1 minute clip
+// Raised from 30 MB. This is the FALLBACK path now, used when the direct-to-Blob presign
+// fails, so it has to cover a real screen share rather than only a short camera take.
+// Vercel functions accept request bodies up to 100 MB.
+const MAX_BYTES = 95 * 1024 * 1024;
 
 function sameOrigin(req) {
   const origin = req.headers.origin;
