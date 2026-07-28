@@ -1264,6 +1264,18 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
    grid cell — a narrow vertical card floating beside the batches. Spanning every column keeps
    it a bar across the top, which is where a filter belongs and what it was designed as. */
 .batch-filter { grid-column:1 / -1; display:flex; align-items:center; flex-wrap:wrap; gap:10px 20px; margin:0 0 4px; padding:14px 18px; border:1px solid var(--line); background:var(--gold-pale); }
+
+/* Applied state. A check reads as done at a glance across twenty-five cards; a status pill
+   reads as one more label to parse. */
+.batch-applied { display:inline-flex; align-items:center; gap:8px; padding:7px 13px; border:1px solid var(--gold-deep); background:var(--gold-pale); color:var(--gold-deep); font-size:14px; font-weight:650; }
+.batch-applied i { display:grid; place-items:center; width:19px; height:19px; border-radius:50%; background:var(--gold-deep); color:#fff; font-size:11px; font-style:normal; line-height:1; }
+.batch-applied.is-accepted { border-color:var(--success,#3f6b45); background:rgba(63,107,69,.08); color:var(--success,#3f6b45); }
+.batch-applied.is-accepted i { background:var(--success,#3f6b45); }
+.batch-applied.is-declined,
+.batch-applied.is-waitlisted { border-color:var(--line-strong); background:var(--surface-2); color:var(--text-2); }
+.batch-applied.is-declined i,
+.batch-applied.is-waitlisted i { background:var(--text-3); }
+
 .batch-filter-cap { flex:none; font-size:14px; font-weight:650; color:var(--text-2); }
 /* Tap targets, each carrying its live count. Big enough for a thumb, and a step that would
    leave nothing is disabled rather than silently emptying the list. */

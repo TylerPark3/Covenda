@@ -1614,12 +1614,22 @@ function batchFitOf(batch){
 //
 // Tap targets instead, each carrying its own live count. One tap, no dragging, the consequence
 // visible before you commit, and it works on a phone.
-const BATCH_FIT_STEPS = [
-  { value: 0, label: 'All' },
-  { value: 40, label: '40%+' },
-  { value: 60, label: '60%+' },
-  { value: 80, label: '80%+' },
-];
+// Steps derived from the scores actually present, not guessed at.
+//
+// Hardcoded 40/60/80 assumed a distribution the data does not have: with every batch scoring
+// under 40, three of the four buttons showed zero and were disabled, so the control looked
+// broken. Quartiles of the real range always partition into something clickable, whatever the
+// scores turn out to be.
+function batchFitSteps(fits){
+  const values=fits.filter(v=>Number.isFinite(v)).sort((a,b)=>a-b);
+  if(values.length<4)return [{value:0,label:'All'}];
+  const at=q=>values[Math.floor((values.length-1)*q)];
+  // Rounded down to a readable number, and de-duplicated: two steps showing the same threshold
+  // would be two buttons doing the same thing.
+  const marks=[...new Set([at(0.5),at(0.75),at(0.9)].map(v=>Math.max(1,Math.floor(v/5)*5)))]
+    .filter(v=>v>0).sort((a,b)=>a-b);
+  return [{value:0,label:'All'},...marks.map(v=>({value:v,label:`${v}%+`}))];
+}
 
 function renderBatchFilter(root){
   const d=state.dashboard;
@@ -1642,7 +1652,7 @@ function renderBatchFilter(root){
   group.setAttribute('role','group');
   group.setAttribute('aria-label','Filter batches by how well they match your skills');
 
-  BATCH_FIT_STEPS.forEach(step=>{
+  batchFitSteps(open.map(batchFitOf)).forEach(step=>{
     // The count is the point: a threshold that would leave nothing should say so before it is
     // chosen, not after.
     const count=open.filter(b=>{const f=batchFitOf(b);return f===null||f>=step.value;}).length;
@@ -1946,7 +1956,16 @@ function batchCard(batch,application){
   expand.addEventListener('click',()=>{const open=detail.hidden;detail.hidden=!open;expand.setAttribute('aria-expanded',String(open));expand.firstChild.textContent=open?'Show less':'Expand';});
   actions.append(expand);
   if(application){
-    actions.append(pill(BATCH_STATUS_LABELS[application.status]||titleCase(application.status),'status-pill',application.status));
+    // A status pill reads as a label. A check reads as done, which is what a student wants to
+    // see at a glance across twenty-five cards.
+    const done=document.createElement('span');
+    done.className='batch-applied is-'+application.status;
+    const mark=document.createElement('i');mark.setAttribute('aria-hidden','true');
+    mark.textContent=['accepted','submitted','reviewing'].includes(application.status)?'\u2713':'\u00b7';
+    const text=document.createElement('span');
+    text.textContent=BATCH_STATUS_LABELS[application.status]||titleCase(application.status);
+    done.append(mark,text);
+    actions.append(done);
   }else{
     const learn=document.createElement('button');learn.type='button';learn.className='portal-primary compact';learn.textContent='Learn more & apply';learn.disabled=batch.status!=='open';if(batch.status!=='open')learn.title='Applications are closed for this batch.';learn.addEventListener('click',()=>openBatchApply(batch));actions.append(learn);
   }
