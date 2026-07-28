@@ -58,7 +58,9 @@ export function reviewerLine(vertical) {
     return {
       state: r.state,
       headline: `Bar set with ${r.name}`,
-      detail: `${r.role}. They set the standard this cohort is judged against; Covenda's raters apply it.`,
+      // What they actually do, because "vetted by a professional" is the kind of phrase a
+      // student has heard before and correctly discounts.
+      detail: `${r.role}. They scored the anchor submissions this bar is built from, they break ties when our two raters disagree, and they re-check a sample each quarter to catch it drifting.`,
     };
   }
   if (r.state === 'invited') {
