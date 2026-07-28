@@ -1606,10 +1606,27 @@ function batchFitOf(batch){
 // markup with no handler and no skills data to compute a match against, so it moved and did
 // nothing. Two controls doing the same job in two files is how they drifted apart; this is
 // the only one, and it is the only one that can work, because it needs a signed-in profile.
+// Match filter.
+//
+// This was a range slider: you dragged, guessed at a threshold, and the entire list re-rendered
+// on every pixel of movement. It also never said what a threshold would cost you, so picking
+// one meant discovering afterwards that it hid everything.
+//
+// Tap targets instead, each carrying its own live count. One tap, no dragging, the consequence
+// visible before you commit, and it works on a phone.
+const BATCH_FIT_STEPS = [
+  { value: 0, label: 'All' },
+  { value: 40, label: '40%+' },
+  { value: 60, label: '60%+' },
+  { value: 80, label: '80%+' },
+];
+
 function renderBatchFilter(root){
   const d=state.dashboard;
-  const withFit=(d.batches||[]).filter(b=>batchFitOf(b)!==null);
+  const open=(d.batches||[]).filter(b=>b.status==='open'||b.status==='reviewing');
+  const withFit=open.filter(b=>batchFitOf(b)!==null);
   const bar=document.createElement('div');bar.className='batch-filter';
+
   if(!withFit.length){
     // Nothing to filter by yet, so say what unlocks it instead of showing a dead control.
     const p=document.createElement('p');p.className='batch-filter-empty';
@@ -1618,15 +1635,32 @@ function renderBatchFilter(root){
     go.textContent='Add your skills';go.addEventListener('click',()=>setView('portfolio'));
     bar.append(p,go);root.append(bar);return;
   }
-  const label=document.createElement('label');label.className='batch-filter-range';
-  const cap=document.createElement('span');cap.textContent='Minimum match';
-  const range=document.createElement('input');range.type='range';range.min='0';range.max='100';range.step='10';range.value=String(batchMinFit);
-  const out=document.createElement('b');out.textContent=batchMinFit?`${batchMinFit}%`:'Any';
-  range.addEventListener('input',()=>{ batchMinFit=Number(range.value)||0; out.textContent=batchMinFit?`${batchMinFit}%`:'Any'; renderBatches(); });
-  label.append(cap,range,out);
+
+  const cap=document.createElement('span');cap.className='batch-filter-cap';
+  cap.textContent='Match';
+  const group=document.createElement('div');group.className='batch-fit-steps';
+  group.setAttribute('role','group');
+  group.setAttribute('aria-label','Filter batches by how well they match your skills');
+
+  BATCH_FIT_STEPS.forEach(step=>{
+    // The count is the point: a threshold that would leave nothing should say so before it is
+    // chosen, not after.
+    const count=open.filter(b=>{const f=batchFitOf(b);return f===null||f>=step.value;}).length;
+    const b=document.createElement('button');
+    b.type='button';
+    b.className='batch-fit-step'+(batchMinFit===step.value?' is-on':'');
+    b.setAttribute('aria-pressed',String(batchMinFit===step.value));
+    const t=document.createElement('span');t.textContent=step.label;
+    const n=document.createElement('b');n.textContent=String(count);
+    b.append(t,n);
+    if(count===0&&step.value>0){ b.disabled=true; b.title='No batch reaches this yet'; }
+    b.addEventListener('click',()=>{ batchMinFit=step.value; renderBatches(); });
+    group.append(b);
+  });
+
   const note=document.createElement('small');note.className='batch-filter-note';
-  note.textContent='Sorts and filters this list against your skills. Admission is decided by the vetting process, not by this.';
-  bar.append(label,note);root.append(bar);
+  note.textContent='Sorted against your listed skills. Admission is decided by the vetting process, not by this.';
+  bar.append(cap,group,note);root.append(bar);
 }
 function renderBatches(){
   const root=$('#batchList');if(!root)return;
