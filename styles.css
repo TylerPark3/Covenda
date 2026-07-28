@@ -2195,7 +2195,10 @@ html.js-reveal .reveal.is-revealed { opacity: 1; transform: none; }
 .compare-section { display: none; }
 body[data-audience="home"] .compare-section { display: block; }
 .compare-section { padding: 88px var(--page-gutter, 6vw) 84px; border-bottom: 1px solid var(--line); }
-.compare-section > * { width: min(100%, var(--content)); margin-left: auto; margin-right: auto; }
+/* One container, so every row shares a left edge. Centring each child independently meant the
+   full-width table centred inside the column while the narrower footnote centred inside the
+   whole section, and the two landed in different places. */
+.compare-inner { width: min(100%, var(--content)); margin-inline: auto; }
 .compare-head { margin: 0; }
 .compare-kicker { margin: 0 0 16px; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-deep); }
 .compare-head h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 4vw, 58px); line-height: 1.04; letter-spacing: -.05em; text-wrap: balance; }
@@ -2335,7 +2338,7 @@ body[data-audience="home"] .compare-section { display: block; }
 }
 
 .compare-foot {
-  max-width: 90ch; margin-top: 34px; padding-left: 16px;
+  max-width: 90ch; margin: 34px 0 0; padding-left: 16px;
   border-left: 3px solid var(--gold);
   font-size: 15.5px; line-height: 1.6; color: var(--soft);
 }
