@@ -1624,11 +1624,19 @@ function batchFitSteps(fits){
   const values=fits.filter(v=>Number.isFinite(v)).sort((a,b)=>a-b);
   if(values.length<4)return [{value:0,label:'All'}];
   const at=q=>values[Math.floor((values.length-1)*q)];
-  // Rounded down to a readable number, and de-duplicated: two steps showing the same threshold
-  // would be two buttons doing the same thing.
+  // Rounded down to a readable number, then de-duplicated by the SET each threshold produces
+  // rather than by the threshold itself. Deduping on value alone still shipped "1%+" and
+  // "10%+" side by side showing the same seven batches — two different numbers, one filter.
   const marks=[...new Set([at(0.5),at(0.75),at(0.9)].map(v=>Math.max(1,Math.floor(v/5)*5)))]
     .filter(v=>v>0).sort((a,b)=>a-b);
-  return [{value:0,label:'All'},...marks.map(v=>({value:v,label:`${v}%+`}))];
+  const seen=new Set([values.length]);
+  const kept=[];
+  for(const v of marks){
+    const count=values.filter(f=>f>=v).length;
+    if(count===0||seen.has(count))continue;
+    seen.add(count);kept.push(v);
+  }
+  return [{value:0,label:'All'},...kept.map(v=>({value:v,label:`${v}%+`}))];
 }
 
 
@@ -2038,18 +2046,73 @@ function batchWorkflowBlock(brief){
   wrap.append(ol);return wrap;
 }
 
+// The skill ledger: which of the batch's core skills this student already has, and which it
+// still wants. A bare "31% match" is a verdict nobody can act on; the same number next to the
+// two skills that would move it is a next step.
+function batchSkillLedger(batch){
+  const c=batch.compatibility;
+  const core=batch.coreSkills||[];
+  if(!core.length||!c||c.score===null)return null;
+  const missing=new Set((c.missing||[]).map(s=>String(s).toLowerCase()));
+  const wrap=document.createElement('div');wrap.className='batch-ledger';
+  const cap=document.createElement('span');cap.className='batch-ledger-cap';
+  cap.textContent=`Reads for ${core.length}`;
+  wrap.append(cap);
+  const list=document.createElement('ul');list.className='batch-ledger-list';
+  for(const skill of core){
+    const li=document.createElement('li');
+    // A skill counts as held when the student's own listing canonicalized onto it, which is
+    // exactly the set the server did NOT put in `missing`.
+    const held=!missing.has(skill.toLowerCase());
+    li.className='batch-ledger-skill'+(held?' is-have':'');
+    const mark=document.createElement('i');mark.setAttribute('aria-hidden','true');
+    mark.textContent=held?'✓':'·';
+    const t=document.createElement('span');t.textContent=skill;
+    li.append(mark,t);
+    li.title=held?'On your profile':'Not on your profile yet';
+    list.append(li);
+  }
+  wrap.append(list);
+  return wrap;
+}
+
 function batchCard(batch,application){
   const card=document.createElement('article');card.className='batch-card batch-card-lg'+(batch.tier==='elite'?' is-elite':'');
   const top=document.createElement('div');top.className='batch-card-top';
   const h=document.createElement('h3');h.textContent=batch.name;top.append(h);
-  top.append(pill(batch.tier==='elite'?'Elite':'Open',batch.tier==='elite'?'batch-tier is-elite':'batch-tier'));
+  const marks=document.createElement('div');marks.className='batch-card-marks';
+  // The match was computed, filtered on, and sorted by — but only ever DRAWN on the company
+  // card. Students were filtering by a number they could not see, which is what made the
+  // control read as broken rather than strict.
+  const cp=compatPill(batch.compatibility);if(cp)marks.append(cp);
+  marks.append(pill(batch.tier==='elite'?'Elite':'Open',batch.tier==='elite'?'batch-tier is-elite':'batch-tier'));
+  top.append(marks);
   card.append(top);
   const meta=document.createElement('div');meta.className='discover-meta';
   if(batch.discipline)meta.append(discoverChip('Discipline',batch.discipline));
   if(batch.partner_org)meta.append(discoverChip('Partner',batch.partner_org));
   if(batch.season)meta.append(discoverChip('Season',batch.season));
   if(meta.childElementCount)card.append(meta);
+
+  // What the batch is actually testing, in one line. This is the difference between a card
+  // that describes a subject and a card that tells you what the hour will ask of you.
+  if(batch.evaluates){
+    const ev=document.createElement('p');ev.className='batch-evaluates';
+    const k=document.createElement('b');k.textContent='Tests: ';
+    ev.append(k,document.createTextNode(batch.evaluates));
+    card.append(ev);
+  }
   if(batch.description){const p=document.createElement('p');p.className='discover-card-summary';p.textContent=batch.description;card.append(p);}
+  const ledger=batchSkillLedger(batch);if(ledger)card.append(ledger);
+  if(batch.compatibility&&batch.compatibility.why){
+    const why=document.createElement('p');why.className='batch-why';why.textContent=batch.compatibility.why;card.append(why);
+  }
+  if(batch.simulation){
+    const sim=document.createElement('p');sim.className='batch-sim';
+    const k=document.createElement('b');k.textContent='The sitting: ';
+    sim.append(k,document.createTextNode(batch.simulation));
+    card.append(sim);
+  }
 
   // Expandable detail panel: who it's for, the kind of teams it feeds, and how the application works.
   const detail=document.createElement('div');detail.className='batch-detail';detail.hidden=true;

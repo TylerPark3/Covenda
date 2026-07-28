@@ -13,7 +13,8 @@ import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicatio
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
-import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility } from './batches.js';
+import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility, SPECIALISATION_SKILLS } from './batches.js';
+import { verticalFor } from './vertical-map.js';
 import { summarise as summariseVetting, processFor } from './vetting.js';
 import { assessmentFor as supplierAssessment } from './assessments.js';
 import { scriptFor } from './session-script.js';
@@ -400,13 +401,24 @@ export async function loadMemberDashboard(member, env = process.env) {
     // help, not an admission signal — evaluateBatchAdmission remains the only gate.
     const evidencedSkills = Object.keys(((profile.skill_signals || {}).github || [])
       .reduce((acc, a) => { (a.skills || []).forEach(sk => { acc[sk.skill] = true; }); return acc; }, {}));
-    const batchesWithFit = (batches || []).map(b => ({
-      ...b,
-      compatibility: batchCompatibility(
-        { ...b, requirements: (BATCH_CATALOG.find(c => c.slug === b.slug) || {}).requirements || [] },
-        { skills: profile.skills || [], verticals: profile.verticals || [], evidencedSkills },
-      ),
-    }));
+    // The DB row carries snake_case columns and no verticalSlug or summary, so grafting only
+    // `requirements` left the matcher blind to the vertical (its bonus could never fire for
+    // anyone) and short of the words it matches against. Merge the whole catalog entry, with
+    // the row winning wherever both have a value — status and capacity are live, not static.
+    const batchesWithFit = (batches || []).map(b => {
+      const spec = BATCH_CATALOG.find(c => c.slug === b.slug) || {};
+      const full = { ...spec, ...b, requirements: spec.requirements || [] };
+      return {
+        ...b,
+        verticalSlug: spec.verticalSlug || null,
+        evaluates: (verticalFor(b.slug) || {}).evaluates || null,
+        simulation: (verticalFor(b.slug) || {}).simulation || null,
+        coreSkills: SPECIALISATION_SKILLS[b.slug] || [],
+        compatibility: batchCompatibility(full, {
+          skills: profile.skills || [], verticals: profile.verticals || [], evidencedSkills,
+        }),
+      };
+    });
     return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.

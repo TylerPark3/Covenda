@@ -18,6 +18,7 @@
 // scorer's internal weights. Requirements are not weights.
 
 import { CONNECTORS } from './connectors.js';
+import { canonicalizeSkill } from './skills-taxonomy.js';
 
 export const BATCH_ADMISSION_VERSION = 'batch-admission-1.0.0';
 
@@ -614,51 +615,115 @@ function batchVocabulary(batch) {
   return new Set([...compatTerms(strong), ...compatTerms(rest)]);
 }
 
+// What each specialisation actually wants, in the SAME namespace canonicalizeSkill() maps
+// student input into. This is the fix for a matcher that used to score prose word-overlap:
+// "PyTorch" appears nowhere in the ai-ml summary, so an ML student matched nothing on the ML
+// batch. Going through the taxonomy, PyTorch canonicalizes to Machine learning and lands.
+//
+// Ordered by weight — the first entry is the one the batch is mostly about.
+export const SPECIALISATION_SKILLS = {
+  'ai-ml': ['Machine learning', 'Python', 'Statistics', 'Data analysis', 'LLMs & prompting'],
+  'physical-ai': ['Robotics (ROS)', 'Computer vision', 'C++', 'Python', 'Machine learning'],
+  'infrastructure-data': ['SQL', 'Cloud & DevOps', 'Python', 'Shell scripting', 'Data analysis'],
+  'product-engineering': ['React', 'TypeScript', 'API design', 'HTML/CSS', 'Git & version control'],
+  'security-reliability': ['QA & testing', 'Cloud & DevOps', 'Shell scripting', 'Python', 'Git & version control'],
+
+  'investment-banking': ['Financial modeling', 'Spreadsheets', 'Data analysis', 'Research'],
+  'private-equity': ['Financial modeling', 'Spreadsheets', 'Research', 'Data analysis'],
+  'venture-capital': ['Research', 'Financial modeling', 'Writing & documentation', 'Spreadsheets'],
+  'asset-wealth-management': ['Financial modeling', 'Statistics', 'Data analysis', 'Spreadsheets'],
+  'accounting-audit': ['Accounting operations', 'Spreadsheets', 'Operations', 'Data analysis'],
+
+  'clinical-operations': ['Healthcare operations', 'Operations', 'Project management', 'Data analysis'],
+  'health-analytics': ['Data analysis', 'SQL', 'Statistics', 'Data visualization', 'Python'],
+  'revenue-cycle': ['Accounting operations', 'Operations', 'Data analysis', 'Spreadsheets'],
+  'regulatory-quality': ['Writing & documentation', 'Operations', 'QA & testing', 'Research'],
+  'digital-health-product': ['Design (UI/UX)', 'Project management', 'Healthcare operations', 'Research'],
+
+  'growth-performance': ['Marketing & growth', 'Data analysis', 'Data visualization', 'Statistics'],
+  'brand-content': ['Marketing & growth', 'Writing & documentation', 'Design (UI/UX)', 'Research'],
+  'merchandising': ['Data analysis', 'Spreadsheets', 'Operations', 'Data visualization'],
+  'supply-chain': ['Operations', 'Data analysis', 'Spreadsheets', 'Project management'],
+  'ecommerce-marketplace': ['Marketing & growth', 'Data analysis', 'SQL', 'Operations'],
+
+  'management-consulting': ['Research', 'Spreadsheets', 'Data analysis', 'Writing & documentation', 'Project management'],
+  'strategy-research': ['Research', 'Writing & documentation', 'Data analysis', 'Spreadsheets'],
+  'market-intelligence': ['Research', 'Data analysis', 'Writing & documentation', 'Data visualization'],
+  'legal-operations': ['Operations', 'Writing & documentation', 'Project management', 'Research'],
+  'technical-writing': ['Writing & documentation', 'Research', 'Git & version control', 'QA & testing'],
+};
+
+// Weight by position: what a batch is mostly about should count for more than its fourth
+// concern, so two students matching one skill each are not tied when one matched the core.
+function coreWeights(slug) {
+  const core = SPECIALISATION_SKILLS[slug] || [];
+  const weights = new Map();
+  core.forEach((skill, i) => weights.set(skill, core.length - i));
+  return weights;
+}
+
 export function batchCompatibility(batch, { skills = [], verticals = [], evidencedSkills = [] } = {}) {
-  const vocab = batchVocabulary(batch);
   const stated = (skills || []).map(s => String(s || '').trim()).filter(Boolean);
   const evidenced = new Set((evidencedSkills || []).map(s => String(s || '').toLowerCase().trim()));
 
   if (!stated.length) {
     return {
-      score: null, matched: [], evidencedMatched: [], verticalMatch: false,
+      score: null, matched: [], evidencedMatched: [], verticalMatch: false, missing: [],
       basis: 'no-skills',
       why: 'Add skills to your profile and every batch will show how well it lines up.',
     };
   }
 
+  const weights = coreWeights(batch?.slug);
+  const vocab = batchVocabulary(batch);
   const matched = [];
+  const adjacent = [];
   const evidencedMatched = [];
+  const hit = new Set();
+
   for (const skill of stated) {
-    const terms = compatTerms(skill);
-    if (!terms.length) continue;
-    // A skill counts if any of its words is part of how this batch describes itself.
-    if (terms.some(t => vocab.has(t))) {
-      matched.push(skill);
+    const { canonical } = canonicalizeSkill(skill);
+    if (weights.has(canonical)) {
+      // Two of a student's skills can canonicalize to the same thing (PyTorch and TensorFlow
+      // are both Machine learning). Credit the batch's requirement once, not twice.
+      if (!hit.has(canonical)) { hit.add(canonical); matched.push(skill); }
       if (evidenced.has(skill.toLowerCase())) evidencedMatched.push(skill);
+      continue;
     }
+    // Not core, but the batch describes itself in these words — worth something, not much.
+    const terms = compatTerms(skill);
+    if (terms.length && terms.some(t => vocab.has(t))) adjacent.push(skill);
   }
 
   const verticalMatch = Boolean(batch?.verticalSlug && (verticals || []).includes(batch.verticalSlug));
 
-  // Proportion of your skills this batch speaks to, lifted by an interest match and again by
-  // any of those skills being backed by analysed code rather than only claimed.
-  const overlap = matched.length / stated.length;
-  let score = Math.round(overlap * 70);
-  if (verticalMatch) score += 20;
-  if (evidencedMatched.length) score += Math.min(10, evidencedMatched.length * 5);
+  // Coverage of what the BATCH needs, not of what the student happens to have listed. The old
+  // denominator was the student's own list, so listing more skills lowered every score you
+  // had — a student with 20 skills and 2 matches scored below one with 6 skills and 2.
+  const totalWeight = [...weights.values()].reduce((a, b) => a + b, 0);
+  const gotWeight = [...hit].reduce((a, c) => a + (weights.get(c) || 0), 0);
+  const coverage = totalWeight ? gotWeight / totalWeight : 0;
+
+  let score = Math.round(coverage * 65);
+  if (verticalMatch) score += 15;
+  if (adjacent.length) score += Math.min(8, adjacent.length * 4);
+  if (evidencedMatched.length) score += Math.min(12, evidencedMatched.length * 6);
   score = Math.max(0, Math.min(100, score));
 
+  // What is missing is more actionable than what matched: it names the next thing to learn.
+  const missing = [...weights.keys()].filter(c => !hit.has(c));
+
   let why;
-  if (!matched.length && !verticalMatch) why = 'Nothing on your profile points at this field yet.';
-  else if (!matched.length) why = 'You listed this vertical as an interest, but none of your skills speak to it yet.';
+  if (!matched.length && !adjacent.length && !verticalMatch) why = 'Nothing on your profile points at this field yet.';
+  else if (!matched.length && verticalMatch) why = 'You follow this vertical, but none of your skills speak to it yet.';
+  else if (!matched.length) why = `Adjacent to what you listed, but none of its core skills — it wants ${missing.slice(0, 2).join(' and ')}.`;
   else {
     const names = matched.slice(0, 3).join(', ');
-    why = `${matched.length} of your ${stated.length} skills line up — ${names}${matched.length > 3 ? ', and more' : ''}`
-      + (verticalMatch ? ', and it is a vertical you follow.' : '.');
+    why = `Covers ${hit.size} of its ${weights.size} core skills — ${names}${matched.length > 3 ? ', and more' : ''}`
+      + (missing.length ? `. Still wants ${missing.slice(0, 2).join(' and ')}.` : '.');
   }
 
-  return { score, matched, evidencedMatched, verticalMatch, basis: 'stated-skills', why };
+  return { score, matched, adjacent, evidencedMatched, verticalMatch, missing, basis: 'stated-skills', why };
 }
 
 export function batchBrief(batch) {

@@ -359,6 +359,24 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-list { grid-template-columns:repeat(auto-fill,minmax(380px,1fr)); }
 .batch-card-lg { padding:24px; gap:2px; }
 .batch-card-lg .discover-card-summary { margin:12px 0 4px; color:var(--muted); font-size: var(--step-body-sm); line-height:1.65; }
+
+/* What the batch tests, and where the student stands against it. Styled through tokens only,
+   so night mode follows from the palette rather than needing a parallel set of rules. */
+.batch-evaluates { margin:12px 0 0; font-size: var(--step-body-sm); line-height:1.6; color:var(--text,var(--ink)); }
+.batch-evaluates b { color:var(--gold-deep); font-weight:700; }
+.batch-sim { margin:10px 0 0; padding:10px 12px; border-left:2px solid var(--gold); background:var(--surface-2); font-size:13.5px; line-height:1.55; color:var(--muted); }
+.batch-sim b { color:var(--gold-deep); font-weight:700; }
+.batch-why { margin:8px 0 0; font-size:13px; line-height:1.55; color:var(--soft); }
+
+.batch-ledger { margin:14px 0 0; display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.batch-ledger-cap { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--soft); }
+.batch-ledger-list { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:6px; }
+/* Held and missing are the same chip at two weights: the contrast is the information, so a
+   glance across a card reads as a bar chart of what you already have. */
+.batch-ledger-skill { display:inline-flex; align-items:center; gap:5px; padding:4px 9px; border:1px solid var(--line); background:transparent; font-size:12.5px; color:var(--soft); white-space:nowrap; }
+.batch-ledger-skill i { font-style:normal; font-weight:700; line-height:1; }
+.batch-ledger-skill.is-have { border-color:rgba(180,123,32,.45); background:var(--gold-pale); color:var(--gold-deep); font-weight:600; }
+:root[data-theme="night"] .batch-ledger-skill.is-have { background:rgba(180,123,32,.16); border-color:rgba(230,196,122,.4); }
 .batch-actions { justify-content:flex-start; gap:10px; }
 .batch-expand { display:inline-flex; align-items:center; gap:6px; }
 .batch-detail { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); display:grid; gap:14px; }
