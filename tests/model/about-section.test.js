@@ -69,3 +69,51 @@ test('the numbered points are a real sequence, not decoration', () => {
   assert.equal(items.length, 3, 'the counter styling assumes exactly three points');
   assert.match(css, /\.about-points\s*\{[^}]*counter-reset/);
 });
+
+// The point of these: "consistent" has to be checkable, or it drifts the moment someone edits
+// one section without looking at the others.
+
+test('the section sits on the same ground as its neighbours', () => {
+  const rule = css.match(/\.about-section\s*\{[^}]*\}/)[0];
+  // gold-pale is used site-wide for badges, banners and cards, never for a section
+  // background. One tinted full-width band between two white sections reads as another site.
+  assert.ok(!/background:\s*var\(--gold-pale\)/.test(rule), 'the About band is tinted where every neighbouring section is white');
+  assert.match(rule, /background:\s*#fff/);
+  assert.match(rule, /border-top:\s*1px solid var\(--line\)/);
+});
+
+// Copying a heading's numbers means it drifts the first time the shared rule changes.
+test('the heading reuses the shared rule rather than restating it', () => {
+  assert.match(css, /\.section-heading h2,[^{]*\.about-lede h2[^{]*\{/);
+  const own = css.match(/\.about-lede h2\s*\{[^}]*\}/)[0];
+  for (const property of ['font-size', 'font-weight', 'letter-spacing', 'line-height']) {
+    assert.ok(!own.includes(property), `.about-lede h2 restates ${property} instead of inheriting it`);
+  }
+});
+
+test('shared components are used by name, not reimplemented', () => {
+  assert.match(about, /class="feature-kicker"/, 'the eyebrow should be the site eyebrow');
+  assert.match(about, /class="stat-note"/, 'the caveat line should be the site caveat component');
+  assert.ok(!/class="about-kicker"/.test(about) && !/\.about-kicker/.test(css), 'a duplicate eyebrow style survives');
+  assert.ok(!/class="about-note"/.test(about) && !/\.about-note/.test(css), 'a duplicate caveat style survives');
+});
+
+test('the card matches the card treatment already on the page', () => {
+  const side = css.match(/\.about-side\s*\{[^}]*\}/)[0];
+  const reference = css.match(/\.referrer-cred-card\s*\{[^}]*\}/)[0];
+  for (const token of ['var(--gold-light)', 'var(--gold-pale)']) {
+    assert.ok(side.includes(token) && reference.includes(token), `.about-side and .referrer-cred-card disagree on ${token}`);
+  }
+});
+
+// Square corners are a deliberate, site-wide choice; a rounded card would be conspicuous.
+test('nothing in the section rounds its corners', () => {
+  for (const rule of css.slice(css.indexOf('/* ── About us ─')).match(/\{[^}]*\}/g) || []) {
+    const radius = rule.match(/border-radius:\s*([^;]+)/);
+    if (radius) assert.equal(radius[1].trim(), '0', `a rounded corner appears where the site uses square: ${radius[1]}`);
+  }
+});
+
+test('the two columns collapse on small screens', () => {
+  assert.match(css, /@media \(max-width: 900px\) \{\s*\.about-inner \{ grid-template-columns: 1fr; \}/);
+});

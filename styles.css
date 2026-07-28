@@ -896,7 +896,7 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
   align-items: end;
   margin-bottom: 64px;
 }
-.section-heading h2, .why-copy h2, .final-cta h2, .workspace-title h1, .simple-workspace-view h1, .exchange-head h2 {
+.section-heading h2, .why-copy h2, .final-cta h2, .about-lede h2, .workspace-title h1, .simple-workspace-view h1, .exchange-head h2 {
   margin: 0;
   font-size: clamp(38px, 4vw, 60px);
   line-height: 1.03;
@@ -5509,48 +5509,42 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
 
 /* ── About us ──────────────────────────────────────────────────────────────────────────
    The nav has always carried an "About" link pointing at a product explainer. This is the
-   section it was promising. Built on the same tokens as .feature-band so it reads as part
-   of the page rather than as something bolted on. */
+   section it was promising.
+
+   Everything here reuses an existing convention rather than restating its values. The first
+   version did not: it was a full-width --gold-pale band, and gold-pale is used across this
+   whole site for small components (badges, banners, cards) and never for a section
+   background. One tinted band between two white sections read as a different site. */
 .about-section {
   padding: clamp(66px, 8vw, 120px) var(--page-gutter);
   border-top: 1px solid var(--line);
-  background: var(--gold-pale);
+  background: #fff;
 }
 .about-inner {
   width: min(100%, var(--content));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: clamp(30px, 5vw, 64px);
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, 460px);
+  gap: clamp(30px, 5vw, 70px);
   align-items: start;
 }
-.about-kicker {
-  margin: 0 0 14px;
-  font-size: 12px;
-  font-weight: 640;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--gold-deep);
-}
-.about-lede h2 {
-  margin: 0 0 22px;
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(34px, 4vw, 56px);
-  line-height: 1.03;
-  letter-spacing: -.05em;
-  text-wrap: balance;
-  color: var(--ink);
-}
-/* Held near 65 characters so the three paragraphs read as an argument rather than a block. */
+/* h2 joins the shared .section-heading h2 rule rather than copying its numbers, so it can
+   never drift from the headings above and below it. */
+.about-lede h2 { margin: 0 0 22px; text-wrap: balance; }
+/* Held near 60 characters so the three paragraphs read as an argument, not a block. */
 .about-body { max-width: 58ch; margin: 0 0 16px; font-size: var(--step-body); line-height: 1.68; color: var(--muted); }
 .about-body:last-of-type { margin-bottom: 0; color: var(--ink); }
-.about-note { display: flex; align-items: flex-start; gap: 9px; margin: 26px 0 0; color: var(--soft); font-size: var(--step-body-sm); line-height: 1.6; }
-.about-note svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 1px; color: var(--gold-deep); }
 
-.about-side { padding: 28px 30px; border: 1px solid var(--line-strong); background: #fff; }
+/* Matches .referrer-cred-card, the card treatment already used two sections above. */
+.about-side {
+  padding: 28px 30px;
+  border-radius: 0;
+  border: 1px solid var(--gold-light);
+  background: linear-gradient(180deg, var(--gold-pale), #fff);
+}
 .about-side-cap { margin: 0 0 18px; font-size: 12px; font-weight: 640; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-deep); }
-/* Three beats of one argument, so they are numbered: the third follows from the first two. */
+/* Three beats of one argument, so they are numbered: the third follows from the first two.
+   CSS counters skip display:none, so this is only correct while all three render. */
 .about-points { counter-reset: about; list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
 .about-points li { counter-increment: about; position: relative; padding-left: 34px; }
 .about-points li::before {
@@ -5558,7 +5552,9 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
   position: absolute; left: 0; top: 1px;
   width: 22px; height: 22px;
   display: grid; place-items: center;
-  border: 1px solid var(--gold);
+  border-radius: 0;
+  border: 1px solid var(--gold-light);
+  background: #fff;
   color: var(--gold-deep);
   font-size: 11.5px; font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -5567,7 +5563,7 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
 .about-points span { display: block; font-size: var(--step-body-sm); line-height: 1.55; color: var(--muted); }
 
 .about-social {
-  margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line);
+  margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--gold-light);
   display: inline-flex; align-items: center; gap: 9px;
   color: var(--gold-deep); font-size: var(--step-body-sm); font-weight: 650; text-decoration: none;
 }
