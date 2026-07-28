@@ -313,3 +313,10 @@ export const SCENARIOS = Object.fromEntries(
 export function scenarioFor(specialization) {
   return Object.values(SCENARIOS).find(s => s.specialization === specialization) || null;
 }
+
+// The optional sittings a vertical can offer on top of its specialisation's default. Kept
+// separate from scenarioFor() because these are opt-in: a student chooses to sit one, and it
+// must never displace the scenario their batch actually runs.
+export function optionalScenariosFor(verticalSlug) {
+  return Object.values(SCENARIOS).filter(s => s.optional && (s.offeredTo || []).includes(verticalSlug));
+}

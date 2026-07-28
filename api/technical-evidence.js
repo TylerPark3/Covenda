@@ -344,16 +344,29 @@ export function technicalProfile(claims = []) {
   for (const claim of rows) {
     const domains = claim.evidence_meta?.technical_domains || domainsForSkill(claim.skill);
     for (const id of domains) {
-      (domainHits[id] ||= { domain: DOMAINS[id]?.label || id, id, skills: new Set(), best: 'claimed' });
+      (domainHits[id] ||= { domain: DOMAINS[id]?.label || id, id, skills: new Set(), evidenced: new Set(), claimedOnly: new Set(), best: 'claimed' });
       domainHits[id].skills.add(claim.skill);
+      // Split, because a domain reports its BEST tier and a mixed list then reads as though
+      // every skill in it were backed. "Backend engineering / Artifact / Python, Rust" makes
+      // a typed Rust look evidenced by standing next to a verified Python.
+      if (claim.verification_tier === 'claimed') domainHits[id].claimedOnly.add(claim.skill);
+      else domainHits[id].evidenced.add(claim.skill);
       if (TIERS.indexOf(claim.verification_tier) > TIERS.indexOf(domainHits[id].best)) {
         domainHits[id].best = claim.verification_tier;
       }
     }
   }
   const breadth = Object.values(domainHits)
-    .map(d => ({ ...d, skills: [...d.skills], skillCount: d.skills.size }))
-    .sort((a, b) => b.skillCount - a.skillCount);
+    .map(d => ({
+      ...d,
+      skills: [...d.skills],
+      evidenced: [...d.evidenced],
+      claimedOnly: [...d.claimedOnly],
+      skillCount: d.skills.size,
+      // The bar is drawn from evidenced skills only, so listing more never widens it.
+      evidencedCount: d.evidenced.size,
+    }))
+    .sort((a, b) => b.evidencedCount - a.evidencedCount || b.skillCount - a.skillCount);
 
   // Depth: where the strongest evidence is, by skill. A skill is only as deep as its best
   // evidence, so this reads the tier rather than counting mentions.
@@ -510,4 +523,87 @@ export function technicalClaimsFromProfile(profile = {}) {
   }
 
   return claims;
+}
+
+// ── Company evidence requests (§9) ────────────────────────────────────────────────────
+// A team says what it is looking for in its own words; this turns that into the evidence a
+// student could actually go and get. The mapping is derived at read time rather than frozen
+// into the stored row, so improving it does not require rewriting requests already made.
+//
+// Priorities are matched against domains and skills both, because a hiring manager writes
+// "distributed systems" and a student's profile says "Go" and "Docker".
+const PRIORITY_EVIDENCE = {
+  aiml: ['shipped_product', 'independent_project', 'research'],
+  infrastructure: ['shipped_product', 'open_source'],
+  distributed: ['shipped_product', 'open_source'],
+  backend: ['shipped_product', 'open_source', 'independent_project'],
+  frontend: ['shipped_product', 'independent_project'],
+  product: ['shipped_product', 'independent_project'],
+  databases: ['shipped_product', 'independent_project'],
+  security: ['open_source', 'research'],
+  algorithms: ['open_source', 'research'],
+  robotics: ['independent_project', 'research'],
+};
+
+const DOMAIN_BY_LABEL = new Map(Object.values(DOMAINS).map(d => [d.label.toLowerCase(), d.id]));
+
+// Resolve a company's own phrasing onto a domain, through the label, the id, or the skill
+// taxonomy. "Distributed systems", "distributed", and "Go" all land in the same place.
+export function domainForPriority(priority) {
+  const raw = String(priority || '').trim().toLowerCase();
+  if (!raw) return null;
+  if (DOMAIN_BY_LABEL.has(raw)) return DOMAIN_BY_LABEL.get(raw);
+  if (DOMAINS[raw]) return raw;
+  const viaSkill = domainsForSkill(priority);
+  return viaSkill[0] || null;
+}
+
+export function recommendedEvidence(priorities = []) {
+  const wanted = (priorities || []).map(p => String(p || '').trim()).filter(Boolean);
+  const types = new Set();
+  const unmapped = [];
+  for (const priority of wanted) {
+    const domain = domainForPriority(priority);
+    if (!domain) { unmapped.push(priority); continue; }
+    for (const type of PRIORITY_EVIDENCE[domain] || []) types.add(type);
+  }
+  // A defense is recommended whatever the priorities are: it is the one thing no artifact and
+  // no third-party score can substitute for.
+  const recommended = [...types].map(id => ({
+    type: id,
+    label: EVIDENCE_TYPES[id].label,
+    why: EVIDENCE_TYPES[id].demonstrates,
+    limit: EVIDENCE_TYPES[id].cannotShow,
+  }));
+  return {
+    recommended,
+    defense: 'A recorded walkthrough of one of these. It is the only evidence a third-party score cannot stand in for.',
+    // Named rather than silently dropped, so an operator can see what the mapping missed.
+    unmapped,
+    note: unmapped.length
+      ? `Not mapped to a technical domain yet: ${unmapped.join(', ')}. These still show on the request, they just do not drive a recommendation.`
+      : null,
+  };
+}
+
+// The student-facing view of one company's request: what they asked for, what this student
+// already has, and what is worth getting next. Same components as explainAlignment, ordered
+// as a next step rather than as an assessment.
+export function evidencePlanFor(profile, request = {}) {
+  const alignment = explainAlignment(profile, request.priorities || []);
+  const suggestions = recommendedEvidence(request.priorities || []);
+  const have = new Set(Object.keys(profile.evidenceTypes || {}));
+  return {
+    headline: request.headline || null,
+    strong: alignment.strong,
+    gaps: alignment.gaps,
+    evidence: alignment.evidence,
+    note: alignment.note,
+    // Only what they do not already have. Telling somebody to ship a product when they have
+    // shipped two is how a recommendation stops being read.
+    next: suggestions.recommended.filter(r => !have.has(r.type)),
+    alreadyHave: suggestions.recommended.filter(r => have.has(r.type)).map(r => r.label),
+    defense: suggestions.defense,
+    unmapped: suggestions.unmapped,
+  };
 }

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { BATCH_CATALOG } from '../../api/batches.js';
-import { SCENARIOS, scenarioFor } from '../../api/scenarios.js';
+import { SCENARIOS, scenarioFor, optionalScenariosFor } from '../../api/scenarios.js';
 import { validateScenario, startRun, currentStep, advance, defenseQuestions, evidenceFrom } from '../../api/simulation.js';
 
 // Every batch card advertises "The sitting: ..." to the student. A card that promises a
@@ -14,14 +14,38 @@ test('every batch a student can open has a scenario behind it', () => {
 test('scenario ids are unique across both files', () => {
   const ids = Object.values(SCENARIOS).map(s => s.id);
   assert.equal(new Set(ids).size, ids.length);
-  assert.equal(ids.length, 25);
+  // 25 specialisation defaults, plus any opt-in extras.
+  assert.equal(Object.values(SCENARIOS).filter(s => !s.optional).length, 25);
 });
 
-test('one scenario per specialisation, so scenarioFor is not picking arbitrarily', () => {
+// scenarioFor() returns the FIRST match, so a second scenario claiming a live specialisation
+// would silently replace that batch's sitting for everyone applying to it.
+test('one default scenario per specialisation, so scenarioFor is not picking arbitrarily', () => {
   const bySpec = {};
-  for (const s of Object.values(SCENARIOS)) (bySpec[s.specialization] ||= []).push(s.id);
+  for (const s of Object.values(SCENARIOS)) {
+    if (s.optional) continue;
+    (bySpec[s.specialization] ||= []).push(s.id);
+  }
   const doubled = Object.entries(bySpec).filter(([, v]) => v.length > 1);
   assert.deepEqual(doubled, []);
+});
+
+test('an optional scenario never claims a specialisation a batch runs', () => {
+  const live = new Set(BATCH_CATALOG.map(b => b.slug));
+  for (const s of Object.values(SCENARIOS).filter(x => x.optional)) {
+    assert.ok(!live.has(s.specialization), `${s.id} would displace the default sitting for ${s.specialization}`);
+    assert.ok((s.offeredTo || []).length, `${s.id} is optional but offered to nobody`);
+  }
+});
+
+test('optional scenarios are reachable only by opting in', () => {
+  for (const s of Object.values(SCENARIOS).filter(x => x.optional)) {
+    assert.equal(scenarioFor(s.specialization).id, s.id, 'an optional scenario must still resolve by its own key');
+    for (const vertical of s.offeredTo) {
+      assert.ok(optionalScenariosFor(vertical).some(x => x.id === s.id), `${s.id} is not offered to ${vertical}`);
+    }
+  }
+  assert.deepEqual(optionalScenariosFor('accounting-finance'), [], 'software extras leaked into finance');
 });
 
 // Walk every branch of every scenario. A dangling `next` is invisible until a student picks

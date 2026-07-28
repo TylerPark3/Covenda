@@ -2284,3 +2284,53 @@ body { background: var(--surface); }
 :root[data-theme="night"] .cred-meter-list li:hover { background:rgba(217,169,78,.08); }
 :root[data-theme="night"] .cred-meter-list li.is-next { background:rgba(217,169,78,.10); }
 :root[data-theme="night"] .cred-next { background:var(--surface-1); }
+
+/* ── Technical profile (§10) ───────────────────────────────────────────────────────────
+   Breadth, depth, builder history and gaps. No headline number anywhere: an "engineering
+   quality score" would sit here more naturally than anywhere else on the page, which is
+   exactly why there is not one. Tokens only, so night mode follows from the palette. */
+.tech-panel { display:grid; gap:22px; }
+.tech-head h3 { margin:0 0 6px; font-size:16px; letter-spacing:-.02em; }
+.tech-head p { margin:0; color:var(--muted); font-size:13.5px; line-height:1.6; }
+.tech-section { display:grid; gap:10px; padding-top:18px; border-top:1px solid var(--line); }
+.tech-section h4 { margin:0; font-size:12px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--gold-deep); }
+.tech-why { margin:0; color:var(--soft); font-size:12.5px; line-height:1.55; }
+
+/* Evidence tier, as a chip. Same vocabulary everywhere it appears. */
+.tech-tier { flex:none; padding:3px 8px; border-radius:0; font-size:11px; font-weight:700; letter-spacing:.03em; white-space:nowrap; border:1px solid var(--line-strong); background:var(--surface-2); color:var(--soft); }
+.tech-tier.is-artifact { border-color:rgba(180,123,32,.35); background:var(--gold-pale); color:var(--gold-deep); }
+.tech-tier.is-referral { border-color:rgba(180,123,32,.5); background:var(--gold-pale); color:var(--gold-deep); }
+.tech-tier.is-trial { border-color:rgba(36,117,58,.3); background:#f4faf5; color:var(--success); }
+
+.tech-domains { list-style:none; margin:0; padding:0; display:grid; gap:9px; }
+.tech-domain { display:grid; grid-template-columns:minmax(0,148px) minmax(60px,1fr) auto; gap:10px; align-items:center; }
+.tech-domain b { font-size:13px; font-weight:650; color:var(--text,var(--ink)); }
+.tech-domain small { grid-column:1 / -1; color:var(--soft); font-size:12px; line-height:1.45; }
+/* Surface area, not a rank. The bar is relative to this student's own widest domain. */
+.tech-bar { display:block; height:6px; background:var(--surface-2); border:1px solid var(--line); overflow:hidden; }
+.tech-bar i { display:block; height:100%; background:var(--gold); }
+.tech-domain.is-claimed .tech-bar i { background:var(--line-strong); }
+
+.tech-depth { list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px; }
+.tech-depth li { display:inline-flex; align-items:center; gap:7px; padding:6px 10px; border:1px solid var(--line); background:var(--surface-1); }
+.tech-depth b { font-size:13px; font-weight:650; color:var(--text,var(--ink)); }
+.tech-depth small { color:var(--soft); font-size:11.5px; }
+
+.tech-types { display:flex; flex-wrap:wrap; gap:8px; }
+.tech-type { display:inline-flex; align-items:baseline; gap:6px; padding:6px 11px; border:1px solid var(--gold-light,var(--line-strong)); background:var(--gold-pale); color:var(--gold-deep); }
+.tech-type b { font-size:14px; font-weight:750; font-variant-numeric:tabular-nums; }
+.tech-type span { font-size:12px; text-transform:capitalize; }
+
+.tech-note { margin:0; font-size:12.5px; line-height:1.55; color:var(--muted); }
+.tech-note.is-good { color:var(--success); }
+
+.tech-gaps { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.tech-gaps li { position:relative; padding-left:16px; font-size:13px; line-height:1.6; color:var(--muted); }
+.tech-gaps li::before { content:''; position:absolute; left:0; top:8px; width:6px; height:6px; background:var(--gold); }
+
+@media (max-width:560px) {
+  .tech-domain { grid-template-columns:1fr auto; }
+  .tech-bar { grid-column:1 / -1; }
+}
+/* Listed but not shown. Visually demoted so it cannot be mistaken for evidenced work. */
+.tech-listed { color:var(--soft); font-style:italic; }

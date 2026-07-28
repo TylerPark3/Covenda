@@ -1075,3 +1075,128 @@ export const SCENARIOS_2 = [
   CHANNEL, CAMPAIGN, MARKDOWN, SUPPLY, MARKETPLACE,
   ENGAGEMENT, LANDSCAPE, SIGNAL, CONTRACT, DOCS,
 ];
+
+// ── The Polymath Builder Challenge (§7) ───────────────────────────────────────────────
+// Longer than the others and shaped differently on purpose. Every other scenario holds its
+// problem still. This one changes the requirements three times after the candidate has
+// committed, because the thing being read is not whether the first design was good. It is
+// whether they can say what their design assumed, notice when that assumption stops holding,
+// and change the right part rather than the whole thing.
+//
+// There is no correct architecture here. Each opening choice is defensible and each is made
+// uncomfortable by a later requirement, so nobody escapes without a trade to account for.
+export const POLYMATH = {
+  id: 'swe-polymath-builder-1',
+  // Deliberately NOT any batch's specialisation. Every specialisation already has a default
+  // sitting and scenarioFor() picks the first match, so claiming 'product-engineering' here
+  // would have silently replaced the inherited-bug scenario for everyone applying to it. The
+  // engine requires a specialisation, so this carries its own, which no batch claims: it is
+  // reachable through optionalScenariosFor() and nowhere else.
+  specialization: 'polymath-builder',
+  optional: true,
+  offeredTo: ['software-ai'],
+  title: 'The requirements keep moving',
+  minutes: 55,
+  skills: ['architecture under ambiguity', 'learning velocity', 'systems thinking', 'security judgement'],
+  brief: 'You are given a vague brief, no implementation instructions, and a deadline. It will change three times. Synthetic throughout: no real system, users or data.',
+  steps: [
+    {
+      id: 'brief', kind: 'reveal', next: 'clarify',
+      title: 'The whole brief',
+      body: '"Build an API that processes user data." That is all of it. The person who wrote it is unavailable for the next two hours.',
+    },
+    {
+      id: 'clarify', kind: 'decide', title: 'Two hours, nobody to ask. What do you do first?',
+      options: [
+        { id: 'assume', label: 'Write down your assumptions, then build against them', next: 'design',
+          reveals: 'Makes the ambiguity explicit before committing. The assumptions become a document that can be checked later, which is what makes a wrong one cheap.',
+          defense: 'You wrote assumptions down. Which one were you least sure of, and what would it have cost to be wrong?' },
+        { id: 'narrow', label: 'Build the smallest thing that could possibly be what they meant', next: 'design',
+          reveals: 'Produces something real to react to, which is often faster than guessing correctly. Risks building the wrong small thing well.',
+          defense: 'You built small to get feedback. What did you deliberately leave out, and how did you decide?' },
+        { id: 'general', label: 'Build it general enough to cover several readings of the brief', next: 'design',
+          reveals: 'Hedges against being wrong by supporting more cases. Costs time now and carries abstraction that may never earn itself back.',
+          defense: 'You generalised before you knew what was needed. Which of those cases turned out to matter?' },
+      ],
+    },
+    {
+      id: 'design', kind: 'decide', title: 'How do you store and process it?',
+      options: [
+        { id: 'sync-sql', label: 'Synchronous handler writing straight to Postgres', next: 'scale',
+          reveals: 'Simplest thing that works, and easiest to reason about when it breaks. Every request holds a connection for as long as the work takes.',
+          defense: 'Your handler does the work inline. What is the first thing that saturates?' },
+        { id: 'queue', label: 'Accept, enqueue, process in a worker', next: 'scale',
+          reveals: 'Decouples arrival from processing, so a slow step cannot block intake. Adds a queue, a worker and a whole class of failure that is invisible from the endpoint.',
+          defense: 'You added a queue on day one. How does a caller find out their job failed?' },
+        { id: 'serverless', label: 'Stateless functions with a managed datastore', next: 'scale',
+          reveals: 'Pushes scaling and uptime onto the platform. Fewer things to run, and the constraints are now someone else\'s to change.',
+          defense: 'You handed the hard parts to a platform. Which of its limits did you check before choosing it?' },
+      ],
+    },
+    {
+      id: 'scale', kind: 'reveal', next: 'scale-decide',
+      title: 'The requirement changes',
+      body: 'Traffic is now expected to be 100x what you designed for. The deadline has not moved.',
+    },
+    {
+      id: 'scale-decide', kind: 'decide', title: 'What do you change?',
+      options: [
+        { id: 'measure', label: 'Find the actual bottleneck before changing anything', next: 'sensitive',
+          reveals: 'Refuses to optimise on a guess. Costs time under a deadline, and it is the only way to avoid rewriting the part that was never the problem.',
+          defense: 'You measured first. What did you find, and was it where you expected?' },
+        { id: 'horizontal', label: 'Scale horizontally and move the slow work off the request path', next: 'sensitive',
+          reveals: 'The change that usually works, applied without confirming this is the usual case. Fast, and it can leave a shared bottleneck untouched behind more instances.',
+          defense: 'You added instances. What in your design is still shared, and does it scale with them?' },
+        { id: 'rewrite', label: 'Redesign around the new number', next: 'sensitive',
+          reveals: 'Treats a 100x change as a different problem rather than a bigger one, which it sometimes is. Spends the remaining time on architecture rather than delivery.',
+          defense: 'You restarted the design with the deadline unchanged. What did you give up to afford that?' },
+      ],
+    },
+    {
+      id: 'sensitive', kind: 'reveal', next: 'sensitive-decide',
+      title: 'It changes again',
+      body: 'The data now includes sensitive personal information. Nothing else about the brief has changed, and your design assumed it did not matter who could read the store.',
+    },
+    {
+      id: 'sensitive-decide', kind: 'decide', title: 'This is not a feature. What do you do?',
+      options: [
+        { id: 'stop', label: 'Stop and establish what the obligations actually are', next: 'latency',
+          reveals: 'Recognises that this changes what "done" means rather than adding a task. The one option that treats a legal and ethical constraint as a constraint.',
+          defense: 'You stopped building. Who did you need an answer from, and what would you have done if nobody answered?' },
+        { id: 'encrypt', label: 'Encrypt at rest and in transit, restrict access, keep going', next: 'latency',
+          reveals: 'The competent technical response. It covers the storage question and says nothing about retention, access logging, or who is allowed to see it at all.',
+          defense: 'You secured the data. Who can still read it, and how would you know if they had?' },
+        { id: 'minimise', label: 'Change the design to hold less of it', next: 'latency',
+          reveals: 'Attacks the exposure rather than defending it. The strongest version, and it means going back on decisions already made.',
+          defense: 'You reduced what you store. What did the product lose, and who agreed to that?' },
+      ],
+    },
+    {
+      id: 'latency', kind: 'reveal', next: 'latency-decide',
+      title: 'And once more',
+      body: 'p99 latency must come down by half. Your security work added a hop. Both requirements are live and neither has been withdrawn.',
+    },
+    {
+      id: 'latency-decide', kind: 'decide', title: 'The two most recent requirements are pulling against each other',
+      options: [
+        { id: 'surface', label: 'Say so, with the cost of each option, and ask for a decision', next: 'produce',
+          reveals: 'Puts a genuine trade in front of whoever owns it instead of quietly resolving it. The right move when both constraints came from outside.',
+          defense: 'You escalated the conflict. What did you recommend, and what would you have done if the answer was "both"?' },
+        { id: 'optimise', label: 'Find the latency somewhere other than the security path', next: 'produce',
+          reveals: 'Assumes the conflict is not real until proven, which is often true. Costs the time to establish it and may not be enough on its own.',
+          defense: 'You protected the security work. What did you have to give up elsewhere to find the time back?' },
+        { id: 'security-first', label: 'Hold the security design and miss the latency target', next: 'produce',
+          reveals: 'Ranks the two constraints and says which loses. Defensible and it is a decision that was not yours to make alone.',
+          defense: 'You chose which requirement to miss. Who found out, and when?' },
+      ],
+    },
+    {
+      id: 'produce', kind: 'produce', next: 'defend',
+      title: 'The design, as it actually ended up',
+      body: 'Describe what you would ship: the architecture, the assumption it still rests on, and the one thing you would fix first with another week.',
+    },
+    { id: 'defend', kind: 'defend', title: 'Defend your own decisions' },
+  ],
+};
+
+SCENARIOS_2.push(POLYMATH);

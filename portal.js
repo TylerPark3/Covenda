@@ -3636,7 +3636,7 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   bar.append(search,vsel,skl,msel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderVideoLibrary(root);renderPayoutSetup(root);renderProofOfWork(root,profile);}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderTechnicalProfile(root,state.dashboard);renderVideoLibrary(root);renderPayoutSetup(root);renderProofOfWork(root,profile);}
   if(profile?.role==='company'){renderCompanyVerification(root);renderAtsPanel(root);renderCompanyReferrals(root);renderCompanyProfileForm(root);}}
 
 // Live credibility meter — a checklist of REAL, earned signals (identity, completeness, proven
@@ -3651,6 +3651,123 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
 // see when they open this? Facts about the profile as it stands, strongest first, and an
 // honest line about what is missing rather than an instruction to go fix it. The journey rail
 // owns "what to do next"; this owns "how you read right now".
+// ── The technical profile (§10) ───────────────────────────────────────────────────────
+// Breadth, depth, agency, gaps. Deliberately no headline number: a single "engineering
+// quality" figure is the artifact this product exists to replace, and it would sit here more
+// naturally than anywhere else on the page, which is exactly why it is worth refusing.
+//
+// Every row states what backs it, so a company reading over a student's shoulder can see the
+// difference between a skill that was typed and one that came out of a connected repo.
+const TIER_LABEL={trial:'Accepted trial',referral:'Referred',artifact:'Artifact',claimed:'Self-reported'};
+
+function techTierChip(tier){
+  const el=document.createElement('span');
+  el.className='tech-tier is-'+tier;
+  el.textContent=TIER_LABEL[tier]||tier;
+  return el;
+}
+
+function renderTechnicalProfile(root,d){
+  const t=d?.technical;
+  if(!t||d?.profile?.role!=='student')return;
+  // Only shown once there is something to show. An empty framework reads as a broken feature.
+  if(!t.breadth.length&&!t.depth.length)return;
+
+  const panel=document.createElement('section');panel.className='panel-card tech-panel';
+  const head=document.createElement('div');head.className='tech-head';
+  const h=document.createElement('h3');h.textContent='Technical profile';
+  const sub=document.createElement('p');
+  sub.textContent=`Built from what you have connected, not from what you listed. ${t.domainsTouched} of ${t.domainsAvailable} domains have evidence behind them.`;
+  head.append(h,sub);panel.append(head);
+
+  // Breadth: the surface area, as a bar per domain. Not a ranking against anyone.
+  if(t.breadth.length){
+    const sec=document.createElement('div');sec.className='tech-section';
+    const cap=document.createElement('h4');cap.textContent='Surface area';
+    sec.append(cap);
+    const list=document.createElement('ul');list.className='tech-domains';
+    // Drawn from EVIDENCED skills only, so typing more never widens the bar.
+    const widest=Math.max(1,...t.breadth.map(x=>x.evidencedCount));
+    for(const domain of t.breadth){
+      const li=document.createElement('li');li.className='tech-domain is-'+domain.best;
+      const name=document.createElement('b');name.textContent=domain.domain;
+      const bar=document.createElement('span');bar.className='tech-bar';
+      const fill=document.createElement('i');
+      fill.style.width=Math.round((domain.evidencedCount/widest)*100)+'%';
+      bar.append(fill);
+      const skills=document.createElement('small');
+      // A domain reports its BEST tier, so a mixed list would make a typed skill look backed
+      // by standing next to a verified one. The two are labelled apart.
+      if(domain.evidenced.length){
+        const shown=document.createElement('span');shown.textContent=domain.evidenced.join(', ');
+        skills.append(shown);
+      }
+      if(domain.claimedOnly.length){
+        const only=document.createElement('span');only.className='tech-listed';
+        only.textContent=(domain.evidenced.length?' · ':'')+'listed only: '+domain.claimedOnly.join(', ');
+        skills.append(only);
+      }
+      li.append(name,bar,techTierChip(domain.best),skills);
+      list.append(li);
+    }
+    sec.append(list);panel.append(sec);
+  }
+
+  // Depth: strongest evidence per skill. Self-reported never appears here by construction.
+  if(t.depth.length){
+    const sec=document.createElement('div');sec.className='tech-section';
+    const cap=document.createElement('h4');cap.textContent='Backed by evidence';
+    const why=document.createElement('p');why.className='tech-why';
+    why.textContent='Skills something can be pointed at. A skill you listed but have not shown does not appear here.';
+    sec.append(cap,why);
+    const list=document.createElement('ul');list.className='tech-depth';
+    for(const item of t.depth.slice(0,12)){
+      const li=document.createElement('li');
+      const name=document.createElement('b');name.textContent=item.skill;
+      li.append(name,techTierChip(item.tier));
+      if(item.type){const from=document.createElement('small');from.textContent=item.type.replace(/_/g,' ');li.append(from);}
+      list.append(li);
+    }
+    sec.append(list);panel.append(sec);
+  }
+
+  // Builder history, as counts of PROJECTS rather than of skills.
+  const types=Object.entries(t.evidenceTypes||{});
+  if(types.length){
+    const sec=document.createElement('div');sec.className='tech-section';
+    const cap=document.createElement('h4');cap.textContent='What you have built';
+    sec.append(cap);
+    const row=document.createElement('div');row.className='tech-types';
+    for(const [type,count] of types.sort((a,b)=>b[1]-a[1])){
+      const chip=document.createElement('span');chip.className='tech-type';
+      const n=document.createElement('b');n.textContent=String(count);
+      const label=document.createElement('span');label.textContent=type.replace(/_/g,' ');
+      chip.append(n,label);row.append(chip);
+    }
+    sec.append(row);
+    if(t.repeatedBuilder){
+      const note=document.createElement('p');note.className='tech-note is-good';
+      note.textContent='More than one thing built and finished. That is a pattern rather than a single good term.';
+      sec.append(note);
+    }
+    panel.append(sec);
+  }
+
+  // Gaps, phrased as the next thing to get.
+  if((t.gaps||[]).length){
+    const sec=document.createElement('div');sec.className='tech-section';
+    const cap=document.createElement('h4');cap.textContent='Not shown yet';
+    const why=document.createElement('p');why.className='tech-why';
+    why.textContent='Nothing here counts against you. It is what a company cannot see yet.';
+    sec.append(cap,why);
+    const list=document.createElement('ul');list.className='tech-gaps';
+    for(const gap of t.gaps){const li=document.createElement('li');li.textContent=gap.ask;list.append(li);}
+    sec.append(list);panel.append(sec);
+  }
+
+  root.append(panel);
+}
+
 function renderCredibility(root,d){
   const p=d?.profile; if(p?.role!=='student') return;
   const completed=(d.projects||[]).filter(x=>x.status==='complete').length;
