@@ -496,7 +496,7 @@ function applicantCard(application,project){
   const head=document.createElement('div');head.className='applicant-head';
   const av=document.createElement('div');av.className='applicant-avatar';paintAvatarSlot(av,a?.avatar_url,initial(a?.display_name||'C'));head.append(av);
   const id=document.createElement('div');id.className='applicant-id';const name=document.createElement('h3');name.textContent=a?.display_name||'Student applicant';if(a?.identity_verified)name.append(identityBadge());const sub=document.createElement('p');sub.textContent=[a?.headline,a?.school_name,a?.graduation_year&&`Class of ${a.graduation_year}`].filter(Boolean).join(' · ')||'Student member';id.append(name,sub);head.append(id);
-  if(application.fit_score!=null)head.append(fitPill(application.fit_score,application.fit&&application.fit.presentation));
+  if(application.fit_score!=null)head.append(fitTier(application.fit_score,application.fit&&application.fit.presentation));
   if(application.fit)card.append(fitWhyBlock({reasons:application.fit.reasons,concerns:application.fit.concerns,approach:application.fit.recommendedApproach}));
   card.append(head);
   const meta=document.createElement('div');meta.className='activity-meta';meta.append(pill(applicationStatusLabels[application.status]||titleCase(application.status),'status-pill',application.status));if(project)meta.append(pill(project.title,'status-pill'));card.append(meta);
@@ -1138,7 +1138,8 @@ function renderPipeline(){
       who.textContent=app.applicant?.display_name||'Applicant';
       card.append(who);
       const meta=document.createElement('small');
-      meta.textContent=[app.applicant?.school_name,app.fit?.presentation?`${app.fit.presentation.value}% fit`:''].filter(Boolean).join(' · ');
+      // School name is a banned input for scoring and has no business on a talent card either.
+      meta.textContent=[app.fit?.presentation?.band?.label?app.fit.presentation.band.label.replace(/^./,c=>c.toUpperCase()):''].filter(Boolean).join(' · ');
       if(meta.textContent)card.append(meta);
       card.addEventListener('click',()=>{setView('activity');pulse('#applicationList');});
       col.append(card);
@@ -1481,6 +1482,21 @@ function persistSavedProjects(){try{localStorage.setItem(SAVED_KEY,JSON.stringif
 function discoverFilters(){return{query:($('#discoverSearch')?.value||'').trim().toLowerCase(),vertical:$('#filterVertical')?.value||'',workType:$('#filterWorkType')?.value||'',minCredits:Number($('#filterMinCredits')?.value)||0,within:Number($('#filterWithin')?.value)||0,matchedOnly:$('#filterMatched')?.checked||false};}
 // P1 hardening: a fit score is shown with its uncertainty band and evidence tier, never as a
 // bare number — a wide band on thin evidence is the honest display.
+// SPEC §4: an employer sees a tier, never a raw percentage. A number invites arithmetic the
+// score cannot support — a company comparing 71 against 68 is reading precision that is not
+// there. The band label already exists on every score; this is the surface that uses it.
+function fitTier(score,pres){
+  const s=Number(score);
+  const label=pres&&pres.band&&pres.band.label
+    ? pres.band.label
+    : s>=70?'strong signal':s>=40?'promising':'early signal';
+  const el=document.createElement('span');
+  el.className='fit-pill '+(s>=70?'is-high':s>=40?'is-mid':'is-low');
+  el.textContent=label.replace(/^./,c=>c.toUpperCase());
+  // The number stays available to the operator, never rendered to the company.
+  el.dataset.score=Number.isFinite(s)?String(Math.round(s)):'';
+  return el;
+}
 function fitPill(score,pres){const s=Math.round(Number(score)||0);const el=document.createElement('span');el.className='fit-pill '+(s>=70?'is-high':s>=40?'is-mid':'is-low');el.textContent=`${s}% fit`;
   if(pres&&pres.band){const b=document.createElement('small');b.className='fit-band';b.textContent=`${pres.band.low}–${pres.band.high}`;el.append(b);el.title=`${pres.evidenceTier.replace('_','-')} evidence · likely range ${pres.band.low}–${pres.band.high}, the band tightens as verification hardens`;}
   return el;}
