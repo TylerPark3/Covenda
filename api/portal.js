@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 import { recordError } from './limits.js';
 import { scoreCandidate } from './scoring.js';
+import { requestAccommodation, saveTranscript } from './transcripts.js';
 
 import { supabaseConfiguration } from './submissions.js';
 import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail } from './notify.js';
@@ -347,7 +348,7 @@ export async function loadMemberDashboard(member, env = process.env) {
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
       checked(supabase.from('member_projects').select('*').eq('assigned_student_user_id', user.id).order('updated_at', { ascending: false }).limit(50)),
-      checked(supabase.from('member_projects').select('*').eq('status', 'open').in('visibility', ['members', 'open']).order('created_at', { ascending: false }).limit(50)),
+      checked(supabase.from('member_projects').select('*').eq('status', 'open').eq('synthetic', false).in('visibility', ['members', 'open']).order('created_at', { ascending: false }).limit(50)),
       checked(supabase.from('project_applications').select('*').eq('student_user_id', user.id).order('updated_at', { ascending: false }).limit(100)),
     ]);
     const projectIds = projects.map(project => project.id);
@@ -414,7 +415,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     });
   }
   const studentDirectory = profile.role === 'company'
-    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,work_types,avatar_url,skill_signals').eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
+    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,work_types,avatar_url,skill_signals').eq('synthetic', false).eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
     : [];
   const messages = projectIds.length
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
@@ -2696,6 +2697,8 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'submit-deliverable') return res.status(200).json({ ok: true, project: await submitDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'review-deliverable') return res.status(200).json({ ok: true, project: await reviewDeliverable(member, input) });
     if (req.method === 'POST' && input.action === 'buy-credits') return res.status(200).json({ ok: true, ...(await buyCredits(member, input, dependencies.env || process.env)) });
+    if (req.method === 'POST' && input.action === 'save-transcript') return res.status(200).json({ ok: true, result: await saveTranscript(member, input) });
+    if (req.method === 'POST' && input.action === 'request-accommodation') return res.status(200).json({ ok: true, result: await requestAccommodation(member, input) });
     if (req.method === 'POST' && input.action === 'cancel-project') return res.status(200).json({ ok: true, project: await cancelProject(member, input) });
     if (req.method === 'POST' && input.action === 'delete-project') return res.status(200).json({ ok: true, result: await deleteProject(member, input) });
     if (req.method === 'POST' && input.action === 'record-conversion') return res.status(200).json({ ok: true, project: await recordConversion(member, input) });

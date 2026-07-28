@@ -2421,6 +2421,8 @@ function openBatchApply(batch){
   // Weights the résumé questions toward this batch's field without ignoring the rest.
   currentBatchVertical=[batch.discipline,batch.name].filter(Boolean)[0]||'';
   renderAssessmentQuestions(batch);
+  const accom=$('#batchAccommodation');
+  if(accom){accom.replaceChildren(accommodationLink('batch_application',batch.slug||batch.id));}
   const promptEl=$('#batchVideoPrompt');if(promptEl)promptEl.textContent=currentBatchPrompt;
   const batchVideoInput=$('#batchVideoUrl');
   if(batchVideoInput){batchVideoInput.value='';
@@ -2703,6 +2705,64 @@ function bindDownload(anchor,url){
   return anchor;
 }
 
+
+// A written alternative to every recording. Primary, not a fallback: it needs no transcription
+// service, it works today, and a student's own words are authoritative because they wrote them.
+// It serves reviewers as much as applicants — a rater who cannot hear a submission cannot
+// score it, and the method depends on two raters reading the same artifact.
+function transcriptEditor(video){
+  const box=document.createElement('details'); box.className='vtx';
+  const sum=document.createElement('summary');
+  sum.textContent=video.transcript?'Transcript attached':'Add a transcript';
+  const why=document.createElement('p'); why.className='vtx-why';
+  why.textContent='Type or paste what you said. Companies read it alongside the recording, and it is what makes your work reviewable by someone who cannot hear it.';
+  const area=document.createElement('textarea'); area.rows=6; area.maxLength=20000;
+  area.value=video.transcript||'';
+  area.placeholder='What you said, in your own words.';
+  const row=document.createElement('div'); row.className='vtx-row';
+  const save=document.createElement('button'); save.type='button'; save.className='portal-primary compact'; save.textContent='Save transcript';
+  const state=document.createElement('span'); state.className='vtx-state'; state.setAttribute('aria-live','polite');
+  save.addEventListener('click',async()=>{
+    save.disabled=true; state.textContent='Saving…';
+    try{
+      await portalRequest({method:'POST',body:JSON.stringify({action:'save-transcript',videoId:video.id,text:area.value,source:'student'})});
+      video.transcript=area.value.trim();
+      sum.textContent=video.transcript?'Transcript attached':'Add a transcript';
+      state.textContent='Saved.';
+    }catch(error){ state.textContent=error.message; }
+    save.disabled=false;
+  });
+  row.append(save,state);
+  box.append(sum,why,area,row);
+  return box;
+}
+
+// A route to a person, for everything a text box cannot cover. Never asks for a diagnosis:
+// requiring someone to classify their own disability to apply for work is its own barrier.
+function accommodationLink(context,reference){
+  const wrap=document.createElement('div'); wrap.className='accom';
+  const btn=document.createElement('button'); btn.type='button'; btn.className='accom-open';
+  btn.textContent='Need a different way to do this?';
+  const panel=document.createElement('div'); panel.className='accom-panel'; panel.hidden=true;
+  const p=document.createElement('p');
+  p.textContent='Tell us what would help and a person will arrange it. No diagnosis needed, and applying is not blocked while you wait.';
+  const area=document.createElement('textarea'); area.rows=3; area.maxLength=2000;
+  area.placeholder='For example: I would rather answer in writing, or I need longer than the timer allows.';
+  const send=document.createElement('button'); send.type='button'; send.className='portal-secondary compact'; send.textContent='Send';
+  const state=document.createElement('p'); state.className='accom-state'; state.setAttribute('aria-live','polite');
+  send.addEventListener('click',async()=>{
+    send.disabled=true; state.textContent='Sending…';
+    try{
+      const out=await portalRequest({method:'POST',body:JSON.stringify({action:'request-accommodation',context,reference,need:area.value})});
+      state.textContent=out.result?.note||'Sent.'; area.hidden=true; send.hidden=true;
+    }catch(error){ state.textContent=error.message; send.disabled=false; }
+  });
+  btn.addEventListener('click',()=>{ panel.hidden=!panel.hidden; if(!panel.hidden)area.focus(); });
+  panel.append(p,area,send,state);
+  wrap.append(btn,panel);
+  return wrap;
+}
+
 function renderVideoLibrary(root){
   const sec=document.createElement('section'); sec.className='video-library';
   const head=document.createElement('div'); head.className='video-library-head';
@@ -2748,7 +2808,7 @@ function renderVideoLibrary(root){
         renderPortfolio();
       }catch(error){ del.disabled=false; del.textContent='Delete'; alert(error.message); }
     });
-    card.append(playerShell,meta,del); list.append(card);
+    card.append(playerShell,meta,transcriptEditor(v),del); list.append(card);
   });
   sec.append(list); root.append(sec);
 }
