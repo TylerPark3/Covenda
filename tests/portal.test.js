@@ -618,7 +618,7 @@ test('accepting a deliverable settles through the atomic database function, neve
     { result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'review' } },
     { result: { id: PROJECT_UUID, status: 'complete', credits_held: 0 } },
   ]);
-  const project = await reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' });
+  const project = await reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept', wouldRequestAgain: true });
   assert.equal(project.status, 'complete');
   assert.equal(project.credits_held, 0);
   // the payout and the completion happen inside one transaction, not as separate writes
@@ -632,7 +632,7 @@ test('a failed settlement leaves the project incomplete rather than completing i
     rpc() { return Promise.resolve({ data: null, error: new Error('duplicate key value violates unique constraint "credit_ledger_one_release_per_project"') }); },
   };
   await assert.rejects(
-    reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' }),
+    reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept', wouldRequestAgain: true }),
     /credit_ledger_one_release_per_project/,
   );
 });
@@ -670,12 +670,20 @@ test('requesting changes sends the project back to in_progress with a required n
   );
 });
 
+test('accepting without the close-out answer is refused, because that answer is the label', async () => {
+  const supabase = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'review' }, error: null }) }) }) }) };
+  await assert.rejects(
+    () => reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' }),
+    err => err.code === 'CLOSEOUT_RATING_REQUIRED',
+  );
+});
+
 test('a deliverable can only be reviewed while the project is in review', async () => {
   const supabase = queuedSupabase([
     { result: { id: PROJECT_UUID, owner_user_id: 'owner-1', status: 'in_progress' } },
   ]);
   await assert.rejects(
-    reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept' }),
+    reviewDeliverable({ user: { id: 'owner-1' }, supabase }, { projectId: PROJECT_UUID, decision: 'accept', wouldRequestAgain: true }),
     /no submitted deliverable/,
   );
 });

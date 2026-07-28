@@ -1740,6 +1740,18 @@ body { background: var(--surface); }
 .sbd-list .is-gap::before { content:"\2212"; color:var(--soft); }
 .sbd-how { margin:2px 0 0; padding-top:10px; border-top:1px solid var(--line); font-size:13px; line-height:1.45; color:var(--soft); }
 
+
+/* The close-out question. Deliberately unmissable and deliberately without a skip: the answer
+   issues the student's work record and is the only label the scorer ever gets. */
+.closeout { display:grid; gap:8px; margin:16px 0 0; padding:18px 20px; border:1px solid var(--gold-deep); background:var(--gold-pale); }
+.closeout-q { margin:0; font-size:19px; font-weight:650; letter-spacing:-.015em; color:var(--text); }
+.closeout-why { margin:0; font-size:14.5px; line-height:1.5; color:var(--text-2); }
+.closeout-answers { display:flex; gap:10px; margin-top:6px; }
+.closeout-answers button { min-width:96px; min-height:42px; border:1px solid var(--gold-deep); background:var(--surface-1); color:var(--gold-deep); font:inherit; font-size:16px; font-weight:650; cursor:pointer; }
+.closeout-answers .closeout-yes { background:var(--gold-deep); color:#fff; }
+.closeout-answers button:hover:not(:disabled) { filter:brightness(1.08); }
+.closeout-answers button:disabled { opacity:.6; cursor:progress; }
+
 .ex-file { justify-self:start; margin:4px 0 2px; padding:11px 20px; border:1px solid var(--gold-deep); background:var(--surface-1); color:var(--gold-deep); font:inherit; font-size:15.5px; font-weight:650; cursor:pointer; }
 .ex-file:hover:not(:disabled) { background:var(--gold-pale); }
 .ex-file:disabled { cursor:progress; opacity:.7; }

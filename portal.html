@@ -486,7 +486,14 @@
   </dialog>
 
   <dialog class="member-dialog compact-dialog" id="reviewDialog">
-    <form method="dialog" id="reviewForm"><header><div><p class="eyebrow">Review deliverable</p><h2 id="reviewTitle">Check before you send</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p class="review-submitted" id="reviewSubmittedAt"></p><div class="review-deliverable" id="reviewDeliverable"></div><label>Note to the student <small>Required to request changes</small><textarea name="note" rows="3" maxlength="2000" placeholder="What is strong, and what to change."></textarea></label><p class="dialog-message" id="reviewMessage" aria-live="polite"></p></div><footer class="review-actions"><button class="portal-secondary" type="button" data-decision="revise">Request changes</button><button class="portal-primary" type="button" data-decision="accept">Accept deliverable<svg><use href="#p-check"/></svg></button></footer></form>
+    <form method="dialog" id="reviewForm"><header><div><p class="eyebrow">Review deliverable</p><h2 id="reviewTitle">Check before you send</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p class="review-submitted" id="reviewSubmittedAt"></p><div class="review-deliverable" id="reviewDeliverable"></div><label>Note to the student <small>Required to request changes</small><textarea name="note" rows="3" maxlength="2000" placeholder="What is strong, and what to change."></textarea></label><section class="closeout" id="closeoutGate" hidden>
+      <p class="closeout-q">Would you request this student for future work?</p>
+      <p class="closeout-why">One tap. This is what issues their verified work record, and it is the only thing we learn from.</p>
+      <div class="closeout-answers">
+        <button type="button" class="closeout-yes" data-closeout="yes">Yes</button>
+        <button type="button" class="closeout-no" data-closeout="no">No</button>
+      </div>
+    </section><p class="dialog-message" id="reviewMessage" aria-live="polite"></p></div><footer class="review-actions"><button class="portal-secondary" type="button" data-decision="revise">Request changes</button><button class="portal-primary" type="button" data-decision="accept">Accept deliverable<svg><use href="#p-check"/></svg></button></footer></form>
   </dialog>
 </body>
 </html>

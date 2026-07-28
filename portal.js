@@ -3857,7 +3857,33 @@ $('#workFileInput')?.addEventListener('change',async event=>{
 });
 
 $('#submitWorkForm').addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);button.disabled=true;setDialogMessage('#submitWorkMessage','Submitting your work…');const notes=form.elements.workNotes.value.trim();const summary=[form.elements.workSummary.value.trim(),notes&&`\n\nNotes for the reviewer: ${notes}`].filter(Boolean).join('');const links=form.elements.workLinks.value.split(/\n/).map(link=>link.trim()).filter(Boolean);const pending=workFiles.filter(f=>!f.url&&!f.error);if(pending.length){setDialogMessage('#submitWorkMessage','Wait for the uploads to finish.',true);button.disabled=false;return;}const deliverableFiles=workFiles.filter(f=>f.url).map(f=>({name:f.name,url:f.url}));try{await portalRequest({method:'POST',body:JSON.stringify({action:'submit-deliverable',projectId:form.elements.projectId.value,deliverable:summary,deliverableLinks:links})});$('#submitWorkDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#submitWorkMessage',error.message,true);}finally{button.disabled=false;}});
-$$('#reviewForm [data-decision]').forEach(button=>button.addEventListener('click',async()=>{const form=$('#reviewForm');const decision=button.dataset.decision;const note=form.elements.note.value.trim();if(decision==='revise'&&!note){setDialogMessage('#reviewMessage','Add a note so the student knows what to revise.',true);return;}const buttons=$$('#reviewForm [data-decision]');buttons.forEach(b=>b.disabled=true);setDialogMessage('#reviewMessage',decision==='accept'?'Accepting the deliverable…':'Sending the change request…');try{await portalRequest({method:'POST',body:JSON.stringify({action:'review-deliverable',projectId:form.elements.projectId.value,decision,note})});$('#reviewDialog').close();await loadDashboard();setView('overview');}catch(error){setDialogMessage('#reviewMessage',error.message,true);}finally{buttons.forEach(b=>b.disabled=false);}}));
+// Accepting is gated on one question. It is not a nicety: the answer is what issues the
+// student's verified work record, and it is the only supervision the scorer will ever get.
+// A skip option here would quietly empty the training set, so there is not one.
+async function sendReview(decision,note,wouldRequestAgain){
+  const form=$('#reviewForm');
+  const buttons=$$('#reviewForm [data-decision], #closeoutGate button');
+  buttons.forEach(b=>b.disabled=true);
+  setDialogMessage('#reviewMessage',decision==='accept'?'Accepting the deliverable…':'Sending the change request…');
+  try{
+    await portalRequest({method:'POST',body:JSON.stringify({action:'review-deliverable',projectId:form.elements.projectId.value,decision,note,wouldRequestAgain})});
+    $('#reviewDialog').close();$('#closeoutGate').hidden=true;
+    await loadDashboard();setView('overview');
+  }catch(error){ setDialogMessage('#reviewMessage',error.message,true); }
+  finally{ buttons.forEach(b=>b.disabled=false); }
+}
+$$('#reviewForm [data-decision]').forEach(button=>button.addEventListener('click',()=>{
+  const form=$('#reviewForm');const decision=button.dataset.decision;const note=form.elements.note.value.trim();
+  if(decision==='revise'&&!note){setDialogMessage('#reviewMessage','Add a note so the student knows what to revise.',true);return;}
+  if(decision!=='accept'){ sendReview(decision,note,undefined); return; }
+  // Reveal the question rather than sending; the server refuses an accept without it.
+  const gate=$('#closeoutGate'); gate.hidden=false;
+  setDialogMessage('#reviewMessage','');
+  gate.scrollIntoView({behavior:'smooth',block:'nearest'});
+  $$('#closeoutGate button').forEach(b=>{
+    b.onclick=()=>sendReview('accept',note,b.dataset.closeout==='yes');
+  });
+}));
 $('#messageForm').addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const status=$('#messageFormStatus');
   const bodyText=form.elements.message.value.trim();

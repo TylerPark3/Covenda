@@ -1124,7 +1124,7 @@ const pick = (obj, keys) => Object.fromEntries(keys.map(k => [k, obj?.[k]]));
 
 // Append a lifecycle event to match_events (§5). Best-effort — a logging failure must never
 // break the user's action. Runs with the service role (authorizeMember's client).
-export async function logMatchEvent(member, { projectId, studentUserId, eventType, fit, features }) {
+export async function logMatchEvent(member, { projectId, studentUserId, eventType, fit, features, matchId, meta }) {
   try {
     await member.supabase.from('match_events').insert({
       project_id: projectId || null,
@@ -1133,6 +1133,10 @@ export async function logMatchEvent(member, { projectId, studentUserId, eventTyp
       features: features || {},
       fit_score: fit && Number.isFinite(fit.score) ? fit.score : null,
       fit_reasons: (fit && fit.reasons) || [],
+      // Groups every event for one trial so the materialiser can assemble a label. The
+      // project id IS the match identity in this repo.
+      match_id: matchId || projectId || null,
+      meta: meta || {},
     });
   } catch (error) {
     console.error(JSON.stringify({ level: 'error', message: 'match_event log failed', eventType, error: String(error?.message || error).slice(0, 200) }));
@@ -2417,6 +2421,17 @@ export async function reviewDeliverable(member, input) {
   );
   if (!project || project.owner_user_id !== member.user.id) throw new Error('Only the project owner can review a deliverable.');
   if (project.status !== 'review') throw new Error('This project has no submitted deliverable to review.');
+
+  // THE LABEL GATE. `label = 1` requires acceptance AND a yes to "would you request this
+  // student for future work". Without the answer there is no label, so accepting cannot be
+  // allowed to proceed without it — this is the only source of supervision the re-ranker
+  // will ever have, and a skip option here silently empties the training set.
+  const wouldRequestAgain = input.wouldRequestAgain;
+  if (decision === 'accept' && typeof wouldRequestAgain !== 'boolean') {
+    const err = new Error('Answer one question to close this out: would you request this student for future work?');
+    err.code = 'CLOSEOUT_RATING_REQUIRED';
+    throw err;
+  }
   const now = new Date().toISOString();
 
   if (decision === 'revise') {
@@ -2431,7 +2446,11 @@ export async function reviewDeliverable(member, input) {
   // together. The database function does both under a row lock; if it fails, nothing
   // moves and the project stays in review rather than completing unpaid.
   if (note) {
-    await checked(member.supabase.from('member_projects').update({ review_note: note, updated_at: now }).eq('id', projectId).select('id').single(), null);
+    await checked(member.supabase.from('member_projects').update({ review_note: note, updated_at: now, closeout_rating: wouldRequestAgain, closeout_at: now }).eq('id', projectId).select('id').single(), null);
+    // Terminal events in the label pipeline's vocabulary. The rating rides on the event
+    // rather than only the project row, because the materialiser reads events.
+    await logMatchEvent(member, { projectId, eventType: 'deliverable_accepted', matchId: projectId });
+    await logMatchEvent(member, { projectId, eventType: 'closeout_rating', matchId: projectId, meta: { wouldRequestAgain } });
   }
   const released = await checked(member.supabase.rpc('release_project_escrow', { p_project_id: projectId, p_owner_id: member.user.id }), null);
   return Array.isArray(released) ? released[0] : released;

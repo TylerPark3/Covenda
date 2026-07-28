@@ -166,3 +166,27 @@ export function csvTemplate() {
   return [...FEATURES, 'label'].join(',') + '\n'
     + FEATURES.map(() => '0.0').join(',') + ',0\n';
 }
+
+// ── The live source ───────────────────────────────────────────────────────────────────
+// Everything above loads rows from a file, which is how the model gets tuned offline before
+// any real outcome exists. This reads the table the nightly materialiser writes, which is
+// how it gets trained once they do.
+//
+// real_trial only. Founder ratings are judgement and synthetic rows are plumbing; pooling
+// either in would train the model on something other than what it claims to predict.
+export async function loadRealLabels(db, { source = 'real_trial' } = {}) {
+  const { data, error } = await db.from('training_labels')
+    .select('match_id, label, feature_vector_at_scoring, source, created_at')
+    .eq('source', source)
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(`Could not read training_labels: ${error.message}`);
+
+  // A label whose features are missing cannot train anything — it says an outcome happened
+  // without saying what the model saw. Dropped, and counted so the loss is visible.
+  const rows = (data || []).filter(r => r.feature_vector_at_scoring);
+  return {
+    rows: rows.map(r => ({ features: r.feature_vector_at_scoring, label: r.label, matchId: r.match_id })),
+    dropped: (data || []).length - rows.length,
+    source,
+  };
+}
