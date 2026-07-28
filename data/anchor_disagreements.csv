@@ -1,0 +1,11 @@
+student_id,project_id,human_accepted,engine_accepted,human_would_request_again,engine_would_request_again,evidence_score,human_note,engine_rationale
+S001,P004,1,1,1.0,0,0.482,Strong research background,"Capable but interests point elsewhere; acceptable work, no repeat"
+S002,P003,1,1,1.0,0,0.873,Relevant finance background,"Capable, but 75% of needed hours; deadline risk costs the rating"
+S002,P004,1,1,1.0,0,0.588,Strong analytical overlap,"Resume-only signal; authorship unverified, so rating stays skeptical"
+S004,P001,1,0,1.0,0,0.853,Strong ML capability but availability constraint,"Only 36% of needed hours before deadline; timeline fails, not capability"
+S004,P002,1,0,1.0,0,1.216,Excellent technical fit,"Only 29% of needed hours before deadline; timeline fails, not capability"
+S006,P002,1,0,,0,0.312,Strong claimed technical skills; evidence gap,No evidence in this domain; capability does not transfer
+S006,P004,1,0,,0,0.33,Relevant background,Evidence too thin in an otherwise matching domain
+S008,P002,1,0,1.0,0,0.19,Strong analytical/technical overlap,No evidence in this domain; capability does not transfer
+S008,P004,1,1,1.0,0,0.634,Strong analytical ability,"Solid verified fit but not exceptional; likely fine, not eager"
+S010,P004,1,1,1.0,0,0.634,Strong analytical fit,"Solid verified fit but not exceptional; likely fine, not eager"
