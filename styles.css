@@ -3431,12 +3431,33 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .club-step-what { margin: 0 0 22px; max-width: 46ch; font-size: 16px; line-height: 1.55; color: var(--soft); }
 .club-earned .club-step-what { padding-right: 24px; }
 
-.club-tiers { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; counter-reset: rung; }
-.club-tiers li { padding: 18px 24px 18px 0; border-top: 1px solid rgba(180,123,32,.24); }
-.club-tiers li:first-child { border-top: 0; }
-.club-tiers strong { display: block; font-size: 18px; font-weight: 650; letter-spacing: -.015em; color: var(--ink); }
-.club-tier-need { display: inline-block; margin: 6px 0 8px; padding: 3px 9px; border: 1px solid rgba(180,123,32,.45); font-size: 12.5px; font-weight: 650; color: var(--gold-deep); font-variant-numeric: tabular-nums; }
-.club-tiers p { margin: 0; max-width: 44ch; font-size: 15px; line-height: 1.5; color: var(--soft); }
+
+/* The ladder. A rung line runs behind the numbers so it reads as a climb rather than three
+   equally weighted options, and each rung gains a little weight as it goes up. */
+.club-tiers { position: relative; display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.club-tiers::before {
+  content: ""; position: absolute; left: 13px; top: 26px; bottom: 26px; width: 1px;
+  background: linear-gradient(180deg, rgba(180,123,32,.25), var(--gold));
+}
+.club-rung { position: relative; display: grid; grid-template-columns: 27px minmax(0,1fr); gap: 16px; padding: 18px 24px 18px 0; }
+.club-rung + .club-rung { border-top: 1px solid rgba(180,123,32,.18); }
+.club-rung-n {
+  position: relative; z-index: 1; display: grid; place-items: center;
+  width: 27px; height: 27px; border-radius: 50%;
+  border: 1.5px solid var(--gold); background: var(--gold-pale);
+  font-size: 12.5px; font-weight: 700; color: var(--gold-deep);
+  font-variant-numeric: tabular-nums;
+}
+/* Weight rises with the rung: the top of a ladder should look like the top. */
+.club-rung:nth-child(2) .club-rung-n { border-width: 2px; }
+.club-rung:nth-child(3) .club-rung-n { border-width: 2px; background: var(--gold-deep); color: #fff; border-color: var(--gold-deep); }
+.club-rung strong { display: block; font-size: 18px; font-weight: 650; letter-spacing: -.018em; color: var(--ink); }
+
+/* The threshold reads as a figure, not a sentence in a box. */
+.club-tier-need { display: inline-flex; align-items: baseline; gap: 7px; margin: 8px 0 9px; font-size: 13.5px; color: var(--soft); }
+.club-tier-need b { font-size: 20px; font-weight: 700; line-height: 1; color: var(--gold-deep); font-variant-numeric: tabular-nums; }
+.club-tier-need i { font-style: normal; opacity: .55; padding: 0 2px; }
+.club-rung p { margin: 0; max-width: 46ch; font-size: 15px; line-height: 1.5; color: var(--soft); }
 
 /* Said before a club assumes otherwise, because every one of them will. */
 .club-caveat { margin: 26px 24px 0 0; padding-top: 20px; border-top: 2px solid var(--gold); font-size: 15px; line-height: 1.6; color: var(--soft); max-width: 52ch; }
@@ -3453,11 +3474,6 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .club-more .field-grid { margin-top: 14px; }
 
 .club-ladder h3 { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 500; letter-spacing: -.02em; }
-.club-tiers { display: grid; gap: 18px; margin: 22px 0 0; padding: 0; list-style: none; counter-reset: tier; }
-.club-tiers li { padding-left: 16px; border-left: 3px solid var(--gold-deep); }
-.club-tiers strong { display: block; font-size: 16px; }
-.club-tier-need { display: block; margin-top: 4px; color: var(--gold-deep); font-family: var(--font-mono); font-size: 12px; }
-.club-tiers p { margin: 7px 0 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
 
 @media (max-width: 900px) { .club-grid { grid-template-columns: 1fr; } }
 

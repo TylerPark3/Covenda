@@ -5316,14 +5316,34 @@ function renderReadiness(readiness) {
         o.value = v.slug; o.textContent = v.name; select.append(o);
       });
     }
-    (data.tiers || []).forEach(function (tier) {
+    // Rendered as an actual ladder. Three equal blocks read as three options; a rung with a
+    // number, a threshold, and rising weight reads as a thing you climb.
+    (data.tiers || []).forEach(function (tier, i) {
       var li = document.createElement('li');
+      li.className = 'club-rung';
+
+      var rung = document.createElement('span');
+      rung.className = 'club-rung-n';
+      rung.setAttribute('aria-hidden', 'true');
+      rung.textContent = String(i + 1);
+
+      var main = document.createElement('div');
       var head = document.createElement('strong'); head.textContent = tier.label;
+
+      // The threshold is the interesting number, so it reads as a number rather than a
+      // sentence in a box. Two figures side by side beat one run-on line.
       var need = document.createElement('span'); need.className = 'club-tier-need';
-      need.textContent = tier.minAdmitted + ' members admitted'
-        + (tier.minAccepted ? ' · ' + tier.minAccepted + ' with accepted work' : '');
+      var admitted = document.createElement('b'); admitted.textContent = tier.minAdmitted;
+      need.append(admitted, document.createTextNode(' admitted'));
+      if (tier.minAccepted) {
+        var sep = document.createElement('i'); sep.textContent = 'with';
+        var accepted = document.createElement('b'); accepted.textContent = tier.minAccepted;
+        need.append(sep, accepted, document.createTextNode(' accepted'));
+      }
+
       var grants = document.createElement('p'); grants.textContent = tier.grants;
-      li.append(head, need, grants);
+      main.append(head, need, grants);
+      li.append(rung, main);
       tiersHost.append(li);
     });
   }).catch(function () { /* endpoint unavailable — the form still submits */ });
