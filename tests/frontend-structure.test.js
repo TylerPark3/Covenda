@@ -470,14 +470,19 @@ test('a selection made before the briefs load is not silently dropped', () => {
 test('school clubs can register and see the earned verification ladder', () => {
   assert.match(html, /id="clubRegisterForm"/);
   assert.match(html, /id="clubTiers"/);
-  assert.match(html, /Get your club Covenda-verified/);
+  // Registering and being verified are different things, and the page must say so rather
+  // than implying one leads to the other.
+  assert.match(html, /Registering takes a minute/);
+  assert.match(html, /Verification is earned/);
   assert.match(html, /name="clubVertical"/);
   assert.match(script, /action: 'club-tiers'/);
   // Reuses the existing intake — no new storage path, no new inbox.
   assert.match(script, /type: 'referrer_endorsement'/);
   assert.match(script, /intent: 'club_verification'/);
   // Earned, never granted — the honesty line has to survive into the UI.
-  assert.match(html, /never granted and never sold/);
+  assert.match(html, /Nothing here is granted or sold/);
+  // The assumption every club will otherwise make, contradicted before they make it.
+  assert.match(html, /never substitutes for a member's own evidence/);
   assert.match(styles, /\.club-ladder/);
 });
 

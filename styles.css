@@ -3399,7 +3399,6 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
        gets a real front door and the earned ladder sits beside the form. ------------- */
 .club-register { padding: clamp(48px, 6vw, 92px) var(--page-gutter); border-top: 1px solid var(--line); background: #fff; }
 .club-register > * { width: min(100%, var(--content)); margin-left: auto; margin-right: auto; }
-.club-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: clamp(24px, 3.4vw, 48px); align-items: start; margin-top: clamp(26px, 3.4vw, 40px); }
 .club-form { padding: clamp(22px, 2.8vw, 32px); border: 1px solid var(--line-strong); background: rgba(255,255,255,.65); }
 .club-form .field-grid { gap: 18px; }
 .club-form .consent-row { margin-top: 18px; font-size: var(--step-body-sm); line-height: 1.55; }
@@ -3409,6 +3408,42 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 
 /* The optional half of the club form, collapsed. Three visible fields is the difference
    between a form an officer fills in between classes and one they leave for later. */
+
+/* Registering and being verified are different things, so they are two visible tracks rather
+   than a form with an aside. The left is what you can do now; the right is what it becomes. */
+.club-register { padding: clamp(56px, 7vw, 96px) var(--page-gutter); }
+.club-register > * { width: min(100%, var(--content)); margin-inline: auto; }
+.club-head h2 { margin: 12px 0 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 3.9vw, 52px); line-height: 1.05; letter-spacing: -.04em; text-wrap: balance; }
+.club-lede { margin: 18px 0 0; max-width: 66ch; font-size: clamp(16.5px, 1.4vw, 19px); line-height: 1.55; color: var(--soft); }
+
+.club-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; margin-top: clamp(34px, 4vw, 54px); border-top: 1px solid var(--rule, var(--line-strong)); }
+.club-now { padding: 34px 44px 34px 0; }
+.club-earned { padding: 34px 0 34px 44px; border-left: 1px solid var(--line); background: var(--gold-pale); }
+@media (max-width: 900px) {
+  .club-split { grid-template-columns: 1fr; }
+  .club-now { padding: 28px 0; }
+  .club-earned { padding: 28px 0; border-left: 0; border-top: 1px solid var(--line); }
+}
+
+/* Numbered because it genuinely is a sequence: you cannot earn the second without the first. */
+.club-step-cap { display: flex; align-items: center; gap: 11px; margin: 0 0 10px; font-size: 13px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--gold-deep); }
+.club-step-cap span { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid var(--gold-deep); font-size: 13px; font-variant-numeric: tabular-nums; }
+.club-step-what { margin: 0 0 22px; max-width: 46ch; font-size: 16px; line-height: 1.55; color: var(--soft); }
+.club-earned .club-step-what { padding-right: 24px; }
+
+.club-tiers { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; counter-reset: rung; }
+.club-tiers li { padding: 18px 24px 18px 0; border-top: 1px solid rgba(180,123,32,.24); }
+.club-tiers li:first-child { border-top: 0; }
+.club-tiers strong { display: block; font-size: 18px; font-weight: 650; letter-spacing: -.015em; color: var(--ink); }
+.club-tier-need { display: inline-block; margin: 6px 0 8px; padding: 3px 9px; border: 1px solid rgba(180,123,32,.45); font-size: 12.5px; font-weight: 650; color: var(--gold-deep); font-variant-numeric: tabular-nums; }
+.club-tiers p { margin: 0; max-width: 44ch; font-size: 15px; line-height: 1.5; color: var(--soft); }
+
+/* Said before a club assumes otherwise, because every one of them will. */
+.club-caveat { margin: 26px 24px 0 0; padding-top: 20px; border-top: 2px solid var(--gold); font-size: 15px; line-height: 1.6; color: var(--soft); max-width: 52ch; }
+.club-caveat b { display: block; margin-bottom: 5px; color: var(--ink); font-weight: 700; }
+
+.club-form { display: grid; gap: 14px; max-width: 44ch; }
+
 .club-more { margin: 4px 0 12px; }
 .club-more summary { cursor: pointer; font-size: 15px; font-weight: 600; color: var(--gold-deep); list-style: none; }
 .club-more summary::-webkit-details-marker { display: none; }
@@ -3417,9 +3452,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .club-more summary span { font-weight: 400; color: var(--soft); font-size: 14px; }
 .club-more .field-grid { margin-top: 14px; }
 
-.club-ladder { padding: clamp(22px, 2.8vw, 32px); border: 1px solid var(--gold-light); background: var(--gold-pale); }
 .club-ladder h3 { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 500; letter-spacing: -.02em; }
-.club-ladder-note { margin: 10px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
 .club-tiers { display: grid; gap: 18px; margin: 22px 0 0; padding: 0; list-style: none; counter-reset: tier; }
 .club-tiers li { padding-left: 16px; border-left: 3px solid var(--gold-deep); }
 .club-tiers strong { display: block; font-size: 16px; }
