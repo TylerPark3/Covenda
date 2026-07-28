@@ -20,6 +20,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 
 /* Sign-in: one centered, light column — the dark split panel is gone on purpose. */
 .portal-auth { display: grid; min-height: 100vh; grid-template-columns: 1fr; }
+/* Pre-sign-in, before any theme preference is known — deliberately light. */
 .auth-panel { display: grid; min-height: 100vh; place-items: center; padding: 42px 20px; background: radial-gradient(circle at 50% 30%,var(--gold-pale),transparent 42%),#fff; }
 .auth-panel-inner { width: min(430px,100%); text-align: center; }
 .auth-brand { justify-content: center; margin-bottom: clamp(28px, 5vh, 48px); color: var(--ink); text-decoration: none; }
@@ -94,7 +95,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .welcome-row > div > p:last-child,.page-heading > div > p:last-child { max-width:96ch; margin:14px 0 0; color:var(--muted); font-size: var(--step-body-sm); line-height:1.7; }
 .welcome-row .portal-primary { flex:0 0 auto; margin-top:4px; }
 .company-segments { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:36px; }
-.company-segment { display:flex; flex-direction:column; padding:24px; border:1px solid var(--line); border-radius: 0; background:linear-gradient(180deg,var(--gold-pale),#fff 62%); }
+.company-segment { display:flex; flex-direction:column; padding:24px; border:1px solid var(--line); border-radius: 0; background:linear-gradient(180deg,var(--gold-pale),var(--surface-1) 62%); }
 .company-segment-icon { display:grid; width:42px; height:42px; place-items:center; border:1px solid rgba(180,123,32,.3); border-radius: 0; color:var(--gold-deep); background:var(--surface-1); }
 .company-segment-icon svg { width:20px; height:20px; }
 .company-segment h2 { margin:16px 0 0; font-size: 18px; letter-spacing:-.02em; }
@@ -183,7 +184,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 @media (prefers-reduced-motion: reduce) { .prv { opacity:1; transform:none; } }
 
 /* Live credibility meter (student profile) — real earned signals, not a black-box score. */
-.cred-meter { margin:22px 0 0; padding:24px; border:1px solid var(--line); background:linear-gradient(180deg,var(--gold-pale),#fff 62%); }
+.cred-meter { margin:22px 0 0; padding:24px; border:1px solid var(--line); background:linear-gradient(180deg,var(--gold-pale),var(--surface-1) 62%); }
 .cred-meter-head { display:flex; align-items:center; justify-content:space-between; gap:18px; }
 .cred-meter-head h3 { margin:0; font-size: 17px; letter-spacing:-.02em; }
 .cred-meter-sub { margin:5px 0 0; max-width:46ch; font-size: 14.5px; line-height:1.45; color:var(--soft); }
@@ -254,7 +255,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .pow-status { margin:10px 0 0; color:var(--muted); font-size: 13.5px; }
 .pow-status.is-error { color:var(--danger); }
 .pow-results { display:grid; gap:14px; margin-top:16px; }
-.pow-card { padding:18px; border:1px solid var(--line); border-radius: 0; background:linear-gradient(180deg,#fffdf9,#fff 60%); }
+.pow-card { padding:18px; border:1px solid var(--line); border-radius: 0; background:linear-gradient(180deg,var(--surface-2),var(--surface-1) 60%); }
 .pow-card-top { display:flex; align-items:center; gap:10px; }
 .pow-card-top h4 { margin:0; font-size: 15px; }
 .pow-card-top a { color:var(--gold-deep); text-decoration:none; }
@@ -272,14 +273,14 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 /* Work-trial ladder: names the "proof precedes access" model on the projects view. */
 .work-trial-ladder { display:flex; align-items:stretch; gap:14px; max-width:none; margin:0 auto 24px 0; }
 .wtl-step { flex:1; display:flex; align-items:flex-start; gap:12px; padding:16px 18px; border:1px solid var(--line); border-radius: 0; background:var(--surface-1); }
-.wtl-step:last-of-type { border-color:rgba(180,123,32,.4); background:linear-gradient(180deg,var(--gold-pale),#fff 65%); }
+.wtl-step:last-of-type { border-color:rgba(180,123,32,.4); background:linear-gradient(180deg,var(--gold-pale),var(--surface-1) 65%); }
 .wtl-num { flex:0 0 auto; display:grid; place-items:center; width:26px; height:26px; border-radius: 0; background:var(--gold); color:#1c1300; font-size: 14.5px; font-weight:700; }
 .wtl-step strong { display:block; font-size: 14.5px; color:var(--ink); }
 .wtl-step > div > span { display:block; margin-top:3px; color:var(--muted); font-size: 13.5px; line-height:1.5; }
 .wtl-arrow { flex:0 0 auto; align-self:center; width:18px; height:18px; color:var(--gold-deep); }
 .verified-earned { margin:8px 0 0; color:var(--gold-deep); font-size: 13.5px; font-weight:600; }
 @media (max-width:680px) { .work-trial-ladder { flex-direction:column; } .wtl-arrow { transform:rotate(90deg); } }
-.packet-card { margin:0 0 16px; padding:22px; border:1px solid rgba(180,123,32,.4); border-radius: 0; background:linear-gradient(180deg,var(--gold-pale),#fff 60%); }
+.packet-card { margin:0 0 16px; padding:22px; border:1px solid rgba(180,123,32,.4); border-radius: 0; background:linear-gradient(180deg,var(--gold-pale),var(--surface-1) 60%); }
 .packet-eyebrow { margin:0; color:var(--gold-deep); font-size: 14px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
 .packet-card-top h3 { margin:4px 0 0; font-size: 17px; letter-spacing:-.02em; }
 .packet-dl { display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:14px 0 0; }
@@ -347,7 +348,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .discover-actions .portal-primary,.discover-actions .portal-secondary { min-height:34px; padding:7px 14px; font-size: 13px; }
 .batch-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
 .batch-card { padding:20px; border:1px solid var(--line); border-radius: 0; background:var(--surface-1); display:flex; flex-direction:column; }
-.batch-card.is-elite { border-color:rgba(180,123,32,.4); background:linear-gradient(180deg,var(--gold-pale),#fff 60%); }
+.batch-card.is-elite { border-color:rgba(180,123,32,.4); background:linear-gradient(180deg,var(--gold-pale),var(--surface-1) 60%); }
 .batch-card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
 .batch-card-top h3 { margin:0; font-size: 16px; letter-spacing:-.03em; }
 .batch-tier { display:inline-flex; padding:5px 10px; border:1px solid var(--line); border-radius: 0; color:var(--muted); font-size: 13.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; white-space:nowrap; }
@@ -432,7 +433,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .message-conversation > header { display:flex; min-height:77px; align-items:center; justify-content:space-between; gap:20px; padding:17px 24px; border-bottom:1px solid var(--line); }
 .message-conversation > header h2 { margin:0; font-size: 18px; letter-spacing:-.04em; }
 .message-conversation > header > span { padding:5px 9px; border:1px solid var(--line); border-radius: 0; color:var(--muted); font-size: 13.5px; }
-.message-thread { display:flex; padding:25px; overflow:auto; background:linear-gradient(180deg,#fff,#fdfcf9); flex-direction:column; gap:12px; }
+.message-thread { display:flex; padding:25px; overflow:auto; background:linear-gradient(180deg,var(--surface-1),var(--surface-2)); flex-direction:column; gap:12px; }
 .message-thread .list-empty { margin:auto 0; border:0; }
 .message-bubble { width:min(560px,82%); padding:13px 15px; border:1px solid var(--line); border-radius: 0; background:var(--surface-1); box-shadow:0 7px 20px rgba(40,33,20,.04); }
 .message-bubble.is-own { align-self:flex-end; border-color:#e2d4b7; border-radius: 0; background:var(--gold-pale); }
@@ -616,7 +617,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .status-pill[data-status="complete"],.status-pill[data-status="accepted"] { border-color:rgba(36,117,58,.25); background:#f4faf5; color:var(--success); }
 .status-pill[data-status="declined"] { border-color:rgba(164,49,36,.22); background:#fbf4f3; color:var(--danger); }
 
-.rung-badge { display:flex; align-items:center; gap:11px; margin-bottom:20px; padding:13px 15px; border:1px solid var(--line); border-radius: 0; background:linear-gradient(100deg,var(--gold-pale),#fff); }
+.rung-badge { display:flex; align-items:center; gap:11px; margin-bottom:20px; padding:13px 15px; border:1px solid var(--line); border-radius: 0; background:linear-gradient(100deg,var(--gold-pale),var(--surface-1)); }
 .rung-badge.is-verified { border-color:rgba(36,117,58,.28); background:linear-gradient(100deg,#f4faf5,var(--surface-1)); }
 .rung-badge svg { width:18px; height:18px; flex:0 0 auto; color:var(--gold-deep); }
 .rung-badge.is-verified svg { color:var(--success); }
@@ -666,7 +667,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
    whitespace while the content below spans wider. Flush-left, no side margins. */
 [data-portal-view="wallet"] .page-heading > div > p:last-child { max-width:900px; }
 .wallet-grid { display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.4fr); gap:22px; align-items:start; }
-.wallet-balance-card { padding:26px; border:1px solid #eadfca; border-radius: 0; background:linear-gradient(160deg,var(--gold-pale),#fff); }
+.wallet-balance-card { padding:26px; border:1px solid #eadfca; border-radius: 0; background:linear-gradient(160deg,var(--gold-pale),var(--surface-1)); }
 .wallet-balance-card strong { display:block; margin-top:6px; font-size: 56px; line-height:1; letter-spacing:-.05em; font-variant-numeric:tabular-nums; }
 .wallet-balance-card > span { color:var(--soft); font-size: 13px; font-weight:650; letter-spacing:.06em; text-transform:uppercase; }
 .wallet-held { margin:16px 0 0; color:var(--muted); font-size: 14.5px; line-height:1.55; }
@@ -749,7 +750,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 }
 
 /* ---- Vertical-matched discovery ---- */
-.discover-highlight { display:flex; align-items:flex-start; gap:11px; margin-bottom:16px; padding:14px 16px; border:1px solid #eadfca; border-radius: 0; background:linear-gradient(100deg,var(--gold-pale),#fff); }
+.discover-highlight { display:flex; align-items:flex-start; gap:11px; margin-bottom:16px; padding:14px 16px; border:1px solid #eadfca; border-radius: 0; background:linear-gradient(100deg,var(--gold-pale),var(--surface-1)); }
 .discover-highlight svg { width:18px; height:18px; flex:0 0 auto; color:var(--gold-deep); }
 .discover-highlight strong { display:block; font-size: 14.5px; }
 .discover-highlight small { display:block; margin-top:2px; color:var(--soft); font-size: 14px; }
@@ -867,7 +868,8 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 }
 
 /* ===== Suno-style student onboarding (warm light + gold, editorial serif) ===== */
-.onboard { position:fixed; inset:0; z-index:40; display:grid; place-items:center; padding:34px 22px; overflow:auto; background:radial-gradient(120% 90% at 50% 0%,var(--gold-pale),#fff 62%),#fff; }
+/* Same: onboarding runs before a theme is chosen. */
+.onboard { position:fixed; inset:0; z-index:40; display:grid; place-items:center; padding:34px 22px; overflow:auto; background:radial-gradient(120% 90% at 50% 0%,var(--gold-pale),var(--surface-1) 62%),#fff; }
 .onboard[hidden] { display:none; }
 .onboard-glow { position:absolute; inset:0; pointer-events:none; background:radial-gradient(58% 42% at 50% 20%,rgba(180,123,32,.16),transparent 72%); }
 .onboard-glow::after { content:""; position:absolute; inset:0; opacity:.45; mix-blend-mode:soft-light; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size:150px 150px; }
@@ -892,7 +894,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .onboard-card strong { font-size: 15px; color:var(--ink); }
 .onboard-card span { font-size: 13.5px; color:var(--muted); line-height:1.45; }
 .onboard-card:hover { border-color:var(--gold); }
-.onboard-card.is-selected { border-color:var(--gold); background:linear-gradient(160deg,var(--gold-pale),#fff); box-shadow:0 0 0 3px rgba(180,123,32,.12); }
+.onboard-card.is-selected { border-color:var(--gold); background:linear-gradient(160deg,var(--gold-pale),var(--surface-1)); box-shadow:0 0 0 3px rgba(180,123,32,.12); }
 .onboard-card:focus-visible { outline:3px solid rgba(180,123,32,.28); outline-offset:2px; }
 .onboard-chip { flex-direction:row; align-items:center; }
 .onboard-cta { display:inline-flex; align-items:center; justify-content:center; gap:10px; width:100%; margin-top:30px; min-height:56px; padding:15px 26px; border:1px solid var(--gold-deep); border-radius: 0; background:linear-gradient(#d8a541,#ab6d09); box-shadow:0 12px 26px rgba(180,123,32,.24),inset 0 1px rgba(255,255,255,.35); color:#fff; font-family:inherit; font-size: 15px; font-weight:700; cursor:pointer; transition:transform .15s,box-shadow .2s; }
@@ -980,7 +982,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .batch-req-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .batch-req-list li { padding: 13px 15px; border: 1px solid #e4e4de; border-radius: 0; }
 .batch-req-list li.is-met { border-color: #bcd9c3; background: #f4faf5; }
-.batch-req-list li.is-open { border-color: #eadfca; background: #fffdf9; }
+.batch-req-list li.is-open { border-color: #eadfca; background: var(--surface-2); }
 .batch-req-list li strong { display: block; font-size: 15.5px; }
 .batch-req-list li p { margin: 5px 0 0; font-size: 15px; line-height: 1.6; color: var(--text-2); }
 .batch-req-gap { color: #8b5709 !important; font-weight: 600; }
@@ -2055,7 +2057,7 @@ body { background: var(--surface); }
    at 70% transparency that read as nothing on a white page. This is the version you can
    actually see. */
 .member-nav {
-  background: linear-gradient(180deg, #fffdf8, #fff 30%);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1) 30%);
   border-right: 2px solid var(--gold);
 }
 .member-nav nav button.is-active {
@@ -2071,7 +2073,7 @@ body { background: var(--surface); }
   border-top: 3px solid var(--gold);
   border-image: none;
 }
-.member-header { border-bottom: 2px solid var(--gold); background: linear-gradient(180deg, #fffdf8,var(--surface-1)); }
+.member-header { border-bottom: 2px solid var(--gold); background: linear-gradient(180deg, var(--surface-2),var(--surface-1)); }
 
 /* Headings sit on a gold rule. */
 .panel-card > h3, .company-form-head h3, .pipe-head h3, .video-library-head h3 {
@@ -2140,3 +2142,20 @@ body { background: var(--surface); }
 :root[data-theme="night"] .ba-rq-item textarea { background:var(--surface-1); border-color:var(--edge-strong); color:var(--text); }
 :root[data-theme="night"] .ex-file { background:var(--surface-1); color:var(--gold-deep); border-color:var(--gold-deep); }
 :root[data-theme="night"] .opt { background:var(--surface-2); color:var(--text-3); }
+
+/* The three panels that were still white at night, each because it painted its own ground
+   through a gradient rather than a token. */
+:root[data-theme="night"] .cred-meter { background:linear-gradient(180deg,var(--gold-pale),var(--surface-1) 62%); }
+:root[data-theme="night"] .message-thread { background:var(--surface-1); }
+:root[data-theme="night"] .message-empty,
+:root[data-theme="night"] .message-empty h3,
+:root[data-theme="night"] .message-empty p { color:var(--text-2); }
+:root[data-theme="night"] .pow-card,
+:root[data-theme="night"] .pow-verify { background:var(--surface-2); border-color:var(--edge); }
+:root[data-theme="night"] .pow-verify p,
+:root[data-theme="night"] .pow-skill { color:var(--text-2); background:var(--surface-1); }
+:root[data-theme="night"] .pow-input { background:var(--surface-1); border-color:var(--edge-strong); color:var(--text); }
+/* The credibility rows sat on a near-white hover tint, which at night reads as a lit strip. */
+:root[data-theme="night"] .cred-meter-list li:hover { background:rgba(217,169,78,.08); }
+:root[data-theme="night"] .cred-meter-list li.is-next { background:rgba(217,169,78,.10); }
+:root[data-theme="night"] .cred-next { background:var(--surface-1); }
