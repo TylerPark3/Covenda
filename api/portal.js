@@ -278,6 +278,25 @@ export async function authorizeMember(req, dependencies = {}) {
 export const degraded = new Map();
 const reported = new Set();
 
+// A query that filters on a column added by a migration, run against a database where that
+// migration has not been applied yet, fails outright — and inside checked() that takes the
+// whole portal down with it.
+//
+// This has now happened twice. The rule that prevents a third: a filter on a NEW column is
+// always attempted and always has a fallback. When the column is missing the unfiltered result
+// is correct anyway, because a database without the column has no synthetic rows in it.
+async function excludingSynthetic(build) {
+  const { data, error } = await build(true);
+  if (!error) return data ?? [];
+  if (!/column .*synthetic.* does not exist|synthetic/i.test(error.message || '')) {
+    throw new Error(error.message);
+  }
+  console.warn(JSON.stringify({ level: 'warn', message: 'synthetic column missing; run the newest migration', detail: error.message.slice(0, 120) }));
+  const fallback = await build(false);
+  if (fallback.error) throw new Error(fallback.error.message);
+  return fallback.data ?? [];
+}
+
 async function optional(query, fallback = [], label = 'optional table') {
   try {
     const { data, error } = await query;
@@ -348,7 +367,11 @@ export async function loadMemberDashboard(member, env = process.env) {
   if (profile.role === 'student') {
     const [projects, opportunities, applications] = await Promise.all([
       checked(supabase.from('member_projects').select('*').eq('assigned_student_user_id', user.id).order('updated_at', { ascending: false }).limit(50)),
-      checked(supabase.from('member_projects').select('*').eq('status', 'open').eq('synthetic', false).in('visibility', ['members', 'open']).order('created_at', { ascending: false }).limit(50)),
+      excludingSynthetic(filtered => {
+        let q = supabase.from('member_projects').select('*').eq('status', 'open');
+        if (filtered) q = q.eq('synthetic', false);
+        return q.in('visibility', ['members', 'open']).order('created_at', { ascending: false }).limit(50);
+      }),
       checked(supabase.from('project_applications').select('*').eq('student_user_id', user.id).order('updated_at', { ascending: false }).limit(100)),
     ]);
     const projectIds = projects.map(project => project.id);
@@ -415,7 +438,11 @@ export async function loadMemberDashboard(member, env = process.env) {
     });
   }
   const studentDirectory = profile.role === 'company'
-    ? await checked(supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,work_types,avatar_url,skill_signals').eq('synthetic', false).eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100))
+    ? await excludingSynthetic(filtered => {
+        let q = supabase.from('member_profiles').select('user_id,display_name,school_name,headline,bio,skills,graduation_year,updated_at,identity_verified,verticals,work_types,avatar_url,skill_signals');
+        if (filtered) q = q.eq('synthetic', false);
+        return q.eq('role', 'student').eq('portfolio_visibility', 'members').order('updated_at', { ascending: false }).limit(100);
+      })
     : [];
   const messages = projectIds.length
     ? await checked(supabase.from('project_messages').select('*').in('project_id', projectIds).order('created_at', { ascending: true }).limit(500))
