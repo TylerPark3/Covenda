@@ -5,7 +5,7 @@ import { scoreCandidate } from './scoring.js';
 import { requestAccommodation, saveTranscript } from './transcripts.js';
 
 import { supabaseConfiguration } from './submissions.js';
-import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail, deliverableSubmittedEmail, deliverableReviewedEmail, trialStartedEmail, introductionEmail } from './notify.js';
+import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail, recordDelivery, deliverableSubmittedEmail, deliverableReviewedEmail, trialStartedEmail, introductionEmail } from './notify.js';
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
@@ -1832,12 +1832,13 @@ export async function requestIntroduction(member, input) {
   const intro = await checked(member.supabase.from('introductions').insert(row).select('*').single(), null);
   // An introduction the student never sees is an introduction that never happened. They
   // decide whether to accept, so they have to be told it exists.
-  await notifyMember(member.supabase, {
+  const sent_intro = await notifyMember(member.supabase, {
     toUserId: studentUserId,
     idempotencyKey: `covenda-intro-${intro?.id || studentUserId}`,
     build: ({ to, from, portalUrl }) => introductionEmail({ to, from, companyName: null, roleSummary: row.role_summary || null, portalUrl }),
     env: process.env,
   });
+  await recordDelivery(member.supabase, { event: 'intro', result: sent_intro, toUserId: studentUserId });
   return intro;
 }
 
@@ -2188,12 +2189,13 @@ export async function applyToProject(member, input, env = process.env) {
   if (error) throw error;
   await logMatchEvent(member, { projectId, studentUserId: member.user.id, eventType: 'applied', fit, features: { project: pick(project, ['verticals', 'work_types', 'desired_skills', 'credits_listed']), student: pick(profile, ['verticals', 'work_types', 'skills']) } });
   // Best-effort: tell the project owner a new applicant arrived. Never blocks the application.
-  await notifyMember(member.supabase, {
+  const sent_applied = await notifyMember(member.supabase, {
     toUserId: project.owner_user_id,
     idempotencyKey: `covenda-applied-${application.id}`,
     build: ({ to, from, portalUrl }) => applicationReceivedEmail({ to, from, projectTitle: project.title, studentName: profile.display_name, portalUrl }),
     env,
   });
+  await recordDelivery(member.supabase, { event: 'applied', result: sent_applied, toUserId: project.owner_user_id });
   return application;
 }
 
@@ -2314,11 +2316,12 @@ export async function acceptApplication(member, input) {
   await logMatchEvent(member, { projectId: project.id, studentUserId: application.student_user_id, eventType: 'accepted', fit: { score: accepted.fit_score, reasons: accepted.fit_reasons } });
   // Best-effort: tell the accepted student. (The cascade-declined applicants are intentionally
   // not emailed here to avoid a burst; an explicit decline still notifies — see declineApplication.)
-  await notifyMember(member.supabase, {
+  const sent_accepted = await notifyMember(member.supabase, {
     toUserId: application.student_user_id,
     idempotencyKey: `covenda-accepted-${application.id}`,
     build: ({ to, from, portalUrl }) => applicationDecisionEmail({ to, from, projectTitle: project.title, accepted: true, portalUrl }),
   });
+  await recordDelivery(member.supabase, { event: 'accepted', result: sent_accepted, toUserId: application.student_user_id });
   return accepted;
 }
 
@@ -2343,12 +2346,13 @@ export async function startTrial(member, input) {
 
   // Both sides need to know the clock has started, or a deadline arrives as a surprise.
   for (const toUserId of [started?.assigned_student_user_id, started?.owner_user_id].filter(Boolean)) {
-    await notifyMember(member.supabase, {
+    const sent_trial_start = await notifyMember(member.supabase, {
       toUserId,
       idempotencyKey: `covenda-trial-start-${project.id}-${toUserId}`,
       build: ({ to, from, portalUrl }) => trialStartedEmail({ to, from, projectTitle: started?.title, portalUrl }),
       env: process.env,
     });
+    await recordDelivery(member.supabase, { event: 'trial-start', result: sent_trial_start, toUserId: null });
   }
   return started;
 }
@@ -2370,11 +2374,12 @@ export async function declineApplication(member, input) {
   );
   await logMatchEvent(member, { projectId: project.id, studentUserId: application.student_user_id, eventType: 'declined', fit: { score: application.fit_score, reasons: application.fit_reasons } });
   // Best-effort: a gentle "not this one" to the student on an explicit decline.
-  await notifyMember(member.supabase, {
+  const sent_declined = await notifyMember(member.supabase, {
     toUserId: application.student_user_id,
     idempotencyKey: `covenda-declined-${application.id}`,
     build: ({ to, from, portalUrl }) => applicationDecisionEmail({ to, from, projectTitle: project.title, accepted: false, portalUrl }),
   });
+  await recordDelivery(member.supabase, { event: 'declined', result: sent_declined, toUserId: application.student_user_id });
   return declined;
 }
 
@@ -2430,12 +2435,13 @@ export async function submitDeliverable(member, input) {
   // The moment a trial most often stalls: the student is finished and the company has no way
   // to know. Best-effort — a mail failure must never lose the submission itself.
   if (submitted?.owner_user_id) {
-    await notifyMember(member.supabase, {
+    const sent_submitted = await notifyMember(member.supabase, {
       toUserId: submitted.owner_user_id,
       idempotencyKey: `covenda-submitted-${projectId}-${now}`,
       build: ({ to, from, portalUrl }) => deliverableSubmittedEmail({ to, from, projectTitle: submitted.title, portalUrl }),
       env: process.env,
     });
+    await recordDelivery(member.supabase, { event: 'submitted', result: sent_submitted, toUserId: submitted.owner_user_id });
   }
   return submitted;
 }
@@ -2474,12 +2480,13 @@ export async function reviewDeliverable(member, input) {
     );
     // A change request nobody is told about is a project that quietly stops.
     if (revised?.assigned_student_user_id) {
-      await notifyMember(member.supabase, {
+      const sent_revise = await notifyMember(member.supabase, {
         toUserId: revised.assigned_student_user_id,
         idempotencyKey: `covenda-revise-${projectId}-${now}`,
         build: ({ to, from, portalUrl }) => deliverableReviewedEmail({ to, from, projectTitle: revised.title, accepted: false, note, portalUrl }),
         env: process.env,
       });
+      await recordDelivery(member.supabase, { event: 'revise', result: sent_revise, toUserId: revised.assigned_student_user_id });
     }
     return revised;
   }
@@ -2498,12 +2505,13 @@ export async function reviewDeliverable(member, input) {
   // Acceptance is what the student has been waiting weeks for, and it is what issues their
   // verified work record. Telling them is not optional.
   if (project.assigned_student_user_id) {
-    await notifyMember(member.supabase, {
+    const sent_accepted = await notifyMember(member.supabase, {
       toUserId: project.assigned_student_user_id,
       idempotencyKey: `covenda-accepted-${projectId}-${now}`,
       build: ({ to, from, portalUrl }) => deliverableReviewedEmail({ to, from, projectTitle: project.title, accepted: true, portalUrl }),
       env: process.env,
     });
+    await recordDelivery(member.supabase, { event: 'accepted', result: sent_accepted, toUserId: project.assigned_student_user_id });
   }
   return Array.isArray(released) ? released[0] : released;
 }

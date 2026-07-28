@@ -69,6 +69,10 @@
       <button class="admin-refresh" id="adminRefresh" type="button"><svg><use href="#a-refresh"/></svg>Refresh inbox</button>
     </header>
     <main class="admin-main">
+      <!-- Delivery health. First panel on purpose: if notifications are silently off, every
+           other number on this page describes a product nobody is hearing from. -->
+      <section class="admin-health" id="adminHealth" hidden></section>
+
       <section class="admin-roster" id="adminRoster" hidden>
         <div class="roster-head">
           <div>

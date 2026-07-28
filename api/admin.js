@@ -1,3 +1,4 @@
+import { deliveryConfig } from './notify.js';
 import { createClient } from '@supabase/supabase-js';
 
 import { supabaseConfiguration } from './submissions.js';
@@ -1015,6 +1016,29 @@ export default async function handler(req, res, dependencies = {}) {
       // Every other POST action mutates operator data and requires an authenticated operator.
       const operator = await authorizeAdmin(req, dependencies);
       if (!operator) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
+      if (input.action === 'delivery-health') {
+        const config = deliveryConfig(env);
+        // Recent failures, so "configured" and "actually working" are answered separately —
+        // a valid key with a bouncing from-address is configured and still delivering nothing.
+        const { data: recent } = await supabase.from('error_events')
+          .select('message, detail, created_at').eq('route', 'notify')
+          .gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString())
+          .order('created_at', { ascending: false }).limit(50);
+        const failures = recent || [];
+        const byReason = {};
+        for (const f of failures) {
+          const r = f.detail?.reason || 'unknown';
+          byReason[r] = (byReason[r] || 0) + 1;
+        }
+        return res.status(200).json({ ok: true, health: {
+          ...config,
+          failuresLast7Days: failures.length,
+          byReason,
+          lastFailureAt: failures[0]?.created_at || null,
+          // Configured but silent for a week is the state worth noticing.
+          healthy: config.configured && failures.length === 0,
+        } });
+      }
       if (input.action === 'platform-roster') {
         return res.status(200).json({ ok: true, roster: await loadPlatformRoster(operator.supabase) });
       }

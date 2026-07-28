@@ -210,3 +210,47 @@ export function introductionEmail({ to, from, companyName, roleSummary, portalUr
     tags: TAGS,
   };
 }
+
+// ── Delivery health ───────────────────────────────────────────────────────────────────
+// The failure mode this exists for is silence. If RESEND_API_KEY is missing, every send
+// returns not-configured and the product behaves exactly as it does today: nothing breaks,
+// nothing arrives, and the first anyone learns of it is a company saying they never heard
+// back. Configuration state has to be visible before it matters, not after.
+
+export function deliveryConfig(env = process.env) {
+  const apiKey = Boolean(env.RESEND_API_KEY);
+  const from = env.COVENDA_NOTIFICATION_FROM || null;
+  const operator = env.COVENDA_NOTIFICATION_EMAIL || null;
+  const missing = [
+    !apiKey ? 'RESEND_API_KEY' : null,
+    !from ? 'COVENDA_NOTIFICATION_FROM' : null,
+  ].filter(Boolean);
+  return {
+    configured: missing.length === 0,
+    missing,
+    from,
+    operatorInbox: operator,
+    // Said plainly, because "not configured" reads as a minor warning and this is not one.
+    consequence: missing.length
+      ? 'Every notification silently does nothing. A student submits work and the company is never told.'
+      : null,
+  };
+}
+
+// Records a send that did not happen, so a run of failures is countable rather than folklore.
+// Never records the message body or the recipient address.
+export async function recordDelivery(supabase, { event, result, toUserId = null }) {
+  if (!supabase || result?.sent || result?.reason === 'opted-out') return { logged: false };
+  try {
+    await supabase.from('error_events').insert({
+      route: 'notify',
+      kind: 'degraded',
+      message: `${event} not delivered: ${result?.reason || 'unknown'}`,
+      detail: { event, reason: String(result?.reason || 'unknown').slice(0, 120) },
+      user_id: toUserId,
+    });
+    return { logged: true };
+  } catch {
+    return { logged: false };
+  }
+}

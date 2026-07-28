@@ -49,6 +49,73 @@ function bindPrivateLink(anchor, url) {
 
 function authHeaders() { return { Authorization: `Bearer ${token()}`, 'Content-Type':'application/json' }; }
 
+
+// Delivery health. The failure this exists for is silence: with no RESEND_API_KEY every
+// notification returns not-configured and the product behaves normally, so the first anyone
+// learns of it is a company saying they never heard back.
+async function renderDeliveryHealth() {
+  const host = document.getElementById('adminHealth');
+  if (!host) return;
+  let health;
+  try {
+    const result = await adminRequest({ method: 'POST', body: JSON.stringify({ action: 'delivery-health' }) });
+    health = result.health;
+  } catch { host.hidden = true; return; }
+  if (!health) { host.hidden = true; return; }
+
+  host.replaceChildren();
+  host.hidden = false;
+  host.classList.toggle('is-broken', !health.configured);
+  host.classList.toggle('is-degraded', health.configured && health.failuresLast7Days > 0);
+
+  const head = document.createElement('div');
+  head.className = 'health-head';
+  const dot = document.createElement('span');
+  dot.className = 'health-dot';
+  const title = document.createElement('h3');
+  title.textContent = !health.configured
+    ? 'Notifications are switched off'
+    : health.failuresLast7Days
+      ? 'Notifications configured, some not delivered'
+      : 'Notifications working';
+  head.append(dot, title);
+  host.append(head);
+
+  // The consequence, not the config state. "Not configured" reads as a minor warning.
+  if (health.consequence) {
+    const why = document.createElement('p');
+    why.className = 'health-why';
+    why.textContent = health.consequence;
+    host.append(why);
+  }
+
+  if (health.missing?.length) {
+    const fix = document.createElement('p');
+    fix.className = 'health-fix';
+    fix.textContent = `Set ${health.missing.join(' and ')} in Vercel, then redeploy.`;
+    host.append(fix);
+  }
+
+  if (health.failuresLast7Days) {
+    const list = document.createElement('ul');
+    list.className = 'health-reasons';
+    Object.entries(health.byReason).forEach(([reason, count]) => {
+      const li = document.createElement('li');
+      li.textContent = `${count} × ${reason}`;
+      list.append(li);
+    });
+    host.append(list);
+  }
+
+  const meta = document.createElement('p');
+  meta.className = 'health-meta';
+  meta.textContent = [
+    health.from ? `Sending as ${health.from}` : null,
+    `${health.failuresLast7Days} undelivered in 7 days`,
+  ].filter(Boolean).join(' · ');
+  host.append(meta);
+}
+
 async function adminRequest(options = {}) {
   const response = await fetch('/api/admin', { ...options, headers: { ...authHeaders(), ...(options.headers || {}) } });
   const result = await response.json().catch(() => ({ ok:false, error:'The server returned an unreadable response.' }));
@@ -324,6 +391,8 @@ function batchApplicationRow(batch, app) {
 
 async function loadInbox({ announce = false } = {}) {
   showInbox();
+  // Never awaited into the main load: a health check failing must not stop the inbox rendering.
+  renderDeliveryHealth().catch(() => {});
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
   try {

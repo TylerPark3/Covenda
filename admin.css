@@ -359,3 +359,18 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .roster-pill[data-tone="good"] { border-color: rgba(36,117,58,.35); background: #f4faf5; color: #24753a; }
 .roster-pill[data-tone="warn"] { border-color: rgba(180,123,32,.35); background: #fbf7ed; color: #8b5709; }
 .roster-empty { padding: 22px; color: #8a8479; font-size: 13.5px; text-align: center; }
+
+/* Delivery health. Sits at the top because if notifications are silently off, every other
+   number on this page describes a product nobody is hearing from. */
+.admin-health { margin: 0 0 18px; padding: 18px 22px; border: 1px solid var(--line, #e2ded3); border-left: 4px solid #3f6b45; background: #fff; }
+.admin-health.is-degraded { border-left-color: #8a6a1c; }
+.admin-health.is-broken { border-left-color: #8f3a1f; background: #fdf1ec; }
+.health-head { display: flex; align-items: center; gap: 10px; }
+.health-dot { width: 9px; height: 9px; border-radius: 50%; background: #3f6b45; flex: none; }
+.is-degraded .health-dot { background: #8a6a1c; }
+.is-broken .health-dot { background: #8f3a1f; }
+.admin-health h3 { margin: 0; font-size: 16px; letter-spacing: -.01em; }
+.health-why { margin: 10px 0 0; font-size: 15px; line-height: 1.5; color: #8f3a1f; font-weight: 600; max-width: 74ch; }
+.health-fix { margin: 8px 0 0; font-size: 14.5px; line-height: 1.5; color: #43403a; }
+.health-reasons { margin: 10px 0 0; padding-left: 18px; font-size: 14px; color: #6f6b62; }
+.health-meta { margin: 10px 0 0; font-size: 13px; color: #9a958b; }
