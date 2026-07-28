@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { recordError } from './limits.js';
 import { scoreCandidate } from './scoring.js';
 import { requestAccommodation, saveTranscript } from './transcripts.js';
+import { reviewerLine } from './reviewers.js';
 
 import { supabaseConfiguration } from './submissions.js';
 import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail, recordDelivery, deliverableSubmittedEmail, deliverableReviewedEmail, trialStartedEmail, introductionEmail } from './notify.js';
@@ -406,7 +407,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
-    batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
   }
 
   const projects = await checked(supabase.from('member_projects').select('*').eq('owner_user_id', user.id).order('updated_at', { ascending: false }).limit(100));
@@ -457,7 +458,7 @@ export async function loadMemberDashboard(member, env = process.env) {
   return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, briefing: await companyBriefing(member), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
-    batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
+    batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
 }
 
 export async function saveMemberProfile(member, input) {
@@ -1412,7 +1413,25 @@ export async function requestSchoolVerification(member, input, { env = process.e
     subject: `Covenda verification code: ${code}`,
     text: `Your Covenda school-email verification code is ${code}. It expires in 20 minutes.\n\nThis confirms you control this address. It is not a sign-in link.`,
   });
-  if (error) throw new PortalOperationalError('VERIFY_EMAIL_FAILED', 'Could not send the code. Try again shortly.');
+  if (error) {
+    // The real reason used to be discarded here, so every failure looked identical and this
+    // stayed broken for days. Resend says exactly what went wrong; it goes to error_events
+    // where it is queryable, and the student gets the part they can act on.
+    const detail = String(error.message || error).slice(0, 200);
+    await recordError('school-verification', 'error', detail, {
+      userId: member.user.id,
+      detail: { domain: check.domain, from },
+    });
+    // An unverified sending domain is by far the most common cause, and it is ours to fix,
+    // not something a student should be told to retry through.
+    const unverified = /domain|not verified|testing emails|only send/i.test(detail);
+    throw new PortalOperationalError(
+      'VERIFY_EMAIL_FAILED',
+      unverified
+        ? 'Our email sending is not fully set up yet, so the code could not reach you. Claim a club or ask for a named referral instead, either counts for more than a school email.'
+        : 'Could not send the code. Try again shortly.',
+    );
+  }
   // The address is never echoed back in full — the client already knows it, and a response
   // that repeats it is one more place it can leak.
   return { sent: true, domain: check.domain };

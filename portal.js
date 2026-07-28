@@ -2133,6 +2133,79 @@ function readBatchInterest(){
 const BA_STEPS=['What this is','Your walkthrough','Your interest','About you'];
 let baStep=0;
 function baPanels(){ return $$('#batchApplyDialog [data-ba-step]'); }
+
+// ── Draft persistence ─────────────────────────────────────────────────────────────────
+// A student can spend twenty minutes on this: a recorded walkthrough, a screen share, six
+// written answers. Closing the dialog threw all of it away, which is the kind of thing people
+// do not come back from. Saved locally on every change, restored on open, cleared on submit.
+//
+// Local only, never the server: a half-finished application is not something an operator
+// should be able to read, and nobody consented to it being stored.
+const BA_DRAFT_KEY = 'covenda:batch-draft:';
+function baDraftKey(batchId){ return BA_DRAFT_KEY + (batchId || 'unknown'); }
+
+function saveBatchDraft(batchId){
+  const form=$('#batchApplyForm'); if(!form||!batchId)return;
+  try{
+    const values={};
+    ['note','experience','skills','hoursPerWeek','startDate','workSample1','workSample2','videoUrl','referralName','referralCode']
+      .forEach(k=>{ if(form.elements[k])values[k]=form.elements[k].value; });
+    const exercise=$('#batchExerciseUrl'); if(exercise)values.exerciseUrl=exercise.value;
+    localStorage.setItem(baDraftKey(batchId), JSON.stringify({
+      values, interest:readBatchInterest(), concepts:readConceptAnswers(),
+      reasoning:readReasoningAnswers(), step:baStep, at:Date.now(),
+    }));
+  }catch{ /* private browsing, or the quota is full. Losing a draft must not break the form. */ }
+}
+
+function loadBatchDraft(batchId){
+  try{ return JSON.parse(localStorage.getItem(baDraftKey(batchId))||'null'); }catch{ return null; }
+}
+function clearBatchDraft(batchId){
+  try{ localStorage.removeItem(baDraftKey(batchId)); }catch{}
+}
+
+// Restores what can be restored and says what cannot. A recording lives on the server once
+// uploaded, so its URL comes back; anything mid-record does not, and pretending otherwise
+// would be worse than saying so.
+function restoreBatchDraft(batchId){
+  const draft=loadBatchDraft(batchId); if(!draft)return null;
+  const form=$('#batchApplyForm'); if(!form)return null;
+  Object.entries(draft.values||{}).forEach(([k,v])=>{ if(form.elements[k])form.elements[k].value=v; });
+  const exercise=$('#batchExerciseUrl'); if(exercise&&draft.values?.exerciseUrl)exercise.value=draft.values.exerciseUrl;
+  (draft.interest||[]).forEach(a=>{
+    const el=document.querySelector(`#batchInterestQuestions [data-interest="${a.id}"]`);
+    if(el)el.value=a.answer;
+  });
+  (draft.reasoning||[]).forEach((a,i)=>{
+    const el=document.querySelector(`#batchReasoning textarea[data-reasoning="${i}"]`);
+    if(el)el.value=a.answer;
+  });
+  (draft.concepts||[]).forEach((a,i)=>{
+    const el=document.querySelector(`input[name="concept-${i}"][value="${a.choice}"]`);
+    if(el)el.checked=true;
+  });
+  return draft;
+}
+
+// ── What is actually finished ─────────────────────────────────────────────────────────
+// "Step 2 of 4" tells a student where they are and nothing about what is left. This reports
+// completion rather than position, so the rail stops being a page counter.
+function baStepDone(index){
+  const form=$('#batchApplyForm'); if(!form)return false;
+  if(index===0)return true;                                     // reading it is doing it
+  if(index===1){
+    const video=(form.elements.videoUrl?.value||'').trim();
+    const part=$('#baPartExercise');
+    const exerciseNeeded=part&&!part.hidden;
+    const exercise=($('#batchExerciseUrl')?.value||'').trim();
+    return Boolean(video)&&(!exerciseNeeded||Boolean(exercise));
+  }
+  if(index===2)return readBatchInterest().length>0;
+  if(index===3)return (form.elements.note?.value||'').trim().length>=40;
+  return false;
+}
+
 function renderBatchWizard(){
   const dlg=$('#batchApplyDialog'); if(!dlg) return;
   const panels=baPanels(); if(!panels.length) return;
@@ -2145,9 +2218,12 @@ function renderBatchWizard(){
     rail.replaceChildren();
     BA_STEPS.slice(0,panels.length).forEach((label,i)=>{
       const li=document.createElement('li');
-      li.className=i===baStep?'is-current':(i<baStep?'is-done':'');
+      // Done means finished, not visited. A student who skipped past step 2 has not done it.
+      const done=baStepDone(i);
+      li.className=[i===baStep?'is-current':'', done?'is-done':''].filter(Boolean).join(' ');
       const b=document.createElement('button');b.type='button';
       b.textContent=label;
+      if(done&&i!==baStep)b.setAttribute('aria-label',`${label}, complete`);
       // Going back is always allowed; jumping ahead is not, so nobody skips the recording.
       b.disabled=i>baStep;
       b.addEventListener('click',()=>{baStep=i;renderBatchWizard();});
@@ -2158,9 +2234,21 @@ function renderBatchWizard(){
   if(back)back.hidden=baStep===0;
   if(next)next.hidden=baStep===last;
   if(submit)submit.hidden=baStep!==last;
-  if(count)count.textContent=`Step ${baStep+1} of ${panels.length}`;
+  if(count){
+    const left=BA_STEPS.slice(0,panels.length).filter((_,i)=>!baStepDone(i)).length;
+    // "Step 2 of 4" is a page number. This is the question a student is actually asking.
+    count.textContent=left===0?'Everything done, ready to send'
+      :`${left} thing${left===1?'':'s'} left`;
+  }
+  // Autosave on every render, so a draft survives a closed tab or a lost connection.
+  saveBatchDraft($('#batchApplyForm')?.elements?.batchId?.value);
   const body=$('#batchApplyDialog .dialog-body'); if(body)body.scrollTop=0;
 }
+// Saved as they type. Waiting for a step change loses everything typed on the current one.
+$('#batchApplyForm')?.addEventListener('input',()=>{
+  saveBatchDraft($('#batchApplyForm')?.elements?.batchId?.value);
+},{passive:true});
+
 $('#baNext')?.addEventListener('click',()=>{
   // The walkthrough is the one thing a model cannot do for you, so it is the one gate.
   if(baStep===1){
@@ -2316,6 +2404,22 @@ function scoreBreakdown({score, precise, comparedOn, axes=8, reasons=[], concern
   return box;
 }
 
+// Who set the bar this cohort is judged against. Shown in step 0, where a student decides
+// whether this is worth twenty minutes, and stated honestly: a vertical nobody has signed off
+// says so rather than showing nothing, because an absent badge reads as an oversight.
+function renderReviewerLine(batch){
+  const host=$('#batchReviewer'); if(!host)return;
+  const brief=batchBriefFor(batch);
+  const line=brief&&brief.reviewer;
+  if(!line){host.hidden=true;return;}
+  host.replaceChildren();
+  host.hidden=false;
+  host.className='batch-reviewer is-'+(line.state||'none');
+  const h=document.createElement('strong');h.textContent=line.headline;
+  const p=document.createElement('p');p.textContent=line.detail;
+  host.append(h,p);
+}
+
 function renderVettingSteps(batch){
   const host=$('#batchVetting');
   if(!host)return;
@@ -2417,10 +2521,17 @@ function openBatchApply(batch){
   // assigned video prompt and the interest questions, so it doesn't feel like a bare form.
   const who=$('#batchApplyWho');if(who)who.textContent=batchStudentProfile(batch);
   const samples=$('#batchApplySamples');if(samples)samples.textContent=batchSampleCompanies(batch);
+  renderReviewerLine(batch);
   currentBatchPrompt=pickBatchPrompt(batch); // a fresh random prompt each time the form opens
   // Weights the résumé questions toward this batch's field without ignoring the rest.
   currentBatchVertical=[batch.discipline,batch.name].filter(Boolean)[0]||'';
   renderAssessmentQuestions(batch);
+  const restored=restoreBatchDraft(batch.id);
+  if(restored){
+    baStep=Number.isInteger(restored.step)?restored.step:0;
+    const when=restored.at?dateLabel(new Date(restored.at).toISOString()):'earlier';
+    setDialogMessage('#batchApplyMessage',`Picked up where you left off (saved ${when}). Nothing was sent.`);
+  }
   const accom=$('#batchAccommodation');
   if(accom){accom.replaceChildren(accommodationLink('batch_application',batch.slug||batch.id));}
   const promptEl=$('#batchVideoPrompt');if(promptEl)promptEl.textContent=currentBatchPrompt;
@@ -3865,6 +3976,7 @@ $('#batchApplyForm')?.addEventListener('submit',async event=>{
   const skills=e.skills.value.split(',').map(s=>s.trim()).filter(Boolean);
   try{
     await portalRequest({method:'POST',body:JSON.stringify({action:'apply-batch',batchId:e.batchId.value,note:e.note.value.trim(),experience:e.experience.value.trim(),skills,hoursPerWeek:e.hoursPerWeek.value,startDate:e.startDate.value,workSample1:e.workSample1.value.trim(),workSample2:e.workSample2.value.trim(),videoUrl:e.videoUrl.value.trim(),videoPrompt:currentBatchPrompt,interest:readBatchInterest(),conceptAnswers:readConceptAnswers(),reasoningAnswers:readReasoningAnswers(),resumeAnswers:readResumeAnswers(),resumeUrl:batchResumeUrl,workSampleFiles:batchArtifacts.filter(f=>f.url).map(f=>({name:f.name,url:f.url})),exerciseUrl:($('#batchExerciseUrl')?.value||'').trim(),referral:{name:e.referralName.value.trim(),code:e.referralCode.value.trim()}})});
+    clearBatchDraft(e.batchId.value);
     $('#batchApplyDialog').close();await loadDashboard();setView('batches');
   }catch(error){setDialogMessage('#batchApplyMessage',error.message,true);}finally{button.disabled=false;}
 });

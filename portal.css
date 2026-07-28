@@ -1763,6 +1763,14 @@ body { background: var(--surface); }
 .accom-panel button { justify-self:start; }
 .accom-state { font-size:14px; color:var(--gold-deep); }
 
+
+/* Who set this cohort's bar. Three states, and the honest one is a sentence rather than a
+   missing badge, because an absent badge reads as an oversight. */
+.batch-reviewer { display:grid; gap:5px; margin:0 0 16px; padding:14px 16px; border:1px solid var(--line); background:var(--surface-2); }
+.batch-reviewer.is-confirmed { border-left:3px solid var(--gold-deep); background:var(--gold-pale); }
+.batch-reviewer strong { font-size:15.5px; letter-spacing:-.01em; color:var(--text); }
+.batch-reviewer p { margin:0; font-size:14.5px; line-height:1.5; color:var(--text-2); }
+
 .closeout { display:grid; gap:8px; margin:16px 0 0; padding:18px 20px; border:1px solid var(--gold-deep); background:var(--gold-pale); }
 .closeout-q { margin:0; font-size:19px; font-weight:650; letter-spacing:-.015em; color:var(--text); }
 .closeout-why { margin:0; font-size:14.5px; line-height:1.5; color:var(--text-2); }
