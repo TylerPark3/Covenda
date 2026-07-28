@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 import { recordError } from './limits.js';
+import { scoreCandidate } from './scoring.js';
 
 import { supabaseConfiguration } from './submissions.js';
 import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicationDecisionEmail, payoutRequestedEmail } from './notify.js';
@@ -890,7 +891,10 @@ export function rankOpportunities(opportunities, profile, context = {}) {
     .map(project => { const fit = computeFitScore(project, profile, context); return { ...project, matched: isMatch(project), fitScore: fit.score, fitPresentation: presentScore(fit.score, studentEvidenceTier(profile, context.completedCount)), fitReasons: fit.reasons, fitConcerns: fit.concerns, fitApproach: fit.recommendedApproach,
       // The basis, not just the number. A 78 built on two answered axes is not the claim a 78
       // built on eight is, and the product should say so where the score is shown.
-      fitPrecise: fit.precise, fitComparedOn: fit.comparedOn, fitAxes: AXIS_COUNT }; })
+      fitPrecise: fit.precise, fitComparedOn: fit.comparedOn, fitAxes: AXIS_COUNT,
+      // Resolved, not assumed. With no completed outcomes this is 'rules' and the number is
+      // untouched; the moment the gate clears it reports what actually produced the score.
+      fitStage: scoreCandidate({ rules: fit, outcomeCount: context.outcomeCount || 0 }).stage }; })
     .sort((a, b) => b.fitScore - a.fitScore || Number(b.matched) - Number(a.matched));
 }
 

@@ -2443,6 +2443,7 @@ function openDiscoverDetail(project,isApplied){
     body.insertBefore(scoreBreakdown({
       score:project.fitScore, precise:project.fitPrecise, comparedOn:project.fitComparedOn,
       axes:project.fitAxes||8, reasons:project.fitReasons||[], concerns:project.fitConcerns||[],
+      stage:project.fitStage||'rules',
     }),head.nextSibling);
   }
   const footer=$('#discoverDetailFooter');footer.replaceChildren();const apply=document.createElement('button');apply.type='button';apply.className='portal-primary';apply.textContent=isApplied?'Interest already sent':'Apply to this project';apply.disabled=isApplied;apply.addEventListener('click',()=>{$('#discoverDetail').close();openApply(project);});footer.append(apply);

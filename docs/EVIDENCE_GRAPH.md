@@ -114,9 +114,25 @@ because a file can be opened and read. Nothing a student can type moves them hig
 
 ---
 
+## What is designed versus what runs today
+
+Worth stating plainly, because the rest of this document reads as description and part of it
+is still specification.
+
+**Running in production:** `studentEvidenceTier()` in `api/portal.js`, which decides how a
+score is presented to a company based on what backs it.
+
+**Designed, not yet on the path:** `api/evidence.js` — the source registry and the per-source
+ceilings. It is written and tested and nothing imports it. Until it does, the ceilings above
+describe the intended model rather than an enforced one.
+
+Wiring it is the next real step, and it belongs to whoever picks this up: replace
+`studentEvidenceTier`'s ad-hoc logic with `evidenceProfile()` so there is one ladder rather
+than two.
+
 ## Where this connects
 
-- `api/evidence.js` — the registry, the ceilings, and the enforcement
+- `api/evidence.js` — the registry and the ceilings **(built, not yet imported)**
 - `api/portal.js` → `computeFitScore` — reads tiers when weighting a skills match
 - `api/ml.js` → `evidence_depth` — a tier-weighted feature, gated with the rest of the model
 - `docs/VETTING_MATRIX.md` — which tier each vertical's process can reach

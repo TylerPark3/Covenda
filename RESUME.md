@@ -25,29 +25,41 @@ npx vercel alias set <the-deployment-url-it-printed> covenda.app
 
 ## State right now
 
-- **718 tests green**
-- Live at covenda.app
-- Blob store is **private**, and playback now works: `api/media.js` authorises the caller
-  against rows, then mints a 15-minute read-only signed URL. Wired into the student's video
-  library, the company's application review, and the operator's batch reviewer.
+- **733 tests green**
+- Live at covenda.app, `main` is the deploy branch
+- Working with Dylan on the same repo. He pushes to `main` too — always `git fetch` before
+  pushing, and never force. A rejected push means he got there first; merge, do not override.
 
 ## Migrations
 
-All applied through `20260728100000_fit_dimensions` (run 27 July). The eight comparison axes,
-student traits, and the score basis on an application all persist.
+Applied: everything through `20260728100000_fit_dimensions`.
 
-## Still on your list
+**NOT yet applied: `20260728200000_infrastructure`.** Rate limits, the error log, and the
+`video_url` index. Until it runs, the limiter and the error log both fail open — nothing
+breaks, but neither is protecting anything. Run `npm run sql`.
 
-**Yours, not code:**
-- `STRIPE_CONNECT_ENABLED=true` in Vercel if you want automatic payouts (manual works now)
-- Add `TylerPark3@users.noreply.github.com` to your Vercel account to stop the
-  "not a collaborator" email
+## Built and NOT wired
 
-**Mine, next session:**
-1. Wire `companyBriefing` into the company dashboard UI (backend done, nothing renders it)
-2. Wire the supplied assessments into the batch application UI (all 25 exist in
-   `api/assessments.js`, nothing shows them)
+Honest list. Each is written and tested; nothing imports it.
 
+| Module | What it would do |
+|---|---|
+| `api/evidence.js` | The source registry and per-source ceilings. `portal.js` has its own `studentEvidenceTier` instead, so there are two ladders. Collapsing them is the next real step. |
+| `api/batch-churn.js` | Inactivity removal policy. No caller. |
+| `api/ml-data.js` | Training-data export. Nothing calls it. |
+| `api/analyze-model.js` | Model analysis. No caller. |
+| `api/proof-methods.js` | No caller. |
+
+`api/scoring.js` **is** now wired: fit results route through `scoreCandidate()`, so the stage a
+score reports is resolved rather than assumed. With zero outcomes it is `rules` and the number
+is untouched.
+
+## Known gaps
+
+- **The required walkthrough has no accessibility path.** No text alternative, no captions
+  requirement, no accommodation route. The product spec flags this and the code does not answer
+  it. If video stays required, this needs closing.
+- **No lead list yet** — the message describing it arrived truncated.
 
 ---
 
