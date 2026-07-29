@@ -2064,6 +2064,13 @@ body[data-audience="university"] #flowDemo { display: none; }
      without changing where the line sits. */
   padding-bottom: 0.36em;
   margin-bottom: -0.36em;
+  /* And the LEFT, which is the one nobody expects on an italic. Italic glyphs lean right, so
+     right and bottom were the obvious sides to pad and both were done first. But the descender
+     loop of an italic g swings back UNDER and to the LEFT of its own origin, past the left
+     sidebearing, and that part of the loop fell outside the fill box entirely. Same for a j,
+     and for a y in some cuts. */
+  padding-left: 0.18em;
+  margin-left: -0.18em;
   /* Clone the box per line fragment so the padding (and gold fill) covers the italic overhang
      at EVERY line end — otherwise a word that ends a wrapped line (e.g. "domain") has its last
      glyph's slant clipped by background-clip:text. */

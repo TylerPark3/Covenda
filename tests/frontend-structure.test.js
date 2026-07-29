@@ -983,6 +983,14 @@ test('the gold word leaves room for descenders as well as the italic overhang', 
   // Padding and margin move together, so the extra room never shows up in layout.
   const marginRight = Number(rule.match(/margin-right:\s*-(0?\.\d+)em/)[1]);
   assert.ok(Math.abs((padRight - marginRight) - 0.08) < 0.001, 'the gold word now shifts the line');
+
+  // The side nobody expects on an italic. Glyphs lean right, so right and bottom get padded
+  // first, but the descender loop of an italic g swings back under and to the LEFT of its own
+  // origin and falls outside the box there. Every side has to be covered, not the obvious ones.
+  const padLeft = Number(rule.match(/padding-left:\s*(0?\.\d+)em/)[1]);
+  const marginLeft = Number(rule.match(/margin-left:\s*-(0?\.\d+)em/)[1]);
+  assert.ok(padLeft > 0, 'an italic g loses the left of its descender loop');
+  assert.equal(padLeft, marginLeft, 'the left padding must not shift the line');
 });
 
 // A serif needs more leading than the sans these values were tuned for.
