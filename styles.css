@@ -3888,9 +3888,12 @@ body.is-audience-transitioning .audience-transition span {
 }
 .student-vertical > small { color: var(--muted); font-size: 11px; line-height: 1.4; }
 .student-vertical:hover { color: var(--ink); transform: translateY(-2px); }
-.student-vertical.is-selected { border-color: var(--gold); background: var(--gold); color: #1c1300; }
-.student-vertical.is-selected > span { color: #1c1300; }
-.student-vertical.is-selected > small { color: rgba(28,19,0,.72); }
+.student-vertical.is-selected { position: relative; overflow: hidden; border-color: var(--gold); background: #14120d; color: #fff; }
+.student-vertical.is-selected > span { position: relative; z-index: 1; color: var(--gold-light); }
+.student-vertical.is-selected > small { position: relative; z-index: 1; color: rgba(255,255,255,.72); }
+/* The field sits behind the label, never over it. */
+.vertical-field { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; }
+.student-vertical.is-selected > *:not(.vertical-field) { position: relative; z-index: 1; }
 .student-vertical.is-selected > small { color: rgba(255,255,255,.68); }
 .student-vertical:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 6px; }
 .student-specialty-empty {

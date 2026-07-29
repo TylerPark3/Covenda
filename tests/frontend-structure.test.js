@@ -21,7 +21,10 @@ test('student-first hero leads with optional joining, five work areas, and a scr
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(hero, /Do work that proves/);
   assert.equal((hero.match(/data-work-type=/g) || []).length, 5);
-  assert.match(hero, /Join now\s*[,—.]\s*choose later/);
+  // The promise is that a direction is optional, carried by the open join mode and the line
+  // under the heading. The button label itself is free to change.
+  assert.match(hero, /data-join-mode="open"/);
+  assert.match(hero, /No work area is required/);
   assert.match(hero, /No work area is required/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
@@ -44,11 +47,12 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
 test('the student entry separates signup without a choice from signup with a specific direction', () => {
   const studentHero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(studentHero, /Do work that proves/);
-  assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"[\s\S]*Join now\s*[,—.]\s*choose later/);
+  assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"/);
   // The picker is on industry verticals now, matching BATCH_CATALOG. It used to offer work
   // types — research, data, QA — a taxonomy nothing else on the platform spoke, so a
   // student's choice lined up with no batch, no profile field and no matching signal.
-  assert.match(studentHero, /Join now\s*[,—.]\s*choose later[\s\S]*Choose your industry/);
+  // Order matters: joining without a direction comes before being asked for one.
+  assert.match(studentHero, /data-join-mode="open"[\s\S]*What do you do\?/);
   assert.match(studentHero, /Software &amp; AI/);
   assert.doesNotMatch(studentHero, /QA &amp; testing/);
   for (const vertical of ['Software &amp; AI', 'Accounting &amp; finance', 'Healthcare operations', 'Consumer &amp; retail', 'Professional services']) {
@@ -112,7 +116,7 @@ test('production home keeps the approved clean banner and talent-to-proof hero',
   assert.equal((hero.match(/class="home-path-index"/g) || []).length, 3);
   assert.match(styles, /\.hero-home \{[\s\S]*linear-gradient\(145deg, #12120f/);
   assert.match(styles, /\.site-header \{[\s\S]*font-family: var\(--font-display\)/);
-  assert.match(script, /function initHeroField\(\)/);
+  assert.match(script, /function initHeroField\(target\)/);
   assert.match(script, /gold: Math\.random\(\) < \.1/);
   assert.match(script, /\.slice\(0, 7\)/);
   assert.match(script, /spawnSignal\(now\)/);
@@ -541,7 +545,7 @@ test('batch selection has real feedback and respects reduced motion', () => {
 });
 
 test('joining the talent pool is name, email and school — not the four-step form', () => {
-  assert.match(html, /data-action="student-quick"[^>]*data-join-mode="open"[^>]*>[\s\S]*Join now\s*[,—.]\s*choose later/);
+  assert.match(html, /data-action="student-quick"[^>]*data-join-mode="open"/);
   assert.doesNotMatch(html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '', /Or add full details now/);
 });
 
@@ -1134,6 +1138,10 @@ test('the monospace is used for data, not for labels', () => {
 
 test('a selected industry reads as gold, not as a hole in the rail', () => {
   const rule = styles.match(/\.student-vertical\.is-selected \{[^}]*\}/)[0];
-  assert.match(rule, /background: var\(--gold\)/);
-  assert.ok(!/background: var\(--ink\)/.test(rule), 'selection is still a black block');
+  // Dark ground with the particle field behind it and white type, the same language as the
+  // hero. A flat gold fill read as a swatch rather than as a selected card.
+  assert.match(rule, /background: #14120d/);
+  assert.match(rule, /border-color: var\(--gold\)/);
+  assert.match(rule, /overflow: hidden/, 'the field would spill past the card corners');
+  assert.match(styles, /\.vertical-field \{[^}]*position: absolute/);
 });

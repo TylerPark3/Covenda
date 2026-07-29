@@ -577,6 +577,8 @@ function selectWorkType(workType) {
     const newlySelected = selected && !button.classList.contains('is-selected');
     button.classList.toggle('is-selected', selected);
     button.setAttribute('aria-pressed', String(selected));
+    // The field follows the selection, and only the industry cards carry it.
+    if (button.classList.contains('student-vertical') && newlySelected) mountVerticalField(button);
     if (newlySelected) {
       button.classList.remove('just-selected');
       window.requestAnimationFrame(() => button.classList.add('just-selected'));
@@ -4822,8 +4824,22 @@ function initScrollReveal() {
 // 3D depth changes size, opacity and link reach, but the field itself does not chase the
 // cursor. The pointer only discovers nearby nodes. Separately, one lasting connection forms
 // between two gold nodes every ten seconds, making the network feel more credible over time.
-function initHeroField() {
-  const canvas = document.getElementById('heroFieldCanvas');
+// The particle field, inside the selected industry card. Mounted on selection and removed on
+// deselection, so exactly one instance ever runs: five always-on canvases would animate four
+// fields nobody is looking at.
+function mountVerticalField(card) {
+  document.querySelectorAll('.student-vertical .vertical-field').forEach(c => c.remove());
+  if (!card) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const canvas = document.createElement('canvas');
+  canvas.className = 'vertical-field';
+  canvas.setAttribute('aria-hidden', 'true');
+  card.prepend(canvas);
+  initHeroField(canvas);
+}
+
+function initHeroField(target) {
+  const canvas = target || document.getElementById('heroFieldCanvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -5041,7 +5057,7 @@ function initHeroField() {
   } else { start(); }
   document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
 
-  const hero = canvas.closest('.hero') || canvas.parentElement;
+  const hero = canvas.closest('.hero') || canvas.closest('.student-vertical') || canvas.parentElement;
   if (hero && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     hero.addEventListener('pointermove', event => {
       const r = canvas.getBoundingClientRect();
