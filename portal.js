@@ -3623,7 +3623,7 @@ function renderAtsPanel(root){
 }
 
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
-  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Students who opted into discovery.';$('#editProfile').hidden=true;renderEvidenceRequests(root,state.dashboard);
+  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Students who opted into discovery.';$('#editProfile').hidden=true;renderBatchBuilder(root,state.dashboard);renderEvidenceRequests(root,state.dashboard);
   const batches=document.createElement('section');batches.className='talent-batches';
   const bh=document.createElement('div');bh.className='talent-batches-head';
   bh.append(Object.assign(document.createElement('h3'),{textContent:'Vetted batches'}));
@@ -3669,6 +3669,138 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
 // see when they open this? Facts about the profile as it stands, strongest first, and an
 // honest line about what is missing rather than an instruction to go fix it. The journey rail
 // owns "what to do next"; this owns "how you read right now".
+// ── The batch builder (company side) ──────────────────────────────────────────────────
+// The reverse audit, and the plan it produces. Both the questions and the autonomy levels come
+// from the server so the form and the engine cannot describe the same thing differently.
+const AUTONOMY_LABELS={guided:'Guided — someone checks the work',semi_autonomous:'Semi-autonomous — checks in, works alone between',autonomous:'Autonomous — owns a piece end to end',high_agency:'High agency — finds the work as well as doing it'};
+
+function paintReverseAudit(){
+  const host=$('#envAudit'); if(!host)return;
+  host.replaceChildren();
+  const questions=state.dashboard?.superIntern?.questions||[];
+  if(!questions.length)return;
+  const cap=document.createElement('p');cap.className='env-audit-cap';
+  cap.textContent='What a student actually has to do here';
+  const why=document.createElement('p');why.className='env-audit-why';
+  why.textContent='Answer what you can. Each one builds a different part of the assessment, and what you leave blank makes it more generic.';
+  host.append(cap,why);
+  for(const q of questions){
+    const wrap=document.createElement('label');wrap.className='env-q';
+    const ask=document.createElement('span');ask.className='env-q-ask';ask.textContent=q.ask;
+    const builds=document.createElement('small');builds.className='env-q-builds';builds.textContent='Builds: '+q.builds;
+    const area=document.createElement('textarea');area.rows=2;area.maxLength=600;area.dataset.audit=q.id;
+    wrap.append(ask,builds,area);host.append(wrap);
+  }
+}
+
+function openEnvironment(){
+  const dlg=$('#environmentDialog'); if(!dlg)return;
+  $('#environmentForm').reset();
+  const v=$('#envVertical');
+  if(v&&!v.options.length){
+    // Verticals from the batch briefs already on the dashboard, so the list cannot drift.
+    const seen=new Set();
+    for(const b of state.dashboard?.batchBriefs||[]){
+      const slug=b.verticalSlug; if(!slug||seen.has(slug))continue; seen.add(slug);
+      const o=document.createElement('option');o.value=slug;o.textContent=b.vertical||b.discipline||slug;v.append(o);
+    }
+  }
+  const a=$('#envAutonomy');
+  if(a&&!a.options.length){
+    for(const level of state.dashboard?.superIntern?.autonomyLevels||[]){
+      const o=document.createElement('option');o.value=level;o.textContent=AUTONOMY_LABELS[level]||level;a.append(o);
+    }
+    a.value='semi_autonomous';
+  }
+  paintReverseAudit();
+  setDialogMessage('#environmentMessage','');
+  dlg.showModal();
+}
+
+$('#environmentForm')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const form=event.target;
+  const data=Object.fromEntries(new FormData(form).entries());
+  const reverseAudit={};
+  $$('#envAudit textarea[data-audit]').forEach(t=>{ if(t.value.trim())reverseAudit[t.dataset.audit]=t.value.trim(); });
+  setDialogMessage('#environmentMessage','');
+  try{
+    const out=await portalRequest({method:'POST',body:JSON.stringify({
+      action:'save-company-environment',
+      vertical:data.vertical,
+      autonomy:data.autonomy,
+      seniorHoursPerWeek:data.seniorHoursPerWeek,
+      domainKnowledge:Boolean(data.domainKnowledge),
+      reverseAudit,
+    })});
+    $('#environmentDialog').close();
+    await loadDashboard();
+    lastBuiltPlan=out.plan||null;
+    renderPortfolio();
+  }catch(error){ setDialogMessage('#environmentMessage',error.message,true); }
+});
+
+let lastBuiltPlan=null;
+
+function renderBatchBuilder(root,d){
+  if(d?.profile?.role!=='company')return;
+  const engine=d.superIntern||{};
+  const plans=engine.plans||[];
+
+  const sec=document.createElement('section');sec.className='panel-card sib-panel';
+  const head=document.createElement('div');head.className='tech-head';
+  const h=document.createElement('h3');h.textContent='Batch builder';
+  const sub=document.createElement('p');
+  sub.textContent='Describe how your team actually works and we build the assessment that environment calls for. Senior hours a week changes it more than anything else you tell us.';
+  head.append(h,sub);sec.append(head);
+
+  const plan=lastBuiltPlan||plans[0];
+  if(plan){
+    const built=document.createElement('div');built.className='sib-plan';
+    const cap=document.createElement('p');cap.className='sib-cap';
+    const minutes=plan.total_minutes||plan.minutes;
+    cap.textContent=`${minutes} minutes of ${engine.budgetMinutes||90}`;
+    built.append(cap);
+
+    const list=document.createElement('ol');list.className='sib-steps';
+    for(const c of plan.components||[]){
+      const li=document.createElement('li');
+      const n=document.createElement('b');n.textContent=c.label;
+      const m=document.createElement('span');m.className='sib-min';m.textContent=c.minutes+'m';
+      const w=document.createElement('small');w.textContent=c.why;
+      li.append(n,m,w);list.append(li);
+    }
+    built.append(list);
+
+    // Why this shape, in the company's own stated constraints. A plan nobody can interrogate
+    // is the black box this product exists to replace.
+    const because=plan.because||[];
+    if(because.length){
+      const bl=document.createElement('ul');bl.className='sib-because';
+      because.forEach(b=>{const li=document.createElement('li');li.textContent=b;bl.append(li);});
+      built.append(bl);
+    }
+    const deferred=plan.deferred_to_trial||plan.deferredToTrial||[];
+    if(deferred.length){
+      const note=document.createElement('p');note.className='sib-deferred';
+      note.textContent='Held back to the paid trial so the screen stays under ninety minutes: '+deferred.map(c=>c.label).join(', ')+'.';
+      built.append(note);
+    }
+    sec.append(built);
+  } else {
+    const none=document.createElement('p');none.className='evreq-none';
+    none.textContent='Nothing built yet. Eight questions about how your team works, and we build the assessment from your answers rather than from a template.';
+    sec.append(none);
+  }
+
+  const add=document.createElement('button');
+  add.type='button';add.className=plan?'portal-ghost compact':'portal-primary compact';
+  add.textContent=plan?'Build another':'Describe your environment';
+  add.addEventListener('click',openEnvironment);
+  sec.append(add);
+  root.append(sec);
+}
+
 // ── What a team wants to see (§9) ─────────────────────────────────────────────────────
 // Distinct from the ideal-intern skill list, which says what to FILTER on. This says what a
 // student should go and build to be worth talking to, and the difference matters: a filter

@@ -325,6 +325,28 @@
     </fieldset><p class="dialog-message" id="projectMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Create project<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
+  <!-- The reverse audit. A company asked "what skills do you want" answers with a wish list,
+       and the assessment built from it tests everything equally and discriminates on nothing.
+       Asked instead what a student must actually DO here, and what will be taught anyway, the
+       gap between those two is the assessment. -->
+  <dialog class="member-dialog compact-dialog" id="environmentDialog">
+    <form method="dialog" id="environmentForm">
+      <header><div><p class="eyebrow">Batch builder</p><h2>Describe the environment.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="dialog-body">
+        <div class="form-grid">
+          <label>Vertical<select name="vertical" id="envVertical" required></select></label>
+          <label>How much autonomy?<select name="autonomy" id="envAutonomy"></select></label>
+        </div>
+        <label>Senior hours a week you can realistically give this <small>The number that changes the assessment most</small><input name="seniorHoursPerWeek" type="number" min="0" max="60" step="0.5" placeholder="3"></label>
+        <p class="te-note"><svg aria-hidden="true"><use href="#p-shield"/></svg>Be honest rather than generous. Under about three hours a week we weight self-direction over everything else, because a student who needs unblocking will not work here whatever their technical score.</p>
+        <label class="env-check"><input type="checkbox" name="domainKnowledge"><span>Domain knowledge has to be learned on the job</span></label>
+        <div id="envAudit" class="env-audit"></div>
+        <p class="dialog-message" id="environmentMessage" aria-live="polite"></p>
+      </div>
+      <footer><button class="portal-primary" type="submit">Build the assessment<svg><use href="#p-arrow"/></svg></button></footer>
+    </form>
+  </dialog>
+
   <!-- What a company wants to SEE. Distinct from the ideal-intern skill list, which decides
        who is shown to them; this decides what a student goes and builds. -->
   <dialog class="member-dialog compact-dialog" id="evidenceRequestDialog">

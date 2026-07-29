@@ -16,6 +16,10 @@ import { presentScore, normalizeAppeal } from './hardening.js';
 import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility, SPECIALISATION_SKILLS } from './batches.js';
 import { verticalFor } from './vertical-map.js';
 import { scenarioFor, optionalScenariosFor } from './scenarios.js';
+import {
+  assessmentPlan, reverseAudit, candidateDisclosure, aedtPosture,
+  REVERSE_AUDIT_QUESTIONS, AUTONOMY_LEVELS, BUDGET_MINUTES, DIMENSIONS,
+} from './super-intern.js';
 import { allTechnicalClaims, technicalProfile, technicalGaps, recordTechnicalEvidence, recommendedEvidence, EVIDENCE_TYPES, OWNERSHIP_LEVELS } from './technical-evidence.js';
 import { summarise as summariseVetting, processFor } from './vetting.js';
 import { assessmentFor as supplierAssessment } from './assessments.js';
@@ -489,7 +493,7 @@ export async function loadMemberDashboard(member, env = process.env) {
   return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, briefing: await companyBriefing(member),
     // Degrades to an empty list before the migration lands, rather than taking the dashboard
     // down with it. That mistake has already caused two outages.
-    simulations: await loadSimulations(member).catch(() => []), evidenceRequests: await loadEvidenceRequests(member), evidenceTypeGuide: Object.fromEntries(Object.entries(EVIDENCE_TYPES).map(([id, t]) => [id, { label: t.label, demonstrates: t.demonstrates, cannotShow: t.cannotShow }])), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    simulations: await loadSimulations(member).catch(() => []), evidenceRequests: await loadEvidenceRequests(member), superIntern: { ...(await loadCompanyEnvironments(member)), questions: REVERSE_AUDIT_QUESTIONS, autonomyLevels: AUTONOMY_LEVELS, budgetMinutes: BUDGET_MINUTES, dimensions: DIMENSIONS }, evidenceTypeGuide: Object.fromEntries(Object.entries(EVIDENCE_TYPES).map(([id, t]) => [id, { label: t.label, demonstrates: t.demonstrates, cannotShow: t.cannotShow }])), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), practitionerAsk: commitmentFor(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -548,6 +552,10 @@ export const REACH_FEE_TARGETED = 25;
 // receives the full listed credits. 10% -> 15% is a single env var (COVENDA_PLATFORM_FEE_RATE),
 // with the code default as the fallback. Exposed to the client via the dashboard payload so
 // the cost the buyer sees can never drift from what the server charges.
+// Derived, never hand-listed: a whitelist that can drift from the catalogue is a whitelist
+// that eventually rejects a real vertical.
+const VERTICAL_SLUGS = new Set(batchesByVertical().map(v => v.verticalSlug));
+
 export const PLATFORM_FEE_RATE = (() => { const r = Number(process.env.COVENDA_PLATFORM_FEE_RATE); return Number.isFinite(r) && r >= 0 && r <= 1 ? r : 0.10; })();
 // Credits are bought in any amount the buyer chooses (min/max bounded). 1 credit = $1 of value;
 // the volume discount lives in the price, never in extra credits. Tiers match the old bundles:
@@ -1522,6 +1530,128 @@ export async function confirmSchoolVerification(member, input) {
 // Asking for "a Loom or YouTube link" assumed a video already exists somewhere; it almost
 // never does. Record once, reuse everywhere.
 export const VIDEO_LIBRARY_LIMIT = 12;
+
+// ── The Super-Intern engine ───────────────────────────────────────────────────────────
+// A company describes its environment; the engine returns the assessment that environment
+// actually calls for. The senior-hours answer is the one that reshapes everything, and it is
+// the question no other platform asks.
+export async function saveCompanyEnvironment(member, input) {
+  const profile = await loadMemberProfile(member);
+  if (profile?.role !== 'company') throw new Error('Only company accounts can describe an environment.');
+
+  const vertical = cleanText(input.vertical, 60);
+  if (!VERTICAL_SLUGS.has(vertical)) throw new Error('Choose a vertical Covenda runs.');
+
+  const autonomy = AUTONOMY_LEVELS.includes(input.autonomy) ? input.autonomy : 'semi_autonomous';
+  const hours = input.seniorHoursPerWeek === '' || input.seniorHoursPerWeek == null
+    ? null : Math.max(0, Math.min(168, Number(input.seniorHoursPerWeek) || 0));
+
+  // The eight reverse-audit answers, kept as the company's own words. A dropdown here would
+  // destroy the value, which is entirely in what they say unprompted.
+  const audit = {};
+  for (const q of REVERSE_AUDIT_QUESTIONS) {
+    const answer = cleanText(input.reverseAudit?.[q.id], 600);
+    if (answer) audit[q.id] = answer;
+  }
+
+  const row = {
+    company_user_id: member.user.id,
+    project_id: PROJECT_ID_PATTERN.test(cleanText(input.projectId, 50)) ? cleanText(input.projectId, 50) : null,
+    vertical,
+    autonomy,
+    senior_hours_per_week: hours,
+    domain_knowledge: Boolean(input.domainKnowledge),
+    onboarding_burden: (Array.isArray(input.onboardingBurden) ? input.onboardingBurden : String(input.onboardingBurden || '').split(','))
+      .map(v => cleanText(v, 120)).filter(Boolean).slice(0, 8),
+    reverse_audit: audit,
+  };
+
+  const environment = await checked(member.supabase.from('company_environments').insert(row).select('*').single(), null);
+  if (!environment) throw new Error('The environment could not be saved. The super_intern migration may not be applied yet.');
+
+  // Generated and STORED, not recomputed on read. A student assessed under this plan must be
+  // able to see the plan they were actually assessed under, whatever the engine does later.
+  const plan = assessmentPlan({
+    vertical, autonomy, seniorHoursPerWeek: hours,
+    domainKnowledge: row.domain_knowledge, onboardingBurden: row.onboarding_burden,
+  });
+  const stored = await checked(member.supabase.from('assessment_plans').insert({
+    environment_id: environment.id,
+    batch_slug: cleanText(input.batchSlug, 60) || null,
+    vertical,
+    engine_version: plan.version,
+    autonomy: plan.autonomy,
+    focus: plan.focus,
+    components: plan.components,
+    deferred_to_trial: plan.deferredToTrial,
+    not_relevant: plan.notRelevant,
+    because: plan.because,
+    total_minutes: plan.minutes,
+  }).select('*').single(), null);
+
+  return {
+    environment,
+    plan: stored ? { ...plan, id: stored.id } : plan,
+    // Both counter-intuitive and both SHRINK the assessment, so they are surfaced immediately.
+    audit: reverseAudit(audit),
+  };
+}
+
+export async function loadCompanyEnvironments(member) {
+  const environments = await optional(member.supabase.from('company_environments')
+    .select('*').eq('company_user_id', member.user.id)
+    .order('created_at', { ascending: false }).limit(20), [], 'company_environments');
+  if (!environments.length) return { environments: [], plans: [] };
+  const plans = await optional(member.supabase.from('assessment_plans')
+    .select('*').in('environment_id', environments.map(e => e.id))
+    .order('created_at', { ascending: false }).limit(40), [], 'assessment_plans');
+  return { environments, plans };
+}
+
+// What a student is owed before they spend an hour and a half. Every component, what it
+// measures, how long it takes, and what is explicitly NOT being done with the result.
+export async function assessmentDisclosure(member, input) {
+  const slug = cleanText(input.batchSlug, 60);
+  const plans = await optional(member.supabase.from('assessment_plans')
+    .select('*').eq('batch_slug', slug)
+    .order('created_at', { ascending: false }).limit(1), [], 'assessment_plans');
+
+  // No company has described an environment for this batch yet, so show what the vertical
+  // would produce rather than an empty page. Marked provisional, because it is.
+  const batch = BATCH_CATALOG.find(b => b.slug === slug);
+  if (!plans.length) {
+    if (!batch) throw new Error('That batch does not exist.');
+    const provisional = assessmentPlan({ vertical: batch.verticalSlug });
+    return { provisional: true, plan: provisional, disclosure: candidateDisclosure(provisional), posture: aedtPosture({}) };
+  }
+
+  const row = plans[0];
+  const plan = {
+    version: row.engine_version, vertical: row.vertical, autonomy: row.autonomy,
+    focus: row.focus || [], components: row.components || [],
+    deferredToTrial: row.deferred_to_trial || [], notRelevant: row.not_relevant || [],
+    because: row.because || [], minutes: row.total_minutes,
+  };
+  return { provisional: false, plan, disclosure: candidateDisclosure(plan), posture: aedtPosture({}) };
+}
+
+export async function startAssessmentRun(member, input) {
+  const profile = await loadMemberProfile(member);
+  if (profile?.role !== 'student') throw new Error('Only student accounts sit an assessment.');
+  const planId = cleanText(input.planId, 60);
+  if (!planId) throw new Error('Choose an assessment to start.');
+
+  const existing = await optional(member.supabase.from('assessment_runs')
+    .select('*').eq('plan_id', planId).eq('student_user_id', member.user.id).limit(1), [], 'assessment_runs');
+  // Resuming rather than restarting. Losing ninety minutes to a closed tab is the same failure
+  // the batch application had.
+  if (existing.length) return { run: existing[0], resumed: true };
+
+  const run = await checked(member.supabase.from('assessment_runs')
+    .insert({ plan_id: planId, student_user_id: member.user.id }).select('*').single(), null);
+  if (!run) throw new Error('The assessment could not be started. The super_intern migration may not be applied yet.');
+  return { run, resumed: false };
+}
 
 // ── Company evidence requests (§9) ────────────────────────────────────────────────────
 // What a team wants to SEE, as opposed to the skills it wants listed. The two are different
@@ -3027,6 +3157,9 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'respond-introduction') return res.status(200).json({ ok: true, introduction: await respondToIntroduction(member, input) });
     if (req.method === 'POST' && input.action === 'outcome-survey') return res.status(200).json({ ok: true, project: await recordOutcomeSurvey(member, input) });
     if (req.method === 'POST' && input.action === 'create-company-referral') return res.status(201).json({ ok: true, referral: await createCompanyReferral(member) });
+    if (req.method === 'POST' && input.action === 'save-company-environment') return res.status(201).json({ ok: true, ...(await saveCompanyEnvironment(member, input)) });
+    if (req.method === 'POST' && input.action === 'assessment-disclosure') return res.status(200).json({ ok: true, ...(await assessmentDisclosure(member, input)) });
+    if (req.method === 'POST' && input.action === 'start-assessment') return res.status(201).json({ ok: true, ...(await startAssessmentRun(member, input)) });
     if (req.method === 'POST' && input.action === 'save-evidence-request') return res.status(201).json({ ok: true, ...(await saveEvidenceRequest(member, input)) });
     if (req.method === 'POST' && input.action === 'delete-evidence-request') return res.status(200).json({ ok: true, ...(await deleteEvidenceRequest(member, input)) });
     if (req.method === 'POST' && input.action === 'save-technical-evidence') return res.status(201).json({ ok: true, ...(await saveTechnicalEvidence(member, input)) });
