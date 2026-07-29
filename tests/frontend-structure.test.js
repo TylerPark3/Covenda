@@ -7,6 +7,17 @@ const script = await readFile(new URL('../app.js', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../styles.css', import.meta.url), 'utf8');
 const typeCss = await readFile(new URL('../type.css', import.meta.url), 'utf8');
 
+// app.js is a classic script whose top level touches document, so it cannot be evaluated whole
+// in node. Lifting one function out by source keeps these as real behaviour tests rather than
+// assertions about how the code is spelled.
+function pureFunction(name) {
+  const start = script.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `${name} is not defined in app.js`);
+  const end = script.indexOf('\n}', start);
+  assert.ok(end > start, `${name} has no closing brace`);
+  return new Function(`${script.slice(start, end + 2)}; return ${name};`)();
+}
+
 test('frontend JavaScript parses', () => {
   assert.doesNotThrow(() => new Function(script));
 });
@@ -1163,4 +1174,165 @@ test('the gold word is a solid colour, not a clipped fill', () => {
   assert.ok(!/padding-(bottom|left|right)/.test(rule), 'padding survives with nothing to pad');
   // And a brighter value where it sits on a dark ground.
   assert.match(styles, /\.hero-home \.word-gold[\s\S]{0,120}color: #e2bd6b/);
+});
+
+// ── Guided sign-up (§15) ──────────────────────────────────────────────────────────────
+// The rail doubles as the progress indicator: setFormStep toggles `.is-active` on
+// `.form-progress span` by index. If anything nested inside a step becomes a <span>, the
+// selector picks it up and every step lights the wrong row.
+test('the rail steps index one-to-one with the form steps', () => {
+  for (const [id, stepAttr] of [['studentForm', 'data-student-step'], ['companyForm', 'data-company-step']]) {
+    const form = html.slice(html.indexOf(`<form id="${id}"`));
+    const body = form.slice(0, form.indexOf('</form>'));
+    const progress = body.match(/<div class="form-progress"[\s\S]*?<\/div>/)[0];
+    const spans = (progress.match(/<span[\s>]/g) || []).length;
+    const steps = (body.match(new RegExp(stepAttr + '="', 'g')) || []).length;
+    assert.equal(spans, steps, `${id} has ${spans} rail rows for ${steps} steps`);
+    assert.equal(spans, 4);
+    // The nested content must not be spans, or $$('.form-progress span') over-matches. Checked
+    // per row: matching across the whole block would just find the next sibling row.
+    for (const [row] of progress.matchAll(/<span[^>]*>[\s\S]*?<\/span>/g)) {
+      assert.ok(!row.slice(1).includes('<span'), `${id} nests a span inside a rail row`);
+    }
+    for (const tag of ['<i>', '<strong>', '<small>']) {
+      assert.equal((progress.match(new RegExp(tag, 'g')) || []).length, 4, `${id} rail rows are missing ${tag}`);
+    }
+  }
+});
+
+// A rail row promises what the step asks before the student gets there. That disclosure is the
+// point of it; a row with only a title is the old tab strip with more pixels.
+test('every rail row says what its step will ask', () => {
+  const rows = [...html.matchAll(/<span[^>]*><i>\d<\/i><strong>([^<]+)<\/strong><small>([^<]+)<\/small><\/span>/g)];
+  assert.equal(rows.length, 8, `expected 8 rail rows across both forms, found ${rows.length}`);
+  for (const [, title, ask] of rows) {
+    assert.ok(title.length <= 16, `rail title "${title}" is too long for the column`);
+    assert.ok(ask.length > 20, `rail row "${title}" does not say what it asks`);
+  }
+});
+
+// Chips replaced selects. The name and every option value have to survive that swap byte for
+// byte, or the payload silently changes shape and api/submissions.js rejects it.
+test('the chip groups kept the values their selects had', () => {
+  const expected = {
+    studentEducation: ['College first-year', 'College sophomore', 'College junior', 'College senior', 'Graduate student', 'Recent graduate'],
+    studentSkillLevel: ['Learning the basics', 'Comfortable with guidance', 'Can work independently', 'Advanced, with work examples'],
+    studentWorkStyle: ['Independent with clear checkpoints', 'Collaborative with regular feedback', 'Either, if expectations are clear'],
+    studentAmbiguity: ['I ask focused questions before starting', 'I can propose assumptions for approval', 'I prefer fully specified work'],
+    studentAvailability: ['Within 7 days', 'Within 30 days', 'Next academic break', 'Just exploring'],
+    studentHours: ['3–5 hours', '6–10 hours', '11–15 hours'],
+    studentDuration: ['One week', 'Two weeks', 'Three to four weeks'],
+    studentCompensation: ['$150+', '$300+', '$500+', 'Depends on scope'],
+    studentScreening: ['Yes', 'Maybe, if time-boxed and relevant', 'No'],
+    studentPriority: ['Paid work and employer feedback', 'Building specific capability evidence', 'Learning an industry', 'Possibility of follow-on work'],
+    studentTimezone: ['Eastern', 'Central', 'Mountain', 'Pacific', 'Outside the United States'],
+    companySize: ['1–5 people', '6–20 people', '21–50 people', '51–200 people', '201+ people'],
+    companyFrequency: ['Every week', 'Every month', 'Every quarter', 'One-time backlog', 'Not sure'],
+    companyStudentHours: ['3–5 hours', '5–8 hours', '8–15 hours', 'Not sure'],
+    companyAccess: ['none', 'temporary', 'production'],
+  };
+  for (const [name, values] of Object.entries(expected)) {
+    const found = [...html.matchAll(new RegExp(`name="${name}" value="([^"]*)"`, 'g'))].map(m => m[1]);
+    assert.deepEqual(found, values, `${name} lost or reordered its options`);
+    assert.ok(!new RegExp(`<select name="${name}"`).test(html), `${name} is still a select`);
+  }
+});
+
+// A required chip group cannot use the native `required` bubble: it would point at a
+// transparent overlay with no visible label. Every one declares its own message instead.
+test('every required chip group carries the sentence shown when it is empty', () => {
+  const groups = [...html.matchAll(/class="chip-field[^"]*"([^>]*)>/g)].map(m => m[1]);
+  assert.ok(groups.length >= 15, `only ${groups.length} chip groups found`);
+  for (const attrs of groups) {
+    assert.match(attrs, /data-require-group="[^"]{12,}"/, `a chip group has no message: ${attrs}`);
+  }
+  // No chip radio may carry `required`, or Chrome logs "not focusable" for the hidden input.
+  assert.ok(!/class="chip"><input type="radio"[^>]*required/.test(html), 'a chip radio is natively required');
+});
+
+// The graduation year answers the education question, so the student does not type both.
+test('education is derived from the graduation year, and the range is covered', () => {
+  const fn = pureFunction('educationFromGraduation');
+  assert.equal(fn(2029, 2026), 'College first-year');
+  assert.equal(fn(2028, 2026), 'College sophomore');
+  assert.equal(fn(2027, 2026), 'College junior');
+  assert.equal(fn(2026, 2026), 'College senior');
+  assert.equal(fn(2025, 2026), 'Recent graduate');
+  // Further out than the chips go is left alone rather than guessed at.
+  assert.equal(fn(2033, 2026), 'College first-year');
+  // A cleared field is unknown, not year zero.
+  assert.equal(fn('', 2026), '');
+  assert.equal(fn('   ', 2026), '');
+  assert.equal(fn(undefined, 2026), '');
+  assert.equal(fn('not a year', 2026), '');
+  // Every derived value has to be one of the chips, or the prefill selects nothing.
+  const chips = [...html.matchAll(/name="studentEducation" value="([^"]+)"/g)].map(m => m[1]);
+  for (const year of [2025, 2026, 2027, 2028, 2029]) assert.ok(chips.includes(fn(year, 2026)));
+});
+
+// Offsets are ambiguous across daylight saving; the zone name is not.
+test('the timezone comes from the IANA zone and falls back honestly', () => {
+  const fn = pureFunction('timezoneChoice');
+  assert.equal(fn('America/New_York'), 'Eastern');
+  assert.equal(fn('America/Chicago'), 'Central');
+  assert.equal(fn('America/Phoenix'), 'Mountain');
+  assert.equal(fn('America/Los_Angeles'), 'Pacific');
+  // Not a nearest-guess: anything unlisted says so.
+  assert.equal(fn('Europe/London'), 'Outside the United States');
+  assert.equal(fn('Asia/Seoul'), 'Outside the United States');
+  // '' rather than undefined: undefined triggers the default parameter and reads the real
+  // machine zone, which would make this assertion depend on where the test runs.
+  assert.equal(fn(''), 'Outside the United States');
+  const chips = [...html.matchAll(/name="studentTimezone" value="([^"]+)"/g)].map(m => m[1]);
+  for (const zone of ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'Europe/London']) {
+    assert.ok(chips.includes(fn(zone)), `${fn(zone)} is not one of the timezone chips`);
+  }
+});
+
+// Restoring a draft used to overwrite each radio's own value attribute, and serializing one
+// stored the LAST option in every group rather than the chosen one. Both were silent.
+test('drafts round-trip a radio group by its chosen option', () => {
+  const src = script.replace(/\/\/.*$/gm, '');
+  const serialize = src.slice(src.indexOf('function serializeDraft'));
+  assert.match(serialize.slice(0, 700), /field\.type === 'radio'[\s\S]*?if \(field\.checked\)/,
+    'serializeDraft writes a radio value without checking whether it is the chosen one');
+  const apply = src.slice(src.indexOf('function applyFormValues'));
+  assert.match(apply.slice(0, 500), /field\.type === 'radio'\) field\.checked =/,
+    'applyFormValues assigns to a radio value instead of its checked state');
+});
+
+// A keyboard-activated click reports 0,0, which a coordinate-based backdrop check reads as
+// "outside" and closes the dialog on. Pressing Enter on Continue killed the whole form.
+test('the backdrop check does not use pointer coordinates', () => {
+  const rule = script.slice(script.indexOf("$$('.form-dialog').forEach"));
+  const body = rule.slice(0, rule.indexOf('}));') + 4);
+  assert.match(body, /event\.target === dialog/);
+  for (const banned of ['clientX', 'clientY', 'getBoundingClientRect']) {
+    assert.ok(!body.includes(banned), `the backdrop check still reads ${banned}`);
+  }
+});
+
+// companyAccess became a radio group, where $('[name=x]').value is the first option's value
+// and never the answer. Reading it that way disables the production-access blocker.
+test('the boundary blocker reads the selected access level, not the first one', () => {
+  const src = script.replace(/\/\/.*$/gm, '');
+  const fn = src.slice(src.indexOf('function companyBoundaryBlockers'));
+  const body = fn.slice(0, fn.indexOf('\n}'));
+  assert.match(body, /selectedControl\(form, 'companyAccess'\)/);
+  assert.ok(!/\$\('\[name="companyAccess"\]', form\)/.test(body),
+    'companyBoundaryBlockers still takes the first radio as the answer');
+  assert.match(body, /access\.value === 'production'/);
+});
+
+// The trust line used to live on step 4, arriving after the decision it was meant to inform.
+test('the privacy promise is on screen from the first step', () => {
+  for (const marker of ['Private by default', 'Nothing is published and no student is assigned']) {
+    const rail = html.slice(html.indexOf('<div class="form-rail-trust">'));
+    assert.ok(html.includes(marker), `the rail never states: ${marker}`);
+    assert.ok(rail.length > 0);
+  }
+  // And it is in the rail, which is not inside any single step.
+  const trust = [...html.matchAll(/<div class="form-rail-trust">[\s\S]*?<\/div>/g)];
+  assert.equal(trust.length, 2, 'both intake forms should carry a permanent trust footer');
+  for (const [block] of trust) assert.ok(!block.includes('form-step'));
 });

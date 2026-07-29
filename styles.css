@@ -1344,6 +1344,216 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
 .form-progress span.is-active { border-bottom-color: var(--gold); color: var(--gold-deep); }
 .form-step { display: none; overflow: auto; padding: 26px 30px 12px; }
 .form-step.is-active { display: block; }
+
+/* ── Guided sign-up (§15) ──────────────────────────────────────────────────────────────
+   The two forms that decide whether anyone joins. Before this they were a flat 2-column
+   grid of eight identical boxes with 12.5px labels above 47px inputs, so the label was
+   smaller than the field was tall and nothing on screen said which answers mattered, how
+   long the form was, or what happens to it. The length was discovered rather than
+   disclosed, and the one sentence that earns trust sat on step 4 where it arrives after
+   the decision it was meant to inform.
+
+   The rail fixes orientation, not decoration: it states the promise, names what every
+   step asks BEFORE you reach it, and keeps the privacy line permanently on screen. It is
+   also the progress indicator, so `.form-progress span` still indexes 1:1 with the steps
+   and app.js drives it without knowing any of this changed.
+
+   Field COUNT is not reduced, because api/submissions.js requires each one and a shorter
+   form would mean a weaker record, not a better one. What is reduced is interaction cost:
+   every short enum became a one-tap chip row instead of a dropdown, and the two answers
+   that can be derived are pre-filled.
+
+   Only .is-guided gets this. The quick-join and endorsement dialogs share these class
+   names and must keep their single-panel layout. */
+.form-dialog.is-guided { width: min(1020px, calc(100vw - 28px)); background: #fff; }
+.form-dialog.is-guided form {
+  grid-template-columns: 292px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  max-height: inherit;
+  min-height: min(680px, calc(100svh - 28px));
+}
+
+.form-rail {
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 26px;
+  padding: 28px 26px;
+  overflow: auto;
+  background: var(--ink);
+  /* The one place gold is allowed to sit large: a hairline the eye reads as the seam
+     between "what this is" and "what you do". */
+  box-shadow: inset -1px 0 0 rgba(180,123,32,.34);
+  color: rgba(255,255,255,.7);
+}
+.form-rail-brand { display: flex; align-items: center; gap: 9px; color: var(--gold-light); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.form-rail-brand svg { width: 15px; height: 15px; }
+.form-rail-promise h2 { margin: 0; color: #fff; font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1.08; letter-spacing: -.03em; text-wrap: balance; }
+.form-rail-promise h2 em { color: var(--gold-light); font-style: italic; }
+.form-rail-promise p { margin: 11px 0 0; font-size: 12.5px; line-height: 1.6; }
+
+/* The rail steps ARE .form-progress, so app.js's index-based is-active toggle drives them
+   with no JS change. Direct children must stay <span> for that selector to index right;
+   anything nested uses <i>/<strong>/<small>. */
+.form-dialog.is-guided .form-progress {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  align-content: start;
+  padding: 0;
+  border: 0;
+}
+.form-dialog.is-guided .form-progress span {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 3px 12px;
+  padding: 11px 10px 12px;
+  border: 0;
+  border-left: 2px solid rgba(255,255,255,.11);
+  color: rgba(255,255,255,.44);
+  font-size: 12.5px;
+  transition: color .16s ease, border-color .16s ease, background .16s ease;
+}
+.form-dialog.is-guided .form-progress span > i {
+  display: grid;
+  place-items: center;
+  width: 24px; height: 24px;
+  border: 1px solid rgba(255,255,255,.2);
+  color: inherit;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+}
+.form-dialog.is-guided .form-progress span > strong { align-self: center; color: rgba(255,255,255,.72); font-size: 14px; font-weight: 620; letter-spacing: -.012em; }
+.form-dialog.is-guided .form-progress span > small { grid-column: 2; color: inherit; font-size: 11px; font-weight: 450; line-height: 1.45; }
+.form-dialog.is-guided .form-progress span.is-active { border-left-color: var(--gold); background: rgba(180,123,32,.13); color: rgba(255,255,255,.78); }
+.form-dialog.is-guided .form-progress span.is-active > i { border-color: var(--gold-light); background: var(--gold); color: #14161a; }
+.form-dialog.is-guided .form-progress span.is-active > strong { color: #fff; }
+/* Behind you, not ahead of you: a done step reads as banked rather than as still pending. */
+.form-dialog.is-guided .form-progress span.is-done { border-left-color: rgba(231,198,121,.5); color: rgba(255,255,255,.4); }
+.form-dialog.is-guided .form-progress span.is-done > i { border-color: rgba(231,198,121,.42); color: var(--gold-light); }
+.form-dialog.is-guided .form-progress span.is-done > strong { color: rgba(255,255,255,.58); }
+.form-dialog.is-guided .form-progress span.is-done > small { color: rgba(255,255,255,.3); }
+
+/* Moved out of the review step. A boundary promise that appears only at the end is
+   reassurance after the fact. */
+.form-rail-trust { display: grid; gap: 8px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.11); }
+.form-rail-trust p { display: flex; align-items: flex-start; gap: 9px; margin: 0; color: rgba(255,255,255,.5); font-size: 11px; line-height: 1.5; }
+.form-rail-trust svg { flex: 0 0 auto; width: 13px; height: 13px; margin-top: 2px; color: var(--gold-light); }
+
+.form-panel { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; min-width: 0; }
+.form-dialog.is-guided .dialog-header { align-items: center; padding: 22px 30px 18px; }
+.form-dialog.is-guided .dialog-header h2 { font-family: var(--font-sans); font-size: 21px; font-weight: 640; letter-spacing: -.025em; }
+/* "Step 1 of 4" is one phrase; letting it wrap after "of" read as two broken labels. */
+.form-dialog.is-guided .dialog-header small { font-size: 11px; white-space: nowrap; }
+.form-dialog.is-guided .form-step { padding: 22px 30px 18px; }
+
+/* Grouping is the hierarchy. Eight fields under one silent heading read as a wall; the
+   same eight in three named groups read as three questions. */
+.field-group { display: grid; gap: 13px; }
+.field-group + .field-group { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 22px; }
+.field-group > header { display: grid; gap: 2px; }
+.field-group > header h3 { margin: 0; font-family: var(--font-sans); font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
+.field-group > header p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+
+/* Labels were 12.5px over a 47px input. Raising the label and shortening the field puts
+   the weight back on the words that say what to type. */
+.form-dialog.is-guided .field-grid { gap: 15px 16px; }
+.form-dialog.is-guided .field-grid label, .form-dialog.is-guided .form-step > label { gap: 6px; color: var(--ink); font-size: 12.5px; font-weight: 620; letter-spacing: -.008em; }
+.form-dialog.is-guided .field-grid label > span { color: var(--soft); font-size: 11px; font-weight: 500; }
+.form-dialog.is-guided input:not([type=checkbox]):not([type=radio]),
+.form-dialog.is-guided textarea,
+.form-dialog.is-guided select { min-height: 42px; padding: 10px 12px; background: #fff; font-size: 14px; }
+.form-dialog.is-guided input:focus-visible, .form-dialog.is-guided textarea:focus-visible, .form-dialog.is-guided select:focus-visible {
+  border-color: var(--gold);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(180,123,32,.16);
+}
+/* A field the student filled should look settled, not still waiting. */
+.form-dialog.is-guided input:not([type=checkbox]):not([type=radio]):not(:placeholder-shown):valid { border-color: var(--line); }
+
+/* ── Chips ────────────────────────────────────────────────────────────────────────────
+   Every short enum was a <select>: click, scan a list that covers the page, click again,
+   and the closed state reads "Choose one" which says nothing. A chip row is one tap and
+   shows all the options at once, so the answer set is part of the question.
+
+   The radio keeps its name, so FormData and the payload are byte-identical to the select
+   it replaced. It stays full-size and merely transparent rather than display:none, so it
+   is still focusable and the label is its own hit area. */
+/* The industry legend moved into a .field-group header, so the fieldset keeps its accessible
+   name without printing the same question twice. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+.chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 13px;
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 570;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: border-color .13s ease, background .13s ease, color .13s ease;
+}
+.chip input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; }
+.chip:hover { border-color: var(--gold); color: var(--ink); }
+.chip:has(input:checked) { border-color: var(--gold); background: var(--gold); color: #fff; font-weight: 620; }
+.chip:has(input:focus-visible) { box-shadow: 0 0 0 3px rgba(180,123,32,.2); }
+.chip-field { display: grid; gap: 8px; }
+.chip-field.wide { grid-column: 1 / -1; }
+.chip-field > .chip-label { display: grid; gap: 3px; color: var(--ink); font-size: 12.5px; font-weight: 620; letter-spacing: -.008em; }
+.chip-field > .chip-label > span { color: var(--soft); font-size: 11px; font-weight: 500; }
+/* Set by app.js when a required group is untouched. Named on the group, not the page, so
+   the student is told which question is unanswered rather than that "something" is. */
+.chip-field.is-missing > .chip-label { color: #9b2e22; }
+.chip-field.is-missing .chip { border-color: rgba(155,46,34,.45); }
+/* renderCompanyBoundaryGuidance marks the chosen chip, not the whole group: production access
+   is the one answer the pilot refuses, and it has to be obvious which chip caused that. */
+.chip.is-blocked, .chip.is-blocked:has(input:checked) { border-color: #9b2e22; background: #9b2e22; color: #fff; }
+
+/* Derived, not assumed: shown as filled in with a visible note that it was, so a wrong
+   guess reads as a suggestion to correct instead of a mistake the student has to catch. */
+.field-prefilled { display: inline-flex; align-items: center; gap: 5px; color: var(--gold-deep); font-size: 11px; font-weight: 600; }
+.field-prefilled svg { width: 11px; height: 11px; }
+
+/* The fieldset and the empty specialisations line both carried their own bottom margin, which
+   the .field-group gap then added to again. The group owns spacing here. */
+.form-dialog.is-guided .industry-fieldset { margin-bottom: 0; }
+.form-dialog.is-guided .industry-specializations:empty { display: none; }
+.form-dialog.is-guided .consent-row { margin-top: 0; }
+.form-dialog.is-guided .form-step > .consent-row:first-of-type { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+
+.form-dialog.is-guided .dialog-footer { padding: 16px 30px 20px; border-top: 1px solid var(--line); background: #fff; }
+.form-dialog.is-guided .form-message { padding: 8px 30px 0; }
+.form-dialog.is-guided .dialog-tools > span { font-size: 11px; }
+
+/* The rail is orientation. On a phone there is no room for it beside the form, and
+   stacking it whole would push the first field below the fold, so it keeps the promise and
+   the step list and drops to a horizontal scroller. */
+@media (max-width: 880px) {
+  .form-dialog.is-guided form { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+  .form-rail { grid-template-rows: auto auto auto; gap: 16px; padding: 20px 22px; overflow: visible; box-shadow: inset 0 -1px 0 rgba(180,123,32,.34); }
+  .form-rail-promise h2 { font-size: 23px; }
+  .form-rail-promise p, .form-rail-trust { display: none; }
+  .form-dialog.is-guided .form-progress { grid-auto-flow: column; grid-auto-columns: minmax(132px, 1fr); grid-template-columns: none; gap: 6px; overflow-x: auto; }
+  .form-dialog.is-guided .form-progress span { grid-template-columns: 22px minmax(0, 1fr); border-left: 0; border-top: 2px solid rgba(255,255,255,.11); padding: 9px 8px 10px; }
+  .form-dialog.is-guided .form-progress span > small { display: none; }
+  /* One line per step in the scroller. Wrapping made "How you work" break to a second line
+     that the next step then clipped mid-word. */
+  .form-dialog.is-guided .form-progress span > strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  /* The live draft status is the first thing to go: the rail already promises the draft is
+     kept, and at this width it was wrapping underneath the close button. */
+  .form-dialog.is-guided .dialog-tools > span { display: none; }
+  .form-dialog.is-guided .dialog-header { gap: 12px; }
+  .form-dialog.is-guided .form-progress span.is-active { border-top-color: var(--gold); }
+  .form-dialog.is-guided .form-progress span.is-done { border-top-color: rgba(231,198,121,.5); }
+  .form-dialog.is-guided .field-grid { grid-template-columns: 1fr; }
+  .form-dialog.is-guided .form-step, .form-dialog.is-guided .dialog-header, .form-dialog.is-guided .dialog-footer { padding-left: 22px; padding-right: 22px; }
+}
 .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .field-grid label, .form-step > label { display: grid; gap: 7px; color: #31312e; font-size: 12.5px; font-weight: 650; }
 .field-grid label > span { color: var(--soft); font-weight: 500; }
@@ -1387,7 +1597,10 @@ legend { margin-bottom: 12px; color: #31312e; font-size: 12.5px; font-weight: 65
 .industry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .industry-card { display: flex; align-items: center; gap: 10px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 0; background: #fff; font-size: 12.5px; font-weight: 550; cursor: pointer; transition: border-color .12s ease, background .12s ease; }
 .industry-card:hover { border-color: var(--gold); }
-.industry-card input { flex: 0 0 auto; width: 16px; height: 16px; margin: 0; accent-color: var(--gold); }
+/* min-height, not just height. The global `input { min-height: 47px }` outranks a 16px height,
+   so every one of these cards was 75px tall: a 16px box reserving 47px of row, plus padding.
+   Same reason the chip radios reset it. */
+.industry-card input { flex: 0 0 auto; width: 16px; height: 16px; min-height: 0; margin: 0; accent-color: var(--gold); }
 .industry-card:has(input:checked) { border-color: var(--gold); background: var(--gold-pale); }
 .industry-specializations { min-height: 16px; margin: 12px 0 0; color: var(--gold-deep); font-size: 12.5px; line-height: 1.55; }
 @media (max-width: 620px) { .industry-grid { grid-template-columns: 1fr; } }

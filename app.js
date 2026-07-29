@@ -293,6 +293,11 @@ function applyFormValues(form, values = {}) {
     if (!(field.name in values)) continue;
     const value = values[field.name];
     if (field.type === 'checkbox') field.checked = Array.isArray(value) && value.includes(field.value);
+    // Radios need the same treatment as checkboxes. Falling through to `field.value = value`
+    // rewrote the radio's OWN value attribute, so restoring a draft silently corrupted every
+    // chip group into submitting whatever the last-restored answer was. Only became reachable
+    // when the selects on the sign-up form became chips.
+    else if (field.type === 'radio') field.checked = String(field.value) === String(value);
     else field.value = value;
   }
 }
@@ -304,6 +309,15 @@ function serializeDraft(form) {
     if (field.type === 'checkbox') {
       if (!Array.isArray(values[field.name])) values[field.name] = [];
       if (field.checked) values[field.name].push(field.value);
+    } else if (field.type === 'radio') {
+      // Only the chosen one. A radio group is many elements sharing a name, so the plain
+      // assignment below ran once per option and the LAST option always won: a student who
+      // picked "6-10 hours", closed the tab and came back found "11-15 hours" restored, in
+      // every chip group at once. Silent, and wrong in the direction of over-promising.
+      //
+      // The key stays absent when nothing is chosen, so restoring a draft cannot invent an
+      // answer for a question the student never reached.
+      if (field.checked) values[field.name] = field.value;
     } else {
       values[field.name] = field.value;
     }
@@ -635,7 +649,21 @@ function setFormStep(form, index) {
   const safeIndex = Math.max(0, Math.min(index, steps.length - 1));
   form.dataset.step = String(safeIndex);
   steps.forEach((step, stepIndex) => step.classList.toggle('is-active', stepIndex === safeIndex));
-  $$('.form-progress span', form).forEach((item, itemIndex) => item.classList.toggle('is-active', itemIndex === safeIndex));
+  const items = $$('.form-progress span', form);
+  items.forEach((item, itemIndex) => {
+    item.classList.toggle('is-active', itemIndex === safeIndex);
+    // Steps behind you read as banked rather than as still pending. Without this the rail
+    // looks identical on step 1 and step 3 except for one highlight.
+    item.classList.toggle('is-done', itemIndex < safeIndex);
+  });
+  // The panel header restates where you are, because on the guided layout the rail is off to
+  // the side and the eye starts at the fields.
+  const title = $('[data-step-title]', form);
+  if (title) {
+    title.textContent = $('strong', items[safeIndex])?.textContent || title.textContent;
+    const eyebrow = $('.dialog-header small', form);
+    if (eyebrow) eyebrow.textContent = `Step ${safeIndex + 1} of ${steps.length}`;
+  }
   $('[data-form-back]', form).hidden = safeIndex === 0;
   $('[data-form-next]', form).hidden = safeIndex === steps.length - 1;
   $('[data-form-submit]', form).hidden = safeIndex !== steps.length - 1;
@@ -648,10 +676,24 @@ function validateStep(form) {
   const message = $('.form-message', form);
   message.textContent = '';
   for (const field of $$('input, textarea, select', step)) {
+    // A chip's radio is a transparent full-size overlay, so it is focusable and reportValidity
+    // would work, but the native bubble points at a box with no visible label. The group check
+    // below names the question instead.
+    if (field.type === 'radio') continue;
     if (!field.checkValidity()) {
       field.reportValidity();
       return false;
     }
+  }
+  // Chip groups. Declared on the markup rather than listed here, so adding a group to the form
+  // does not mean remembering to add a matching branch to this function. The old hard-coded
+  // industry check was the only one of these and it was already the third copy of the pattern.
+  for (const group of $$('[data-require-group]', step)) {
+    if ($('input:checked', group)) { group.classList.remove('is-missing'); continue; }
+    group.classList.add('is-missing');
+    message.textContent = group.dataset.requireGroup;
+    group.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    return false;
   }
   if (form.id === 'studentForm' && step.dataset.studentStep === '2') {
     if (!$$('input[name="studentIndustry"]:checked', form).length) {
@@ -662,7 +704,74 @@ function validateStep(form) {
   return true;
 }
 
+// ── Fields Covenda can answer for you ─────────────────────────────────────────────────
+// Two of the required answers are derivable, and asking for them anyway is asking someone to
+// type what we already know. Both are pre-filled rather than assumed: the chip is selected and
+// a visible note says where it came from, so a wrong guess reads as a suggestion to correct
+// instead of an error the student has to notice on their own.
+//
+// Never overwrites an answer the student gave, and never fires if a draft already restored one.
+function selectChip(form, name, value) {
+  const target = $$(`input[name="${name}"]`, form).find(input => input.value === value);
+  if (!target || $(`input[name="${name}"]:checked`, form)) return false;
+  target.checked = true;
+  const note = $('[data-prefilled-note]', target.closest('[data-derive]') || form);
+  if (note) note.hidden = false;
+  return true;
+}
+
+// A 2029 graduate in 2026 has three years left, so they are a first-year. Anything past the
+// range the chips cover is left alone rather than guessed at.
+function educationFromGraduation(year, now = new Date().getFullYear()) {
+  // Blank means unknown, not zero. Number('') is 0, so a cleared field used to derive a
+  // graduation year of 0 and select "Recent graduate" on the student's behalf.
+  if (String(year ?? '').trim() === '') return '';
+  const yearsLeft = Number(year) - now;
+  if (!Number.isFinite(yearsLeft)) return '';
+  if (yearsLeft >= 3) return 'College first-year';
+  if (yearsLeft === 2) return 'College sophomore';
+  if (yearsLeft === 1) return 'College junior';
+  if (yearsLeft === 0) return 'College senior';
+  return 'Recent graduate';
+}
+
+// The IANA zone name, not the UTC offset. Offsets are ambiguous across daylight saving: -300 is
+// Eastern in winter and Central in summer, so an offset map guesses wrong for half the year in
+// half the country. The zone name says which it is outright.
+//
+// Anything not on this list becomes the honest "outside the United States" rather than the
+// nearest wrong guess, and the student can still tap a different chip.
+function timezoneChoice(zone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
+  const zones = {
+    'America/New_York': 'Eastern', 'America/Detroit': 'Eastern', 'America/Toronto': 'Eastern',
+    'America/Indiana/Indianapolis': 'Eastern', 'America/Kentucky/Louisville': 'Eastern',
+    'America/Chicago': 'Central', 'America/Winnipeg': 'Central', 'America/Indiana/Knox': 'Central',
+    'America/Denver': 'Mountain', 'America/Edmonton': 'Mountain', 'America/Phoenix': 'Mountain',
+    'America/Boise': 'Mountain', 'America/Los_Angeles': 'Pacific', 'America/Vancouver': 'Pacific',
+  };
+  return zones[zone] || 'Outside the United States';
+}
+
+function initDerivedFields(form) {
+  const graduation = $('[name="studentGraduation"]', form);
+  graduation?.addEventListener('change', () => {
+    const guess = educationFromGraduation(graduation.value);
+    if (guess) selectChip(form, 'studentEducation', guess);
+  });
+  // Timezone is knowable before the student types anything, so it is set on open.
+  selectChip(form, 'studentTimezone', timezoneChoice());
+}
+
 function initSteppedForm(form) {
+  initDerivedFields(form);
+  // Clear the group error the moment it stops being true. Leaving it up while the answer is
+  // now given is the thing that makes a form feel like it is arguing with you.
+  form.addEventListener('change', event => {
+    const group = event.target.closest?.('[data-require-group]');
+    if (!group) return;
+    group.classList.remove('is-missing');
+    if ($('.form-message', form)?.textContent === group.dataset.requireGroup) $('.form-message', form).textContent = '';
+  });
   $('[data-form-next]', form).addEventListener('click', () => {
     if (!validateStep(form)) return;
     setFormStep(form, Number(form.dataset.step || 0) + 1);
@@ -780,13 +889,29 @@ function companyPacketReadiness(input) {
   return { checks, readyCount, total: checks.length, allReady: readyCount === checks.length };
 }
 
+// The control this reads used to be a <select>, where `$('[name=x]').value` is the answer. It is
+// a radio group now, and there `$()` returns the FIRST radio, whose value is a constant. Reading
+// it that way would have made access.value permanently 'none' and silently disabled the
+// production-access blocker: the one check that stops a company handing over client systems.
+//
+// Returns the element as well as the value, because the caller marks the chosen chip as blocked
+// and marking the first radio would highlight the wrong one.
+function selectedControl(form, name) {
+  const fields = $$(`[name="${name}"]`, form);
+  const checked = fields.find(field => field.type === 'radio' && field.checked);
+  if (checked) return { field: checked, value: checked.value };
+  const first = fields[0] || null;
+  // A radio group with nothing chosen has no value at all, which is different from ''.
+  return { field: first, value: first && first.type === 'radio' ? '' : (first?.value ?? '') };
+}
+
 function companyBoundaryBlockers(form) {
   const blockers = [];
-  const access = $('[name="companyAccess"]', form);
+  const access = selectedControl(form, 'companyAccess');
   const records = $('[name="companyClientRecords"]', form);
   const restricted = $('[name="companyRestricted"]', form);
   if (access.value === 'production') {
-    blockers.push({ field: access, message: 'change System access from production/client systems' });
+    blockers.push({ field: access.field, message: 'change System access from production/client systems' });
   }
   if (records.checked) {
     blockers.push({ field: records, message: 'uncheck client, patient, or customer records' });
@@ -799,7 +924,7 @@ function companyBoundaryBlockers(form) {
 
 function renderCompanyBoundaryGuidance(form) {
   const panel = $('#companyBoundaryGuidance');
-  const access = $('[name="companyAccess"]', form);
+  const access = selectedControl(form, 'companyAccess');
   const blockers = companyBoundaryBlockers(form);
   $$('[name="companyAccess"], [name="companyClientRecords"], [name="companyRestricted"]', form).forEach(field => {
     field.removeAttribute('aria-invalid');
@@ -2481,10 +2606,16 @@ $$('[data-work-type]').forEach(button => button.addEventListener('click', () => 
   if (button.closest('.work-types')) openDialog(studentDialog, studentForm);
 }));
 $$('[data-close-dialog]').forEach(button => button.addEventListener('click', () => button.closest('dialog').close()));
+// Click the backdrop to dismiss. This used to compare event.clientX/Y against the dialog's
+// bounding box, which closed the dialog on any click reporting coordinates outside it — and a
+// click activated by Enter or Space reports 0,0. So a keyboard user pressing Enter on Continue
+// closed the entire sign-up form instead of advancing, losing the step they were on. Nothing
+// caught it because a mouse click always carries real coordinates.
+//
+// The backdrop is painted by the dialog element itself and the form covers the rest of it, so
+// "target is the dialog" is exactly the backdrop and needs no coordinates at all.
 $$('.form-dialog').forEach(dialog => dialog.addEventListener('click', event => {
-  const bounds = dialog.getBoundingClientRect();
-  const outside = event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
-  if (outside) dialog.close();
+  if (event.target === dialog) dialog.close();
 }));
 
 // Step 4 — roles + applications foundation. Illustrative company roles a student can

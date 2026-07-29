@@ -1592,63 +1592,198 @@
     </div>
   </div>
 
-  <dialog class="form-dialog" id="studentDialog" aria-labelledby="studentDialogTitle">
+  <dialog class="form-dialog is-guided" id="studentDialog" aria-labelledby="studentDialogTitle">
     <form id="studentForm">
       <input type="hidden" name="studentBatch" id="studentBatch">
-      <header class="dialog-header"><div><small>Student interest profile</small><h2 id="studentDialogTitle">Tell us what you want to <span class="word-gold">prove</span>.</h2></div><div class="dialog-tools"><span data-draft-status>Draft saves on this device</span><button type="button" class="draft-clear" data-clear-draft>Clear draft</button><button type="button" class="icon-button" data-close-dialog aria-label="Close student form"><svg><use href="#icon-close"/></svg></button></div></header>
-      <div class="form-progress" aria-label="Student form progress"><span class="is-active">1. You</span><span>2. Work</span><span>3. Fit</span><span>4. Review</span></div>
+      <!-- The rail is also the progress indicator: app.js toggles `.is-active` on
+           `.form-progress span` by index, so these four spans must stay the only spans that
+           are direct children of it. Nested content uses i / strong / small. -->
+      <aside class="form-rail">
+        <p class="form-rail-brand"><svg><use href="#icon-shield"/></svg>Covenda</p>
+        <div class="form-rail-promise">
+          <h2 id="studentDialogTitle">Show what you can already <em>do</em>.</h2>
+          <p>Four steps. Nothing here is a test, and none of it is published.</p>
+        </div>
+        <div class="form-progress" aria-label="Student form progress">
+          <span class="is-active"><i>1</i><strong>You</strong><small>Name, school, when you graduate</small></span>
+          <span><i>2</i><strong>Your work</strong><small>Fields you want in, and your strongest skill</small></span>
+          <span><i>3</i><strong>How you work</strong><small>Time you have and what you want back</small></span>
+          <span><i>4</i><strong>Review</strong><small>See exactly what gets sent</small></span>
+        </div>
+        <div class="form-rail-trust">
+          <p><svg><use href="#icon-lock"/></svg>Private by default. Not a public profile and not a score.</p>
+          <p><svg><use href="#icon-file"/></svg>Stop and come back any time. Nothing sends until you review it.</p>
+        </div>
+      </aside>
+
+      <div class="form-panel">
+      <header class="dialog-header"><div><small>Step 1 of 4</small><h2 data-step-title>About you</h2></div><div class="dialog-tools"><span data-draft-status>Draft saves on this device</span><button type="button" class="draft-clear" data-clear-draft>Clear draft</button><button type="button" class="icon-button" data-close-dialog aria-label="Close student form"><svg><use href="#icon-close"/></svg></button></div></header>
       <section class="form-step is-active" data-student-step="1">
-        <div class="field-grid">
-          <label>Full name<input name="studentName" autocomplete="name" required></label>
-          <label>Email<input name="studentEmail" type="email" autocomplete="email" required></label>
-          <label>School<input name="studentSchool" autocomplete="organization" required></label>
-          <label>Education level<select name="studentEducation" required><option value="">Choose one</option><option>College first-year</option><option>College sophomore</option><option>College junior</option><option>College senior</option><option>Graduate student</option><option>Recent graduate</option></select></label>
-          <label>Graduation year<input name="studentGraduation" type="number" min="2026" max="2035" required></label>
-          <label>Major or field<input name="studentMajor" required></label>
-          <label>Timezone<select name="studentTimezone" required><option value="">Choose one</option><option>Eastern</option><option>Central</option><option>Mountain</option><option>Pacific</option><option>Outside the United States</option></select></label>
-          <label>Portfolio or work sample URL <span>Optional</span><input name="studentPortfolio" type="url" placeholder="https://"></label>
-          <div class="video-record wide">
-            <p class="video-intro-label">One-minute video intro <span>Optional</span></p>
-            <button type="button" class="outline-button video-record-primary" data-video-record-toggle><svg><use href="#icon-user"/></svg>Record a 1-minute intro</button>
-            <div class="video-recorder" data-video-recorder hidden></div>
-            <details class="video-link-fallback">
-              <summary>Prefer to paste a link?</summary>
-              <input name="studentVideoIntro" type="url" inputmode="url" placeholder="https://, Loom, YouTube, or Vimeo" data-video-intro-input>
-            </details>
+        <div class="field-group">
+          <header><h3>How to reach you</h3><p>Used to contact you about the pilot. Nothing else.</p></header>
+          <div class="field-grid">
+            <label>Full name<input name="studentName" autocomplete="name" required></label>
+            <label>Email<input name="studentEmail" type="email" autocomplete="email" required></label>
           </div>
-          <div class="video-intro-card wide" id="studentVideoIntroCard" data-video-card></div>
-          <label class="wide video-transcript-field" data-video-transcript-field hidden>Video transcript or captions <span>Optional · improves accessibility</span><textarea name="studentVideoTranscript" rows="3" placeholder="Paste a short transcript so your intro is accessible to everyone…"></textarea></label>
+        </div>
+        <div class="field-group">
+          <header><h3>Where you study</h3><p>Graduation year sets your education level below. Change it if the guess is wrong.</p></header>
+          <div class="field-grid">
+            <label>School<input name="studentSchool" autocomplete="organization" required></label>
+            <label>Graduation year<input name="studentGraduation" type="number" inputmode="numeric" min="2026" max="2035" placeholder="2029" required></label>
+            <label class="wide">Major or field<input name="studentMajor" placeholder="Finance, computer science, undecided…" required></label>
+          </div>
+          <div class="chip-field wide" data-require-group="Choose your education level." data-derive="education">
+            <span class="chip-label">Education level <span data-prefilled-note hidden class="field-prefilled"><svg><use href="#icon-check"/></svg>Set from your graduation year</span></span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentEducation" value="College first-year">First-year</label>
+              <label class="chip"><input type="radio" name="studentEducation" value="College sophomore">Sophomore</label>
+              <label class="chip"><input type="radio" name="studentEducation" value="College junior">Junior</label>
+              <label class="chip"><input type="radio" name="studentEducation" value="College senior">Senior</label>
+              <label class="chip"><input type="radio" name="studentEducation" value="Graduate student">Graduate student</label>
+              <label class="chip"><input type="radio" name="studentEducation" value="Recent graduate">Recent graduate</label>
+            </div>
+          </div>
         </div>
       </section>
       <section class="form-step" data-student-step="2">
-        <fieldset class="industry-fieldset">
-          <legend>Which industries do you want to build proof in? <span>Pick one or more</span></legend>
-          <div class="industry-grid" id="studentIndustryGrid">
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Accounting & finance"><span>Accounting &amp; finance</span></label>
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Software & AI"><span>Software &amp; AI</span></label>
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Healthcare operations"><span>Healthcare operations</span></label>
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Consumer & retail"><span>Consumer &amp; retail</span></label>
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Professional services"><span>Professional services</span></label>
-            <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Not sure yet — show me everything"><span>Not sure yet, show me everything</span></label>
+        <div class="field-group">
+          <header><h3>Where you want to build proof</h3><p>Pick one or more. This decides which batches you see, not what you are allowed to apply to.</p></header>
+          <fieldset class="industry-fieldset">
+            <legend class="visually-hidden">Which industries do you want to build proof in?</legend>
+            <div class="industry-grid" id="studentIndustryGrid">
+              <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Accounting & finance"><span>Accounting &amp; finance</span></label>
+              <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Software & AI"><span>Software &amp; AI</span></label>
+              <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Healthcare operations"><span>Healthcare operations</span></label>
+              <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Consumer & retail"><span>Consumer &amp; retail</span></label>
+              <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Professional services"><span>Professional services</span></label>
+              <label class="industry-card"><input type="checkbox" name="studentIndustry" value="Not sure yet — show me everything"><span>Not sure yet, show me everything</span></label>
+            </div>
+            <p class="industry-specializations" id="studentSpecializations" aria-live="polite"></p>
+          </fieldset>
+        </div>
+        <div class="field-group">
+          <header><h3>Your strongest skill</h3><p>One is enough. An honest level is worth more here than a high one, and it is not a filter.</p></header>
+          <div class="field-grid">
+            <label class="wide">Your strongest relevant skill<input name="studentSkill" placeholder="Research, spreadsheets, QA…" required></label>
           </div>
-          <p class="industry-specializations" id="studentSpecializations" aria-live="polite"></p>
-        </fieldset>
-        <div class="field-grid">
-          <label>Your strongest relevant skill<input name="studentSkill" placeholder="Research, spreadsheets, QA…" required></label>
-          <label>Honest current level<select name="studentSkillLevel" required><option value="">Choose one</option><option>Learning the basics</option><option>Comfortable with guidance</option><option>Can work independently</option><option>Advanced, with work examples</option></select></label>
-          <label>Preferred work style<select name="studentWorkStyle" required><option value="">Choose one</option><option>Independent with clear checkpoints</option><option>Collaborative with regular feedback</option><option>Either, if expectations are clear</option></select></label>
-          <label class="wide">How do you handle an incomplete brief?<select name="studentAmbiguity" required><option value="">Choose one</option><option>I ask focused questions before starting</option><option>I can propose assumptions for approval</option><option>I prefer fully specified work</option></select></label>
+          <div class="chip-field wide" data-require-group="Choose your honest current level.">
+            <span class="chip-label">Honest current level</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentSkillLevel" value="Learning the basics">Learning the basics</label>
+              <label class="chip"><input type="radio" name="studentSkillLevel" value="Comfortable with guidance">Comfortable with guidance</label>
+              <label class="chip"><input type="radio" name="studentSkillLevel" value="Can work independently">Can work independently</label>
+              <label class="chip"><input type="radio" name="studentSkillLevel" value="Advanced, with work examples">Advanced, with examples</label>
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <header><h3>Anything you have already built</h3><p>Optional, and it helps more than everything above. A link, a repo, or a minute of you explaining it.</p></header>
+          <div class="field-grid">
+            <label class="wide">Portfolio or work sample URL <span>Optional</span><input name="studentPortfolio" type="url" placeholder="https://"></label>
+            <div class="video-record wide">
+              <p class="video-intro-label">One-minute video intro <span>Optional</span></p>
+              <button type="button" class="outline-button video-record-primary" data-video-record-toggle><svg><use href="#icon-user"/></svg>Record a 1-minute intro</button>
+              <div class="video-recorder" data-video-recorder hidden></div>
+              <details class="video-link-fallback">
+                <summary>Prefer to paste a link?</summary>
+                <input name="studentVideoIntro" type="url" inputmode="url" placeholder="https://, Loom, YouTube, or Vimeo" data-video-intro-input>
+              </details>
+            </div>
+            <div class="video-intro-card wide" id="studentVideoIntroCard" data-video-card></div>
+            <label class="wide video-transcript-field" data-video-transcript-field hidden>Video transcript or captions <span>Optional · improves accessibility</span><textarea name="studentVideoTranscript" rows="3" placeholder="Paste a short transcript so your intro is accessible to everyone…"></textarea></label>
+          </div>
         </div>
       </section>
       <section class="form-step" data-student-step="3">
-        <div class="field-grid">
-          <label>When can you start?<select name="studentAvailability" required><option value="">Choose one</option><option>Within 7 days</option><option>Within 30 days</option><option>Next academic break</option><option>Just exploring</option></select></label>
-          <label>Hours per week<select name="studentHours" required><option value="">Choose one</option><option>3–5 hours</option><option>6–10 hours</option><option>11–15 hours</option></select></label>
-          <label>Preferred project length<select name="studentDuration" required><option value="">Choose one</option><option>One week</option><option>Two weeks</option><option>Three to four weeks</option></select></label>
-          <label>Minimum fixed compensation<select name="studentCompensation" required><option value="">Choose one</option><option>$150+</option><option>$300+</option><option>$500+</option><option>Depends on scope</option></select></label>
-          <label>Live meeting availability<input name="studentMeetings" placeholder="Weekday evenings, Friday afternoons…" required></label>
-          <label>Open to a short work sample?<select name="studentScreening" required><option value="">Choose one</option><option>Yes</option><option>Maybe, if time-boxed and relevant</option><option>No</option></select></label>
-          <label class="wide">What matters most?<select name="studentPriority" required><option value="">Choose one</option><option>Paid work and employer feedback</option><option>Building specific capability evidence</option><option>Learning an industry</option><option>Possibility of follow-on work</option></select></label>
+        <div class="field-group">
+          <header><h3>How you like to work</h3><p>There is no right answer. This is used to match you to a brief that fits, not to rank you.</p></header>
+          <div class="chip-field wide" data-require-group="Choose a preferred work style.">
+            <span class="chip-label">Preferred work style</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentWorkStyle" value="Independent with clear checkpoints">Independent, with checkpoints</label>
+              <label class="chip"><input type="radio" name="studentWorkStyle" value="Collaborative with regular feedback">Collaborative, regular feedback</label>
+              <label class="chip"><input type="radio" name="studentWorkStyle" value="Either, if expectations are clear">Either, if expectations are clear</label>
+            </div>
+          </div>
+          <div class="chip-field wide" data-require-group="Choose how you handle an incomplete brief.">
+            <span class="chip-label">A brief arrives half-specified. What do you do?</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentAmbiguity" value="I ask focused questions before starting">Ask focused questions first</label>
+              <label class="chip"><input type="radio" name="studentAmbiguity" value="I can propose assumptions for approval">Propose assumptions for approval</label>
+              <label class="chip"><input type="radio" name="studentAmbiguity" value="I prefer fully specified work">Prefer it fully specified</label>
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <header><h3>Time you actually have</h3><p>Under-promise here. A missed deadline costs you more than a smaller commitment does.</p></header>
+          <div class="chip-field wide" data-require-group="Choose when you can start.">
+            <span class="chip-label">When can you start?</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentAvailability" value="Within 7 days">Within 7 days</label>
+              <label class="chip"><input type="radio" name="studentAvailability" value="Within 30 days">Within 30 days</label>
+              <label class="chip"><input type="radio" name="studentAvailability" value="Next academic break">Next break</label>
+              <label class="chip"><input type="radio" name="studentAvailability" value="Just exploring">Just exploring</label>
+            </div>
+          </div>
+          <div class="chip-field wide" data-require-group="Choose your hours per week.">
+            <span class="chip-label">Hours per week</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentHours" value="3–5 hours">3–5</label>
+              <label class="chip"><input type="radio" name="studentHours" value="6–10 hours">6–10</label>
+              <label class="chip"><input type="radio" name="studentHours" value="11–15 hours">11–15</label>
+            </div>
+          </div>
+          <div class="chip-field wide" data-require-group="Choose a preferred project length.">
+            <span class="chip-label">Preferred project length</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentDuration" value="One week">One week</label>
+              <label class="chip"><input type="radio" name="studentDuration" value="Two weeks">Two weeks</label>
+              <label class="chip"><input type="radio" name="studentDuration" value="Three to four weeks">Three to four weeks</label>
+            </div>
+          </div>
+          <div class="field-grid">
+            <label class="wide">Live meeting availability<input name="studentMeetings" placeholder="Weekday evenings, Friday afternoons…" required></label>
+          </div>
+          <div class="chip-field wide" data-require-group="Choose your timezone." data-derive="timezone">
+            <span class="chip-label">Timezone <span data-prefilled-note hidden class="field-prefilled"><svg><use href="#icon-check"/></svg>Detected from your device</span></span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentTimezone" value="Eastern">Eastern</label>
+              <label class="chip"><input type="radio" name="studentTimezone" value="Central">Central</label>
+              <label class="chip"><input type="radio" name="studentTimezone" value="Mountain">Mountain</label>
+              <label class="chip"><input type="radio" name="studentTimezone" value="Pacific">Pacific</label>
+              <label class="chip"><input type="radio" name="studentTimezone" value="Outside the United States">Outside the US</label>
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <header><h3>What you want out of it</h3><p>Paid work is the default. Saying what matters most changes which briefs you are shown first.</p></header>
+          <div class="chip-field wide" data-require-group="Choose your minimum fixed compensation.">
+            <span class="chip-label">Minimum fixed compensation</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentCompensation" value="$150+">$150+</label>
+              <label class="chip"><input type="radio" name="studentCompensation" value="$300+">$300+</label>
+              <label class="chip"><input type="radio" name="studentCompensation" value="$500+">$500+</label>
+              <label class="chip"><input type="radio" name="studentCompensation" value="Depends on scope">Depends on scope</label>
+            </div>
+          </div>
+          <div class="chip-field wide" data-require-group="Say whether you are open to a short work sample.">
+            <span class="chip-label">Open to a short, time-boxed work sample?</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentScreening" value="Yes">Yes</label>
+              <label class="chip"><input type="radio" name="studentScreening" value="Maybe, if time-boxed and relevant">If time-boxed and relevant</label>
+              <label class="chip"><input type="radio" name="studentScreening" value="No">No</label>
+            </div>
+          </div>
+          <div class="chip-field wide" data-require-group="Choose what matters most to you.">
+            <span class="chip-label">What matters most?</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="studentPriority" value="Paid work and employer feedback">Paid work and feedback</label>
+              <label class="chip"><input type="radio" name="studentPriority" value="Building specific capability evidence">Building evidence</label>
+              <label class="chip"><input type="radio" name="studentPriority" value="Learning an industry">Learning an industry</label>
+              <label class="chip"><input type="radio" name="studentPriority" value="Possibility of follow-on work">Follow-on work</label>
+            </div>
+          </div>
         </div>
         <label class="consent-row"><input name="studentAge" type="checkbox" required><span>I am 18 or older.</span></label>
         <label class="consent-row"><input name="studentConsent" type="checkbox" required><span>Covenda may use these details to assess pilot fit and contact me. This is an interest profile, not a job application or guarantee.</span></label>
@@ -1661,6 +1796,7 @@
       </section>
       <div class="form-message" id="studentFormMessage" role="status" aria-live="polite"></div>
       <footer class="dialog-footer"><button class="outline-button" type="button" data-form-back hidden>Back</button><button class="gold-button" type="button" data-form-next>Continue<svg><use href="#icon-arrow-right"/></svg></button><button class="gold-button" type="submit" data-form-submit hidden>Send interest profile<svg><use href="#icon-arrow-right"/></svg></button></footer>
+      </div>
     </form>
   </dialog>
 
@@ -1729,44 +1865,127 @@
     <div class="quick-join-done" id="roleApplyDone" hidden></div>
   </dialog>
 
-  <dialog class="form-dialog" id="companyDialog" aria-labelledby="companyDialogTitle">
+  <dialog class="form-dialog is-guided" id="companyDialog" aria-labelledby="companyDialogTitle">
     <form id="companyForm">
-      <header class="dialog-header"><div><small>Company problem intake</small><h2 id="companyDialogTitle">Start with the work, not a job post.</h2></div><div class="dialog-tools"><span data-draft-status>Draft saves on this device</span><button type="button" class="draft-clear" data-clear-draft>Clear draft</button><button type="button" class="icon-button" data-close-dialog aria-label="Close company form"><svg><use href="#icon-close"/></svg></button></div></header>
+      <aside class="form-rail">
+        <p class="form-rail-brand"><svg><use href="#icon-shield"/></svg>Covenda</p>
+        <div class="form-rail-promise">
+          <h2 id="companyDialogTitle">Start with the work, not a <em>job post</em>.</h2>
+          <p>Four steps. You describe one delayed piece of work; a person scopes it with you.</p>
+        </div>
+        <div class="form-progress" aria-label="Company form progress">
+          <span class="is-active"><i>1</i><strong>Company</strong><small>Who you are and how often this work recurs</small></span>
+          <span><i>2</i><strong>The problem</strong><small>What is not getting done, and what finished looks like</small></span>
+          <span><i>3</i><strong>Boundary</strong><small>What you can safely share, and the review budget</small></span>
+          <span><i>4</i><strong>Review</strong><small>Your working packet before it sends</small></span>
+        </div>
+        <div class="form-rail-trust">
+          <p><svg><use href="#icon-shield"/></svg>Nothing is published and no student is assigned from this.</p>
+          <p><svg><use href="#icon-lock"/></svg>Never send client records, credentials, or production access.</p>
+        </div>
+      </aside>
+
+      <div class="form-panel">
+      <header class="dialog-header"><div><small>Step 1 of 4</small><h2 data-step-title>Company</h2></div><div class="dialog-tools"><span data-draft-status>Draft saves on this device</span><button type="button" class="draft-clear" data-clear-draft>Clear draft</button><button type="button" class="icon-button" data-close-dialog aria-label="Close company form"><svg><use href="#icon-close"/></svg></button></div></header>
       <div class="revision-context" id="companyRevisionContext" hidden><svg><use href="#icon-file"/></svg><div><strong>Revising a received packet</strong><span id="companyRevisionReference">The original submission remains unchanged.</span></div></div>
-      <div class="form-progress" aria-label="Company form progress"><span class="is-active">1. Company</span><span>2. Problem</span><span>3. Boundary</span><span>4. Review</span></div>
       <section class="form-step is-active" data-company-step="1">
-        <div class="field-grid">
-          <label>Your name<input name="companyContactName" autocomplete="name" required></label>
-          <label>Work email<input name="companyContactEmail" type="email" autocomplete="email" required></label>
-          <label>Company<input name="companyName" autocomplete="organization" required></label>
-          <label>Your role<input name="companyRole" autocomplete="organization-title" required></label>
-          <label>Company website<input name="companyWebsite" type="url" placeholder="https://" required></label>
-          <label>Company size<select name="companySize" required><option value="">Choose one</option><option>1–5 people</option><option>6–20 people</option><option>21–50 people</option><option>51–200 people</option><option>201+ people</option></select></label>
-          <label>Industry<select name="companyIndustry" required><option value="">Choose one</option><option>Accounting and finance operations</option><option>Software and AI</option><option>Healthcare operations</option><option>Research</option><option>Consumer and services</option><option>Other professional services</option></select></label>
-          <label>How often does this work recur?<select name="companyFrequency" required><option value="">Choose one</option><option>Every week</option><option>Every month</option><option>Every quarter</option><option>One-time backlog</option><option>Not sure</option></select></label>
+        <div class="field-group">
+          <header><h3>Who is asking</h3><p>Used to reach you about scoping. Not shared with students.</p></header>
+          <div class="field-grid">
+            <label>Your name<input name="companyContactName" autocomplete="name" required></label>
+            <label>Work email<input name="companyContactEmail" type="email" autocomplete="email" required></label>
+            <label>Company<input name="companyName" autocomplete="organization" required></label>
+            <label>Your role<input name="companyRole" autocomplete="organization-title" required></label>
+            <label class="wide">Company website<input name="companyWebsite" type="url" placeholder="https://" required></label>
+          </div>
+        </div>
+        <div class="field-group">
+          <header><h3>Your team and this work</h3><p>Recurring work is the best fit. A one-time backlog is still worth sending.</p></header>
+          <div class="chip-field wide" data-require-group="Choose your company size.">
+            <span class="chip-label">Company size</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="companySize" value="1–5 people">1–5</label>
+              <label class="chip"><input type="radio" name="companySize" value="6–20 people">6–20</label>
+              <label class="chip"><input type="radio" name="companySize" value="21–50 people">21–50</label>
+              <label class="chip"><input type="radio" name="companySize" value="51–200 people">51–200</label>
+              <label class="chip"><input type="radio" name="companySize" value="201+ people">201+</label>
+            </div>
+          </div>
+          <div class="chip-field wide" data-require-group="Choose your industry.">
+            <span class="chip-label">Industry</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="companyIndustry" value="Accounting and finance operations">Accounting &amp; finance ops</label>
+              <label class="chip"><input type="radio" name="companyIndustry" value="Software and AI">Software &amp; AI</label>
+              <label class="chip"><input type="radio" name="companyIndustry" value="Healthcare operations">Healthcare ops</label>
+              <label class="chip"><input type="radio" name="companyIndustry" value="Research">Research</label>
+              <label class="chip"><input type="radio" name="companyIndustry" value="Consumer and services">Consumer &amp; services</label>
+              <label class="chip"><input type="radio" name="companyIndustry" value="Other professional services">Other professional services</label>
+            </div>
+          </div>
+          <div class="chip-field wide" data-require-group="Say how often this work recurs.">
+            <span class="chip-label">How often does this work recur?</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="companyFrequency" value="Every week">Every week</label>
+              <label class="chip"><input type="radio" name="companyFrequency" value="Every month">Every month</label>
+              <label class="chip"><input type="radio" name="companyFrequency" value="Every quarter">Every quarter</label>
+              <label class="chip"><input type="radio" name="companyFrequency" value="One-time backlog">One-time backlog</label>
+              <label class="chip"><input type="radio" name="companyFrequency" value="Not sure">Not sure</label>
+            </div>
+          </div>
         </div>
       </section>
       <section class="form-step" data-company-step="2">
-        <div class="field-grid">
-          <label class="wide">What work is not getting done, and why?<textarea name="companyProblem" rows="4" required></textarea></label>
-          <label class="wide">What would the finished result let your team do?<textarea name="companyDecision" rows="3" required></textarea></label>
-          <label class="wide">What should the final deliverable look like?<textarea name="companyDeliverable" rows="3" required></textarea></label>
-          <label>Who can review the result?<input name="companyReviewer" required></label>
-          <label>What makes the result acceptable?<input name="companyAcceptance" required></label>
-          <label>Why explore Covenda now?<input name="companyReason" required></label>
-          <label>Useful by <span>Optional</span><input name="companyDeadline" type="date"></label>
+        <div class="field-group">
+          <header><h3>The work that is stuck</h3><p>Plain language beats a spec. One delayed thing is enough.</p></header>
+          <div class="field-grid">
+            <label class="wide">What work is not getting done, and why?<textarea name="companyProblem" rows="4" required></textarea></label>
+            <label class="wide">What would the finished result let your team do?<textarea name="companyDecision" rows="3" required></textarea></label>
+            <label class="wide">What should the final deliverable look like?<textarea name="companyDeliverable" rows="3" required></textarea></label>
+          </div>
+        </div>
+        <div class="field-group">
+          <header><h3>Who decides it is done</h3><p>A named reviewer and a stated bar are what make the result auditable.</p></header>
+          <div class="field-grid">
+            <label>Who can review the result?<input name="companyReviewer" required></label>
+            <label>What makes the result acceptable?<input name="companyAcceptance" required></label>
+            <label>Why explore Covenda now?<input name="companyReason" required></label>
+            <label>Useful by <span>Optional</span><input name="companyDeadline" type="date"></label>
+          </div>
         </div>
       </section>
       <section class="form-step" data-company-step="3">
-        <div class="field-grid">
-          <label class="wide">What context could you safely provide?<textarea name="companyContext" rows="3" placeholder="Public sources, a glossary, redacted templates, a synthetic example…" required></textarea></label>
-          <label>Estimated student effort<select name="companyStudentHours" required><option value="">Choose one</option><option>3–5 hours</option><option>5–8 hours</option><option>8–15 hours</option><option>Not sure</option></select></label>
-          <label>Employee time this could avoid<input name="companyInternalHours" type="number" min="0" max="1000" placeholder="Hours" required></label>
-          <label>Maximum review time<input name="companyReviewMinutes" type="number" min="0" max="240" placeholder="Minutes" required></label>
-          <label>Possible project budget<input name="companyBudget" type="number" min="0" max="100000" placeholder="USD" required></label>
-          <label>System access<select name="companyAccess" required><option value="none">None · approved copies only</option><option value="temporary">Temporary least-privilege access</option><option value="production">Production or client systems · not eligible</option></select></label>
+        <div class="field-group">
+          <header><h3>What a student can safely see</h3><p>Approved copies and de-identified examples only. This is the line the pilot does not cross.</p></header>
+          <div class="field-grid">
+            <label class="wide">What context could you safely provide?<textarea name="companyContext" rows="3" placeholder="Public sources, a glossary, redacted templates, a synthetic example…" required></textarea></label>
+          </div>
+          <div class="chip-field wide" data-require-group="Choose the system access level.">
+            <span class="chip-label">System access</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="companyAccess" value="none" checked>None · approved copies only</label>
+              <label class="chip"><input type="radio" name="companyAccess" value="temporary">Temporary least-privilege</label>
+              <label class="chip"><input type="radio" name="companyAccess" value="production">Production or client systems</label>
+            </div>
+          </div>
+          <fieldset><legend>Possible information sources</legend><div class="check-grid"><label><input name="companyPublic" type="checkbox" checked>Public or employer-approved sources</label><label><input name="companyDeidentified" type="checkbox">Explicitly de-identified internal examples</label><label data-boundary-risk="records"><input name="companyClientRecords" type="checkbox">Client, patient, or customer records · not eligible</label><label data-boundary-risk="judgment"><input name="companyRestricted" type="checkbox">Regulated or licensed decision · not eligible</label></div></fieldset>
         </div>
-        <fieldset><legend>Possible information sources</legend><div class="check-grid"><label><input name="companyPublic" type="checkbox" checked>Public or employer-approved sources</label><label><input name="companyDeidentified" type="checkbox">Explicitly de-identified internal examples</label><label data-boundary-risk="records"><input name="companyClientRecords" type="checkbox">Client, patient, or customer records · not eligible</label><label data-boundary-risk="judgment"><input name="companyRestricted" type="checkbox">Regulated or licensed decision · not eligible</label></div></fieldset>
+        <div class="field-group">
+          <header><h3>Effort and review budget</h3><p>Review time is the real cost of a pilot. Stating it honestly is what keeps the scope small.</p></header>
+          <div class="chip-field wide" data-require-group="Estimate the student effort.">
+            <span class="chip-label">Estimated student effort</span>
+            <div class="chip-row">
+              <label class="chip"><input type="radio" name="companyStudentHours" value="3–5 hours">3–5 hours</label>
+              <label class="chip"><input type="radio" name="companyStudentHours" value="5–8 hours">5–8 hours</label>
+              <label class="chip"><input type="radio" name="companyStudentHours" value="8–15 hours">8–15 hours</label>
+              <label class="chip"><input type="radio" name="companyStudentHours" value="Not sure">Not sure</label>
+            </div>
+          </div>
+          <div class="field-grid">
+            <label>Employee time this could avoid<input name="companyInternalHours" type="number" min="0" max="1000" placeholder="Hours" required></label>
+            <label>Maximum review time<input name="companyReviewMinutes" type="number" min="0" max="240" placeholder="Minutes" required></label>
+            <label>Possible project budget<input name="companyBudget" type="number" min="0" max="100000" placeholder="USD" required></label>
+          </div>
+        </div>
         <div class="boundary-guidance" id="companyBoundaryGuidance" role="status" aria-live="polite"><svg><use href="#icon-shield"/></svg><div><strong>Safe boundary selected</strong><span>Approved copies and de-identified examples can be reviewed. Red “not eligible” choices must stay unselected.</span></div></div>
         <label class="consent-row"><input name="companyConsent" type="checkbox" required><span>I confirm I have not included restricted records, credentials, proprietary documents, or regulated decisions. Covenda may follow up to assess project fit.</span></label>
         <label class="honeypot" aria-hidden="true">Website<input name="website" tabindex="-1" autocomplete="off"></label>
@@ -1785,6 +2004,7 @@
       </section>
       <div class="form-message" id="companyFormMessage" role="status" aria-live="polite"></div>
       <footer class="dialog-footer"><button class="outline-button" type="button" data-form-back hidden>Back</button><button class="gold-button" type="button" data-form-next>Continue<svg><use href="#icon-arrow-right"/></svg></button><button class="gold-button" type="submit" data-form-submit hidden>Send company problem<svg><use href="#icon-arrow-right"/></svg></button></footer>
+      </div>
     </form>
   </dialog>
 
