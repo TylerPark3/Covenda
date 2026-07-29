@@ -960,3 +960,26 @@ test('nothing is hidden unless the reveal can actually run', () => {
   assert.ok(!/^\.reveal \{[^}]*opacity: 0/m.test(styles), 'content is hidden without the js-reveal guard');
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,160}html\.js-reveal \.reveal \{ opacity: 1/);
 });
+
+// background-clip:text clips the fill to the LINE BOX. Geist's shallow descenders sat inside
+// it; EB Garamond's do not, so the p in "proof" and the g in "good" lost their tails the moment
+// the display face became a serif.
+test('the gold word leaves room for descenders as well as the italic overhang', () => {
+  const rule = styles.match(/\.word-gold \{[^}]*\}/)[0];
+  assert.match(rule, /background-clip: text/);
+  assert.match(rule, /padding-bottom:\s*0?\.\d+em/, 'descenders will be clipped by the fill box');
+  assert.match(rule, /margin-bottom:\s*-0?\.\d+em/, 'the padding must not push the line down');
+  // The horizontal fix has to survive too, or italic overhang clips at a line end.
+  assert.match(rule, /padding-right:\s*0?\.\d+em/);
+});
+
+// A serif needs more leading than the sans these values were tuned for.
+test('no display rule sets a line-height that clips a descender', () => {
+  for (const file of [styles, typeCss]) {
+    for (const block of file.match(/\{[^{}]*\}/g) || []) {
+      if (!block.includes('var(--font-display)')) continue;
+      const lh = block.match(/line-height:\s*(\.\d+|1(?:\.\d+)?)\b/);
+      if (lh) assert.ok(Number(lh[1]) >= 1.06, `line-height ${lh[1]} clips descenders on a serif`);
+    }
+  }
+});

@@ -57,8 +57,8 @@
   --step-eyebrow: 11px;
 }
 
-.t-display-xl { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-xl); line-height: 1.02; letter-spacing: -.038em; }
-.t-display-lg { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-lg); line-height: 1.05; letter-spacing: -.038em; }
+.t-display-xl { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-xl); line-height: 1.06; letter-spacing: -.038em; }
+.t-display-lg { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-lg); line-height: 1.06; letter-spacing: -.038em; }
 .t-h1 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-h1); line-height: 1.1; letter-spacing: -.02em; }
 .t-h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-h2); line-height: 1.15; letter-spacing: -.02em; }
 .t-h3 { font-family: var(--font-sans); font-weight: 650; font-size: var(--step-h3); line-height: 1.25; }
