@@ -15,6 +15,17 @@
    IBM Plex Mono handles data, tiers and reference codes. That pairing suits what Covenda
    actually is, a record of verified work, far better than a magazine serif did.
 
+   ── AND WHY A SERIF CAME BACK, FOR DISPLAY ONLY ─────────────────────────────────────────
+   EB Garamond, at display sizes only, which is exactly how Cluely uses it alongside Geist.
+   This is not a return to the thing that read as AI-generated: that was an editorial serif
+   doing ALL the headings over a warm cream ground. An old-style serif used only at the very
+   largest sizes, over a cool ground, with a neo-grotesque carrying every other level, is a
+   different treatment and a much older one.
+
+   The rule is size, not importance. --font-display is the serif and applies to hero and
+   section headlines; --font-ui carries h3 downward, every label, and all UI chrome. A serif
+   at 15px is where this goes wrong.
+
    Headline weight is 700 rather than the 400 a serif wanted: the same number that reads as a
    considered headline in Newsreader reads as unfinished in a sans.
 
@@ -22,10 +33,12 @@
    treatment on the sites referenced: large, tight, and set in the same face as the body rather
    than a contrasting display family. */
 :root {
-  --font-display: "Geist", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: "EB Garamond", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Geist", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-body: "Geist", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-ui: var(--font-body); /* legacy alias used by the marketing stylesheet */
+  --font-heading: var(--font-sans); /* h3 and below stay in the grotesque */
 
   /* One scale. Sizes clamp; weight + line-height live on the utility classes below so every
      text role maps to a named step instead of an ad-hoc size/weight per component. */
@@ -44,11 +57,11 @@
   --step-eyebrow: 11px;
 }
 
-.t-display-xl { font-family: var(--font-display); font-weight: 650; font-size: var(--step-display-xl); line-height: 1.02; letter-spacing: -.038em; }
-.t-display-lg { font-family: var(--font-display); font-weight: 650; font-size: var(--step-display-lg); line-height: 1.05; letter-spacing: -.038em; }
-.t-h1 { font-family: var(--font-display); font-weight: 650; font-size: var(--step-h1); line-height: 1.1; letter-spacing: -.02em; }
-.t-h2 { font-family: var(--font-display); font-weight: 650; font-size: var(--step-h2); line-height: 1.15; letter-spacing: -.02em; }
-.t-h3 { font-family: var(--font-display); font-weight: 650; font-size: var(--step-h3); line-height: 1.25; }
+.t-display-xl { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-xl); line-height: 1.02; letter-spacing: -.038em; }
+.t-display-lg { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-lg); line-height: 1.05; letter-spacing: -.038em; }
+.t-h1 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-h1); line-height: 1.1; letter-spacing: -.02em; }
+.t-h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-h2); line-height: 1.15; letter-spacing: -.02em; }
+.t-h3 { font-family: var(--font-sans); font-weight: 650; font-size: var(--step-h3); line-height: 1.25; }
 .t-body-lg { font-family: var(--font-body); font-weight: 400; font-size: var(--step-body-lg); line-height: 1.6; }
 .t-body { font-family: var(--font-body); font-weight: 400; font-size: var(--step-body); line-height: 1.55; }
 .t-small { font-family: var(--font-body); font-weight: 500; font-size: var(--step-small); line-height: 1.5; }

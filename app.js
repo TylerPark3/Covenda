@@ -4771,6 +4771,10 @@ function initScrollReveal() {
     '.why-section .why-copy', '.why-section .fit-table',
     '.batches-section .section-heading', '.batch-card',
     '.final-cta .audience-content',
+    // Sections added since this list was written. Extending it rather than adding a second
+    // observer: two would double-observe the overlap and fight over the same classes.
+    '.about-lede', '.about-side',
+    '.recruiter-lede', '.recruiter-card', '.rmap-row', '.recruiter-honest',
   ].join(',');
   document.documentElement.classList.add('js-reveal');
   const revealed = new WeakSet();

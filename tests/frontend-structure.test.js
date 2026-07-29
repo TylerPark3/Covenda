@@ -321,7 +321,11 @@ test('design system stays true white and supports responsive and reduced-motion 
   // sites converge on, and readers said so unprompted. Geist is a modern neo-grotesque, free
   // under the SIL OFL, in the same family tree as TWK Lausanne (commercial) and the face
   // Cluely uses. This asserts the pair and refuses the AI-default cluster coming back.
-  assert.match(typeCss, /--font-display: "Geist"/);
+  // EB Garamond at display sizes only, over a cool ground, with Geist carrying every other
+  // level. That is Cluely's treatment and it is not the thing that read as AI-generated: that
+  // was an editorial serif doing ALL the headings over warm cream.
+  assert.match(typeCss, /--font-display: "EB Garamond"/);
+  assert.match(typeCss, /--font-sans: "Geist"/);
   assert.match(typeCss, /--font-body: "Geist"/);
   assert.match(typeCss, /--font-mono: "IBM Plex Mono"/);
   for (const face of ['Newsreader', 'Manrope', 'Inter', 'Space Grotesk']) {
@@ -903,11 +907,15 @@ test('the neutral palette carries no warm bias', () => {
   assert.match(styles, /--ink: #0e1013/);
 });
 
-// A serif headline at 400 reads as considered. The same number in a sans reads unfinished.
-test('display type is set at a weight a sans can carry', () => {
+// The rule is SIZE, not importance. A serif at 15px reads as a mistake; the same face at 44px
+// reads as a decision.
+test('the serif is display-only and h3 downward stays in the grotesque', () => {
   for (const [, weight] of typeCss.matchAll(/\.t-(?:display-\w+|h1|h2)\s*\{[^}]*font-weight:\s*(\d+)/g)) {
-    assert.ok(Number(weight) >= 600, `display type set at ${weight}, too light for Public Sans`);
+    // A serif carries its own weight; 650 was calibrated for Geist and reads as a fake bold.
+    assert.ok(Number(weight) <= 600, `display serif set at ${weight}, too heavy`);
   }
+  assert.match(typeCss, /\.t-h3 \{ font-family: var\(--font-sans\)/, 'h3 must not be the serif');
+  assert.match(typeCss, /\.t-body \{ font-family: var\(--font-body\)/);
 });
 
 // Every surface has to load the pair, or one page silently falls back to Helvetica.
@@ -931,4 +939,24 @@ test('display headings are tracked tight, and label tracking stays positive', ()
   // small-caps rhythm.
   const eyebrow = typeCss.match(/\.t-eyebrow \{[^}]*\}/)[0];
   assert.match(eyebrow, /letter-spacing:\s*\.\d+em/, 'eyebrow tracking must stay positive');
+});
+
+// Sections added since the reveal list was written were never in it, so they simply appeared.
+test('the newer sections are covered by the existing reveal observer', async () => {
+  const app = await readFile(new URL('../app.js', import.meta.url), 'utf8');
+  const list = app.slice(app.indexOf('function initScrollReveal'), app.indexOf("].join(',')"));
+  for (const sel of ['.about-lede', '.recruiter-lede', '.recruiter-card', '.rmap-row']) {
+    assert.ok(list.includes(`'${sel}'`), `${sel} never reveals`);
+  }
+  // One observer, not two: a second would double-observe the overlap and fight over the class.
+  assert.equal((app.match(/function initScrollReveal/g) || []).length, 1);
+  assert.equal((app.match(/initScrollReveal\(\);/g) || []).length, 1);
+});
+
+// The hidden state must only exist when JavaScript is present to remove it, or a failed script
+// leaves the page blank.
+test('nothing is hidden unless the reveal can actually run', () => {
+  assert.match(styles, /html\.js-reveal \.reveal \{/);
+  assert.ok(!/^\.reveal \{[^}]*opacity: 0/m.test(styles), 'content is hidden without the js-reveal guard');
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,160}html\.js-reveal \.reveal \{ opacity: 1/);
 });
