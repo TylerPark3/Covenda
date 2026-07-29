@@ -318,11 +318,11 @@ test('design system stays true white and supports responsive and reduced-motion 
   // §14: the families live in one shared type.css, linked by all surfaces.
   //
   // Newsreader over Manrope on a warm cream ground is the exact combination AI-generated
-  // sites converge on, and readers said so unprompted. Public Sans (the US government design
-  // system face) and IBM Plex Mono carry institutional weight and appear essentially nowhere
-  // in generated work. This asserts the pair and refuses the old one coming back.
-  assert.match(typeCss, /--font-display: "Public Sans"/);
-  assert.match(typeCss, /--font-body: "Public Sans"/);
+  // sites converge on, and readers said so unprompted. Geist is a modern neo-grotesque, free
+  // under the SIL OFL, in the same family tree as TWK Lausanne (commercial) and the face
+  // Cluely uses. This asserts the pair and refuses the AI-default cluster coming back.
+  assert.match(typeCss, /--font-display: "Geist"/);
+  assert.match(typeCss, /--font-body: "Geist"/);
   assert.match(typeCss, /--font-mono: "IBM Plex Mono"/);
   for (const face of ['Newsreader', 'Manrope', 'Inter', 'Space Grotesk']) {
     assert.ok(!new RegExp(`--font-[a-z]+: "${face}"`).test(typeCss), `${face} is the AI-default cluster`);
@@ -914,8 +914,21 @@ test('display type is set at a weight a sans can carry', () => {
 test('every page loads the same two families', async () => {
   for (const page of ['index.html', 'portal.html', 'admin.html', 'cohort.html']) {
     const src = await readFile(new URL(`../${page}`, import.meta.url), 'utf8');
-    assert.match(src, /family=Public\+Sans/, `${page} does not load Public Sans`);
+    assert.match(src, /family=Geist/, `${page} does not load Geist`);
     assert.match(src, /family=IBM\+Plex\+Mono/, `${page} does not load the mono`);
     assert.ok(!/Newsreader|Manrope/.test(src), `${page} still loads a retired face`);
   }
+});
+
+// Display tracking is the header treatment on the sites referenced: large, tight, and set in
+// the body face rather than a contrasting display family.
+test('display headings are tracked tight, and label tracking stays positive', () => {
+  const displayRule = typeCss.match(/\.t-display-xl \{[^}]*\}/)[0];
+  const tracking = Number(displayRule.match(/letter-spacing:\s*(-?[\d.]+)em/)[1]);
+  assert.ok(tracking <= -0.03, `display tracking is ${tracking}em, too loose for a neo-grotesque`);
+
+  // Eyebrows and uppercase labels need POSITIVE tracking; tightening those collapses the
+  // small-caps rhythm.
+  const eyebrow = typeCss.match(/\.t-eyebrow \{[^}]*\}/)[0];
+  assert.match(eyebrow, /letter-spacing:\s*\.\d+em/, 'eyebrow tracking must stay positive');
 });

@@ -8,16 +8,22 @@
    serif for headings, one of the three "safe" geometric sans faces for body, amber accent on
    cream. The layout was never the problem; the type was.
 
-   Public Sans is the typeface of the US government design system. It carries institutional
-   weight without reading as corporate, and it appears essentially nowhere in generated work.
+   Geist is Vercel's typeface, free under the SIL OFL. It is a modern neo-grotesque: the same
+   family tree as TWK Lausanne, which flysoar.ai uses and which is commercial and would have to
+   be licensed. Cluely uses Geist directly. So one free face matches both references.
+
    IBM Plex Mono handles data, tiers and reference codes. That pairing suits what Covenda
-   actually is — a record of verified work — far better than a magazine serif did.
+   actually is, a record of verified work, far better than a magazine serif did.
 
    Headline weight is 700 rather than the 400 a serif wanted: the same number that reads as a
-   considered headline in Newsreader reads as unfinished in a sans. */
+   considered headline in Newsreader reads as unfinished in a sans.
+
+   Display tracking is tight and negative, between -.03em and -.045em. That is the header
+   treatment on the sites referenced: large, tight, and set in the same face as the body rather
+   than a contrasting display family. */
 :root {
-  --font-display: "Public Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --font-body: "Public Sans", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  --font-display: "Geist", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: "Geist", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-ui: var(--font-body); /* legacy alias used by the marketing stylesheet */
 
@@ -38,8 +44,8 @@
   --step-eyebrow: 11px;
 }
 
-.t-display-xl { font-family: var(--font-display); font-weight: 650; font-size: var(--step-display-xl); line-height: 1.02; letter-spacing: -.03em; }
-.t-display-lg { font-family: var(--font-display); font-weight: 650; font-size: var(--step-display-lg); line-height: 1.05; letter-spacing: -.03em; }
+.t-display-xl { font-family: var(--font-display); font-weight: 650; font-size: var(--step-display-xl); line-height: 1.02; letter-spacing: -.038em; }
+.t-display-lg { font-family: var(--font-display); font-weight: 650; font-size: var(--step-display-lg); line-height: 1.05; letter-spacing: -.038em; }
 .t-h1 { font-family: var(--font-display); font-weight: 650; font-size: var(--step-h1); line-height: 1.1; letter-spacing: -.02em; }
 .t-h2 { font-family: var(--font-display); font-weight: 650; font-size: var(--step-h2); line-height: 1.15; letter-spacing: -.02em; }
 .t-h3 { font-family: var(--font-display); font-weight: 650; font-size: var(--step-h3); line-height: 1.25; }
