@@ -3605,7 +3605,7 @@ function renderAtsPanel(root){
 }
 
 function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildren();const {profile,studentDirectory}=state.dashboard;if(profile?.role==='company'){
-  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Students who opted into discovery.';$('#editProfile').hidden=true;
+  $('#portfolioEyebrow').textContent='Vetted talent';$('#portfolioTitle').textContent='Talent';$('#portfolioIntro').textContent='Students who opted into discovery.';$('#editProfile').hidden=true;renderEvidenceRequests(root,state.dashboard);
   const batches=document.createElement('section');batches.className='talent-batches';
   const bh=document.createElement('div');bh.className='talent-batches-head';
   bh.append(Object.assign(document.createElement('h3'),{textContent:'Vetted batches'}));
@@ -3636,7 +3636,7 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   bar.append(search,vsel,skl,msel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderTechnicalProfile(root,state.dashboard);renderVideoLibrary(root);renderPayoutSetup(root);renderProofOfWork(root,profile);}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderTechnicalProfile(root,state.dashboard);renderSimulations(root,state.dashboard);renderVideoLibrary(root);renderPayoutSetup(root);renderProofOfWork(root,profile);}
   if(profile?.role==='company'){renderCompanyVerification(root);renderAtsPanel(root);renderCompanyReferrals(root);renderCompanyProfileForm(root);}}
 
 // Live credibility meter — a checklist of REAL, earned signals (identity, completeness, proven
@@ -3651,6 +3651,197 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
 // see when they open this? Facts about the profile as it stands, strongest first, and an
 // honest line about what is missing rather than an instruction to go fix it. The journey rail
 // owns "what to do next"; this owns "how you read right now".
+// ── What a team wants to see (§9) ─────────────────────────────────────────────────────
+// Distinct from the ideal-intern skill list, which says what to FILTER on. This says what a
+// student should go and build to be worth talking to, and the difference matters: a filter
+// excludes people who have not listed a word, an evidence request tells them what to do about
+// it.
+//
+// The panel shows the company its own request read back as a student would receive it, so a
+// vague ask is visible as a vague ask before anyone acts on it.
+function renderEvidenceRequests(root,d){
+  if(d?.profile?.role!=='company')return;
+  const requests=d.evidenceRequests||[];
+
+  const sec=document.createElement('section');sec.className='panel-card evreq-panel';
+  const head=document.createElement('div');head.className='tech-head';
+  const h=document.createElement('h3');h.textContent='What you want to see';
+  const sub=document.createElement('p');
+  sub.textContent='Your skills list decides who is shown to you. This decides what they go and build. Students see it as a next step rather than a filter they failed.';
+  head.append(h,sub);sec.append(head);
+
+  if(requests.length){
+    const list=document.createElement('ul');list.className='evreq-list';
+    for(const request of requests){
+      const li=document.createElement('li');
+      const top=document.createElement('div');top.className='evreq-top';
+      const title=document.createElement('b');title.textContent=request.headline;
+      top.append(title);
+      const remove=document.createElement('button');
+      remove.type='button';remove.className='tech-entry-remove';remove.textContent='Remove';
+      remove.addEventListener('click',async()=>{
+        try{
+          await portalRequest({method:'POST',body:JSON.stringify({action:'delete-evidence-request',id:request.id})});
+          await loadDashboard();
+        }catch(error){ remove.textContent=error.message||'Could not remove'; remove.disabled=true; }
+      });
+      top.append(remove);
+      li.append(top);
+      const chips=document.createElement('div');chips.className='evreq-chips';
+      for(const priority of request.priorities||[]){
+        const chip=document.createElement('span');chip.className='evreq-chip';chip.textContent=priority;chips.append(chip);
+      }
+      li.append(chips);
+      if(request.batch_slug){
+        const ctx=document.createElement('small');ctx.className='sim-ctx';ctx.textContent='For the '+request.batch_slug.replace(/-/g,' ')+' batch';li.append(ctx);
+      }
+      list.append(li);
+    }
+    sec.append(list);
+  } else {
+    const none=document.createElement('p');none.className='evreq-none';
+    none.textContent='Nothing posted yet. Say what a strong candidate would have already built, and students see it as a concrete next step.';
+    sec.append(none);
+  }
+
+  const add=document.createElement('button');
+  add.type='button';add.className=requests.length?'portal-ghost compact':'portal-primary compact';
+  add.textContent=requests.length?'Post another':'Post what you want to see';
+  add.addEventListener('click',openEvidenceRequest);
+  sec.append(add);
+  root.append(sec);
+}
+
+function openEvidenceRequest(){
+  const dlg=$('#evidenceRequestDialog'); if(!dlg)return;
+  $('#evidenceRequestForm').reset();
+  setDialogMessage('#evidenceRequestMessage','');
+  $('#evreqGuidance').replaceChildren();
+  dlg.showModal();
+}
+
+// Read the company's words back as recommendations before they post, so a priority that maps
+// onto nothing is visible immediately rather than after a student fails to act on it.
+function previewEvidenceGuidance(){
+  const host=$('#evreqGuidance'); if(!host)return;
+  host.replaceChildren();
+  const raw=$('#evreqPriorities')?.value||'';
+  const priorities=raw.split(',').map(x=>x.trim()).filter(Boolean);
+  if(!priorities.length)return;
+  const guide=state.dashboard?.evidenceTypeGuide||{};
+  const cap=document.createElement('p');cap.className='evreq-guide-cap';
+  cap.textContent='Students will be told to bring:';
+  host.append(cap);
+  const list=document.createElement('ul');list.className='evreq-guide';
+  // Mirrors the server's mapping loosely for preview only; the server's answer is authoritative
+  // and is shown after posting.
+  const wanted=new Set();
+  for(const p of priorities){
+    const key=p.toLowerCase();
+    if(/ai|ml|machine|model/.test(key))['shipped_product','research'].forEach(t=>wanted.add(t));
+    else if(/infra|cloud|deploy|kubernetes|distributed|system/.test(key))['shipped_product','open_source'].forEach(t=>wanted.add(t));
+    else if(/security/.test(key))['open_source','research'].forEach(t=>wanted.add(t));
+    else ['shipped_product','independent_project'].forEach(t=>wanted.add(t));
+  }
+  for(const type of wanted){
+    if(!guide[type])continue;
+    const li=document.createElement('li');
+    const name=document.createElement('b');name.textContent=guide[type].label;
+    const why=document.createElement('small');why.textContent=guide[type].demonstrates;
+    li.append(name,why);list.append(li);
+  }
+  host.append(list);
+}
+
+$('#evreqPriorities')?.addEventListener('input',previewEvidenceGuidance);
+
+$('#evidenceRequestForm')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const data=Object.fromEntries(new FormData(event.target).entries());
+  setDialogMessage('#evidenceRequestMessage','');
+  try{
+    const out=await portalRequest({method:'POST',body:JSON.stringify({
+      action:'save-evidence-request',
+      headline:data.headline,
+      priorities:String(data.priorities||'').split(',').map(x=>x.trim()).filter(Boolean),
+      batchSlug:data.batchSlug||null,
+      notes:data.notes||null,
+    })});
+    // Anything that mapped onto no technical domain is named rather than dropped, because a
+    // priority nobody can act on is worse than one nobody wrote.
+    const unmapped=out.guidance?.unmapped||[];
+    if(unmapped.length){
+      setDialogMessage('#evidenceRequestMessage','Posted. Not mapped to a technical domain: '+unmapped.join(', ')+'. Those still show on the request.');
+      window.setTimeout(()=>$('#evidenceRequestDialog').close(),3200);
+    } else { $('#evidenceRequestDialog').close(); }
+    await loadDashboard();
+  }catch(error){ setDialogMessage('#evidenceRequestMessage',error.message,true); }
+});
+
+// ── Offering a sitting ────────────────────────────────────────────────────────────────
+// openSimulation existed, worked, and had no caller anywhere. Twenty-six scenarios, a working
+// engine and a working route, reachable by nobody. This is the part that was missing.
+//
+// A sitting is not an assessment a student passes. The card says what it costs in minutes and
+// what it is for, because the honest reason to sit one is that it produces evidence no
+// artifact can: what you did when the requirements moved.
+function renderSimulations(root,d){
+  const offers=d?.availableSimulations||[];
+  if(d?.profile?.role!=='student'||!offers.length)return;
+  const runs=new Map((d.simulations||[]).map(r=>[r.scenario_id,r]));
+
+  const sec=document.createElement('section');sec.className='panel-card simoffer-panel';
+  const head=document.createElement('div');head.className='tech-head';
+  const h=document.createElement('h3');h.textContent='Simulations';
+  const sub=document.createElement('p');
+  sub.textContent='A scenario, not a test. You make decisions with incomplete information and then account for them. Nothing here is scored by the software.';
+  head.append(h,sub);sec.append(head);
+
+  const list=document.createElement('ul');list.className='simoffer-list';
+  for(const offer of offers){
+    const run=runs.get(offer.id);
+    const li=document.createElement('li');li.className='simoffer-card'+(offer.optional?' is-optional':'');
+
+    const top=document.createElement('div');top.className='simoffer-top';
+    const name=document.createElement('b');name.textContent=offer.title;
+    top.append(name);
+    if(offer.optional){const tag=document.createElement('span');tag.className='simoffer-tag';tag.textContent='Optional';top.append(tag);}
+    const mins=document.createElement('span');mins.className='simoffer-mins';mins.textContent=offer.minutes+' min';
+    top.append(mins);
+    li.append(top);
+
+    const why=document.createElement('p');why.className='simoffer-brief';why.textContent=offer.brief;
+    li.append(why);
+
+    if(offer.forBatch){
+      const ctx=document.createElement('small');ctx.className='simoffer-ctx';
+      ctx.textContent='The sitting behind '+offer.forBatch;
+      li.append(ctx);
+    }
+    if((offer.skills||[]).length){
+      const skills=document.createElement('small');skills.className='simoffer-ctx';
+      skills.textContent='Reads for: '+offer.skills.join(', ');
+      li.append(skills);
+    }
+
+    const go=document.createElement('button');
+    go.type='button';
+    // Resuming is the common case for a 55-minute sitting, and a button that says Start when
+    // there is a half-finished run behind it reads as though the work was lost.
+    const inProgress=run&&run.status==='in_progress';
+    go.className=inProgress?'portal-primary compact':'portal-ghost compact';
+    go.textContent=inProgress?'Resume':(run?'Sit it again':'Start');
+    go.addEventListener('click',()=>openSimulation({scenarioId:offer.id,specialization:offer.specialization}));
+    li.append(go);
+
+    if(run&&run.status!=='in_progress'){
+      const done=document.createElement('small');done.className='simoffer-done';done.textContent='Completed';li.append(done);
+    }
+    list.append(li);
+  }
+  sec.append(list);root.append(sec);
+}
+
 // ── Adding technical evidence (§3, §4, §5) ────────────────────────────────────────────
 // The type is chosen first because it decides which questions are worth asking. Showing every
 // field for every type is how a form stops being filled in, so the type-specific blocks are

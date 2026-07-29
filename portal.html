@@ -318,6 +318,24 @@
     </fieldset><p class="dialog-message" id="projectMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Create project<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
+  <!-- What a company wants to SEE. Distinct from the ideal-intern skill list, which decides
+       who is shown to them; this decides what a student goes and builds. -->
+  <dialog class="member-dialog compact-dialog" id="evidenceRequestDialog">
+    <form method="dialog" id="evidenceRequestForm">
+      <header><div><p class="eyebrow">Evidence request</p><h2>Say what you want to see.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="dialog-body">
+        <label>What are you looking for?<textarea name="headline" rows="2" minlength="15" maxlength="300" required placeholder="We build AI infrastructure and need people who have shipped something and kept it running."></textarea></label>
+        <label>What matters most? <small>Comma-separated. Domains or specific tools both work.</small><input name="priorities" id="evreqPriorities" required placeholder="AI &amp; machine learning, distributed systems, Python"></label>
+        <div class="evreq-guidance" id="evreqGuidance" aria-live="polite"></div>
+        <label>For a specific batch? <small>Optional</small><input name="batchSlug" maxlength="60" placeholder="ai-ml"></label>
+        <label>Anything else a student should know? <small>Optional</small><textarea name="notes" rows="3" maxlength="1500" placeholder="We care more about one thing you kept running than five weekend projects."></textarea></label>
+        <p class="te-note"><svg aria-hidden="true"><use href="#p-shield"/></svg>This is a next step, not a filter. Students who do not match still see it, and see what would change that.</p>
+        <p class="dialog-message" id="evidenceRequestMessage" aria-live="polite"></p>
+      </div>
+      <footer><button class="portal-primary" type="submit">Post request<svg><use href="#p-arrow"/></svg></button></footer>
+    </form>
+  </dialog>
+
   <!-- Adding a piece of technical evidence. The type is chosen first because it decides which
        fields are worth asking for: a hackathon has a team and a placement, a pull request has
        a merge status, and asking every question of every type is how a form stops being

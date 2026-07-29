@@ -2352,3 +2352,38 @@ body { background: var(--surface); }
 .te-ai { border:1px solid var(--line); padding:12px 14px; }
 .te-ai summary { cursor:pointer; font-size:13px; font-weight:650; color:var(--text,var(--ink)); }
 .te-ai-why { margin:10px 0 0; color:var(--soft); font-size:12.5px; line-height:1.55; }
+
+/* Simulations on offer. A separate namespace from .sim-*, which belongs to the simulation
+   RUNNER dialog: these rules come later in the file, so sharing names would have silently
+   overridden the dialog's own styling. */
+/* A sitting is not a test the student passes, so the card leads with what it
+   costs in time and what it reads for, not with a call to action. */
+.simoffer-panel { display:grid; gap:18px; }
+.simoffer-list { list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+.simoffer-card { display:grid; gap:7px; padding:16px 18px; border:1px solid var(--line); background:var(--surface-1); }
+.simoffer-card.is-optional { border-left:2px solid var(--gold); }
+.simoffer-top { display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.simoffer-top b { font-size:14.5px; font-weight:680; letter-spacing:-.01em; color:var(--text,var(--ink)); }
+.simoffer-tag { padding:3px 8px; border:1px solid var(--gold-light,var(--line-strong)); background:var(--gold-pale); color:var(--gold-deep); font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+.simoffer-mins { margin-left:auto; flex:none; color:var(--soft); font-size:12.5px; font-variant-numeric:tabular-nums; }
+.simoffer-brief { margin:0; color:var(--muted); font-size:13.5px; line-height:1.6; }
+.simoffer-ctx { color:var(--soft); font-size:12px; line-height:1.5; }
+.simoffer-card button { justify-self:start; margin-top:4px; }
+.simoffer-done { color:var(--success); font-size:12px; font-weight:650; }
+
+/* Company evidence requests. */
+.evreq-panel { display:grid; gap:16px; }
+.evreq-list { list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+.evreq-list li { display:grid; gap:7px; padding:14px 16px; border:1px solid var(--line); background:var(--surface-1); }
+.evreq-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.evreq-top b { font-size:13.5px; font-weight:650; line-height:1.5; color:var(--text,var(--ink)); }
+.evreq-chips { display:flex; flex-wrap:wrap; gap:6px; }
+.evreq-chip { padding:4px 9px; border:1px solid var(--gold-light,var(--line-strong)); background:var(--gold-pale); color:var(--gold-deep); font-size:12px; font-weight:600; }
+.evreq-none { margin:0; color:var(--muted); font-size:13.5px; line-height:1.6; }
+.evreq-panel > button { justify-self:start; }
+.evreq-guidance { display:grid; gap:8px; }
+.evreq-guide-cap { margin:0; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--gold-deep); }
+.evreq-guide { list-style:none; margin:0; padding:0; display:grid; gap:7px; }
+.evreq-guide li { display:grid; gap:2px; padding:9px 11px; border-left:2px solid var(--gold); background:var(--surface-2); }
+.evreq-guide b { font-size:13px; font-weight:650; color:var(--text,var(--ink)); }
+.evreq-guide small { color:var(--soft); font-size:12px; line-height:1.5; }

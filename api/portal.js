@@ -15,7 +15,8 @@ import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
 import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility, SPECIALISATION_SKILLS } from './batches.js';
 import { verticalFor } from './vertical-map.js';
-import { allTechnicalClaims, technicalProfile, technicalGaps, recordTechnicalEvidence, EVIDENCE_TYPES, OWNERSHIP_LEVELS } from './technical-evidence.js';
+import { scenarioFor, optionalScenariosFor } from './scenarios.js';
+import { allTechnicalClaims, technicalProfile, technicalGaps, recordTechnicalEvidence, recommendedEvidence, EVIDENCE_TYPES, OWNERSHIP_LEVELS } from './technical-evidence.js';
 import { summarise as summariseVetting, processFor } from './vetting.js';
 import { assessmentFor as supplierAssessment } from './assessments.js';
 import { scriptFor } from './session-script.js';
@@ -413,6 +414,8 @@ export async function loadMemberDashboard(member, env = process.env) {
     // on a hackathon quietly stops matching the one the reviewer reads.
     const typeGuide = Object.fromEntries(Object.entries(EVIDENCE_TYPES)
       .map(([id, t]) => [id, { label: t.label, demonstrates: t.demonstrates, cannotShow: t.cannotShow }]));
+    const simulations = await loadSimulations(member).catch(() => []);
+    const availableSimulations = offerableSimulations(profile, batches || []);
     const technical = { ...technicalBase, gaps: technicalGaps(technicalBase), entries: technicalEvidence, typeGuide, ownershipLevels: OWNERSHIP_LEVELS };
     // The DB row carries snake_case columns and no verticalSlug or summary, so grafting only
     // `requirements` left the matcher blind to the vertical (its bonus could never fire for
@@ -432,7 +435,7 @@ export async function loadMemberDashboard(member, env = process.env) {
         }),
       };
     });
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, simulations, availableSimulations, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), practitionerAsk: commitmentFor(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -486,7 +489,7 @@ export async function loadMemberDashboard(member, env = process.env) {
   return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, briefing: await companyBriefing(member),
     // Degrades to an empty list before the migration lands, rather than taking the dashboard
     // down with it. That mistake has already caused two outages.
-    simulations: await loadSimulations(member).catch(() => []), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    simulations: await loadSimulations(member).catch(() => []), evidenceRequests: await loadEvidenceRequests(member), evidenceTypeGuide: Object.fromEntries(Object.entries(EVIDENCE_TYPES).map(([id, t]) => [id, { label: t.label, demonstrates: t.demonstrates, cannotShow: t.cannotShow }])), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), practitionerAsk: commitmentFor(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -1502,6 +1505,104 @@ export async function confirmSchoolVerification(member, input) {
 // Asking for "a Loom or YouTube link" assumed a video already exists somewhere; it almost
 // never does. Record once, reuse everywhere.
 export const VIDEO_LIBRARY_LIMIT = 12;
+
+// ── Company evidence requests (§9) ────────────────────────────────────────────────────
+// What a team wants to SEE, as opposed to the skills it wants listed. The two are different
+// asks and the second is the one that already existed: ideal_skills says what to filter on,
+// this says what a student should go and build to be worth talking to.
+//
+// Priorities are stored in the company's own words. The evidence recommendation is derived at
+// read time, so improving the mapping does not require rewriting requests already made.
+export async function saveEvidenceRequest(member, input) {
+  const profile = await loadMemberProfile(member);
+  if (profile?.role !== 'company') throw new Error('Only company accounts can post an evidence request.');
+
+  const priorities = (Array.isArray(input.priorities) ? input.priorities : String(input.priorities || '').split(','))
+    .map(v => cleanText(v, 80)).filter(Boolean).slice(0, 10);
+  if (!priorities.length) throw new Error('Name at least one thing you want to see evidence of.');
+
+  const headline = cleanText(input.headline, 300);
+  if (headline.length < 15) throw new Error('Say in a sentence what kind of engineer you are looking for.');
+
+  const row = {
+    company_user_id: member.user.id,
+    batch_slug: cleanText(input.batchSlug, 60) || null,
+    project_id: PROJECT_ID_PATTERN.test(cleanText(input.projectId, 50)) ? cleanText(input.projectId, 50) : null,
+    headline,
+    priorities,
+    required_evidence_types: (Array.isArray(input.requiredEvidenceTypes) ? input.requiredEvidenceTypes : [])
+      .map(v => cleanText(v, 40)).filter(v => EVIDENCE_TYPES[v]).slice(0, 6),
+    notes: cleanText(input.notes, 1500) || null,
+  };
+
+  const saved = await checked(member.supabase.from('company_evidence_requests').insert(row).select('*').single(), null);
+  if (!saved) throw new Error('The request could not be saved. The technical_evidence migration may not be applied yet.');
+  // Returned so the company sees immediately what its own words ask a student to go and get,
+  // including anything that did not map onto a technical domain.
+  return { request: saved, guidance: recommendedEvidence(priorities) };
+}
+
+export async function loadEvidenceRequests(member) {
+  return checked(member.supabase.from('company_evidence_requests')
+    .select('*').eq('company_user_id', member.user.id)
+    .order('created_at', { ascending: false }).limit(20), []);
+}
+
+export async function deleteEvidenceRequest(member, input) {
+  const id = cleanText(input.id, 60);
+  if (!id) throw new Error('Choose a request to remove.');
+  await member.supabase.from('company_evidence_requests').delete()
+    .eq('id', id).eq('company_user_id', member.user.id);
+  return { removed: id };
+}
+
+// Which sittings a student can actually start.
+//
+// The whole simulation feature was unreachable: 26 scenarios, a working engine, a working
+// server route, and no caller anywhere in the client. This is what the UI needs to offer one.
+//
+// Two kinds. The default for a specialisation is the sitting that batch runs, so it is
+// offered against the batches this student is looking at. Optional sittings are offered on
+// top and never instead, which is why they carry their own specialisation key.
+export function offerableSimulations(profile, batches = []) {
+  const out = [];
+  const seen = new Set();
+
+  const add = (scenario, context) => {
+    if (!scenario || seen.has(scenario.id)) return;
+    seen.add(scenario.id);
+    out.push({
+      id: scenario.id,
+      title: scenario.title,
+      minutes: scenario.minutes,
+      brief: scenario.brief,
+      skills: scenario.skills || [],
+      optional: Boolean(scenario.optional),
+      ...context,
+    });
+  };
+
+  // The sitting behind each open batch the student could apply to.
+  for (const batch of batches) {
+    if (!['open', 'reviewing'].includes(batch.status)) continue;
+    add(scenarioFor(batch.slug), { forBatch: batch.name, specialization: batch.slug });
+  }
+
+  // Optional extras for every vertical the student follows, plus the verticals of the batches
+  // above, so somebody browsing software sees the polymath sitting without having to declare
+  // an interest first.
+  const verticals = new Set([
+    ...(profile?.verticals || []),
+    ...batches.map(b => (BATCH_CATALOG.find(c => c.slug === b.slug) || {}).verticalSlug).filter(Boolean),
+  ]);
+  for (const vertical of verticals) {
+    for (const scenario of optionalScenariosFor(vertical)) {
+      add(scenario, { specialization: scenario.specialization, forVertical: vertical });
+    }
+  }
+
+  return out;
+}
 
 // ── Technical evidence (§3, §4, §5) ───────────────────────────────────────────────────
 // The rails were unreachable: the model, the storage and the profile all existed, and a
@@ -2900,6 +3001,8 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'respond-introduction') return res.status(200).json({ ok: true, introduction: await respondToIntroduction(member, input) });
     if (req.method === 'POST' && input.action === 'outcome-survey') return res.status(200).json({ ok: true, project: await recordOutcomeSurvey(member, input) });
     if (req.method === 'POST' && input.action === 'create-company-referral') return res.status(201).json({ ok: true, referral: await createCompanyReferral(member) });
+    if (req.method === 'POST' && input.action === 'save-evidence-request') return res.status(201).json({ ok: true, ...(await saveEvidenceRequest(member, input)) });
+    if (req.method === 'POST' && input.action === 'delete-evidence-request') return res.status(200).json({ ok: true, ...(await deleteEvidenceRequest(member, input)) });
     if (req.method === 'POST' && input.action === 'save-technical-evidence') return res.status(201).json({ ok: true, ...(await saveTechnicalEvidence(member, input)) });
     if (req.method === 'POST' && input.action === 'delete-technical-evidence') return res.status(200).json({ ok: true, ...(await deleteTechnicalEvidence(member, input)) });
     if (req.method === 'POST' && input.action === 'save-video') return res.status(201).json({ ok: true, video: await saveMemberVideo(member, input) });
