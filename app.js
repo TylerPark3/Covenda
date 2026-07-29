@@ -4909,7 +4909,7 @@ function initHeroField(target) {
   const WHITE = '245,246,241';
   const FOCAL = 760;
   const DEPTH = 680;
-  const LINK_DISTANCE = 112;
+  const LINK_DISTANCE = 152;
   let W = 0, H = 0, nodes = [], signals = [], goldBonds = [], running = false, raf = 0, t = 0;
   let pointer = null;
   let nextSignalAt = 0, nextGoldBondAt = 0;
@@ -5000,14 +5000,14 @@ function initHeroField(target) {
     // The ambient mesh makes the crowd legible as a connected field without becoming a web.
     let linkCount = 0;
     ctx.lineWidth = 1;
-    for (let i = 0; i < nodes.length && linkCount < 520; i += 1) {
-      for (let j = i + 1; j < nodes.length && linkCount < 520; j += 1) {
+    for (let i = 0; i < nodes.length && linkCount < 900; i += 1) {
+      for (let j = i + 1; j < nodes.length && linkCount < 900; j += 1) {
         const a = pts[i], b = pts[j];
         const distance = Math.hypot(a.x - b.x, a.y - b.y);
         if (distance > LINK_DISTANCE) continue;
         const depth = (a.scale + b.scale) / 2;
         const goldLink = nodes[i].gold || nodes[j].gold;
-        const alpha = (1 - distance / LINK_DISTANCE) * depth * (goldLink ? .23 : .105);
+        const alpha = (1 - distance / LINK_DISTANCE) * depth * (goldLink ? .58 : .30);
         ctx.strokeStyle = goldLink
           ? `rgba(${GOLD},${alpha})`
           : `rgba(${WHITE},${alpha})`;
