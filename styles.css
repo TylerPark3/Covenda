@@ -5670,3 +5670,38 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
   .rmap-steps { grid-auto-flow: row; }
   .recruiter-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Ambient drift on the exchange cards ───────────────────────────────────────────────
+   The three panels sat perfectly still, which made a diagram about work moving between two
+   sides look like a printed figure. A slow, small drift gives it life without asking for
+   attention.
+
+   Restrained on purpose. Amplitude is a few pixels and the cycles are long and deliberately
+   coprime, so the cards never fall into step and the pattern never becomes visible as a
+   pattern. Nothing scales, nothing rotates fast enough to notice, and the centre panel moves
+   least because it is the thing being read.
+
+   Transform only, so this runs on the compositor and never triggers layout. */
+@keyframes drift-a {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50%      { transform: translate3d(0, -7px, 0) rotate(-.35deg); }
+}
+@keyframes drift-b {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50%      { transform: translate3d(0, -9px, 0) rotate(.4deg); }
+}
+@keyframes drift-centre {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -4px, 0); }
+}
+
+.exchange-source--task { animation: drift-a 11s ease-in-out infinite; }
+.exchange-source--student { animation: drift-b 13s ease-in-out -4s infinite; }
+.exchange-workbench { animation: drift-centre 17s ease-in-out -7s infinite; }
+
+/* Hovering a card settles it, so anything somebody is actually reading holds still. */
+.exchange-source:hover, .exchange-workbench:hover { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .exchange-source--task, .exchange-source--student, .exchange-workbench { animation: none; }
+}

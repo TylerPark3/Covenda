@@ -1049,3 +1049,37 @@ test('the roster empty state occupies the space the list will', () => {
   assert.match(rule, /padding: \d+px/);
   assert.match(styles, /\.roster-list:empty \{ display: none; \}/);
 });
+
+// A diagram about work moving between two sides looked like a printed figure because nothing
+// in it ever moved.
+test('the exchange cards drift, slowly and out of step', () => {
+  for (const name of ['drift-a', 'drift-b', 'drift-centre']) {
+    assert.match(styles, new RegExp(`@keyframes ${name}`), `${name} is missing`);
+  }
+  const durations = [...styles.matchAll(/animation: drift-[a-z]+ (\d+)s/g)].map(m => Number(m[1]));
+  assert.equal(durations.length, 3);
+  // Coprime cycles, so the cards never fall into step and the pattern never becomes visible.
+  assert.equal(new Set(durations).size, 3, 'two cards share a cycle and will synchronise');
+  for (const d of durations) assert.ok(d >= 10, `a ${d}s cycle is fast enough to distract`);
+
+  // Transform only: this runs on the compositor and never triggers layout.
+  const frames = styles.slice(styles.indexOf('@keyframes drift-a'), styles.indexOf('.exchange-source--task'));
+  for (const [, prop] of frames.matchAll(/^\s+\d+%[^{]*\{\s*([a-z-]+):/gm)) {
+    assert.equal(prop, 'transform', `drift animates ${prop}, which is not compositor-safe`);
+  }
+});
+
+test('drift settles under a cursor and never runs against a motion preference', () => {
+  assert.match(styles, /\.exchange-source:hover, \.exchange-workbench:hover \{ animation-play-state: paused; \}/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,200}\.exchange-workbench \{ animation: none; \}/);
+});
+
+// Two transforms on one element fight: the reveal's translateY and a drift keyframe would
+// cancel each other, and the card would either skip its entrance or jump at the end of it.
+test('nothing both drifts and reveals', async () => {
+  const app = await readFile(new URL('../app.js', import.meta.url), 'utf8');
+  const list = app.slice(app.indexOf('function initScrollReveal'), app.indexOf("].join(',')"));
+  for (const drifting of ['exchange-source', 'exchange-workbench']) {
+    assert.ok(!list.includes(drifting), `${drifting} is in the reveal list and also drifts`);
+  }
+});
