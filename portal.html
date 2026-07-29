@@ -325,6 +325,16 @@
     </fieldset><p class="dialog-message" id="projectMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Create project<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
+  <!-- What a student would be assessed on, shown BEFORE they commit ninety minutes. -->
+  <dialog class="member-dialog compact-dialog" id="assessmentDialog">
+    <form method="dialog" id="assessmentForm">
+      <header><div><p class="eyebrow">Before you start</p><h2 id="assessmentTitle">This batch</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="dialog-body" id="assessmentBody"></div>
+      <p class="dialog-message" id="assessmentMessage" aria-live="polite"></p>
+      <footer id="assessmentFoot"></footer>
+    </form>
+  </dialog>
+
   <!-- The reverse audit. A company asked "what skills do you want" answers with a wish list,
        and the assessment built from it tests everything equally and discriminates on nothing.
        Asked instead what a student must actually DO here, and what will be taught anyway, the

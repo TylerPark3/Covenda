@@ -116,3 +116,65 @@ test('outcomes and plans are operator-only', () => {
     assert.ok(!new RegExp(`create policy [a-z_]+ on public\\.${table}`).test(migration), `${table} has a policy and should be service-role only`);
   }
 });
+
+// ── The student side ──────────────────────────────────────────────────────────────────
+// Both routes existed and were called by nothing, the same gap the simulation runner had.
+test('the disclosure route is actually called from the portal', () => {
+  assert.match(js, /action:'assessment-disclosure'/);
+  assert.match(js, /action:'start-assessment'/);
+  const card = js.slice(js.indexOf('function batchCard('), js.indexOf('let batchResumeUrl'));
+  assert.match(card, /openAssessmentDisclosure\(batch\)/, 'nothing on the card opens it');
+  assert.match(card, /What you are assessed on/);
+});
+
+// Before the ninety minutes, not after.
+test('a student sees the whole battery before committing to it', () => {
+  const paint = js.slice(js.indexOf('function paintAssessmentDisclosure'), js.indexOf('// ── The batch builder'));
+  assert.match(paint, /plan\.minutes/);
+  assert.match(paint, /c\.minutes/, 'each component must show its own cost');
+  assert.match(paint, /c\.why/, 'each component must say what it measures');
+});
+
+// The difference between this and every other application a student has filled in.
+test('what is NOT done with the result is shown, not just what is', () => {
+  const paint = js.slice(js.indexOf('function paintAssessmentDisclosure'), js.indexOf('// ── The batch builder'));
+  assert.match(paint, /What we do not do/);
+  assert.match(paint, /disclosure\.notUsed/);
+  assert.match(paint, /disclosure\.rights/);
+  assert.match(css, /\.asd-not/);
+});
+
+test('a template is labelled as one rather than passed off as company-specific', () => {
+  const paint = js.slice(js.indexOf('function paintAssessmentDisclosure'), js.indexOf('// ── The batch builder'));
+  assert.match(paint, /data\.provisional/);
+  assert.match(paint, /No company has described its environment for this batch yet/);
+});
+
+// A live Start button behind a closed door is a control that fails on submit.
+test('no start button is offered while applications are closed', () => {
+  const paint = js.slice(js.indexOf('function paintAssessmentDisclosure'), js.indexOf('// ── The batch builder'));
+  assert.match(paint, /state\.dashboard\?\.batchApplicationsOpen===false/);
+  assert.match(paint, /Applications open again soon/);
+  // And the button only exists when there is a real stored plan to run against.
+  assert.match(paint, /else if\(plan\.id\)/);
+});
+
+test('starting again resumes, and says so', () => {
+  const paint = js.slice(js.indexOf('function paintAssessmentDisclosure'), js.indexOf('// ── The batch builder'));
+  assert.match(paint, /out\.resumed\?'Picked up where you left off\.'/);
+});
+
+test('the disclosure dialog exists and its icons resolve', () => {
+  const dialog = html.slice(html.indexOf('id="assessmentDialog"'), html.indexOf('id="environmentDialog"'));
+  assert.ok(dialog.length > 200);
+  for (const icon of [...dialog.matchAll(/#(p-[a-z-]+)/g)].map(m => m[1])) {
+    assert.ok(html.includes(`id="${icon}"`), `${icon} is referenced but not defined`);
+  }
+});
+
+test('every class the disclosure renders is styled', () => {
+  const region = js.slice(js.indexOf('function paintAssessmentDisclosure'), js.indexOf('// ── The batch builder'));
+  const classes = [...region.matchAll(/className=['"]([^'"]+)['"]/g)]
+    .flatMap(m => m[1].split(/\s+/)).filter(c => c.startsWith('asd-'));
+  for (const name of new Set(classes)) assert.ok(css.includes(`.${name}`), `.${name} is rendered but never styled`);
+});

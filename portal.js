@@ -2140,6 +2140,13 @@ function batchCard(batch,application){
   expand.append(document.createTextNode('Expand'));
   expand.addEventListener('click',()=>{const open=detail.hidden;detail.hidden=!open;expand.setAttribute('aria-expanded',String(open));expand.firstChild.textContent=open?'Show less':'Expand';});
   actions.append(expand);
+  // Before the application, not after. A student deciding whether to spend ninety minutes
+  // should be able to see what the ninety minutes contains.
+  const what=document.createElement('button');
+  what.type='button';what.className='portal-ghost compact';
+  what.textContent='What you are assessed on';
+  what.addEventListener('click',()=>openAssessmentDisclosure(batch));
+  actions.append(what);
   if(application){
     // A status pill reads as a label. A check reads as done, which is what a student wants to
     // see at a glance across twenty-five cards.
@@ -3669,6 +3676,109 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
 // see when they open this? Facts about the profile as it stands, strongest first, and an
 // honest line about what is missing rather than an instruction to go fix it. The journey rail
 // owns "what to do next"; this owns "how you read right now".
+// ── What you would actually be assessed on (student side) ─────────────────────────────
+// A student is owed this BEFORE they spend ninety minutes, not after. Every component, what it
+// measures, how long it takes, and the explicit list of what is not done with the result.
+//
+// The last part matters most. "No composite score, no ranking, no automated rejection" is the
+// difference between this and the black box every other application is, and a student has no
+// way to know it unless it is written down where they can read it.
+const assessmentCache=new Map();
+
+async function openAssessmentDisclosure(batch){
+  const dlg=$('#assessmentDialog'); if(!dlg)return;
+  $('#assessmentTitle').textContent=batch.name;
+  $('#assessmentBody').replaceChildren();
+  setDialogMessage('#assessmentMessage','');
+  dlg.showModal();
+
+  try{
+    let data=assessmentCache.get(batch.slug);
+    if(!data){
+      data=await portalRequest({method:'POST',body:JSON.stringify({action:'assessment-disclosure',batchSlug:batch.slug})});
+      assessmentCache.set(batch.slug,data);
+    }
+    paintAssessmentDisclosure(data,batch);
+  }catch(error){ setDialogMessage('#assessmentMessage',error.message,true); }
+}
+
+function paintAssessmentDisclosure(data,batch){
+  const host=$('#assessmentBody'); host.replaceChildren();
+  const plan=data.plan||{};
+  const disclosure=data.disclosure||{};
+
+  const head=document.createElement('p');head.className='asd-head';
+  head.textContent=`${plan.minutes} minutes in total, in ${(plan.components||[]).length} parts.`;
+  host.append(head);
+
+  // Said plainly when nothing is company-specific yet, rather than presenting a template as
+  // though a real team had asked for it.
+  if(data.provisional){
+    const prov=document.createElement('p');prov.className='asd-provisional';
+    prov.textContent='No company has described its environment for this batch yet, so this is what the vertical would ask for. It changes once one does.';
+    host.append(prov);
+  }
+
+  const list=document.createElement('ol');list.className='asd-steps';
+  for(const c of plan.components||[]){
+    const li=document.createElement('li');
+    const top=document.createElement('div');top.className='asd-step-top';
+    const n=document.createElement('b');n.textContent=c.label;
+    const m=document.createElement('span');m.className='asd-min';m.textContent=c.minutes+'m';
+    top.append(n,m);
+    const w=document.createElement('small');w.textContent=c.why;
+    li.append(top,w);list.append(li);
+  }
+  host.append(list);
+
+  // What is NOT done with the result. The whole point.
+  const not=document.createElement('div');not.className='asd-not';
+  const cap=document.createElement('b');cap.textContent='What we do not do';
+  not.append(cap);
+  const ul=document.createElement('ul');
+  for(const item of disclosure.notUsed||[]){const li=document.createElement('li');li.textContent=item;ul.append(li);}
+  not.append(ul);
+  host.append(not);
+
+  if((disclosure.rights||[]).length){
+    const rights=document.createElement('div');rights.className='asd-rights';
+    const rc=document.createElement('b');rc.textContent='Either way';
+    rights.append(rc);
+    const rl=document.createElement('ul');
+    for(const r of disclosure.rights){const li=document.createElement('li');li.textContent=r;rl.append(li);}
+    rights.append(rl);host.append(rights);
+  }
+
+  const deferred=plan.deferredToTrial||[];
+  if(deferred.length){
+    const note=document.createElement('p');note.className='asd-deferred';
+    note.textContent='Not part of this screen, and part of the paid trial if you get one: '+deferred.map(c=>c.label).join(', ')+'.';
+    host.append(note);
+  }
+
+  // Only offered when applications are open. A live Start button behind a closed door is the
+  // control that fails on submit.
+  const foot=$('#assessmentFoot'); foot.replaceChildren();
+  if(state.dashboard?.batchApplicationsOpen===false){
+    const closed=document.createElement('p');closed.className='asd-closed';
+    closed.textContent='Applications open again soon. Nothing to do yet.';
+    foot.append(closed);
+  } else if(plan.id){
+    const go=document.createElement('button');go.type='button';go.className='portal-primary';
+    go.textContent='Start the assessment';
+    go.addEventListener('click',async()=>{
+      go.disabled=true;
+      try{
+        const out=await portalRequest({method:'POST',body:JSON.stringify({action:'start-assessment',planId:plan.id})});
+        setDialogMessage('#assessmentMessage',out.resumed?'Picked up where you left off.':'Started. You can leave and come back.');
+        await loadDashboard();
+      }catch(error){ setDialogMessage('#assessmentMessage',error.message,true); go.disabled=false; }
+    });
+    foot.append(go);
+  }
+  void batch;
+}
+
 // ── The batch builder (company side) ──────────────────────────────────────────────────
 // The reverse audit, and the plan it produces. Both the questions and the autonomy levels come
 // from the server so the form and the engine cannot describe the same thing differently.
