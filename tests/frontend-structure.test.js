@@ -1007,3 +1007,34 @@ test('every surface draws its type from the same four tokens', async () => {
     assert.equal((typeCss.match(new RegExp(`^\\s+--font-${token}:`, 'gm')) || []).length, 1);
   }
 });
+
+// Twelve distinct font sizes between 9px and 16px is not a scale, it is a pile: each value was
+// picked in isolation to fit one component, so nothing lines up and the smallest are unreadable.
+test('no text is set below the readable floor', async () => {
+  for (const name of ['styles.css', 'portal.css', 'admin.css']) {
+    const css = await readFile(new URL(`../${name}`, import.meta.url), 'utf8');
+    for (const [, size] of css.matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)) {
+      assert.ok(Number(size) >= 11, `${name} sets text at ${size}px, below the readable floor`);
+    }
+  }
+});
+
+test('the small end of the scale stays on a few steps rather than sprawling', async () => {
+  const sizes = new Set();
+  for (const name of ['styles.css', 'portal.css', 'admin.css']) {
+    const css = await readFile(new URL(`../${name}`, import.meta.url), 'utf8');
+    for (const [, size] of css.matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)) {
+      if (Number(size) <= 14) sizes.add(size);
+    }
+  }
+  assert.ok(sizes.size <= 4, `${sizes.size} distinct sizes at or below 14px: ${[...sizes].sort().join(', ')}`);
+});
+
+// An empty list left a void where the roster will be, so the section jumped when the first
+// student was added.
+test('the roster empty state occupies the space the list will', () => {
+  const rule = styles.match(/\.roster-empty \{[^}]*\}/)[0];
+  assert.match(rule, /border: 1px dashed/);
+  assert.match(rule, /padding: \d+px/);
+  assert.match(styles, /\.roster-list:empty \{ display: none; \}/);
+});
