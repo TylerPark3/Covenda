@@ -2342,12 +2342,6 @@ body[data-audience="home"] .compare-section { display: block; }
   .company-demo-steps > li:last-child { border-bottom: 0; }
 }
 
-.compare-foot {
-  max-width: 90ch; margin: 34px 0 0; padding-left: 16px;
-  border-left: 3px solid var(--gold);
-  font-size: 15.5px; line-height: 1.6; color: var(--soft);
-}
-.compare-foot b { color: var(--ink); font-weight: 700; }
 
 @media (max-width: 900px) {
   .compare-section { padding: 56px 6vw 52px; }
