@@ -19,6 +19,9 @@ import { scenarioFor, optionalScenariosFor } from './scenarios.js';
 import {
   assessmentPlan, reverseAudit, candidateDisclosure, aedtPosture,
   REVERSE_AUDIT_QUESTIONS, AUTONOMY_LEVELS, BUDGET_MINUTES, DIMENSIONS,
+  deepDiveFor, verificationTest, blockerPrompt, systemDesign,
+  ambiguousTakeHome, liveDebugging, figureItOut,
+  unpromptedBuild, crossFunctional,
 } from './super-intern.js';
 import { allTechnicalClaims, technicalProfile, technicalGaps, recordTechnicalEvidence, recommendedEvidence, EVIDENCE_TYPES, OWNERSHIP_LEVELS } from './technical-evidence.js';
 import { summarise as summariseVetting, processFor } from './vetting.js';
@@ -1597,6 +1600,74 @@ export async function saveCompanyEnvironment(member, input) {
   };
 }
 
+// The material for one component of a sitting. Served per component rather than all at once,
+// because the Deep Dive topic and the verification defect are the assessment: handing them
+// over up front turns a ninety-minute sitting into three days of preparation.
+export function componentMaterial(componentId, vertical, seed = 0) {
+  switch (componentId) {
+    case 'deep_dive': return deepDiveFor(vertical, seed);
+    case 'verification': return verificationTest(vertical);
+    case 'blocker': return blockerPrompt(vertical);
+    case 'system_design': return systemDesign(vertical);
+    case 'take_home': return ambiguousTakeHome({ vertical });
+    case 'live_debug': return liveDebugging({ vertical });
+    case 'figure_it_out': return figureItOut({ vertical });
+    // Objective questions come from the existing bank, and the defence is generated from what
+    // this candidate actually did rather than prepared in advance.
+    case 'objective': return { dimensions: ['capability'], minutes: 25, fromBank: true };
+    case 'defense': return { dimensions: ['ownership', 'communication'], minutes: 10, generated: true };
+    default: return null;
+  }
+}
+
+export async function assessmentComponent(member, input) {
+  const runId = cleanText(input.runId, 60);
+  const componentId = cleanText(input.componentId, 40);
+  const runs = await optional(member.supabase.from('assessment_runs')
+    .select('*').eq('id', runId).eq('student_user_id', member.user.id).limit(1), [], 'assessment_runs');
+  if (!runs.length) throw new Error('That sitting is not yours, or does not exist.');
+  if (runs[0].status !== 'in_progress') throw new Error('That sitting is already finished.');
+
+  const plans = await optional(member.supabase.from('assessment_plans')
+    .select('*').eq('id', runs[0].plan_id).limit(1), [], 'assessment_plans');
+  if (!plans.length) throw new Error('The plan behind this sitting is missing.');
+
+  const component = (plans[0].components || []).find(c => c.id === componentId);
+  if (!component) throw new Error('That component is not part of this sitting.');
+
+  // Seeded from the run id so the same student always gets the same topic on resume, and two
+  // students in one batch do not reliably share one.
+  const seed = [...runId].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  return { component, material: componentMaterial(componentId, plans[0].vertical, seed) };
+}
+
+// A student's own answer. Deliberately separate from the reviewer's observation: this is what
+// they produced, that is what somebody made of it, and merging the two would let a candidate
+// write their own assessment.
+export async function submitComponent(member, input) {
+  const runId = cleanText(input.runId, 60);
+  const componentId = cleanText(input.componentId, 40);
+  const answer = cleanText(input.answer, 8000);
+  if (!answer) throw new Error('Nothing to submit yet.');
+
+  const runs = await optional(member.supabase.from('assessment_runs')
+    .select('*').eq('id', runId).eq('student_user_id', member.user.id).limit(1), [], 'assessment_runs');
+  if (!runs.length) throw new Error('That sitting is not yours, or does not exist.');
+  if (runs[0].status !== 'in_progress') throw new Error('That sitting is already finished.');
+
+  const observations = { ...(runs[0].observations || {}) };
+  observations[componentId] = {
+    ...(observations[componentId] || {}),
+    answer,
+    submittedAt: new Date().toISOString(),
+  };
+
+  const saved = await checked(member.supabase.from('assessment_runs')
+    .update({ observations }).eq('id', runId).eq('student_user_id', member.user.id).select('*').single(), null);
+  if (!saved) throw new Error('That answer could not be saved.');
+  return { run: saved };
+}
+
 export async function loadCompanyEnvironments(member) {
   const environments = await optional(member.supabase.from('company_environments')
     .select('*').eq('company_user_id', member.user.id)
@@ -3159,6 +3230,8 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'create-company-referral') return res.status(201).json({ ok: true, referral: await createCompanyReferral(member) });
     if (req.method === 'POST' && input.action === 'save-company-environment') return res.status(201).json({ ok: true, ...(await saveCompanyEnvironment(member, input)) });
     if (req.method === 'POST' && input.action === 'assessment-disclosure') return res.status(200).json({ ok: true, ...(await assessmentDisclosure(member, input)) });
+    if (req.method === 'POST' && input.action === 'assessment-component') return res.status(200).json({ ok: true, ...(await assessmentComponent(member, input)) });
+    if (req.method === 'POST' && input.action === 'submit-component') return res.status(200).json({ ok: true, ...(await submitComponent(member, input)) });
     if (req.method === 'POST' && input.action === 'start-assessment') return res.status(201).json({ ok: true, ...(await startAssessmentRun(member, input)) });
     if (req.method === 'POST' && input.action === 'save-evidence-request') return res.status(201).json({ ok: true, ...(await saveEvidenceRequest(member, input)) });
     if (req.method === 'POST' && input.action === 'delete-evidence-request') return res.status(200).json({ ok: true, ...(await deleteEvidenceRequest(member, input)) });
