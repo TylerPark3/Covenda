@@ -315,10 +315,18 @@ test('design system stays true white and supports responsive and reduced-motion 
   assert.match(styles, /backdrop-filter: blur/);
   assert.match(styles, /@media \(max-width: 560px\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
-  // §14: the three families now live in one shared type.css, linked by all surfaces.
-  assert.match(typeCss, /--font-body: "Manrope"/);
-  assert.match(typeCss, /--font-display: "Newsreader"/);
-  assert.match(typeCss, /--font-mono:/);
+  // §14: the families live in one shared type.css, linked by all surfaces.
+  //
+  // Newsreader over Manrope on a warm cream ground is the exact combination AI-generated
+  // sites converge on, and readers said so unprompted. Public Sans (the US government design
+  // system face) and IBM Plex Mono carry institutional weight and appear essentially nowhere
+  // in generated work. This asserts the pair and refuses the old one coming back.
+  assert.match(typeCss, /--font-display: "Public Sans"/);
+  assert.match(typeCss, /--font-body: "Public Sans"/);
+  assert.match(typeCss, /--font-mono: "IBM Plex Mono"/);
+  for (const face of ['Newsreader', 'Manrope', 'Inter', 'Space Grotesk']) {
+    assert.ok(!new RegExp(`--font-[a-z]+: "${face}"`).test(typeCss), `${face} is the AI-default cluster`);
+  }
   assert.match(html, /href="type\.css"/);
   assert.match(html, /fonts\.googleapis\.com/);
 });
@@ -881,4 +889,33 @@ test('students can see their verification standing and where work stands', async
   // stay safe and silence must stay the thing that costs you the work.
   assert.match(portalJs, /Running late is fine/);
   assert.match(portalJs, /Going quiet is what loses the work/);
+});
+
+// The other half of the signal readers reacted to was the ground, not the accent: warm cream
+// under an amber gold. Gold stays; the neutrals it sits on are cool now.
+test('the neutral palette carries no warm bias', () => {
+  const warm = ['#fbf7ed', '#11110f', '#60605b', '#85857f', '#deded9', '#c9c9c2', '#fbf9f4'];
+  for (const value of warm) {
+    assert.ok(!styles.toLowerCase().includes(value), `${value} is a warm neutral from the old palette`);
+  }
+  assert.match(styles, /--gold: #b47b20/, 'the brand accent must not have changed');
+  assert.match(styles, /--gold-pale: #f4f5f7/);
+  assert.match(styles, /--ink: #0e1013/);
+});
+
+// A serif headline at 400 reads as considered. The same number in a sans reads unfinished.
+test('display type is set at a weight a sans can carry', () => {
+  for (const [, weight] of typeCss.matchAll(/\.t-(?:display-\w+|h1|h2)\s*\{[^}]*font-weight:\s*(\d+)/g)) {
+    assert.ok(Number(weight) >= 600, `display type set at ${weight}, too light for Public Sans`);
+  }
+});
+
+// Every surface has to load the pair, or one page silently falls back to Helvetica.
+test('every page loads the same two families', async () => {
+  for (const page of ['index.html', 'portal.html', 'admin.html', 'cohort.html']) {
+    const src = await readFile(new URL(`../${page}`, import.meta.url), 'utf8');
+    assert.match(src, /family=Public\+Sans/, `${page} does not load Public Sans`);
+    assert.match(src, /family=IBM\+Plex\+Mono/, `${page} does not load the mono`);
+    assert.ok(!/Newsreader|Manrope/.test(src), `${page} still loads a retired face`);
+  }
 });

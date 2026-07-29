@@ -1,9 +1,9 @@
-:root { --gold:#b47b20; --gold-deep:#8d5b0f; --gold-pale:#fbf7ed; --ink:#11110f; --muted:#65635d; --soft:#918e86; --line:#e7e4dd; --line-strong:#d5d0c5; --success:#24753a; --danger:#a43124; --nav:228px; --header:72px; }
+:root { --gold:#b47b20; --gold-deep:#8d5b0f; --gold-pale:#f4f5f7; --ink:#0e1013; --muted:#5a5f66; --soft:#868d96; --line:#e3e6ea; --line-strong:#ccd1d7; --success:#24753a; --danger:#a43124; --nav:228px; --header:72px; }
 * { box-sizing: border-box; }
 html, body { min-height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); -webkit-font-smoothing: antialiased; }
 /* §14: all page/section/dialog headings use the shared display serif (card titles are h3 → stay sans). */
-h1, h2 { font-family: var(--font-display); font-weight: 500; }
+h1, h2 { font-family: var(--font-display); font-weight: 650; }
 button, input, textarea, select { font: inherit; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { color: inherit; }
@@ -91,7 +91,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 @keyframes view-in { from { opacity:0; transform:translateY(7px); } }
 .overview-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(310px,360px); gap:clamp(35px,5vw,80px); max-width:none; margin:0 auto 0 0; }
 .welcome-row,.page-heading,.section-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:22px; }
-.welcome-row h1,.page-heading h1 { margin:0; font-family:var(--font-display); font-weight:500; font-size:clamp(36px,4.1vw,58px); line-height:1.02; letter-spacing:-.03em; }
+.welcome-row h1,.page-heading h1 { margin:0; font-family:var(--font-display); font-weight: 650; font-size:clamp(36px,4.1vw,58px); line-height:1.02; letter-spacing:-.03em; }
 .welcome-row > div > p:last-child,.page-heading > div > p:last-child { max-width:96ch; margin:14px 0 0; color:var(--muted); font-size: var(--step-body-sm); line-height:1.7; }
 .welcome-row .portal-primary { flex:0 0 auto; margin-top:4px; }
 .company-segments { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:36px; }
@@ -104,7 +104,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .company-segment-actions .portal-primary,.company-segment-actions .portal-ghost { min-height:36px; padding:8px 14px; font-size: 13.5px; }
 .focus-section,.plain-section { margin-top:54px; }
 .section-heading { align-items:flex-end; padding-bottom:15px; border-bottom:1px solid var(--line); }
-.section-heading h2 { margin:0; font-family:var(--font-display); font-weight:500; font-size: 21px; letter-spacing:-.02em; }
+.section-heading h2 { margin:0; font-family:var(--font-display); font-weight: 650; font-size: 21px; letter-spacing:-.02em; }
 .section-heading button { padding:5px 0; border:0; background:transparent; color:var(--gold-deep); font-size: 14px; font-weight:700; cursor:pointer; }
 .project-focus { display:grid; grid-template-columns:1fr auto; gap:22px; padding:25px 0; border-bottom:1px solid var(--line); }
 .project-focus h3 { margin:0 0 7px; font-size: 17px; letter-spacing:-.03em; }
@@ -117,7 +117,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .project-progress i { display:block; height:100%; border-radius: 0; background:linear-gradient(90deg,var(--gold),#e0b252); }
 .project-progress span { display:block; margin-top:8px; color:var(--soft); font-size: 13.5px; text-align:right; }
 .empty-line { padding:34px 0; border-bottom:1px solid var(--line); }
-.empty-line h3 { margin:0; font-family:var(--font-display); font-weight:500; font-size: 21px; letter-spacing:-.02em; }
+.empty-line h3 { margin:0; font-family:var(--font-display); font-weight: 650; font-size: 21px; letter-spacing:-.02em; }
 .empty-line p { margin:8px 0 15px; color:var(--muted); font-size: 14.5px; line-height:1.6; }
 .empty-line button { padding:0; border:0; background:transparent; color:var(--gold-deep); font-size: 14px; font-weight:700; cursor:pointer; }
 .metrics-row { display:grid; grid-template-columns:repeat(3,1fr); border-bottom:1px solid var(--line); }
@@ -541,7 +541,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .member-dialog::backdrop { background:rgba(24,22,17,.28); backdrop-filter:blur(7px); }
 .member-dialog form { display:grid; max-height:inherit; }
 .member-dialog header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding:25px 28px 20px; border-bottom:1px solid var(--line); }
-.member-dialog header h2 { margin:0; font-family:var(--font-display); font-weight:500; font-size: 27px; letter-spacing:-.02em; }
+.member-dialog header h2 { margin:0; font-family:var(--font-display); font-weight: 650; font-size: 27px; letter-spacing:-.02em; }
 .member-dialog header p:last-child { margin:7px 0 0; color:var(--muted); font-size: 14.5px; }
 .member-dialog header button { display:grid; width:36px; height:36px; place-items:center; border:1px solid var(--line); border-radius:50%; background:var(--surface-1); cursor:pointer; }
 .dialog-body { display:grid; gap:18px; padding:24px 28px; overflow:auto; }
@@ -898,7 +898,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .onboard-dot { width:22px; height:4px; border-radius: 0; background:var(--line); transition:background .3s; }
 .onboard-dot.is-current { background:var(--gold); }
 .onboard-dot.is-done { background:var(--gold-deep); }
-.onboard-headline { margin:0; font-family:var(--font-display); font-weight:600; font-size:clamp(34px,6vw,60px); line-height:1.04; letter-spacing:-.02em; color:var(--ink); }
+.onboard-headline { margin:0; font-family:var(--font-display); font-weight: 650; font-size:clamp(34px,6vw,60px); line-height:1.04; letter-spacing:-.02em; color:var(--ink); }
 .onboard-sub { margin:16px 0 0; color:var(--muted); font-size: 17px; line-height:1.5; }
 .onboard-controls { margin-top:34px; }
 .onboard-field { display:block; }
@@ -989,8 +989,8 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .gh-owner-pill[data-status="verified"] { border-color: var(--gold-deep); color: var(--gold-deep); }
 
 /* §13 slice 4 — batch detail: the vetting rail, the published bar, the company walkthrough. */
-.batch-vetting .batch-rail-badge { display: inline-block; margin-bottom: 12px; padding: 5px 11px; border: 1px solid var(--line-strong, #c9c9c2); border-radius: 0; font-size: 13.5px; font-weight: 700; letter-spacing: .02em; color: #6c6c67; }
-.batch-vetting .batch-rail-badge.is-api { border-color: #b47b20; background: #fbf7ed; color: #8b5709; }
+.batch-vetting .batch-rail-badge { display: inline-block; margin-bottom: 12px; padding: 5px 11px; border: 1px solid var(--line-strong, #c4c9cf); border-radius: 0; font-size: 13.5px; font-weight: 700; letter-spacing: .02em; color: #6c6c67; }
+.batch-vetting .batch-rail-badge.is-api { border-color: #b47b20; background: #f4f5f7; color: #8b5709; }
 .batch-rail { margin-top: 14px; padding-left: 14px; border-left: 2px solid #eadfca; }
 .batch-rail strong { display: block; font-size: 15.5px; }
 .batch-rail p { margin: 5px 0 0; font-size: 15px; line-height: 1.6; color: var(--text-2); }
@@ -1039,7 +1039,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 
 /* The recorder itself is deliberately LARGE — a cramped preview is why people record
    somewhere else. Near-full-viewport, camera first. */
-.rec-overlay { width: min(980px, calc(100vw - 32px)); max-width: none; padding: 0; border: 1px solid var(--line-strong, #c9c9c2); border-radius: 0; background: #11110f; color: #fff; }
+.rec-overlay { width: min(980px, calc(100vw - 32px)); max-width: none; padding: 0; border: 1px solid var(--line-strong, #c4c9cf); border-radius: 0; background: #0e1013; color: #fff; }
 .rec-overlay::backdrop { background: rgba(12,11,9,.82); backdrop-filter: blur(6px); }
 .rec-shell { display: grid; gap: 16px; padding: clamp(16px, 2.4vw, 24px); }
 .rec-stage { position: relative; aspect-ratio: 16 / 9; background: #000; overflow: hidden; }
@@ -1073,7 +1073,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
    Both were computed server-side and shown nowhere, so a student could not see either. */
 .panel-card { padding: 22px; border: 1px solid var(--line); background:var(--surface-1); }
 .panel-card + .panel-card { margin-top: 16px; }
-.panel-card h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; }
+.panel-card h3 { margin: 0; font-family: var(--font-display); font-weight: 650; font-size: 21px; letter-spacing: -.02em; }
 .verif-head p, .ms-sub { margin: 5px 0 0; color: var(--muted); font-size: var(--step-body-sm); }
 
 .verif-list { display: grid; gap: 12px; margin: 16px 0 0; padding: 0; list-style: none; }
@@ -1133,7 +1133,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .verif-dialog::backdrop { background:rgba(24,22,17,.28); backdrop-filter:blur(7px); }
 .verif-form { display:grid; max-height:calc(100dvh - 56px); }
 .verif-form header { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; padding:24px 26px 18px; border-bottom:1px solid var(--line); }
-.verif-form header h2 { margin:0; font-family:var(--font-display); font-weight:500; font-size: 24px; letter-spacing:-.02em; }
+.verif-form header h2 { margin:0; font-family:var(--font-display); font-weight: 650; font-size: 24px; letter-spacing:-.02em; }
 .verif-form header button { display:grid; width:34px; height:34px; place-items:center; border:1px solid var(--line); border-radius:50%; background:var(--surface-1); cursor:pointer; }
 .verif-form header button svg { width:14px; height:14px; }
 .verif-form .dialog-body { display:grid; gap:16px; padding:22px 26px; overflow:auto; }
@@ -1174,7 +1174,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 
 .video-library { display:grid; gap:16px; margin-top:22px; padding:20px 22px; border:1px solid var(--line); background:var(--surface-1); }
 .video-library-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex-wrap:wrap; }
-.video-library-head h3 { margin:0 0 5px; font-family:var(--font-display); font-weight:500; font-size: 21px; letter-spacing:-.02em; }
+.video-library-head h3 { margin:0 0 5px; font-family:var(--font-display); font-weight: 650; font-size: 21px; letter-spacing:-.02em; }
 .video-library-head p { margin:0; max-width:56ch; color:var(--muted); font-size: 13.5px; line-height:1.6; }
 .video-library-empty { margin:0; max-width:62ch; color:var(--muted); font-size: 14px; line-height:1.65; }
 .video-library-list { display:grid; gap:14px; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); }
@@ -1240,7 +1240,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
    always exactly one obvious move. */
 .journey-panel { display:grid; gap:14px; }
 .journey-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
-.journey-head h3 { margin:0 0 5px; font-family:var(--font-display); font-weight:500; font-size: 21px; letter-spacing:-.02em; }
+.journey-head h3 { margin:0 0 5px; font-family:var(--font-display); font-weight: 650; font-size: 21px; letter-spacing:-.02em; }
 .journey-head p { margin:0; max-width:52ch; color:var(--muted); font-size: 13.5px; line-height:1.6; }
 .journey-count { flex:none; padding:5px 10px; border:1px solid var(--line-strong); font-size: 14.5px; font-weight:700; color:var(--gold-deep); font-variant-numeric:tabular-nums; }
 .journey-list { display:grid; gap:2px; margin:0; padding:0; list-style:none; counter-reset:none; }
@@ -1357,7 +1357,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 
 .company-form { display: grid; gap: 18px; margin-top: 22px; padding: 22px 24px; border: 1px solid var(--line); background:var(--surface-1); }
 .company-form-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
-.company-form-head h3 { margin: 0 0 5px; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; }
+.company-form-head h3 { margin: 0 0 5px; font-family: var(--font-display); font-weight: 650; font-size: 21px; letter-spacing: -.02em; }
 .company-form-head p { margin: 0; max-width: 58ch; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .company-form-state { flex: none; padding: 5px 11px; border: 1px solid var(--line-strong); font-size: 13px; font-weight: 700; color: var(--soft); }
 .company-form-state[data-published="yes"] { border-color: rgba(36,117,58,.35); background: #f4faf5; color: var(--success); }
@@ -1388,7 +1388,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 /* Approved but not started. States the commitment next to the button, because the point of
    the step is that the student knows what is held before they do anything. */
 .trial-start-panel { display: grid; gap: 14px; border-color: var(--gold-light); background: var(--gold-pale); }
-.trial-start-panel h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; }
+.trial-start-panel h3 { margin: 0; font-family: var(--font-display); font-weight: 650; font-size: 21px; letter-spacing: -.02em; }
 .trial-start { display: grid; gap: 10px; padding: 16px; border: 1px solid var(--line); background:var(--surface-1); }
 .trial-start > strong { font-size: 15px; }
 .trial-start > p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
@@ -1407,7 +1407,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .readiness[data-state="ready"] { border-color: rgba(36,117,58,.4); background: #f4faf5; }
 .readiness[data-state="reachable"] { border-color: var(--gold); background: var(--gold-pale); }
 .readiness-top { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-.readiness-top strong { font-family: var(--font-display); font-weight: 500; font-size: 19px; letter-spacing: -.02em; }
+.readiness-top strong { font-family: var(--font-display); font-weight: 650; font-size: 19px; letter-spacing: -.02em; }
 .readiness[data-state="ready"] .readiness-top strong { color: var(--success); }
 .readiness[data-state="reachable"] .readiness-top strong { color: var(--gold-deep); }
 .readiness-top span { flex: none; color: var(--soft); font-size: 13.5px; font-variant-numeric: tabular-nums; }
@@ -1425,7 +1425,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .discover-band { margin: 22px 0 12px; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
 .discover-band:first-child { margin-top: 0; }
 .discover-band-top { display: flex; align-items: baseline; gap: 10px; }
-.discover-band-top h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 19px; letter-spacing: -.02em; }
+.discover-band-top h3 { margin: 0; font-family: var(--font-display); font-weight: 650; font-size: 19px; letter-spacing: -.02em; }
 .discover-band-top span { padding: 2px 8px; border: 1px solid var(--line-strong); font-size: 12.5px; font-weight: 700; color: var(--soft); font-variant-numeric: tabular-nums; }
 .discover-band p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
 
@@ -1464,7 +1464,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
    why each part is there before being asked to approve it. */
 .brief-review { display: grid; gap: 16px; margin: 0 0 20px; padding: 20px 22px; border: 1px solid var(--gold-light); background: var(--gold-pale); }
 .brief-review-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.brief-review-head h3 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; }
+.brief-review-head h3 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 650; font-size: 21px; letter-spacing: -.02em; }
 .brief-review-head p { margin: 0; color: var(--muted); font-size: 14px; }
 .brief-version { flex: none; padding: 3px 9px; border: 1px solid var(--line-strong); background:var(--surface-1); font-family: var(--font-mono); font-size: 12.5px; color: var(--gold-deep); }
 
@@ -1496,7 +1496,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
    A flat list answers "how many". Grouped by stage answers "what do I do next", and the
    first column is always the one waiting on the company. */
 .pipeline-panel { display: grid; gap: 14px; }
-.pipe-head h3 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; }
+.pipe-head h3 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 650; font-size: 21px; letter-spacing: -.02em; }
 .pipe-head p { margin: 0; color: var(--muted); font-size: 14px; }
 .pipe-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
 .pipe-col { display: grid; align-content: start; gap: 7px; padding: 11px; border: 1px solid var(--line); background:var(--surface-1); min-width: 0; }
@@ -1516,7 +1516,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
    The terms come with the ask. Declining and reporting sit in the same row as accepting —
    a student who feels pressured needs an obvious exit, not one buried in a menu. */
 .intro-panel { display: grid; gap: 12px; border-color: var(--gold-light); background: var(--gold-pale); }
-.intro-panel h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; }
+.intro-panel h3 { margin: 0; font-family: var(--font-display); font-weight: 650; font-size: 21px; letter-spacing: -.02em; }
 .intro-card { display: grid; gap: 10px; padding: 15px 16px; border: 1px solid var(--line); background:var(--surface-1); }
 .intro-card > strong { font-size: 15px; }
 .intro-terms { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
@@ -1619,7 +1619,7 @@ body { background: var(--surface); }
 
 /* Payout setup, referrals, ATS — three panels that had backends and no way in. */
 .payout-setup, .coref, .ats-panel { display: grid; gap: 10px; margin-top: 20px; padding: 18px 20px; border: 1px solid var(--line); background:var(--surface-1); box-shadow: var(--lift-sm); }
-.payout-setup h3, .coref h3, .ats-panel h3 { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 19px; letter-spacing: -.02em; }
+.payout-setup h3, .coref h3, .ats-panel h3 { margin: 0; font-family: var(--font-display); font-weight: 650; font-size: 19px; letter-spacing: -.02em; }
 .payout-setup p, .coref p, .ats-panel p { margin: 0; max-width: 62ch; color: var(--muted); font-size: 14px; line-height: 1.55; }
 .payout-setup button, .ats-actions button { justify-self: start; }
 .ats-actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -1634,7 +1634,7 @@ body { background: var(--surface); }
 /* The referral is the strongest signal on a batch application, and it was two cramped fields
    sharing a row at the bottom of the last step. Its own block, with room. */
 .ba-referral { display: grid; gap: 12px; margin-top: 26px; padding: 22px 24px; border: 1px solid var(--gold-light); background: var(--gold-pale); }
-.ba-referral-cap { margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 21px; letter-spacing: -.02em; color: var(--ink); }
+.ba-referral-cap { margin: 0; font-family: var(--font-display); font-weight: 650; font-size: 21px; letter-spacing: -.02em; color: var(--ink); }
 .ba-referral-note { margin: -6px 0 4px; color: var(--muted); font-size: 14.5px; }
 .ba-referral label { display: grid; gap: 8px; font-size: 14px; font-weight: 650; }
 .ba-referral input { width: 100%; min-height: 50px; padding: 12px 14px; border: 1px solid var(--line-strong); background:var(--surface-1); font: inherit; font-size: 15.5px; }
@@ -1663,7 +1663,7 @@ body { background: var(--surface); }
    A student meeting a video prompt with no context assumes the video IS the process. It is
    one stage of four, and which four depends on the industry. */
 .batch-vetting { display: grid; gap: 14px; margin-top: 20px; padding: 20px 22px; border: 1px solid var(--line-strong); background:var(--surface-1); }
-.vet-head h4 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 20px; letter-spacing: -.02em; }
+.vet-head h4 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 650; font-size: 20px; letter-spacing: -.02em; }
 .vet-meta { margin: 0; color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
 .vet-steps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
 .vet-steps li { display: grid; grid-template-columns: 30px 1fr; gap: 13px; }
@@ -1934,7 +1934,7 @@ body { background: var(--surface); }
 
 /* The supplied exercise. Work happens on screen, so the recording is of a screen. */
 .batch-exercise { display: grid; gap: 16px; margin-bottom: 26px; padding: 26px 28px; border: 1px solid #000; background:var(--surface-1); }
-.ex-head h4 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 24px; letter-spacing: -.02em; color: var(--text); }
+.ex-head h4 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 650; font-size: 24px; letter-spacing: -.02em; color: var(--text); }
 .ex-meta { margin: 0; font-size: 15px; color: #7d7870; font-variant-numeric: tabular-nums; }
 .ex-block { display: grid; gap: 6px; padding: 16px 18px; border: 1px solid #ebe8e1; }
 .ex-block.is-task { border-color: var(--text); }
@@ -1958,14 +1958,14 @@ body { background: var(--surface); }
 :root {
   --bg: #fbfaf7;
   --surface-1: #ffffff;
-  --surface-2: #fbf9f4;
-  --text: #11110f;
+  --surface-2: #f7f8fa;
+  --text: #0e1013;
   --text-2: #55524a;
   --text-3: #7d7870;
-  --edge: #e7e4dd;
-  --edge-strong: #d5d0c5;
+  --edge: #e3e6ea;
+  --edge-strong: #ccd1d7;
   --accent: #b47b20;
-  --accent-soft: #fbf7ed;
+  --accent-soft: #f4f5f7;
   --accent-text: #8d5b0f;
 }
 

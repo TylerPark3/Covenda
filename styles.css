@@ -1,14 +1,14 @@
 :root {
   --white: #fff;
-  --ink: #11110f;
-  --muted: #60605b;
-  --soft: #85857f;
-  --line: #deded9;
-  --line-strong: #c9c9c2;
+  --ink: #0e1013;
+  --muted: #5a5f66;
+  --soft: #868d96;
+  --line: #dcdfe3;
+  --line-strong: #c4c9cf;
   --gold: #b47b20;
   --gold-deep: #8b5709;
   --gold-light: #e7c679;
-  --gold-pale: #fbf7ed;
+  --gold-pale: #f4f5f7;
   --success: #24753a;
   --shadow: 0 18px 48px rgba(45, 38, 24, .09), 0 2px 8px rgba(25, 20, 12, .05);
   --glass-shadow: 0 24px 52px rgba(45, 38, 24, .11), inset 0 1px 1px rgba(255,255,255,.96), inset 0 -1px 2px rgba(176, 127, 41, .11);
@@ -84,7 +84,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   margin-bottom: clamp(72px, 11vh, 132px);
   font-family: var(--font-display);
   font-size: clamp(22px, 2vw, 31px);
-  font-weight: 600;
+  font-weight: 650;
   letter-spacing: -.045em;
 }
 .intro-brand .brand-mark { width: 46px; height: 46px; }
@@ -95,7 +95,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(64px, 8.4vw, 132px);
-  font-weight: 400;
+  font-weight: 700;
   line-height: .91;
   letter-spacing: -.065em;
 }
@@ -177,7 +177,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   background: transparent;
   font-family: var(--font-display);
   font-size: 26px;
-  font-weight: 600;
+  font-weight: 650;
   letter-spacing: -.045em;
   cursor: pointer;
 }
@@ -268,7 +268,7 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
      "proof" — has room and isn't cramped/clipped against the line above. */
   line-height: 1.0;
   letter-spacing: -.064em;
-  font-weight: 400;
+  font-weight: 700;
 }
 .hero-copy p {
   max-width: 820px;
@@ -681,13 +681,13 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   width: 100%;
   aspect-ratio: 16 / 9;
   border-radius: 0;
-  background: #11110f;
+  background: #0e1013;
   object-fit: cover;
   transform: scaleX(-1); /* mirror the live selfie view */
 }
 .video-rec-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .video-rec-count { font-family: var(--font-mono); font-size: 13px; color: #6c6c67; }
-.video-rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #c9c9c2; }
+.video-rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #c4c9cf; }
 .video-rec-dot.is-live { background: #d23b30; animation: video-rec-pulse 1s ease-in-out infinite; }
 .video-rec-start.is-recording { background: #b4322a; }
 .video-rec-status { margin: 0; font-size: var(--step-body-sm); color: #6c6c67; }
@@ -732,11 +732,11 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 .rec-close { border: 0; background: transparent; font-size: 26px; line-height: 1; color: #6c6c67; cursor: pointer; padding: 2px 6px; border-radius: 0; }
 .rec-close:hover { color: var(--ink); }
 .rec-body { padding: 16px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
-.rec-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 0; overflow: hidden; background: #11110f; }
+.rec-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 0; overflow: hidden; background: #0e1013; }
 .rec-video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .rec-video.is-mirror { transform: scaleX(-1); }
 .rec-timer { position: absolute; left: 14px; top: 14px; display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 0; background: rgba(17,17,15,.62); color: #fff; font-family: var(--font-mono); font-size: 15px; }
-.rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #c9c9c2; }
+.rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #c4c9cf; }
 .rec-dot.is-live { background: #ff3b30; animation: rec-pulse 1s ease-in-out infinite; }
 .rec-max { opacity: .7; font-size: 12px; }
 .rec-count { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: clamp(90px, 22vw, 170px); text-shadow: 0 6px 34px rgba(0,0,0,.45); pointer-events: none; }
@@ -910,7 +910,7 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
    face at 400. Different family AND different weight, from one omitted selector. */
 .section-heading h2, .why-copy h2, .final-cta h2, .about-lede h2, .recruiter-lede h2, .dialog-copy h2, .review-intro h3, .exchange-head h2 {
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 700;
 }
 .section-heading p, .why-copy p {
   margin: 0;
@@ -959,7 +959,7 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
 .record-state svg { width: 16px; height: 16px; }
 .record-preview { display: grid; grid-template-columns: 110px 1fr; gap: 24px; margin: 26px 0; padding: 22px; border: 1px solid var(--line); border-radius: 0; background: rgba(255,255,255,.62); }
 .document-lines { padding: 19px 13px; border: 1px solid var(--line); border-radius: 0; background: #fff; }
-.document-lines i { display: block; height: 3px; margin-bottom: 8px; border-radius: 0; background: #deded9; }
+.document-lines i { display: block; height: 3px; margin-bottom: 8px; border-radius: 0; background: #dcdfe3; }
 .document-lines i:nth-child(2) { width: 72%; }
 .document-lines i:nth-child(4) { width: 84%; }
 .record-preview > div:last-child { display: grid; gap: 4px; }
@@ -1693,7 +1693,7 @@ body[data-audience="university"] #flowDemo { display: none; }
   font-size: clamp(38px, 4vw, 60px);
   line-height: 1.03;
   letter-spacing: -.055em;
-  font-weight: 400;
+  font-weight: 700;
 }
 .flow-demo-head p { margin: 0; max-width: 660px; color: #45453f; font-size: 17px; line-height: 1.6; }
 .flow-demo-track {
@@ -1979,7 +1979,7 @@ body[data-audience="university"] #flowDemo { display: none; }
 .feature-copy h2 {
   margin: 0 0 18px;
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 700;
   font-size: clamp(34px, 4vw, 56px);
   line-height: 1.03;
   letter-spacing: -.05em;
@@ -2206,7 +2206,7 @@ body[data-audience="home"] .compare-section { display: block; }
 .compare-inner { width: min(100%, var(--content)); margin-inline: auto; }
 .compare-head { margin: 0; }
 .compare-kicker { margin: 0 0 16px; font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--gold-deep); }
-.compare-head h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 4vw, 58px); line-height: 1.04; letter-spacing: -.05em; text-wrap: balance; }
+.compare-head h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(34px, 4vw, 58px); line-height: 1.04; letter-spacing: -.05em; text-wrap: balance; }
 .compare-lede { margin: 20px 0 0; max-width: 68ch; font-size: clamp(17px, 1.5vw, 20px); line-height: 1.55; color: var(--soft); }
 
 /* Wide content scrolls inside its own container so the page body never scrolls sideways. */
@@ -2248,7 +2248,7 @@ body[data-audience="home"] .compare-section { display: block; }
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(40px, 5vw, 68px);
-  font-weight: 400;
+  font-weight: 700;
   line-height: .98;
   letter-spacing: -.05em;
 }
@@ -2306,7 +2306,7 @@ body[data-audience="home"] .compare-section { display: block; }
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(25px, 2.4vw, 34px);
-  font-weight: 500;
+  font-weight: 650;
   line-height: 1.05;
   letter-spacing: -.03em;
 }
@@ -2554,7 +2554,7 @@ body[data-audience="student"] .feature-band { display: none; }
 /* ---- §9 public partner cohort page (cohort.html) ---- */
 .cohort-page { max-width: 860px; margin: 0 auto; padding: 28px clamp(18px, 5vw, 40px) 64px; }
 .cohort-page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: clamp(30px, 6vw, 60px); }
-.cohort-brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 22px; font-weight: 500; letter-spacing: -.02em; color: var(--ink); text-decoration: none; }
+.cohort-brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--font-display); font-size: 22px; font-weight: 650; letter-spacing: -.02em; color: var(--ink); text-decoration: none; }
 .cohort-back { color: var(--gold-deep); font-size: 13px; font-weight: 650; text-decoration: none; }
 .cohort-back:hover { text-decoration: underline; }
 .cohort-hero { margin-bottom: clamp(24px, 4vw, 40px); }
@@ -2574,7 +2574,7 @@ body[data-audience="student"] .feature-band { display: none; }
 .contrast-section::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: min(560px, 72vw); height: 1px; background: linear-gradient(90deg, transparent, var(--gold) 18%, var(--gold) 82%, transparent); }
 .contrast-inner { max-width: 1100px; margin: 0 auto; }
 .contrast-head { max-width: 760px; }
-.contrast-head h2 { margin: 10px 0 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 4vw, 58px); line-height: 1.04; letter-spacing: -.05em; }
+.contrast-head h2 { margin: 10px 0 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(34px, 4vw, 58px); line-height: 1.04; letter-spacing: -.05em; }
 .contrast-head > p { margin: 16px 0 0; color: var(--muted); font-size: clamp(15px, 1.7vw, 18px); line-height: 1.6; }
 .contrast-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: clamp(32px, 4vw, 48px); }
 .contrast-col { padding: clamp(24px, 2.8vw, 34px); border: 1px solid var(--line); border-radius: 0; background: #fff; }
@@ -2737,7 +2737,7 @@ body[data-audience="student"] .stat-band { padding-bottom: clamp(24px, 3vw, 44px
 body[data-audience="company"] .stat-band,
 body[data-audience="university"] .stat-band { display: none; }
 .stat-band-inner { width: min(100%, var(--content)); margin: 0 auto; }
-.stat-band-head h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 4vw, 58px); line-height: 1.04; letter-spacing: -.05em; }
+.stat-band-head h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(34px, 4vw, 58px); line-height: 1.04; letter-spacing: -.05em; }
 .stat-band-head > p:last-child { margin: 16px 0 0; max-width: 62ch; color: var(--muted); font-size: 17px; line-height: 1.6; }
 .stat-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; margin: clamp(34px, 4vw, 52px) 0 0; padding: 0; }
 .stat-list li { display: grid; gap: 9px; align-content: start; padding: 24px; border: 1px solid var(--line); border-radius: 0; background: linear-gradient(170deg, var(--gold-pale), #fff); }
@@ -2810,12 +2810,12 @@ body[data-audience="student"] .covenda-tree { display: none; }
 .ct-inner { padding: clamp(18px, 3cqw, 40px) clamp(12px, 2cqw, 28px) clamp(14px, 2.5cqw, 30px); }
 .ct-head { text-align: center; margin-bottom: .6cqw; }
 .ct-eyebrow { font-family: var(--font-mono); font-size: clamp(9px, .85cqw, 12px); font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--gold-deep); }
-.ct-title { margin: clamp(4px, .5cqw, 10px) 0 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 3.3cqw, 54px); line-height: 1.08; letter-spacing: -.03em; }
+.ct-title { margin: clamp(4px, .5cqw, 10px) 0 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 3.3cqw, 54px); line-height: 1.08; letter-spacing: -.03em; }
 .ct-stage { position: relative; width: 100%; aspect-ratio: 1400 / 1000; margin: 0 auto; }
 .ct-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; display: block; }
 .ct-card { position: absolute; width: clamp(164px, 20cqw, 288px); padding: clamp(12px, 1.3cqw, 18px) clamp(13px, 1.4cqw, 19px); border: 1px solid var(--line); border-radius: 0; background: #fffdf8; box-shadow: 0 12px 34px rgba(60,45,10,.09); }
 .ct-k { font-size: clamp(8px, .8cqw, 11px); font-weight: 600; letter-spacing: .15em; text-transform: uppercase; color: var(--gold-deep); }
-.ct-t { margin: .4cqw 0 .5cqw; font-family: var(--font-display); font-weight: 400; font-size: clamp(13px, 1.35cqw, 19px); color: var(--ink); }
+.ct-t { margin: .4cqw 0 .5cqw; font-family: var(--font-display); font-weight: 700; font-size: clamp(13px, 1.35cqw, 19px); color: var(--ink); }
 .ct-d { font-size: clamp(10px, .98cqw, 13.5px); line-height: 1.5; color: var(--muted); }
 .ct-chips { display: flex; flex-wrap: wrap; gap: clamp(4px, .45cqw, 7px); margin-top: .75cqw; }
 .ct-chip { padding: clamp(3px, .35cqw, 5px) clamp(6px, .7cqw, 10px); border: 1px solid var(--gold-light); border-radius: 0; background: var(--gold-pale); color: var(--gold-deep); font-size: clamp(8px, .8cqw, 11px); white-space: nowrap; }
@@ -2934,7 +2934,7 @@ body[data-audience="student"] .covenda-tree { display: none; }
   .gold-header { grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); }
   .gold-header .gold-tile { display: block; }
 }
-.gold-header h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(34px, 3.6vw, 54px); line-height: 1.05; letter-spacing: -.05em; }
+.gold-header h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(34px, 3.6vw, 54px); line-height: 1.05; letter-spacing: -.05em; }
 .gold-header .feature-kicker { margin: 0 0 14px; }
 .gold-header p { margin: 16px 0 0; color: var(--muted); font-size: 16px; line-height: 1.6; max-width: 60ch; }
 
@@ -3217,7 +3217,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
   color: #c5c3ba;
   font-family: var(--font-display);
   font-size: 43px;
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: -.055em;
   line-height: 1;
 }
@@ -3237,7 +3237,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(21px, 2vw, 28px);
-  font-weight: 500;
+  font-weight: 650;
   letter-spacing: -.035em;
   line-height: 1.02;
 }
@@ -3365,7 +3365,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 
 .batch-deep { display: grid; gap: clamp(30px, 4vw, 54px); margin-top: clamp(32px, 4.5vw, 60px); }
 .bd-panel { padding: clamp(24px, 3.4vw, 44px); border: 1px solid var(--line-strong); background: #fff; }
-.bd-head h3 { margin: 6px 0 0; font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 40px); font-weight: 500; line-height: 1.06; letter-spacing: -.025em; }
+.bd-head h3 { margin: 6px 0 0; font-family: var(--font-display); font-size: clamp(26px, 3.4vw, 40px); font-weight: 650; line-height: 1.06; letter-spacing: -.025em; }
 .bd-lede { max-width: 68ch; margin: 14px 0 0; color: var(--muted); font-size: var(--step-body); line-height: 1.65; }
 
 /* Flow diagram: rails -> bar -> review -> batch. Sized generously; it is the explanation,
@@ -3418,7 +3418,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
    than a form with an aside. The left is what you can do now; the right is what it becomes. */
 .club-register { padding: clamp(56px, 7vw, 96px) var(--page-gutter); }
 .club-register > * { width: min(100%, var(--content)); margin-inline: auto; }
-.club-head h2 { margin: 12px 0 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(30px, 3.9vw, 52px); line-height: 1.05; letter-spacing: -.04em; text-wrap: balance; }
+.club-head h2 { margin: 12px 0 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(30px, 3.9vw, 52px); line-height: 1.05; letter-spacing: -.04em; text-wrap: balance; }
 .club-lede { margin: 18px 0 0; max-width: 66ch; font-size: clamp(16.5px, 1.4vw, 19px); line-height: 1.55; color: var(--soft); }
 
 .club-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; margin-top: clamp(34px, 4vw, 54px); border-top: 1px solid var(--rule, var(--line-strong)); }
@@ -3478,7 +3478,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .club-more summary span { font-weight: 400; color: var(--soft); font-size: 14px; }
 .club-more .field-grid { margin-top: 14px; }
 
-.club-ladder h3 { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 500; letter-spacing: -.02em; }
+.club-ladder h3 { margin: 0; font-family: var(--font-display); font-size: 21px; font-weight: 650; letter-spacing: -.02em; }
 
 @media (max-width: 900px) { .club-grid { grid-template-columns: 1fr; } }
 
@@ -3530,7 +3530,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .ib-actions .quiet-link { margin-top: 0; font-size: 14px; }
 
 .ib-result { margin-top: 24px; padding: clamp(20px, 2.6vw, 30px); border: 1px solid var(--gold-light); background: var(--gold-pale); }
-.ib-result-head h3 { margin: 4px 0 0; font-family: var(--font-display); font-size: clamp(21px, 2.4vw, 27px); font-weight: 500; letter-spacing: -.02em; }
+.ib-result-head h3 { margin: 4px 0 0; font-family: var(--font-display); font-size: clamp(21px, 2.4vw, 27px); font-weight: 650; letter-spacing: -.02em; }
 .ib-lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-top: 20px; }
 .ib-line { display: grid; gap: 3px; padding: 13px 15px; border: 1px solid var(--gold-light); background: rgba(255,255,255,.72); }
 .ib-line span { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--gold-deep); }
@@ -3579,7 +3579,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .vdemo-tab:hover { border-color: var(--gold); color: var(--gold-deep); }
 .vdemo-tab[aria-selected="true"] { border-color: var(--gold-deep); background: var(--gold-deep); color: #fff; }
 .vdemo-body { margin-top: clamp(24px, 3vw, 36px); padding: clamp(24px, 3.4vw, 40px); border: 1px solid var(--line-strong); }
-.vdemo-company { margin: 0; font-family: var(--font-display); font-size: clamp(20px, 2.4vw, 27px); font-weight: 500; letter-spacing: -.02em; }
+.vdemo-company { margin: 0; font-family: var(--font-display); font-size: clamp(20px, 2.4vw, 27px); font-weight: 650; letter-spacing: -.02em; }
 .vdemo-need { max-width: 66ch; margin: 10px 0 0; color: var(--muted); font-size: var(--step-body); line-height: 1.6; }
 .vdemo-beats { display: grid; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); gap: 18px; margin: clamp(24px, 3vw, 34px) 0 0; padding: 0; list-style: none; }
 .vdemo-beats li { display: grid; grid-template-columns: 30px 1fr; gap: 13px; align-items: start; padding-top: 16px; border-top: 2px solid var(--gold-light); }
@@ -3675,7 +3675,7 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
   color: var(--ink);
   font-family: var(--font-display);
   font-size: clamp(34px, 6vw, 82px);
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: -.055em;
   opacity: 0;
   transform: scale(.88) rotate(-2deg);
@@ -3741,7 +3741,7 @@ body.is-audience-transitioning .audience-transition span {
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(26px, 3vw, 40px);
-  font-weight: 430;
+  font-weight: 700;
   letter-spacing: -.04em;
 }
 .student-open-join p:last-child {
@@ -3804,7 +3804,7 @@ body.is-audience-transitioning .audience-transition span {
   display: block;
   font-family: var(--font-display);
   font-size: clamp(25px, 3vw, 38px);
-  font-weight: 430;
+  font-weight: 700;
   letter-spacing: -.04em;
 }
 .student-vertical-picker legend small {
@@ -3851,7 +3851,7 @@ body.is-audience-transitioning .audience-transition span {
   color: inherit;
   font-family: var(--font-display);
   font-size: clamp(19px, 1.65vw, 25px);
-  font-weight: 430;
+  font-weight: 700;
   letter-spacing: -.035em;
   line-height: 1.06;
 }
@@ -3895,7 +3895,7 @@ body.is-audience-transitioning .audience-transition span {
 .student-specialty-heading strong {
   font-family: var(--font-display);
   font-size: clamp(20px, 2vw, 27px);
-  font-weight: 450;
+  font-weight: 700;
   letter-spacing: -.035em;
 }
 .student-specialty-heading button {
@@ -4120,7 +4120,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(19px, 1.55vw, 25px);
-  font-weight: 500;
+  font-weight: 650;
   letter-spacing: -.035em;
   line-height: 1.08;
 }
@@ -4226,7 +4226,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
   margin: 17px 0 0;
   font-family: var(--font-display);
   font-size: clamp(25px, 2.15vw, 34px);
-  font-weight: 500;
+  font-weight: 650;
   letter-spacing: -.045em;
   line-height: .98;
 }
@@ -4346,7 +4346,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
   display: block;
   font-family: var(--font-display);
   font-size: clamp(16px, 1.4vw, 20px);
-  font-weight: 560;
+  font-weight: 650;
   letter-spacing: -.025em;
 }
 .exchange-output .exchange-output-arrow { width: 18px; height: 18px; color: var(--gold-deep); }
@@ -4598,7 +4598,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 .hero-home h1 {
   color: #fff;
   font-family: var(--font-display);
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: -.045em;
   text-shadow: 0 2px 34px rgba(0,0,0,.45);
 }
@@ -4692,7 +4692,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
   color: #fff;
   font-family: var(--font-display);
   font-size: clamp(20px, 1.8vw, 24px);
-  font-weight: 500;
+  font-weight: 650;
   letter-spacing: -.02em;
 }
 
@@ -4803,7 +4803,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
    student picks between first. */
 .batch-group + .batch-group { margin-top: clamp(30px, 4vw, 48px); }
 .batch-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
-.batch-group-head h3 { margin: 0; font-family: var(--font-display); font-size: clamp(19px, 2.1vw, 25px); font-weight: 500; letter-spacing: -.02em; }
+.batch-group-head h3 { margin: 0; font-family: var(--font-display); font-size: clamp(19px, 2.1vw, 25px); font-weight: 650; letter-spacing: -.02em; }
 .batch-group-head span { color: var(--soft); font-family: var(--font-mono); font-size: 12px; }
 .batch-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: clamp(12px, 1.4vw, 18px); align-items: stretch; }
 @media (min-width: 1180px) { .batch-row { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
@@ -4819,7 +4819,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
   cursor: pointer;
   transition: transform .16s cubic-bezier(.2,.8,.3,1), border-color .16s ease, box-shadow .16s ease;
 }
-.batch-card.is-pickable .batch-title { margin: 0; font-family: var(--font-display); font-size: clamp(18px, 1.5vw, 22px); font-weight: 500; letter-spacing: -.02em; line-height: 1.16; }
+.batch-card.is-pickable .batch-title { margin: 0; font-family: var(--font-display); font-size: clamp(18px, 1.5vw, 22px); font-weight: 650; letter-spacing: -.02em; line-height: 1.16; }
 .batch-card.is-pickable .batch-desc { margin: 0; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
 .batch-card .batch-tier { justify-self: start; padding: 4px 10px; border: 1px solid var(--line-strong); font-size: 10.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
 .batch-card .batch-tier.is-elite { border-color: var(--gold-deep); background: var(--gold-pale); color: var(--gold-deep); }
@@ -4849,10 +4849,10 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 .ref-card { margin: 0; border: 1px solid var(--gold-light); background: var(--gold-pale); }
 .ref-card figcaption { padding: 12px 20px; border-bottom: 1px solid var(--gold-light); font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--gold-deep); }
 .ref-card-body { padding: clamp(18px, 2.2vw, 26px); }
-.ref-card-org { margin: 0 0 16px; font-family: var(--font-display); font-size: 20px; font-weight: 500; letter-spacing: -.015em; }
+.ref-card-org { margin: 0 0 16px; font-family: var(--font-display); font-size: 20px; font-weight: 650; letter-spacing: -.015em; }
 .ref-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .ref-stats div { padding: 14px 16px; border: 1px solid var(--gold-light); background: rgba(255,255,255,.72); }
-.ref-stats b { display: block; font-family: var(--font-display); font-size: 30px; font-weight: 500; line-height: 1; color: var(--gold-deep); }
+.ref-stats b { display: block; font-family: var(--font-display); font-size: 30px; font-weight: 650; line-height: 1; color: var(--gold-deep); }
 .ref-stats span { display: block; margin-top: 5px; color: var(--muted); font-size: 12.5px; }
 .ref-card-note { margin: 16px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
 .ref-illus { display: flex; align-items: flex-start; gap: 9px; margin-top: clamp(20px, 2.4vw, 28px); color: var(--soft); font-size: 13px; }
@@ -4907,7 +4907,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 .cred-ways li { display: grid; gap: 5px; padding: 18px 20px; border: 1px solid var(--line-strong); background: #fff; }
 .cred-ways li.is-strong { border-color: var(--gold-deep); background: var(--gold-pale); }
 .cred-ways li.is-light { border-style: dashed; background: transparent; }
-.cred-ways b { font-family: var(--font-display); font-size: 18px; font-weight: 500; letter-spacing: -.015em; }
+.cred-ways b { font-family: var(--font-display); font-size: 18px; font-weight: 650; letter-spacing: -.015em; }
 .cred-ways span { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
 .cred-ways li.is-light b, .cred-ways li.is-light span { color: var(--soft); }
 
@@ -4923,7 +4923,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 .cred-ladder li.is-proven { background: #f4faf5; border-color: var(--success); }
 .cred-step { font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; color: var(--gold-deep); }
 .cred-ladder li.is-proven .cred-step { color: var(--success); }
-.cred-ladder b { font-family: var(--font-display); font-size: 18px; font-weight: 500; letter-spacing: -.015em; line-height: 1.2; }
+.cred-ladder b { font-family: var(--font-display); font-size: 18px; font-weight: 650; letter-spacing: -.015em; line-height: 1.2; }
 .cred-sub { color: var(--muted); font-size: 13px; line-height: 1.5; }
 @media (max-width: 640px) {
   .cred-ladder li { border-right-width: 1px; border-bottom-width: 0; }
@@ -4966,7 +4966,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 .tb-side.is-batch { background: var(--gold-pale); }
 .tb-tag { margin: 0; font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
 .tb-side.is-batch .tb-tag { color: var(--gold-deep); }
-.tb-side h3 { margin: 0; font-family: var(--font-display); font-size: clamp(19px, 2vw, 24px); font-weight: 500; letter-spacing: -.02em; line-height: 1.2; }
+.tb-side h3 { margin: 0; font-family: var(--font-display); font-size: clamp(19px, 2vw, 24px); font-weight: 650; letter-spacing: -.02em; line-height: 1.2; }
 .tb-side p { margin: 0; max-width: 46ch; color: var(--muted); font-size: var(--step-body-sm); line-height: 1.6; }
 .tb-out { margin-top: 6px !important; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink) !important; }
 .tb-out b { color: var(--gold-deep); }
@@ -4995,7 +4995,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
    together with a decorative banner wedged in the middle. */
 .tb-divider { width: min(100%, 1080px); height: 1px; margin: clamp(34px, 5vw, 60px) auto clamp(26px, 3.4vw, 40px); background: var(--line); }
 .batch-browse-head { display: grid; justify-items: center; gap: 8px; text-align: center; margin-bottom: clamp(22px, 3vw, 34px); }
-.batch-browse-head h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 2.8vw, 38px); letter-spacing: -.03em; }
+.batch-browse-head h3 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(26px, 2.8vw, 38px); letter-spacing: -.03em; }
 .batch-browse-head p { margin: 0; max-width: 52ch; color: var(--muted); font-size: var(--step-body-sm); }
 
 /* The section intro ran the full content width, so the lede under a 60px display heading
@@ -5036,7 +5036,7 @@ body[data-audience="company"] .slop-section { display: block; }
 .slop-head .feature-kicker { justify-content: center; color: var(--gold-light); }
 .slop-head h2 {
   margin: 0 auto 18px; max-width: 22ch;
-  font-family: var(--font-display); font-weight: 400;
+  font-family: var(--font-display); font-weight: 700;
   font-size: clamp(34px, 4.4vw, 62px); line-height: 1.04; letter-spacing: -.045em;
   color: #fff; text-wrap: balance;
 }
@@ -5045,7 +5045,7 @@ body[data-audience="company"] .slop-section { display: block; }
 .slop-grid { display: grid; gap: 1px; margin-top: clamp(38px, 5vw, 60px); background: #2b2619; border: 1px solid #2b2619; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
 .slop-card { display: grid; align-content: start; gap: 10px; padding: clamp(24px, 2.8vw, 34px); background: #14120d; }
 .slop-n { font-family: var(--font-mono); font-size: 12px; letter-spacing: .16em; color: var(--gold-light); }
-.slop-card h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(20px, 2vw, 25px); letter-spacing: -.02em; line-height: 1.22; color: #fff; }
+.slop-card h3 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: clamp(20px, 2vw, 25px); letter-spacing: -.02em; line-height: 1.22; color: #fff; }
 .slop-card p { margin: 0; color: #a9a190; font-size: 15px; line-height: 1.65; }
 
 .slop-answer { margin-top: clamp(34px, 4vw, 52px); padding: clamp(24px, 3vw, 38px); border: 1px solid var(--gold-deep); background: #191610; }
@@ -5074,7 +5074,7 @@ body[data-audience="company"] .slop-section { display: block; }
 .made-by {
   width: min(100%, var(--content)); margin: 0 auto clamp(30px, 4vw, 52px);
   padding: 0 var(--page-gutter); text-align: center;
-  font-family: var(--font-display); font-weight: 400;
+  font-family: var(--font-display); font-weight: 700;
   font-size: clamp(19px, 2vw, 26px); letter-spacing: -.02em; color: var(--muted);
 }
 
@@ -5096,7 +5096,7 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(62px, 6.8vw, 96px);
-  font-weight: 400;
+  font-weight: 700;
   line-height: .96;
   letter-spacing: -.05em;
 }
@@ -5295,7 +5295,7 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
   margin: 0;
   font-family: var(--font-display);
   font-size: clamp(32px, 3.8vw, 56px);
-  font-weight: 400;
+  font-weight: 700;
   letter-spacing: -.04em;
   text-align: center;
 }
