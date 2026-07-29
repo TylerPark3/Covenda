@@ -1091,10 +1091,30 @@ export default async function handler(req, res, dependencies = {}) {
         // Grouped by vertical, because "who do we have in software" is the question actually
         // being asked. Someone with two verticals appears under both, which is correct: they
         // are available for both.
+        //
+        // Canonicalised first. These strings come from whatever a student typed or whichever
+        // form version they filled in, so "Software & AI", "Software and AI" and
+        // "software-ai" were rendering as three separate groups of the same people. Grouping
+        // raw free text answers the wrong question: it tells you how many spellings exist.
+        const canonicalVertical = raw => {
+          const key = String(raw || '').toLowerCase()
+            .replace(/&/g, 'and').replace(/[^a-z0-9]+/g, ' ').trim();
+          if (!key) return 'Not stated';
+          if (/^software|^ai\b|machine learning|^tech/.test(key)) return 'Software & AI';
+          if (/account|financ|banking|invest/.test(key)) return 'Accounting & finance';
+          if (/health|clinic|medic|biotech/.test(key)) return 'Healthcare operations';
+          if (/consumer|retail|commerce|growth|brand/.test(key)) return 'Consumer & retail';
+          if (/consult|profession|legal|research|strateg/.test(key)) return 'Professional services';
+          if (/not sure|everything|any/.test(key)) return 'Open to anything';
+          // Unrecognised values are kept as written rather than swept into an Other bucket:
+          // an operator seeing the real string can decide whether it needs a new rule.
+          return String(raw).trim();
+        };
+
         const byVertical = {};
         for (const person of people || []) {
           const verticals = Array.isArray(person.verticals) && person.verticals.length
-            ? person.verticals
+            ? [...new Set(person.verticals.map(canonicalVertical))]
             : ['Not stated'];
           for (const v of verticals) (byVertical[v] ||= []).push(person);
         }

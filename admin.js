@@ -203,6 +203,11 @@ async function renderPeopleDirectory() {
     gh.append(name, count);
     section.append(gh);
 
+    // Rows need their own container so they can lay out as a grid without the group heading
+    // becoming a grid item alongside them.
+    const rows = document.createElement('div');
+    rows.className = 'person-rows';
+
     group.members.forEach(person => {
       const row = document.createElement('div');
       row.className = 'person-row';
@@ -228,8 +233,9 @@ async function renderPeopleDirectory() {
         n.title = 'Submitted more than once';
         row.append(n);
       }
-      section.append(row);
+      rows.append(row);
     });
+    section.append(rows);
     host.append(section);
   });
 }

@@ -108,3 +108,34 @@ test('the schema handler uses the authenticated client', () => {
   assert.match(block, /operator\.supabase\.from\(spec\.table\)/);
   assert.ok(!/(?<![.\w])supabase\.from\(spec\.table\)/.test(block));
 });
+
+// ── The operator directory layout ─────────────────────────────────────────────────────
+// .admin-main is a two-column grid, so a section dropped into it becomes a grid item and lands
+// in the 350-440px detail rail. The directory rendered inside that rail with the entire left
+// half of the page empty.
+test('the full-width operator panels span both columns', () => {
+  const css = readFileSync(root + 'admin.css', 'utf8');
+  const rule = css.match(/\.admin-health, \.admin-schema, \.admin-people, \.admin-sims \{[^}]*\}/);
+  assert.ok(rule, 'the full-width panels declare no column span');
+  assert.match(rule[0], /grid-column: 1 \/ -1/);
+  assert.match(rule[0], /max-width: 1240px/, 'unbounded text on a wide screen is unreadable');
+});
+
+test('people lay out as a grid rather than one column in a rail', () => {
+  const css = readFileSync(root + 'admin.css', 'utf8');
+  assert.match(css, /\.person-rows \{[^}]*grid-template-columns: repeat\(auto-fill/);
+  // The rows need their own container or the group heading becomes a grid item beside them.
+  assert.match(js, /rows\.className = 'person-rows'/);
+  assert.match(js, /rows\.append\(row\)/);
+  assert.match(js, /section\.append\(rows\)/);
+});
+
+// Grouping raw free text answers the wrong question: it reports how many spellings exist.
+test('verticals are canonicalised before grouping', () => {
+  const block = api.slice(api.indexOf('const canonicalVertical'), api.indexOf('const groups = Object.entries'));
+  assert.match(block, /replace\(\/&\/g, 'and'\)/, '"Software & AI" and "Software and AI" must merge');
+  assert.match(block, /new Set\(person\.verticals\.map\(canonicalVertical\)\)/, 'two spellings of one vertical must not double-list a person');
+  // An unrecognised value is shown as written rather than swept into an Other bucket, so an
+  // operator can see whether it needs a rule.
+  assert.match(block, /return String\(raw\)\.trim\(\);/);
+});
