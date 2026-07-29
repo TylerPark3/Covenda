@@ -249,3 +249,137 @@ test('a student is told what they were assessed on and what was not used', async
   assert.ok(d.notUsed.some(n => /No automated rejection/.test(n)));
   assert.ok(d.rights.some(r => /human makes the decision/i.test(r)));
 });
+
+// ── The six strategies that were specified and missing ────────────────────────────────
+
+test('the ambiguous take-home plants exactly one ambiguity and never announces it', async () => {
+  const { ambiguousTakeHome, TAKE_HOME_RESPONSES, TAKE_HOME_FAILS } = await import('../../api/super-intern.js');
+  const t = ambiguousTakeHome({ vertical: 'data work' });
+  assert.match(t.plantedAmbiguity, /Exactly one requirement/);
+  // Telling a student one requirement is ambiguous turns the exercise into a hunt for it.
+  assert.ok(!/ambiguous|unclear requirement/i.test(t.framing), 'the framing gives the plant away');
+  assert.equal(TAKE_HOME_RESPONSES.length, 4);
+  for (const r of TAKE_HOME_RESPONSES) assert.ok(r.looksLike && r.reads, `${r.id} is underdescribed`);
+  // An undocumented guess reads identically to a misunderstanding.
+  assert.ok(TAKE_HOME_FAILS.some(f => /never mentioned there was a choice/i.test(f)));
+});
+
+test('stalling and over-asking are read as costs, not as character failures', async () => {
+  const { TAKE_HOME_RESPONSES } = await import('../../api/super-intern.js');
+  const asked = TAKE_HOME_RESPONSES.find(r => r.id === 'asked_all');
+  assert.match(asked.reads, /Careful/, 'over-asking should be read as careful, then costed');
+  assert.match(asked.reads, /unblocking service/);
+});
+
+test('the unprompted build costs the student nothing and reads what already exists', async () => {
+  const { unpromptedBuild } = await import('../../api/super-intern.js');
+  assert.equal(unpromptedBuild([]).minutes, 0, 'this must not add time to the battery');
+
+  assert.equal(unpromptedBuild([]).tier, 'none');
+  assert.equal(unpromptedBuild([{ }]).tier, 'started');
+  assert.equal(unpromptedBuild([{ finished: true }]).tier, 'finished');
+  assert.equal(unpromptedBuild([{ usersReported: 12 }]).tier, 'used');
+  // Assigned work is not unprompted work, whatever else is true about it.
+  assert.equal(unpromptedBuild([{ assigned: true, deploymentUrl: 'https://x' }]).tier, 'none');
+  assert.equal(unpromptedBuild([{ finished: true }, { finished: true }]).repeated, true);
+});
+
+test('having built nothing unprompted is stated as an absent signal, not a deficiency', async () => {
+  const { unpromptedBuild } = await import('../../api/super-intern.js');
+  assert.match(unpromptedBuild([]).band.reads, /Says nothing bad about the person/);
+});
+
+test('live debugging reads the search, and says the fix is not the point', async () => {
+  const { liveDebugging, DEBUG_READS } = await import('../../api/super-intern.js');
+  const d = liveDebugging({});
+  assert.match(d.notScoredOn, /Whether the bug is fixed/);
+  // A student who thinks only the fix counts stops narrating, and the narration is the test.
+  assert.match(d.framing, /Think out loud/);
+  assert.ok(DEBUG_READS.some(r => /Reproduced it before changing/.test(r.signal)));
+  assert.ok(DEBUG_READS.some(r => /ruled out/.test(r.signal)), 'communicating the search must be read');
+});
+
+test('system design tests seams, not vocabulary, in every vertical', async () => {
+  const { systemDesign, DESIGN_PROMPTS } = await import('../../api/super-intern.js');
+  for (const slug of batchesByVertical().map(v => v.verticalSlug)) {
+    assert.ok(DESIGN_PROMPTS[slug], `${slug} has no design prompt`);
+    const d = systemDesign(slug);
+    assert.match(d.notScoredOn, /Terminology/);
+    assert.ok(d.minutes <= 30);
+  }
+  assert.equal(systemDesign('nope'), null);
+  // Healthcare prompts must never imply real records.
+  assert.match(DESIGN_PROMPTS['healthcare-operations'], /Synthetic only/);
+});
+
+// A generalist who is weak everywhere must not outrank a specialist who can reach one step out.
+test('cross-functional reach is only readable once there is a primary', async () => {
+  const { crossFunctional } = await import('../../api/super-intern.js');
+  const noCentre = crossFunctional({ evidenceByFunction: { product: [1], operations: [1] } });
+  assert.match(noCentre.note, /breadth without a strong centre is not the signal/);
+
+  const specialist = crossFunctional({ primary: 'engineering', evidenceByFunction: { engineering: [1] } });
+  assert.equal(specialist.reach, 0);
+  assert.match(specialist.note, /right answer for some teams/);
+
+  const reaching = crossFunctional({ primary: 'engineering', evidenceByFunction: { engineering: [1], product: [1] } });
+  assert.equal(reaching.reach, 1);
+  assert.equal(reaching.minutes, 0);
+});
+
+// The intake question that changes the assessment: what will you teach anyway.
+test('the reverse audit surfaces what NOT to assess', async () => {
+  const { reverseAudit, REVERSE_AUDIT_QUESTIONS } = await import('../../api/super-intern.js');
+  assert.ok(REVERSE_AUDIT_QUESTIONS.every(q => q.builds), 'every question must say what it builds');
+  assert.ok(REVERSE_AUDIT_QUESTIONS.some(q => q.id === 'two_weeks'));
+  assert.ok(REVERSE_AUDIT_QUESTIONS.some(q => q.id === 'senior_time'));
+  assert.ok(REVERSE_AUDIT_QUESTIONS.some(q => q.id === 'automatable'));
+
+  const out = reverseAudit({ two_weeks: 'our deploy tooling', automatable: 'boilerplate CRUD' });
+  assert.equal(out.excludeFromAssessment.length, 2);
+  assert.match(out.excludeFromAssessment[0], /not worth a student's time/);
+  assert.match(out.excludeFromAssessment[1], /no longer the scarce part/);
+  assert.equal(out.complete, false);
+  assert.match(out.note, /generic in proportion to what is missing/);
+});
+
+test('a complete reverse audit reports itself complete', async () => {
+  const { reverseAudit, REVERSE_AUDIT_QUESTIONS } = await import('../../api/super-intern.js');
+  const answers = Object.fromEntries(REVERSE_AUDIT_QUESTIONS.map(q => [q.id, 'a real answer here']));
+  assert.equal(reverseAudit(answers).complete, true);
+});
+
+// ── The budget, across every combination ──────────────────────────────────────────────
+// The defence is mandatory and appended last. Adding it after the loop let a guided plan
+// finish at 92 minutes against a 90 minute cap, which defeats the cap.
+test('no plan exceeds the budget, for any autonomy, senior-hour value or vertical', async () => {
+  const { BUDGET_MINUTES } = await import('../../api/super-intern.js');
+  for (const autonomy of ['guided', 'semi_autonomous', 'autonomous', 'high_agency']) {
+    for (const seniorHoursPerWeek of [1, 2, 5, 12, null]) {
+      for (const vertical of batchesByVertical().map(v => v.verticalSlug)) {
+        const plan = assessmentPlan({ vertical, autonomy, seniorHoursPerWeek });
+        assert.ok(plan.minutes <= BUDGET_MINUTES,
+          `${autonomy}/${seniorHoursPerWeek}h/${vertical} runs to ${plan.minutes} minutes`);
+        assert.equal(plan.components[plan.components.length - 1].id, 'defense');
+      }
+    }
+  }
+});
+
+// A component that disappears with no trace is a silent cap.
+test('nothing is dropped silently: time and relevance are reported separately', () => {
+  const plan = assessmentPlan({ autonomy: 'guided', seniorHoursPerWeek: 12 });
+  assert.ok(Array.isArray(plan.deferredToTrial));
+  assert.ok(Array.isArray(plan.notRelevant));
+  for (const item of plan.notRelevant) assert.ok(item.because, `${item.id} does not say which dimension it needed`);
+  const run = plan.components.map(c => c.id);
+  const accounted = [...run, ...plan.deferredToTrial.map(c => c.id), ...plan.notRelevant.map(c => c.id)];
+  for (const id of ['blocker', 'take_home', 'live_debug', 'figure_it_out', 'system_design', 'simulation']) {
+    assert.ok(accounted.includes(id), `${id} vanished without being run, deferred or explained`);
+  }
+});
+
+test('the asynchronous reads are always present and always free', () => {
+  const plan = assessmentPlan({ autonomy: 'guided' });
+  assert.deepEqual(plan.asynchronous.map(a => a.id), ['unprompted', 'cross_functional']);
+});

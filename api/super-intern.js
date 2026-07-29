@@ -359,24 +359,44 @@ export function assessmentPlan({
     { id: 'verification', label: 'Verification test', minutes: 20, why: 'Whether they can tell trustworthy output from plausible output.' },
     { id: 'deep_dive', label: 'Deep Dive', minutes: 12, why: 'Whether they can learn something hard and explain it.' },
     { id: 'blocker', label: 'Blocker account', minutes: 15, why: 'What they do when the obvious path closes.', needs: 'agency' },
+    { id: 'system_design', label: 'System design', minutes: 25, why: 'Whether they can find the seams in a problem.' },
+    { id: 'take_home', label: 'Ambiguous take-home', minutes: 45, why: 'What they do when one requirement admits two readings.', needs: 'agency' },
+    { id: 'live_debug', label: 'Live debugging', minutes: 45, why: 'The shape of the search when the answer is not obvious.', needs: 'capability' },
     { id: 'figure_it_out', label: 'Figure It Out', minutes: 45, why: 'Finding and validating an answer nobody gave them.', needs: 'resourcefulness' },
     { id: 'simulation', label: 'Scenario sitting', minutes: 35, why: 'Decisions under incomplete information, with the trade named.' },
   ];
 
+  // Costs the student nothing: the artifacts already exist and the reach is derived from them.
+  // Always read, never budgeted.
+  const asynchronous = [
+    { id: 'unprompted', label: 'Unprompted build review', why: 'What they made that nobody asked for.' },
+    { id: 'cross_functional', label: 'Cross-functional reach', why: 'Whether they contribute either side of their own discipline.' },
+  ];
+
+  // The defence is mandatory and appended last, so its cost is reserved BEFORE anything else
+  // is admitted. Adding it afterwards let the battery finish at 92 minutes against a 90 minute
+  // cap, which is the whole point of having a cap.
+  const DEFENCE_MINUTES = 10;
+  const spendable = BUDGET_MINUTES - DEFENCE_MINUTES;
+
   const components = [];
   let minutes = 0;
   const deferred = [];
+  const notRelevant = [];
   for (const c of candidates) {
-    if (c.needs && !focus.includes(c.needs)) continue;
+    // Skipped because this environment does not call for it, which is different from skipped
+    // for time. Both are reported: a component that disappears with no trace is a silent cap,
+    // and nobody can audit an assessment they cannot see the shape of.
+    if (c.needs && !focus.includes(c.needs)) { notRelevant.push({ id: c.id, label: c.label, because: c.needs }); continue; }
     // Objective and verification are never dropped: one sets the floor, the other measures the
     // half of AI-era work that has not commoditised.
     const required = ['objective', 'verification'].includes(c.id);
-    if (!required && minutes + c.minutes > BUDGET_MINUTES) { deferred.push(c); continue; }
+    if (!required && minutes + c.minutes > spendable) { deferred.push(c); continue; }
     components.push({ id: c.id, label: c.label, minutes: c.minutes, why: c.why });
     minutes += c.minutes;
   }
-  components.push({ id: 'defense', label: 'Defence', minutes: 10, why: 'The only part no artifact and no score can stand in for.' });
-  minutes += 10;
+  components.push({ id: 'defense', label: 'Defence', minutes: DEFENCE_MINUTES, why: 'The only part no artifact and no score can stand in for.' });
+  minutes += DEFENCE_MINUTES;
 
   return {
     version: SUPER_INTERN_VERSION,
@@ -389,8 +409,13 @@ export function assessmentPlan({
     // Named rather than silently dropped. What did not fit belongs in the paid trial, which is
     // where deeper validation should happen anyway.
     deferredToTrial: deferred.map(c => ({ id: c.id, label: c.label, why: c.why })),
+    // Not run because this role does not weight that dimension. Named so a company can see
+    // what its own stated constraints excluded, and argue with it.
+    notRelevant,
+    asynchronous,
     deepDive: deepDiveFor(vertical),
     verification: verificationTest(vertical),
+    design: systemDesign(vertical),
     // Named so a company sees which of its own constraints shaped the assessment.
     because: [
       `Autonomy expected: ${level.replace(/_/g, ' ')}.`,
@@ -515,5 +540,273 @@ export function candidateDisclosure(plan = {}) {
       'A human makes the decision, and you can ask them to explain it.',
       'You can correct anything factually wrong in your profile.',
     ],
+  };
+}
+
+// ── The Ambiguous Take-Home ───────────────────────────────────────────────────────────
+// A small, tightly scoped assignment with exactly ONE requirement left deliberately unclear.
+//
+// The ambiguity is the assessment. A student who freezes, or who asks for every detail before
+// starting, will do the same thing on day four of a real job while a senior waits. A student
+// who picks a reading, writes down why, and delivers has done the thing the job actually asks
+// for. Both are visible in an hour; neither is visible on a résumé.
+//
+// One ambiguity, not several. Two or more stops reading as a real brief and starts reading as
+// a trick, and a student who suspects a trick behaves differently from one who is working.
+export const TAKE_HOME_RESPONSES = [
+  {
+    id: 'froze', label: 'Stalled',
+    looksLike: 'Did not start, or delivered only the unambiguous part.',
+    reads: 'Needs the specification to be complete before work begins. Expensive on a team that writes rough briefs.',
+  },
+  {
+    id: 'asked_all', label: 'Asked for everything',
+    looksLike: 'Sent a list of clarifying questions and waited for answers before starting.',
+    reads: 'Careful, and it makes a senior the unblocking service for every unclear line.',
+  },
+  {
+    id: 'asked_and_moved', label: 'Asked, and started anyway',
+    looksLike: 'Raised the ambiguity, took a reading, and kept working while waiting.',
+    reads: 'The behaviour most teams actually want. Nothing is hidden and nothing is stalled.',
+  },
+  {
+    id: 'assumed_documented', label: 'Chose, and wrote down why',
+    looksLike: 'Picked a reading, stated it in the deliverable, and said what would change if the other reading was intended.',
+    reads: 'Decided under uncertainty and left an audit trail. Costs a senior almost nothing to check.',
+  },
+];
+
+// An undocumented guess is not the top band. It reads identically to a misunderstanding, and
+// the reviewer cannot tell which it was.
+export const TAKE_HOME_FAILS = [
+  'Chose a reading and never mentioned there was a choice.',
+  'Delivered something that answers neither reading cleanly.',
+  'Asked about the parts that were clear and not about the part that was not.',
+];
+
+export function ambiguousTakeHome({ vertical = 'this field', brief = null, ambiguity = null } = {}) {
+  return {
+    dimensions: ['agency', 'communication', 'discernment'],
+    minutes: 45,
+    brief: brief || `A small, self-contained piece of ${vertical} work.`,
+    // Never disclosed to the student. Saying "one requirement is ambiguous" converts the
+    // assessment into a hunt for the ambiguity, which is a different and less useful test.
+    plantedAmbiguity: ambiguity || 'Exactly one requirement admits two reasonable readings.',
+    framing: 'Deliver what you would actually send. If anything is unclear, handle it the way you would handle it at work.',
+    lookFor: TAKE_HOME_RESPONSES,
+    fails: TAKE_HOME_FAILS,
+    probe: 'Which part was unclear, and how did you decide what to do about it?',
+  };
+}
+
+// ── The Unprompted Build ──────────────────────────────────────────────────────────────
+// The strongest single signal in the whole framework, and the cheapest to collect: what has
+// this person made that nobody asked for.
+//
+// It is empirically-keyed biodata, which the 2022 re-analysis of selection validity puts among
+// the highest-validity job-specific predictors. It is also the one thing a course transcript
+// structurally cannot contain.
+//
+// Reviewed rather than assessed: the evidence already exists, so this is a protocol for
+// reading it, not another hour of a student's time.
+export const UNPROMPTED_TIERS = [
+  {
+    id: 'none', label: 'Nothing unprompted',
+    looksLike: 'Everything on the profile was assigned, graded, or paid for.',
+    reads: 'Says nothing bad about the person. It says this signal is simply absent, and something else has to carry the read.',
+  },
+  {
+    id: 'started', label: 'Started something',
+    looksLike: 'Began a project nobody set, and it stopped where the interesting part ended.',
+    reads: 'Initiative without follow-through. Common, and the gap between this and the next tier is most of the signal.',
+  },
+  {
+    id: 'finished', label: 'Finished it',
+    looksLike: 'Carried an unassigned project to something that runs.',
+    reads: 'Chose a problem and closed it, including the unglamorous last twenty percent.',
+  },
+  {
+    id: 'used', label: 'Someone else used it',
+    looksLike: 'Other people depend on it, and it changed after they did.',
+    reads: 'Survived contact with users. The strongest version, because the feedback loop was real.',
+  },
+];
+
+export function unpromptedBuild(entries = []) {
+  const rows = (entries || []).filter(e => e && !e.assigned);
+  const tier = !rows.length ? 'none'
+    : rows.some(e => e.usersReported || e.changedAfterFeedback) ? 'used'
+    : rows.some(e => e.deploymentUrl || e.finished) ? 'finished'
+    : 'started';
+  return {
+    dimension: 'agency',
+    // Asynchronous: nothing here costs the student time, because the artifacts already exist.
+    minutes: 0,
+    tier,
+    band: UNPROMPTED_TIERS.find(t => t.id === tier),
+    count: rows.length,
+    // Repetition is a different claim from magnitude, and the more useful one.
+    repeated: rows.length >= 2,
+    ask: 'What have you built that nobody told you to build?',
+    probes: [
+      'Why that problem, out of everything you could have worked on?',
+      'What did you have to finish that you did not enjoy?',
+      'What would you do differently if you started it again now?',
+    ],
+    ladder: UNPROMPTED_TIERS,
+  };
+}
+
+// ── Live Debugging ────────────────────────────────────────────────────────────────────
+// A small codebase, a failing test, a subtle bug, and deliberately incomplete documentation.
+//
+// Whether they fix it is the least interesting output. What is being read is the shape of the
+// search: a hypothesis that gets tested and discarded is worth more than a lucky fix, because
+// the job is mostly the former.
+export const DEBUG_BEHAVIOURS = [
+  { id: 'shotgun', label: 'Changed things to see what happened', reads: 'No model of the system. Every fix is a coincidence and none of them generalise.' },
+  { id: 'traced', label: 'Followed the data to where it went wrong', reads: 'Builds a model before touching anything. Slower to the first change, faster to the right one.' },
+  { id: 'hypothesised', label: 'Formed a hypothesis and tested it', reads: 'Treats the bug as a question with an answer. Discarding a wrong hypothesis quickly is the signal.' },
+  { id: 'narrowed', label: 'Cut the search space deliberately', reads: 'Halved the problem rather than reading all of it. The habit that scales to codebases nobody can hold in their head.' },
+];
+
+export const DEBUG_READS = [
+  { signal: 'Reproduced it before changing anything', means: 'Knows a bug you cannot reproduce is a bug you cannot verify you fixed.' },
+  { signal: 'Read the failing test before the source', means: 'Started from what is actually asserted rather than from what the code appears to do.' },
+  { signal: 'Said what they expected before running it', means: 'Was testing a belief. Someone who cannot say what they expect is not running an experiment.' },
+  { signal: 'Checked the fix did not break something else', means: 'Understands that a passing test is not the same as a correct change.' },
+  { signal: 'Said out loud what they had ruled out', means: 'Communication under uncertainty, which is what a senior needs to help without starting over.' },
+];
+
+export function liveDebugging({ vertical = 'software-ai', minutes = 45 } = {}) {
+  return {
+    dimensions: ['capability', 'discernment', 'communication'],
+    minutes,
+    vertical,
+    setup: 'A small codebase, one failing test, a bug that is not where the failure appears, and documentation that does not cover it.',
+    framing: 'Think out loud. We are reading how you narrow it down, not whether you finish.',
+    // Stated because it changes behaviour: a student who believes only the fix counts will stop
+    // narrating, and the narration is the assessment.
+    notScoredOn: 'Whether the bug is fixed inside the time.',
+    behaviours: DEBUG_BEHAVIOURS,
+    lookFor: DEBUG_READS,
+    probes: [
+      'What did you rule out, and what ruled it out?',
+      'What would you have checked next?',
+      'How would you stop this class of bug reaching production again?',
+    ],
+  };
+}
+
+// ── System Design, scaled down ────────────────────────────────────────────────────────
+// Not distributed systems trivia. Whether they can take something they already understand and
+// separate it into parts that do not bleed into each other.
+//
+// A student who has never run anything at scale cannot reason about sharding, and asking them
+// to is a test of whether they have read the right blog posts. Whether orders belong to users
+// and payments belong to orders is answerable from first principles, and it is the actual
+// skill.
+export const DESIGN_PROMPTS = {
+  'software-ai': 'Design the data model and endpoints for campus food delivery. Users, restaurants, orders, payments, delivery.',
+  'accounting-finance': 'Design the structure of a model that tracks one portfolio across positions, transactions, valuations and reporting periods.',
+  'healthcare-operations': 'Design how a clinic tracks a patient visit from referral through appointment, encounter, coding and billing. Synthetic only.',
+  'consumer-retail': 'Design how a retailer tracks one product from supplier through inventory, store allocation, sale and return.',
+  'professional-services': 'Design how a firm tracks an engagement from scope through workstreams, deliverables, review and invoicing.',
+};
+
+export const DESIGN_READS = [
+  { signal: 'Separated the entities cleanly', means: 'Can find the seams in a problem. The whole skill at this level.' },
+  { signal: 'Noticed a relationship that is not one-to-one', means: 'Read the domain rather than the nouns in the prompt.' },
+  { signal: 'Said what they were deliberately leaving out', means: 'Scoping. Distinguishes a simplification from an oversight.' },
+  { signal: 'Named a trade rather than reaching for a pattern', means: 'Reasoning from the problem, not from vocabulary.' },
+];
+
+export function systemDesign(verticalSlug = 'software-ai') {
+  const prompt = DESIGN_PROMPTS[verticalSlug];
+  if (!prompt) return null;
+  return {
+    dimensions: ['capability', 'communication'],
+    minutes: 25,
+    prompt,
+    framing: 'Whiteboard level. We are reading whether the pieces are separated sensibly, not whether you know the vocabulary.',
+    notScoredOn: 'Terminology, scale, or anything you would only know from having run it in production.',
+    lookFor: DESIGN_READS,
+    probes: [
+      'What did you leave out, and why was that safe?',
+      'What breaks first if this gets ten times bigger?',
+      'Which of these would you build last?',
+    ],
+  };
+}
+
+// ── Cross-functionality ───────────────────────────────────────────────────────────────
+// On a five-person team, the boundary of a title is a formality. What matters is whether
+// somebody can contribute one step either side of their own discipline.
+//
+// Measured as reach, not as breadth-for-its-own-sake. A strong specialist who can talk to the
+// next function is worth more than a generalist who is weak everywhere, and this must not
+// reward the second.
+export const FUNCTIONS = ['engineering', 'product', 'research', 'analysis', 'operations', 'communication', 'commercial'];
+
+export function crossFunctional({ primary = null, evidenceByFunction = {} } = {}) {
+  const held = FUNCTIONS.filter(f => (evidenceByFunction[f] || []).length > 0);
+  const secondary = held.filter(f => f !== primary);
+  return {
+    dimension: 'capability',
+    minutes: 0,
+    primary,
+    secondary,
+    reach: secondary.length,
+    // Stated so the number is never read as "more is better". Depth first, then reach.
+    note: !primary
+      ? 'No primary function established yet, so reach cannot be read: breadth without a strong centre is not the signal.'
+      : secondary.length === 0
+        ? `Evidence sits entirely in ${primary}. That is a specialist profile, which is the right answer for some teams.`
+        : `Primary in ${primary}, with evidence reaching ${secondary.join(' and ')}.`,
+    ask: 'Tell us about something you worked on that was outside what you would call your main skill.',
+    probe: 'What did you get wrong because it was outside your area, and how did you find out?',
+  };
+}
+
+// ── The company reverse audit ─────────────────────────────────────────────────────────
+// The intake question that changes everything. Companies asked "what skills do you want" answer
+// with a wish list; the assessment built from it tests everything equally and discriminates on
+// nothing.
+//
+// Asked instead: what does a student actually have to do here, what will you teach, and what
+// will you not. The gap between those is the assessment.
+export const REVERSE_AUDIT_QUESTIONS = [
+  { id: 'day_one', ask: 'What must this person already know on day one?', builds: 'The objective floor.' },
+  { id: 'two_weeks', ask: 'What could they pick up in a fortnight?', builds: 'Nothing. This is the part not worth testing.' },
+  { id: 'months', ask: 'What takes months, and who teaches it?', builds: 'Learning velocity, and the Deep Dive topic.' },
+  { id: 'blocked', ask: 'Where do juniors get stuck here?', builds: 'The blocker scenario and the debugging setup.' },
+  { id: 'senior_time', ask: 'What consumes the most senior time?', builds: 'Which dimensions the plan weights.' },
+  { id: 'costly_mistakes', ask: 'Which mistakes are expensive rather than annoying?', builds: 'The verification test.' },
+  { id: 'first_month', ask: 'What does a good first month look like?', builds: 'What the trial is measured against.' },
+  { id: 'automatable', ask: 'Which of this work can AI already do?', builds: 'What NOT to assess, because it is no longer the scarce part.' },
+];
+
+// The most valuable answer is `two_weeks`, and it is the one nobody volunteers. Anything a
+// company will happily teach in a fortnight should not be tested at all: testing it costs a
+// student time and screens on something the job does not actually require.
+export function reverseAudit(answers = {}) {
+  const answered = REVERSE_AUDIT_QUESTIONS.filter(q => String(answers[q.id] || '').trim().length > 3);
+  const missing = REVERSE_AUDIT_QUESTIONS.filter(q => !answered.includes(q));
+  const doNotTest = String(answers.two_weeks || '').trim();
+  const automatable = String(answers.automatable || '').trim();
+  return {
+    version: SUPER_INTERN_VERSION,
+    answered: answered.map(q => q.id),
+    missing: missing.map(q => ({ id: q.id, ask: q.ask, builds: q.builds })),
+    complete: missing.length === 0,
+    // Surfaced back to the company, because both are counter-intuitive and both shrink the
+    // assessment rather than growing it.
+    excludeFromAssessment: [
+      doNotTest ? `Learnable in a fortnight, so not worth a student's time: ${doNotTest}` : null,
+      automatable ? `Already automatable, so no longer the scarce part: ${automatable}` : null,
+    ].filter(Boolean),
+    note: missing.length
+      ? `${missing.length} of ${REVERSE_AUDIT_QUESTIONS.length} unanswered. The assessment will be generic in proportion to what is missing.`
+      : 'Enough to build an assessment that reflects this environment rather than the vertical average.',
   };
 }
