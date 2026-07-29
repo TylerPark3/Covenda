@@ -12,7 +12,7 @@
     "compat:validate": "node scripts/validate-against-calibration.js",
     "compat:calibrate": "node scripts/calibrate-thresholds.js",
     "compat:test": "node scripts/test-compatibility.js",
-    "ship": "npm run check && vercel --prod --yes"
+    "ship": "node scripts/ship.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.110.7",

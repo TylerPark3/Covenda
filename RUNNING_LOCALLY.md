@@ -56,22 +56,30 @@ Local and production are the same code. Nothing about running locally changes wh
 npm run ship
 ```
 
-That runs the full test suite and then deploys to production. It will not deploy if a test
-fails.
+That runs the full test suite, deploys, points **covenda.app** at the new build, and verifies
+with Vercel that the domain resolves to it. It stops at the first failure, so a red test never
+reaches production and a deploy that cannot be aliased is reported as a failed ship.
 
-Two things `ship` deliberately does not do, because both should be decisions rather than side
-effects:
+The alias used to be a separate command to run afterwards. It was forgotten repeatedly, and
+the failure is quiet in the worst way: the deploy succeeds, the tests pass, a URL is printed,
+and covenda.app carries on serving a build from days ago. Everything reports success and
+nothing is live. It is one command now.
+
+`ship` does not push to GitHub, because that should be a decision rather than a side effect of
+a build:
 
 ```
-git push origin HEAD:main                                   # put the code on GitHub
-npx vercel alias set <the-url-ship-printed> covenda.app     # point the domain at it
+git push origin HEAD:main
 ```
 
-`ship` prints the deployment URL. The alias step is what makes `covenda.app` serve it.
+Verification is done against Vercel rather than by fetching the site. An intercepting proxy on
+a guest network fails the fetch while the alias is perfectly fine, and that false alarm is
+worse than no check at all.
 
 ## Normal loop
 
 1. Edit a file.
 2. Reload http://localhost:3000 — `vercel dev` picks up changes without a restart.
 3. `npm run check` when the change is done.
-4. `npm run ship`, then push and alias.
+4. `npm run ship` — tests, deploys, and points covenda.app at it.
+5. `git push origin HEAD:main`.
