@@ -2912,13 +2912,61 @@ function openTrace(c) {
 const REFERRER_DASHBOARD = {
   name: 'Prof. R. Chen', role: 'Professor', institution: 'Columbia Robotics', founding: true,
   students: [
-    { name: 'Maya T.', fn: 'Research & Synthesis', status: 'verified' },
-    { name: 'Devin K.', fn: 'QA & Testing', status: 'working' },
-    { name: 'Ravi N.', fn: 'Data & spreadsheets', status: 'working' },
-    { name: 'Amir S.', fn: 'Operations', status: 'endorsed' },
-    { name: 'Ola B.', fn: 'Research & Synthesis', status: 'endorsed' },
+    { name: 'Maya T.', fn: 'Research & Synthesis', status: 'verified', batch: 'AI & machine learning' },
+    { name: 'Devin K.', fn: 'QA & Testing', status: 'working', batch: 'Security & reliability' },
+    { name: 'Ravi N.', fn: 'Data & spreadsheets', status: 'working', batch: null },
+    { name: 'Amir S.', fn: 'Operations', status: 'endorsed', batch: 'Supply chain & operations' },
+    { name: 'Ola B.', fn: 'Research & Synthesis', status: 'endorsed', batch: null },
   ],
 };
+
+// What a referrer's standing actually rests on.
+//
+// ── WHY THIS IS NOT A PERCENTAGE ──────────────────────────────────────────────────────
+// It used to be (verified + working*.6 + endorsed*.3) / total * 100, which is a RATIO, and a
+// ratio punishes the thing it should reward. A professor who vouched for one student and saw
+// them verified scored 100. One who vouched for twenty and saw fifteen verified scored lower.
+// Referring more people made you look worse, which is precisely backwards for a signal meant
+// to say how much a name is worth.
+//
+// It accumulates now. Every student who reaches a real outcome adds; nobody is ever subtracted
+// for a referral that has not landed yet.
+//
+// An endorsement on its own contributes NOTHING. It is a claim, and the entire product exists
+// to distinguish claims from what happened. Being admitted to a batch counts, because clearing
+// a published bar is an outcome somebody else verified.
+const REFERRER_POINTS = { verified: 3, working: 1, batch: 2 };
+
+function referrerStanding(students) {
+  let points = 0;
+  const counts = { endorsed: 0, working: 0, verified: 0, batched: 0 };
+  for (const s of students) {
+    counts[s.status] = (counts[s.status] || 0) + 1;
+    if (s.status === 'verified') points += REFERRER_POINTS.verified;
+    else if (s.status === 'working') points += REFERRER_POINTS.working;
+    if (s.batch) { counts.batched += 1; points += REFERRER_POINTS.batch; }
+  }
+  // Named bands rather than a bare number, so the meter reads as a position rather than as a
+  // score somebody could argue about the second decimal of.
+  const BANDS = [
+    { at: 0, label: 'No track record yet' },
+    { at: 3, label: 'Early track record' },
+    { at: 8, label: 'Established referrer' },
+    { at: 16, label: 'Distinguished referrer' },
+  ];
+  let band = BANDS[0];
+  for (const b of BANDS) if (points >= b.at) band = b;
+  const next = BANDS.find(b => b.at > points) || null;
+  return {
+    points,
+    counts,
+    band: band.label,
+    next,
+    // Progress toward the NEXT band, which is a thing that means something, rather than a
+    // percentage of a total that does not exist.
+    toNext: next ? Math.min(100, Math.round((points / next.at) * 100)) : 100,
+  };
+}
 function renderReferrerDashboard() {
   const host = $('#referrerDashboardBody');
   if (!host) return;
@@ -2926,11 +2974,9 @@ function renderReferrerDashboard() {
   const ref = activeReferral();
   const name = (ref && ref.via) || data.name; // personalize the identity if referred by a named partner
   const students = data.students;
-  const counts = { endorsed: 0, working: 0, verified: 0 };
-  students.forEach(s => { counts[s.status] = (counts[s.status] || 0) + 1; });
-  const total = students.length;
-  // Derived, illustrative credibility weight from outcomes — never a fabricated validated number.
-  const weight = total ? Math.round(((counts.verified * 1 + counts.working * 0.6 + counts.endorsed * 0.3) / total) * 100) : 0;
+  const standing = referrerStanding(students);
+  const counts = standing.counts;
+  const weight = standing.toNext;
   host.textContent = '';
 
   const card = document.createElement('div'); card.className = 'referrer-cred-card';
@@ -2948,15 +2994,18 @@ function renderReferrerDashboard() {
   card.append(top);
   const mw = document.createElement('div'); mw.className = 'referrer-meter-wrap';
   const mh = document.createElement('div'); mh.className = 'referrer-meter-head';
-  const mb = document.createElement('b'); mb.textContent = 'Endorsement weight';
-  const ms = document.createElement('span'); ms.textContent = 'Illustrative · derived from your referrals’ outcomes';
+  const mb = document.createElement('b'); mb.textContent = standing.band;
+  const ms = document.createElement('span');
+  ms.textContent = standing.next
+    ? `Illustrative · ${standing.points} of ${standing.next.at} toward ${standing.next.label.toLowerCase()}`
+    : `Illustrative · ${standing.points} from outcomes so far`;
   mh.append(mb, ms);
   const meter = document.createElement('div'); meter.className = 'referrer-meter';
   const fill = document.createElement('div'); fill.className = 'referrer-meter-fill'; meter.append(fill);
   mw.append(mh, meter);
   card.append(mw);
   const stats = document.createElement('div'); stats.className = 'referrer-stats';
-  [['Endorsed', counts.endorsed], ['Working', counts.working], ['Verified', counts.verified]].forEach(([label, n]) => {
+  [['Endorsed', counts.endorsed], ['In a batch', counts.batched], ['Working', counts.working], ['Verified', counts.verified]].forEach(([label, n]) => {
     const st = document.createElement('div'); st.className = 'referrer-stat';
     const b = document.createElement('b'); b.textContent = String(n);
     const sp = document.createElement('span'); sp.textContent = label;
@@ -2983,7 +3032,7 @@ function renderReferrerDashboard() {
   const note = document.createElement('p'); note.className = 'referrer-note';
   note.append(createIcon('icon-lock'));
   const ns = document.createElement('span');
-  ns.append(document.createTextNode('An endorsement is an appreciating reputation asset: as your referred students complete reviewed, verified work, your endorsements carry more weight. '));
+  ns.append(document.createTextNode('Standing accumulates. Every student who clears a batch bar or completes reviewed work adds to it, and a referral that has not landed yet never counts against you. '));
   const nb = document.createElement('b'); nb.textContent = 'Verified rungs are earned through reviewed work, never assigned.';
   ns.append(nb);
   note.append(ns);
