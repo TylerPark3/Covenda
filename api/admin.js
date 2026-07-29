@@ -1017,6 +1017,52 @@ export default async function handler(req, res, dependencies = {}) {
       // Every other POST action mutates operator data and requires an authenticated operator.
       const operator = await authorizeAdmin(req, dependencies);
       if (!operator) return res.status(401).json({ ok: false, error: 'Operator authentication is required.' });
+      // Which migrations have actually landed. degradedReport() only knows about tables that
+      // have already been read and failed since this instance started, which is a lagging
+      // indicator and useless right after a deploy. This probes actively instead.
+      //
+      // "Did the migration land" was previously unanswerable without opening the Supabase
+      // console, which meant a missing table showed up as a broken feature rather than as a
+      // missing table.
+      if (input.action === 'schema-health') {
+        const EXPECTED = [
+          { table: 'batches', migration: '20260726260000_elite_batches', breaks: 'Every batch surface.' },
+          { table: 'people_directory', migration: '20260728600000_people_directory', breaks: 'The operator directory below.' },
+          { table: 'technical_evidence', migration: '20260728700000_technical_evidence', breaks: 'Student evidence entry and the technical profile.' },
+          { table: 'company_evidence_requests', migration: '20260728700000_technical_evidence', breaks: 'Company evidence requests.' },
+          { table: 'company_environments', migration: '20260729100000_super_intern', breaks: 'The batch builder.' },
+          { table: 'assessment_plans', migration: '20260729100000_super_intern', breaks: 'Assessment plans and student disclosure.' },
+          { table: 'assessment_runs', migration: '20260729100000_super_intern', breaks: 'Starting an assessment.' },
+          { table: 'placement_outcomes', migration: '20260729100000_super_intern', breaks: 'The outcome loop.' },
+          { table: 'simulation_runs', migration: '20260728500000_simulation_runs', breaks: 'Scenario sittings.' },
+        ];
+
+        const checked = await Promise.all(EXPECTED.map(async spec => {
+          const { error, count } = await supabase.from(spec.table).select('*', { count: 'exact', head: true });
+          const missing = Boolean(error) && /does not exist|schema cache|relation/i.test(error.message || '');
+          return {
+            ...spec,
+            present: !error,
+            missing,
+            rows: error ? null : count,
+            // A permission error is not a missing table, and conflating the two sends somebody
+            // to re-run a migration that already landed.
+            error: error && !missing ? error.message.slice(0, 120) : null,
+          };
+        }));
+
+        const missing = checked.filter(c => c.missing);
+        return res.status(200).json({ ok: true,
+          tables: checked,
+          healthy: missing.length === 0,
+          // Deduplicated: one migration usually creates several tables, and listing it once per
+          // table would read as several outstanding migrations.
+          outstanding: [...new Set(missing.map(m => m.migration))],
+          summary: missing.length
+            ? `${missing.length} of ${checked.length} tables missing. Run npm run sql and apply: ${[...new Set(missing.map(m => m.migration))].join(', ')}.`
+            : `All ${checked.length} expected tables are present.`,
+        });
+      }
       if (input.action === 'people-directory') {
         // Reads the view, not the log: one row per person rather than one per click.
         const [peopleResult, dupeResult] = await Promise.all([

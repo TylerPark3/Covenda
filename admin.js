@@ -65,6 +65,72 @@ function authHeaders() { return { Authorization: `Bearer ${token()}`, 'Content-T
 // The submissions table has one row per click, so reading it as a list of people gives a wrong
 // count and a wrong picture. This reads the people_directory view instead: one row per email,
 // with every vertical that person has expressed across every form they filled in.
+// Which migrations have landed. Sits above the directory because a missing table is the most
+// common reason anything below it looks broken, and an operator should see the cause before
+// the symptom.
+async function renderSchemaHealth() {
+  const host = document.getElementById('adminSchema');
+  if (!host) return;
+  let data;
+  try {
+    data = await adminRequest({ method: 'POST', body: JSON.stringify({ action: 'schema-health' }) });
+  } catch (error) {
+    host.hidden = false;
+    host.replaceChildren();
+    const box = document.createElement('div');
+    box.className = 'people-error';
+    const cap = document.createElement('strong');
+    cap.textContent = 'Could not check the schema';
+    const why = document.createElement('p');
+    why.textContent = error?.message || 'The request failed.';
+    box.append(cap, why);
+    host.append(box);
+    return;
+  }
+
+  host.hidden = false;
+  host.replaceChildren();
+
+  const head = document.createElement('div');
+  head.className = 'people-head';
+  const h = document.createElement('h3');
+  h.textContent = data.healthy ? 'Schema up to date' : 'Migrations outstanding';
+  const note = document.createElement('span');
+  note.textContent = data.summary;
+  head.append(h, note);
+  host.append(head);
+
+  // Only the missing ones are listed by default. A list of everything that works is noise
+  // when the question is what does not.
+  const missing = (data.tables || []).filter(t => t.missing);
+  if (missing.length) {
+    const list = document.createElement('ul');
+    list.className = 'schema-missing';
+    for (const t of missing) {
+      const li = document.createElement('li');
+      const name = document.createElement('b');
+      name.textContent = t.table;
+      const breaks = document.createElement('span');
+      breaks.textContent = t.breaks;
+      const mig = document.createElement('code');
+      mig.textContent = t.migration;
+      li.append(name, breaks, mig);
+      list.append(li);
+    }
+    host.append(list);
+  }
+
+  // A permission or connection error is not a missing table, and treating them the same sends
+  // somebody to re-run a migration that already landed.
+  const errored = (data.tables || []).filter(t => t.error);
+  for (const t of errored) {
+    const p = document.createElement('p');
+    p.className = 'schema-error';
+    p.textContent = `${t.table}: ${t.error}`;
+    host.append(p);
+  }
+}
+
 async function renderPeopleDirectory() {
   const host = document.getElementById('adminPeople');
   if (!host) return;
@@ -596,6 +662,7 @@ async function loadInbox({ announce = false } = {}) {
   // Never awaited into the main load: a health check failing must not stop the inbox rendering.
   renderDeliveryHealth().catch(() => {});
   renderSimulationRuns().catch(() => {});
+  renderSchemaHealth().catch(() => {});
   renderPeopleDirectory().catch(() => {});
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';
