@@ -5698,3 +5698,29 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .exchange-source--task, .exchange-source--student, .exchange-workbench { animation: none; }
 }
+
+/* The verification mark, beside the heading it describes.
+   Reusing #icon-verified rather than drawing a second badge: a platform with two verification
+   marks has neither. The scalloped seal is deliberately not a plain tick, because a tick means
+   "done" and this means "vouched for". */
+.club-verified-mark {
+  display: inline-block;
+  width: .62em;
+  height: .62em;
+  margin-left: .22em;
+  color: var(--gold);
+  vertical-align: baseline;
+}
+/* The badge alone would read as decoration, or worse as a claim the club already has it. The
+   key says what earns it and, more importantly, that nobody is given it. */
+.club-verified-key {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  max-width: 54ch;
+  margin: 14px 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.club-verified-key svg { flex: 0 0 auto; width: 17px; height: 17px; margin-top: 2px; color: var(--gold); }

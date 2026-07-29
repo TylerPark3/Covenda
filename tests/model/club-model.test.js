@@ -47,3 +47,15 @@ test('every rung has a real threshold, so "earned" means something checkable', (
 test('the ladder is not for sale, and says so', () => {
   assert.match(html, /Nothing here is granted or sold/);
 });
+
+// A badge next to the heading, and a line saying what earns it. The badge alone would read as
+// decoration, or worse as a claim the club already has one.
+test('the verification mark says what earns it, and that nobody starts with it', () => {
+  assert.match(html, /class="club-verified-mark"/);
+  assert.match(html, /class="club-verified-key"/);
+  assert.match(html, /Nobody starts with it/);
+  // Reuses the existing badge: a platform with two verification marks has neither.
+  const marks = [...html.matchAll(/class="club-verified-(?:mark|key)"[\s\S]{0,200}?href="#([a-z-]+)"/g)].map(m => m[1]);
+  assert.ok(marks.length >= 2 && new Set(marks).size === 1, `the club badge uses ${new Set(marks).size} different icons`);
+  assert.equal(marks[0], 'icon-verified');
+});
