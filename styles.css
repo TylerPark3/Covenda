@@ -5105,6 +5105,15 @@ body[data-audience="company"] .slop-section { display: block; }
   font-family: var(--font-sans); font-weight: 700;
   font-size: clamp(19px, 2vw, 26px); letter-spacing: -.02em; color: var(--muted);
 }
+/* The gold half is the display serif rather than the sans around it, which is the same
+   pairing the headlines use: a grotesque statement with the italic serif carrying the part
+   that is meant to be felt rather than read. */
+.made-by .word-gold {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 1.14em;
+  letter-spacing: -.02em;
+}
 
 /* The batch board: filter in a rail, cards using the width that box was wasting. */
 .batch-board { width: min(100%, var(--content)); margin-inline: auto; }
