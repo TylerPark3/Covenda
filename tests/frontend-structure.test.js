@@ -969,8 +969,12 @@ test('nothing is hidden unless the reveal can actually run', () => {
 test('the gold word leaves room for descenders as well as the italic overhang', () => {
   const rule = styles.match(/\.word-gold \{[^}]*\}/)[0];
   assert.match(rule, /background-clip: text/);
-  assert.match(rule, /padding-bottom:\s*0?\.\d+em/, 'descenders will be clipped by the fill box');
-  assert.match(rule, /margin-bottom:\s*-0?\.\d+em/, 'the padding must not push the line down');
+  // .2em cleared the upright p of "good" and clipped the italic p and f of "proof". Sized for
+  // the italic, which is the deeper of the two.
+  const padBottom = Number(rule.match(/padding-bottom:\s*(0?\.\d+)em/)[1]);
+  assert.ok(padBottom >= 0.3, `padding-bottom ${padBottom}em clips the italic descender`);
+  const marginBottom = Number(rule.match(/margin-bottom:\s*-(0?\.\d+)em/)[1]);
+  assert.equal(padBottom, marginBottom, 'the padding must not push the line down');
   // The horizontal fix has to survive too, or the italic exit stroke clips at a line end.
   // EB Garamond needs materially more room than the face this was first measured against.
   const padRight = Number(rule.match(/padding-right:\s*(0?\.\d+)em/)[1]);

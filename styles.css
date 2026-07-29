@@ -2062,8 +2062,8 @@ body[data-audience="university"] #flowDemo { display: none; }
      shallow descenders sat inside it, EB Garamond's do not. So the p in "proof" and the g in
      "good" lost their tails. Padded down and pulled back so the fill covers the descender
      without changing where the line sits. */
-  padding-bottom: 0.2em;
-  margin-bottom: -0.2em;
+  padding-bottom: 0.36em;
+  margin-bottom: -0.36em;
   /* Clone the box per line fragment so the padding (and gold fill) covers the italic overhang
      at EVERY line end — otherwise a word that ends a wrapped line (e.g. "domain") has its last
      glyph's slant clipped by background-clip:text. */
