@@ -2334,3 +2334,21 @@ body { background: var(--surface); }
 }
 /* Listed but not shown. Visually demoted so it cannot be mistaken for evidenced work. */
 .tech-listed { color:var(--soft); font-style:italic; }
+
+/* Adding technical evidence. */
+.tech-add { justify-self:start; }
+.tech-entries { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.tech-entries li { display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:10px 12px; border:1px solid var(--line); background:var(--surface-1); }
+.tech-entry-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.tech-entry-top b { font-size:13.5px; font-weight:650; color:var(--text,var(--ink)); }
+.tech-entries small { grid-column:1; color:var(--soft); font-size:12px; text-transform:capitalize; }
+.tech-entry-remove { grid-row:1 / span 2; grid-column:2; align-self:center; padding:5px 10px; border:1px solid var(--line-strong); background:transparent; color:var(--soft); font-size:12px; cursor:pointer; }
+.tech-entry-remove:hover:not(:disabled) { border-color:var(--danger); color:var(--danger); }
+.tech-entry-remove:disabled { cursor:default; }
+.te-explain { margin:-4px 0 0; display:grid; gap:3px; font-size:12.5px; line-height:1.5; color:var(--muted); }
+.te-explain small { color:var(--soft); font-size:12px; }
+.te-note { display:flex; align-items:flex-start; gap:8px; margin:0; color:var(--soft); font-size:12.5px; line-height:1.55; }
+.te-note svg { flex:none; width:14px; height:14px; margin-top:2px; color:var(--gold-deep); }
+.te-ai { border:1px solid var(--line); padding:12px 14px; }
+.te-ai summary { cursor:pointer; font-size:13px; font-weight:650; color:var(--text,var(--ink)); }
+.te-ai-why { margin:10px 0 0; color:var(--soft); font-size:12.5px; line-height:1.55; }

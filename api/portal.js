@@ -15,7 +15,7 @@ import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
 import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility, SPECIALISATION_SKILLS } from './batches.js';
 import { verticalFor } from './vertical-map.js';
-import { technicalClaimsFromProfile, technicalProfile, technicalGaps } from './technical-evidence.js';
+import { allTechnicalClaims, technicalProfile, technicalGaps, recordTechnicalEvidence, EVIDENCE_TYPES, OWNERSHIP_LEVELS } from './technical-evidence.js';
 import { summarise as summariseVetting, processFor } from './vetting.js';
 import { assessmentFor as supplierAssessment } from './assessments.js';
 import { scriptFor } from './session-script.js';
@@ -404,8 +404,16 @@ export async function loadMemberDashboard(member, env = process.env) {
       .reduce((acc, a) => { (a.skills || []).forEach(sk => { acc[sk.skill] = true; }); return acc; }, {}));
     // The technical evidence graph. Built for every student because breadth and gaps are
     // useful to anyone, though it only has anything to say once a repo is connected.
-    const technicalBase = technicalProfile(technicalClaimsFromProfile(profile));
-    const technical = { ...technicalBase, gaps: technicalGaps(technicalBase) };
+    // Connected repos AND evidence the student entered. Reading only the former is what made
+    // the whole agency story depend on having a GitHub account connected.
+    const technicalEvidence = await loadTechnicalEvidence(member);
+    const technicalBase = technicalProfile(allTechnicalClaims(profile, technicalEvidence));
+    // The type guide travels with the dashboard so the form and the model cannot describe the
+    // same evidence type differently. Duplicating these strings in the client is how the limit
+    // on a hackathon quietly stops matching the one the reviewer reads.
+    const typeGuide = Object.fromEntries(Object.entries(EVIDENCE_TYPES)
+      .map(([id, t]) => [id, { label: t.label, demonstrates: t.demonstrates, cannotShow: t.cannotShow }]));
+    const technical = { ...technicalBase, gaps: technicalGaps(technicalBase), entries: technicalEvidence, typeGuide, ownershipLevels: OWNERSHIP_LEVELS };
     // The DB row carries snake_case columns and no verticalSlug or summary, so grafting only
     // `requirements` left the matcher blind to the vertical (its bonus could never fire for
     // anyone) and short of the words it matches against. Merge the whole catalog entry, with
@@ -1494,6 +1502,95 @@ export async function confirmSchoolVerification(member, input) {
 // Asking for "a Loom or YouTube link" assumed a video already exists somewhere; it almost
 // never does. Record once, reuse everywhere.
 export const VIDEO_LIBRARY_LIMIT = 12;
+
+// ── Technical evidence (§3, §4, §5) ───────────────────────────────────────────────────
+// The rails were unreachable: the model, the storage and the profile all existed, and a
+// student had no way to put a hackathon or a pull request into any of them. Only analysed
+// GitHub repos reached the profile, which meant the entire agency story depended on a
+// connected account.
+//
+// recordTechnicalEvidence does the validation and the tier capping; this only persists what
+// it produced. The ceiling logic is not restated here, so a route cannot drift from it.
+export async function saveTechnicalEvidence(member, input) {
+  const profile = await loadMemberProfile(member);
+  if (profile?.role !== 'student') throw new Error('Only student accounts carry technical evidence.');
+
+  const skills = (Array.isArray(input.skills) ? input.skills : [])
+    .map(s => cleanText(s, 60)).filter(Boolean).slice(0, 12);
+  const pointer = cleanUrl(input.pointer) || cleanUrl(input.repoUrl) || cleanUrl(input.deploymentUrl) || null;
+
+  // Run it through the model first. If it refuses, nothing is written, and the reason the
+  // student sees is the model's own rather than a database constraint violation.
+  const assessed = recordTechnicalEvidence({
+    id: pointer || cleanText(input.title, 160),
+    type: input.type,
+    source: input.source || (pointer ? 'connected_repo' : 'self_reported'),
+    tier: input.tier || (pointer ? 'artifact' : 'claimed'),
+    pointer,
+    skills,
+    ownership: input.ownership,
+    deploymentUrl: cleanUrl(input.deploymentUrl),
+    monthsOperated: Number(input.monthsOperated) || 0,
+    iterations: Number(input.iterations) || 0,
+    learnedForThis: cleanText(input.learnedForThis, 200) || null,
+    mergeStatus: cleanText(input.mergeStatus, 40) || null,
+    assigned: Boolean(input.assigned),
+    aiDisclosure: input.aiDisclosure || null,
+  });
+  if (!assessed.ok) throw new Error(assessed.reason);
+
+  const first = assessed.claims[0];
+  const row = {
+    student_user_id: member.user.id,
+    evidence_type: input.type,
+    evidence_source: first.evidence_meta.source,
+    ownership_level: assessed.ownership,
+    verification_level: first.verification_tier,
+    title: cleanText(input.title, 160) || null,
+    pointer,
+    repo_url: cleanUrl(input.repoUrl),
+    deployment_url: cleanUrl(input.deploymentUrl),
+    deployment_status: cleanText(input.deploymentStatus, 40) || null,
+    project_status: cleanText(input.projectStatus, 40) || null,
+    skills,
+    technical_domains: [...new Set(assessed.claims.flatMap(c => c.evidence_meta.technical_domains || []))],
+    agency_signals: assessed.agency.map(a => a.id),
+    ai_assistance_disclosure: input.aiDisclosure || null,
+    detail: {
+      // Type-specific fields, kept out of columns because they genuinely vary by type.
+      hackathon: input.hackathon || null,
+      openSource: input.openSource || null,
+      usage: cleanText(input.usage, 300) || null,
+      whatIBuilt: cleanText(input.whatIBuilt, 1500) || null,
+      challenges: cleanText(input.challenges, 1500) || null,
+      learned: cleanText(input.learned, 1500) || null,
+    },
+    months_operated: Number(input.monthsOperated) || null,
+    iterations: Number(input.iterations) || null,
+    assigned: Boolean(input.assigned),
+  };
+
+  const saved = await checked(member.supabase.from('technical_evidence').insert(row).select('*').single(), null);
+  // Degrades rather than throwing when the migration is not applied yet, so the rest of the
+  // portal keeps working; the client is told plainly instead of seeing a 500.
+  if (!saved) throw new Error('Technical evidence could not be saved. The technical_evidence migration may not be applied yet.');
+  return { entry: saved, questions: assessed.questions, agency: assessed.agency, aiDisclosure: assessed.aiDisclosure };
+}
+
+export async function loadTechnicalEvidence(member) {
+  return checked(member.supabase.from('technical_evidence')
+    .select('*').eq('student_user_id', member.user.id)
+    .order('created_at', { ascending: false }).limit(60), []);
+}
+
+export async function deleteTechnicalEvidence(member, input) {
+  const id = cleanText(input.id, 60);
+  if (!id) throw new Error('Choose an entry to remove.');
+  // Scoped to the owner in the query as well as in RLS: defence in depth costs one clause.
+  await member.supabase.from('technical_evidence').delete()
+    .eq('id', id).eq('student_user_id', member.user.id);
+  return { removed: id };
+}
 
 export async function saveMemberVideo(member, input) {
   const url = cleanUrl(input.url);
@@ -2803,6 +2900,8 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'respond-introduction') return res.status(200).json({ ok: true, introduction: await respondToIntroduction(member, input) });
     if (req.method === 'POST' && input.action === 'outcome-survey') return res.status(200).json({ ok: true, project: await recordOutcomeSurvey(member, input) });
     if (req.method === 'POST' && input.action === 'create-company-referral') return res.status(201).json({ ok: true, referral: await createCompanyReferral(member) });
+    if (req.method === 'POST' && input.action === 'save-technical-evidence') return res.status(201).json({ ok: true, ...(await saveTechnicalEvidence(member, input)) });
+    if (req.method === 'POST' && input.action === 'delete-technical-evidence') return res.status(200).json({ ok: true, ...(await deleteTechnicalEvidence(member, input)) });
     if (req.method === 'POST' && input.action === 'save-video') return res.status(201).json({ ok: true, video: await saveMemberVideo(member, input) });
     if (req.method === 'POST' && input.action === 'delete-video') return res.status(200).json({ ok: true, ...(await deleteMemberVideo(member, input)) });
     if (req.method === 'POST' && input.action === 'register-club') return res.status(201).json({ ok: true, club: await registerClub(member, input) });

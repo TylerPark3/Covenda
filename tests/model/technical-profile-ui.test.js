@@ -42,9 +42,14 @@ test('the self-reported tier is labelled as such rather than dressed up', () => 
   assert.match(js, /claimed:'Self-reported'/);
 });
 
-// A framework with nothing in it reads as a broken feature, not an empty one.
-test('the panel hides itself until there is something to show', () => {
-  assert.match(panel, /if\(!t\.breadth\.length&&!t\.depth\.length\)return;/);
+// A framework with nothing in it reads as a broken feature. The first version returned early,
+// which hid the Add button from exactly the students who had nothing yet. It collapses to that
+// one control instead.
+test('an empty panel collapses to the way to fill it, rather than vanishing', () => {
+  assert.match(panel, /const empty=!t\.breadth\.length&&!t\.depth\.length/);
+  assert.match(panel, /Add your first evidence/);
+  assert.match(panel, /Nothing here yet/);
+  assert.ok(!/if\(!t\.breadth\.length&&!t\.depth\.length\)return;/.test(panel), 'the panel still returns early when empty');
 });
 
 test('gaps are framed as what is not shown, not as a deficiency', () => {

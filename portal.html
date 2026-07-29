@@ -318,6 +318,56 @@
     </fieldset><p class="dialog-message" id="projectMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Create project<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>
 
+  <!-- Adding a piece of technical evidence. The type is chosen first because it decides which
+       fields are worth asking for: a hackathon has a team and a placement, a pull request has
+       a merge status, and asking every question of every type is how a form stops being
+       filled in. Fields below are shown and hidden by type in portal.js. -->
+  <dialog class="member-dialog compact-dialog" id="techEvidenceDialog">
+    <form method="dialog" id="techEvidenceForm">
+      <header><div><p class="eyebrow">Technical evidence</p><h2>Add something you built.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="dialog-body">
+        <label>What kind of work is this?<select name="type" id="techType" required></select></label>
+        <p class="te-explain" id="techTypeExplain" aria-live="polite"></p>
+        <label>What is it called?<input name="title" maxlength="160" required placeholder="Course scheduler for my department"></label>
+        <label>Skills it demonstrates <small>Comma-separated</small><input name="skills" required placeholder="Python, PostgreSQL, Docker"></label>
+        <div class="form-grid">
+          <label>Repository <small>Optional</small><input name="repoUrl" type="url" placeholder="https://github.com/…"></label>
+          <label>Where it runs <small>Optional</small><input name="deploymentUrl" type="url" placeholder="https://…"></label>
+        </div>
+        <p class="te-note"><svg aria-hidden="true"><use href="#p-shield"/></svg>A link is what lets this count as more than self-reported. Without one it still appears on your profile, marked as listed rather than shown.</p>
+        <label>How much of it was yours?<select name="ownership" id="techOwnership"></select></label>
+        <div data-te-for="hackathon" hidden>
+          <div class="form-grid">
+            <label>Hackathon<input name="hackathonName" maxlength="120" placeholder="TreeHacks"></label>
+            <label>Team size<input name="teamSize" type="number" min="1" max="20"></label>
+          </div>
+          <label>What did you personally build?<textarea name="whatIBuilt" rows="3" maxlength="1500" placeholder="The parts that were yours, as distinct from your teammates'."></textarea></label>
+        </div>
+        <div data-te-for="open_source" hidden>
+          <label>Was it merged?<select name="mergeStatus"><option value="">Not yet</option><option value="merged">Merged</option><option value="open">Open</option><option value="closed">Closed</option></select></label>
+        </div>
+        <div data-te-for="shipped_product" hidden>
+          <div class="form-grid">
+            <label>Months running<input name="monthsOperated" type="number" min="0" max="120"></label>
+            <label>Times you changed it after feedback<input name="iterations" type="number" min="0" max="99"></label>
+          </div>
+          <label>Who used it? <small>Optional</small><input name="usage" maxlength="300" placeholder="20 people in my department, weekly"></label>
+        </div>
+        <label>What did you have to learn for it? <small>Optional</small><input name="learnedForThis" maxlength="200" placeholder="Docker, and how connection pooling actually works"></label>
+        <details class="te-ai">
+          <summary>Did you use AI tools on this?</summary>
+          <p class="te-ai-why">Assume we expect you did. Disclosing it costs you nothing and adds questions about the parts you changed. Saying nothing is what makes a defense harder, not easier.</p>
+          <label>Which tools? <small>Optional</small><input name="aiTools" maxlength="160" placeholder="Cursor, Claude"></label>
+          <label>What did it generate?<textarea name="aiGenerated" rows="2" maxlength="600" placeholder="The initial API scaffold and route handlers."></textarea></label>
+          <label>What did you change, and why?<textarea name="aiChanged" rows="2" maxlength="600" placeholder="Rewrote the auth middleware, it trusted the client."></textarea></label>
+          <label>What did you verify yourself?<textarea name="aiVerified" rows="2" maxlength="600" placeholder="Wrote tests for the token refresh path."></textarea></label>
+        </details>
+        <p class="dialog-message" id="techEvidenceMessage" aria-live="polite"></p>
+      </div>
+      <footer><button class="portal-primary" type="submit">Add evidence<svg><use href="#p-arrow"/></svg></button></footer>
+    </form>
+  </dialog>
+
   <dialog class="member-dialog compact-dialog" id="applyDialog">
     <form method="dialog" id="applyForm"><header><div><p class="eyebrow">Project interest</p><h2 id="applyTitle">Apply to this project.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header><div class="dialog-body"><input name="projectId" type="hidden"><p id="applySummary"></p><label>Why does this fit you? <small>Optional</small><textarea name="note" rows="4" maxlength="2000" placeholder="Connect your interests or experience to the work."></textarea></label><label>Skills you bring <small>Comma-separated</small><input name="skills" placeholder="Research, spreadsheets, writing"></label><label>Show your work <small>Optional link, portfolio, repo, sample</small><input name="demonstration" type="url" placeholder="https://…"></label><div class="video-field" data-video-field="apply"><p class="video-field-label">Intro video <small>Optional, 60 seconds, recorded here</small></p><div class="video-picker" id="applyVideoPicker"></div><input name="videoUrl" type="hidden"></div><div class="form-grid"><label>Referred by <small>Optional</small><input name="referralName" placeholder="Prof. Lee"></label><label>Referral code <small>Optional</small><input name="referralCode" placeholder="REF-XXXX"></label></div><p class="dialog-message" id="applyMessage" aria-live="polite"></p></div><footer><button class="portal-primary" type="submit">Send interest<svg><use href="#p-arrow"/></svg></button></footer></form>
   </dialog>

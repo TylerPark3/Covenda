@@ -3651,6 +3651,135 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
 // see when they open this? Facts about the profile as it stands, strongest first, and an
 // honest line about what is missing rather than an instruction to go fix it. The journey rail
 // owns "what to do next"; this owns "how you read right now".
+// ── Adding technical evidence (§3, §4, §5) ────────────────────────────────────────────
+// The type is chosen first because it decides which questions are worth asking. Showing every
+// field for every type is how a form stops being filled in, so the type-specific blocks are
+// revealed rather than all present at once.
+//
+// The labels and limits here are the server's, fetched with the dashboard, so the two cannot
+// describe the same evidence type differently.
+const TE_TYPES=[
+  ['shipped_product','Shipped product'],
+  ['independent_project','Independent project'],
+  ['hackathon','Hackathon project'],
+  ['open_source','Open-source contribution'],
+  ['research','Research work'],
+  ['technical_writing','Technical writing'],
+  ['community','Technical community'],
+  ['coursework','Coursework project'],
+];
+const TE_OWNERSHIP=[
+  ['sole','I built it alone'],
+  ['primary','I made the decisions and did most of the building'],
+  ['substantial','I owned a named part of it end to end'],
+  ['contributor','I worked on it, others shaped it'],
+];
+
+function paintTechTypeFields(){
+  const type=$('#techType')?.value;
+  $$('#techEvidenceForm [data-te-for]').forEach(block=>{
+    block.hidden=block.dataset.teFor!==type;
+  });
+  const explain=$('#techTypeExplain');
+  const brief=state.dashboard?.technical?.typeGuide?.[type];
+  if(explain){
+    explain.replaceChildren();
+    if(brief){
+      const what=document.createElement('span');what.textContent=brief.demonstrates;
+      const limit=document.createElement('small');limit.textContent='Does not show: '+brief.cannotShow;
+      explain.append(what,limit);
+    }
+  }
+}
+
+function openTechEvidence(){
+  const dlg=$('#techEvidenceDialog'); if(!dlg)return;
+  const form=$('#techEvidenceForm'); form.reset();
+  const typeSelect=$('#techType');
+  if(typeSelect&&!typeSelect.options.length){
+    for(const [value,label] of TE_TYPES){const o=document.createElement('option');o.value=value;o.textContent=label;typeSelect.append(o);}
+  }
+  const own=$('#techOwnership');
+  if(own&&!own.options.length){
+    for(const [value,label] of TE_OWNERSHIP){const o=document.createElement('option');o.value=value;o.textContent=label;own.append(o);}
+  }
+  setDialogMessage('#techEvidenceMessage','');
+  paintTechTypeFields();
+  dlg.showModal();
+}
+
+function readTechEvidence(form){
+  const data=Object.fromEntries(new FormData(form).entries());
+  const ai=['aiTools','aiGenerated','aiChanged','aiVerified'].some(k=>String(data[k]||'').trim());
+  return {
+    action:'save-technical-evidence',
+    type:data.type,
+    title:data.title,
+    skills:String(data.skills||'').split(',').map(x=>x.trim()).filter(Boolean),
+    repoUrl:data.repoUrl||null,
+    deploymentUrl:data.deploymentUrl||null,
+    ownership:data.ownership,
+    monthsOperated:data.monthsOperated||0,
+    iterations:data.iterations||0,
+    usage:data.usage||null,
+    whatIBuilt:data.whatIBuilt||null,
+    learnedForThis:data.learnedForThis||null,
+    mergeStatus:data.mergeStatus||null,
+    hackathon:data.hackathonName?{name:data.hackathonName,teamSize:Number(data.teamSize)||null}:null,
+    // Sent only when something was actually written. An empty disclosure object would read as
+    // "disclosed nothing" rather than "did not disclose", and those are different.
+    aiDisclosure:ai?{tools:data.aiTools||'',generated:data.aiGenerated||'',changed:data.aiChanged||'',verified:data.aiVerified||''}:null,
+  };
+}
+
+$('#techType')?.addEventListener('change',paintTechTypeFields);
+
+$('#techEvidenceForm')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const form=event.target;
+  setDialogMessage('#techEvidenceMessage','');
+  try{
+    const out=await portalRequest({method:'POST',body:JSON.stringify(readTechEvidence(form))});
+    // The questions come back from the server so a student sees straight away what a reviewer
+    // will ask about this entry. Nothing is scored; these are what the defense covers. Shown
+    // in the dialog before it closes, because a message that appears after it is gone is a
+    // message nobody reads.
+    if((out.questions||[]).length){
+      setDialogMessage('#techEvidenceMessage','Added. At defense you will be asked: '+out.questions[0]);
+      window.setTimeout(()=>$('#techEvidenceDialog').close(),2600);
+    } else { $('#techEvidenceDialog').close(); }
+    await loadDashboard();
+  }catch(error){ setDialogMessage('#techEvidenceMessage',error.message,true); }
+});
+
+function renderTechEntries(root,d){
+  const entries=d?.technical?.entries||[];
+  if(!entries.length)return;
+  const sec=document.createElement('div');sec.className='tech-section';
+  const cap=document.createElement('h4');cap.textContent='Evidence you added';
+  sec.append(cap);
+  const list=document.createElement('ul');list.className='tech-entries';
+  for(const entry of entries){
+    const li=document.createElement('li');
+    const top=document.createElement('div');top.className='tech-entry-top';
+    const name=document.createElement('b');name.textContent=entry.title||'Untitled';
+    top.append(name,techTierChip(entry.verification_level));
+    const meta=document.createElement('small');
+    meta.textContent=[(entry.evidence_type||'').replace(/_/g,' '),(entry.skills||[]).join(', ')].filter(Boolean).join(' · ');
+    const remove=document.createElement('button');
+    remove.type='button';remove.className='tech-entry-remove';remove.textContent='Remove';
+    remove.addEventListener('click',async()=>{
+      try{
+        await portalRequest({method:'POST',body:JSON.stringify({action:'delete-technical-evidence',id:entry.id})});
+        await loadDashboard();
+      }catch(error){ remove.textContent=error.message||'Could not remove'; remove.disabled=true; }
+    });
+    li.append(top,meta,remove);
+    list.append(li);
+  }
+  sec.append(list);root.append(sec);
+}
+
 // ── The technical profile (§10) ───────────────────────────────────────────────────────
 // Breadth, depth, agency, gaps. Deliberately no headline number: a single "engineering
 // quality" figure is the artifact this product exists to replace, and it would sit here more
@@ -3670,8 +3799,10 @@ function techTierChip(tier){
 function renderTechnicalProfile(root,d){
   const t=d?.technical;
   if(!t||d?.profile?.role!=='student')return;
-  // Only shown once there is something to show. An empty framework reads as a broken feature.
-  if(!t.breadth.length&&!t.depth.length)return;
+  // An empty framework reads as a broken feature, so when there is nothing yet the panel
+  // collapses to the one thing that matters: the way to add the first piece. Returning early
+  // here would have hidden the Add button from exactly the students who need it.
+  const empty=!t.breadth.length&&!t.depth.length&&!(t.entries||[]).length;
 
   const panel=document.createElement('section');panel.className='panel-card tech-panel';
   const head=document.createElement('div');head.className='tech-head';
@@ -3679,6 +3810,15 @@ function renderTechnicalProfile(root,d){
   const sub=document.createElement('p');
   sub.textContent=`Built from what you have connected, not from what you listed. ${t.domainsTouched} of ${t.domainsAvailable} domains have evidence behind them.`;
   head.append(h,sub);panel.append(head);
+
+  if(empty){
+    sub.textContent='Nothing here yet. Add a project, a hackathon, or a pull request and this fills in.';
+    const add=document.createElement('button');
+    add.type='button';add.className='portal-primary compact tech-add';
+    add.textContent='Add your first evidence';
+    add.addEventListener('click',openTechEvidence);
+    panel.append(add);root.append(panel);return;
+  }
 
   // Breadth: the surface area, as a bar per domain. Not a ranking against anyone.
   if(t.breadth.length){
@@ -3752,6 +3892,16 @@ function renderTechnicalProfile(root,d){
     }
     panel.append(sec);
   }
+
+  renderTechEntries(panel,d);
+
+  // Always available, including when the panel is otherwise empty, because adding the first
+  // piece of evidence is the whole point of the panel existing.
+  const add=document.createElement('button');
+  add.type='button';add.className='portal-ghost compact tech-add';
+  add.textContent='Add evidence';
+  add.addEventListener('click',openTechEvidence);
+  panel.append(add);
 
   // Gaps, phrased as the next thing to get.
   if((t.gaps||[]).length){

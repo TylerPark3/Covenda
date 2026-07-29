@@ -607,3 +607,45 @@ export function evidencePlanFor(profile, request = {}) {
     unmapped: suggestions.unmapped,
   };
 }
+
+// Claims from evidence a student entered themselves, stored in technical_evidence. Kept
+// separate from technicalClaimsFromProfile because the two sources have different shapes and
+// different trust: one is derived from a connected account, the other is typed by the person
+// it describes. Both go through recordTechnicalEvidence, so the source ceiling applies
+// identically and a typed entry with no pointer can never rise above `claimed`.
+export function claimsFromStoredEvidence(rows = []) {
+  const claims = [];
+  for (const row of rows || []) {
+    if (!row || !EVIDENCE_TYPES[row.evidence_type]) continue;
+    const result = recordTechnicalEvidence({
+      id: row.id,
+      type: row.evidence_type,
+      source: row.evidence_source,
+      tier: row.verification_level,
+      pointer: row.pointer || row.repo_url || row.deployment_url || null,
+      skills: Array.isArray(row.skills) ? row.skills : [],
+      ownership: row.ownership_level,
+      deploymentUrl: row.deployment_url,
+      monthsOperated: row.months_operated || 0,
+      iterations: row.iterations || 0,
+      assigned: row.assigned,
+      aiDisclosure: row.ai_assistance_disclosure || null,
+    });
+    claims.push(...(result.claims || []));
+  }
+  return claims;
+}
+
+// Everything a student's technical profile rests on: connected repos and entered evidence
+// together. One place, so no caller has to remember there are two sources.
+export function allTechnicalClaims(profile = {}, storedRows = []) {
+  const claims = [...claimsFromStoredEvidence(storedRows)];
+  const seen = new Set(claims.map(c => `${c.skill.toLowerCase()}:${c.evidence_meta?.entry_id}`));
+  for (const claim of technicalClaimsFromProfile(profile)) {
+    const key = `${claim.skill.toLowerCase()}:${claim.evidence_meta?.entry_id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    claims.push(claim);
+  }
+  return claims;
+}
