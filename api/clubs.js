@@ -31,21 +31,21 @@ export const VERIFICATION_TIERS = [
     label: 'Recognised pipeline',
     minAdmitted: 2,
     minAccepted: 0,
-    grants: 'Listed as a pipeline for this batch. Members show their club on their profile.',
+    grants: 'Members show your club on their profile.',
   },
   {
     id: 'verified',
     label: 'Covenda-verified for this batch',
     minAdmitted: 3,
     minAccepted: 2,
-    grants: 'Members carry the club badge into every application in this vertical, and the club gets a public track record page.',
+    grants: 'A club badge on every application, and a public track record page.',
   },
   {
     id: 'distinguished',
     label: 'Distinguished pipeline',
     minAdmitted: 6,
     minAccepted: 5,
-    grants: 'Featured to companies unlocking this batch, plus first look at new openings in the vertical.',
+    grants: 'Featured to companies, and first look at new openings.',
   },
 ];
 

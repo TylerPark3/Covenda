@@ -24,7 +24,7 @@ test('no club tier lets a member skip their own evidence', () => {
   for (const tier of ['recognised', 'verified', 'distinguished']) {
     assert.equal(memberStanding(tier).satisfiesRequirement, false, `${tier} must not be a shortcut`);
   }
-  assert.match(html, /never substitutes for a member's own evidence/);
+  assert.match(html, /Members still apply with their own recorded work and are judged on it/);
 });
 
 test('and the evidence ceiling agrees with the page', () => {

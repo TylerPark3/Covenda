@@ -493,8 +493,10 @@ test('school clubs can register and see the earned verification ladder', () => {
   assert.match(script, /intent: 'club_verification'/);
   // Earned, never granted — the honesty line has to survive into the UI.
   assert.match(html, /Nothing here is granted or sold/);
-  // The assumption every club will otherwise make, contradicted before they make it.
-  assert.match(html, /never substitutes for a member's own evidence/);
+  // The assumption every club will otherwise make, contradicted before they make it. The
+  // wording shortened; the guarantee did not.
+  assert.match(html, /Standing opens doors, it does not walk through them/);
+  assert.match(html, /Members still apply with their own recorded work and are judged on it/);
   assert.match(styles, /\.club-ladder/);
 });
 
