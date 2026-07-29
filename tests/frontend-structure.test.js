@@ -976,8 +976,11 @@ test('the gold word leaves room for descenders as well as the italic overhang', 
   assert.match(rule, /background-clip: text/);
   // .2em cleared the upright p of "good" and clipped the italic p and f of "proof". Sized for
   // the italic, which is the deeper of the two.
+  // Sized from the font file, not by eye. EB Garamond reports head yMin -294, hhea descender
+  // -298 and OS/2 winDescent 390 against unitsPerEm 1000. Browsers disagree about which sets
+  // the inline content box, so the padding has to clear the LARGEST of them.
   const padBottom = Number(rule.match(/padding-bottom:\s*(0?\.\d+)em/)[1]);
-  assert.ok(padBottom >= 0.3, `padding-bottom ${padBottom}em clips the italic descender`);
+  assert.ok(padBottom > 0.39, `padding-bottom ${padBottom}em does not clear winDescent (0.39em)`);
   const marginBottom = Number(rule.match(/margin-bottom:\s*-(0?\.\d+)em/)[1]);
   assert.equal(padBottom, marginBottom, 'the padding must not push the line down');
   // The horizontal fix has to survive too, or the italic exit stroke clips at a line end.

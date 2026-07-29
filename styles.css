@@ -2062,8 +2062,8 @@ body[data-audience="university"] #flowDemo { display: none; }
      shallow descenders sat inside it, EB Garamond's do not. So the p in "proof" and the g in
      "good" lost their tails. Padded down and pulled back so the fill covers the descender
      without changing where the line sits. */
-  padding-bottom: 0.36em;
-  margin-bottom: -0.36em;
+  padding-bottom: 0.44em;
+  margin-bottom: -0.44em;
   /* And the LEFT, which is the one nobody expects on an italic. Italic glyphs lean right, so
      right and bottom were the obvious sides to pad and both were done first. But the descender
      loop of an italic g swings back UNDER and to the LEFT of its own origin, past the left
