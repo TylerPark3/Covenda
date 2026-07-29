@@ -84,8 +84,28 @@ test('the API merges the catalog entry, not just its requirements', () => {
   assert.match(block, /\{ \.\.\.spec, \.\.\.b/, 'the row must win over the catalog on live columns');
 });
 
-// Two thresholds that hide the same batches are two buttons doing one job. Deduping on the
-// value alone still shipped "1%+" and "10%+" side by side over the same seven batches.
+// Quartiles of the student's own distribution produced "1%+" and "5%+" for anybody scoring
+// low, and a one percent match is not a filter anybody would choose. The number has to mean
+// something independently of who is looking at it.
+test('the thresholds are meaningful numbers, not cuts through one profile', () => {
+  const src = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
+  const fn = src.slice(src.indexOf('function batchFitSteps'), src.indexOf('// ── The simulation runner'));
+  const batchFitSteps = new Function(fn + '; return batchFitSteps;')();
+
+  for (const student of [
+    { skills: ['Python', 'PyTorch', 'SQL', 'Docker', 'React'], verticals: ['software-ai'] },
+    { skills: ['Writing'] },
+    { skills: ['Excel', 'DCF', 'valuation'], verticals: ['accounting-finance'] },
+  ]) {
+    const fits = BATCH_CATALOG.map(b => batchCompatibility(b, student).score);
+    for (const step of batchFitSteps(fits)) {
+      if (step.value === 0) continue;
+      assert.ok([25, 50, 75].includes(step.value), `${step.label} is not a threshold anybody would choose`);
+    }
+  }
+});
+
+// Two thresholds that hide the same batches are two buttons doing one job.
 test('no two filter steps produce the same set, and none is dead', () => {
   const src = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
   const fn = src.slice(src.indexOf('function batchFitSteps'), src.indexOf('// ── The simulation runner'));

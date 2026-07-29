@@ -1623,15 +1623,23 @@ function batchFitOf(batch){
 function batchFitSteps(fits){
   const values=fits.filter(v=>Number.isFinite(v)).sort((a,b)=>a-b);
   if(values.length<4)return [{value:0,label:'All'}];
-  const at=q=>values[Math.floor((values.length-1)*q)];
-  // Rounded down to a readable number, then de-duplicated by the SET each threshold produces
-  // rather than by the threshold itself. Deduping on value alone still shipped "1%+" and
-  // "10%+" side by side showing the same seven batches — two different numbers, one filter.
-  const marks=[...new Set([at(0.5),at(0.75),at(0.9)].map(v=>Math.max(1,Math.floor(v/5)*5)))]
-    .filter(v=>v>0).sort((a,b)=>a-b);
+
+  // Fixed, meaningful thresholds rather than quartiles of this student's own distribution.
+  //
+  // Quartiles produced "1%+", "5%+", "20%+" for anybody whose scores clustered low, and a 1%
+  // match is not a filter anybody would choose: nobody thinks "show me the batches I match at
+  // least one percent of". The number has to mean something on its own, independently of who
+  // is looking at it, or the control is just three arbitrary cuts through the same list.
+  //
+  // 25/50/75 reads as weak / real / strong, which is what somebody is actually deciding
+  // between.
+  const MARKS=[25,50,75];
+
+  // A threshold nobody clears is a dead button, and two thresholds hiding the same batches are
+  // one filter wearing two labels. Both are dropped rather than shown greyed out.
   const seen=new Set([values.length]);
   const kept=[];
-  for(const v of marks){
+  for(const v of MARKS){
     const count=values.filter(f=>f>=v).length;
     if(count===0||seen.has(count))continue;
     seen.add(count);kept.push(v);
