@@ -738,6 +738,21 @@
         </div>
 
         <div class="selector-orbit university-orbit">
+          <!-- The roster builder opens on demand. Inline it was the longest thing on the
+               page and the least likely to be used on a first visit: a partner reads the
+               ladder, decides, and only then has names to add. -->
+          <div class="roster-open">
+            <p class="roster-open-cap">Ready to put names forward?</p>
+            <p class="roster-open-note">Add the students you would stake your name on. Nothing is shared until you send it.</p>
+            <button class="gold-button" type="button" data-action="roster-open">Open the roster builder<svg><use href="#icon-arrow-right"/></svg></button>
+          </div>
+        </div>
+
+  <dialog class="form-dialog roster-dialog" id="rosterDialog" aria-labelledby="rosterDialogTitle">
+    <div class="roster-dialog-head">
+      <h2 id="rosterDialogTitle">Put names forward</h2>
+      <button class="dialog-close" type="button" data-close-dialog aria-label="Close">&times;</button>
+    </div>
           <div class="roster-builder glass-panel">
             <div class="roster-section">
               <p class="roster-eyebrow">Partner details</p>
@@ -822,7 +837,7 @@
               </div>
             </div>
           </div>
-        </div>
+  </dialog>
         <a class="scroll-cue" href="#how"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
@@ -1132,16 +1147,16 @@
       <section class="value-band">
         <div class="value-band-inner">
           <div class="value-col">
-            <p class="value-metric">Fixed pay</p>
-            <p class="value-line">Confirmed before any work starts. No spec work.</p>
+            <p class="value-metric">A profile you own</p>
+            <p class="value-line">Built from what you have actually done, with what each piece proves and what it does not.</p>
           </div>
           <div class="value-col">
-            <p class="value-metric">Safe boundary</p>
-            <p class="value-line">Public or approved inputs only. Never restricted records.</p>
+            <p class="value-metric">Agency, measured</p>
+            <p class="value-line">What you do when the obvious path closes. A transcript is blind to it.</p>
           </div>
           <div class="value-col">
-            <p class="value-metric">Kept proof</p>
-            <p class="value-line">Accepted work becomes a record the student controls.</p>
+            <p class="value-metric">Built for one team</p>
+            <p class="value-line">Each batch is shaped by one company's real constraints, not a keyword filter.</p>
           </div>
         </div>
       </section>

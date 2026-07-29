@@ -5703,3 +5703,18 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .exchange-source--task, .exchange-source--student, .exchange-workbench { animation: none; }
 }
+
+/* The roster builder, on demand. Inline it was the longest thing on the page and the least
+   likely to be used on a first visit: a partner reads the ladder, decides, and only then has
+   names to add. */
+.roster-open { display: grid; gap: 8px; justify-items: start; padding: clamp(24px, 3vw, 34px); border: 1px solid var(--gold-light); background: linear-gradient(180deg, var(--gold-pale), #fff); }
+.roster-open-cap { margin: 0; font-size: var(--step-body-lg); font-weight: 700; letter-spacing: -.02em; color: var(--ink); }
+.roster-open-note { max-width: 52ch; margin: 0 0 6px; font-size: var(--step-body-sm); line-height: 1.6; color: var(--muted); }
+
+.roster-dialog { width: min(100%, 900px); max-height: 88vh; padding: 0; border: 1px solid var(--line-strong); border-radius: 0; background: #fff; overflow: auto; }
+.roster-dialog::backdrop { background: rgba(17,17,15,.55); }
+.roster-dialog-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 26px; border-bottom: 1px solid var(--line); background: #fff; }
+.roster-dialog-head h2 { margin: 0; font-family: var(--font-sans); font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.roster-dialog .roster-builder { border: 0; box-shadow: none; padding: 22px 26px 30px; }
+.dialog-close { border: 0; background: transparent; color: var(--muted); font-size: 26px; line-height: 1; cursor: pointer; }
+.dialog-close:hover { color: var(--ink); }

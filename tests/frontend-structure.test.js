@@ -1155,3 +1155,19 @@ test('the specialty prompt disappears once a choice is made', async () => {
   // The prompt still earns its place while there is something to prompt for.
   assert.match(app, /Choose the specific work you want attached to your signup/);
 });
+
+// The roster builder was the longest thing on the page and the least likely to be used on a
+// first visit. Behind a trigger it is a tool; inline it was homework.
+test('the roster builder opens on demand and its trigger works', async () => {
+  const app = await readFile(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(html, /id="rosterDialog"/);
+  assert.match(html, /data-action="roster-open"/);
+  // A trigger with no handler is a dead button, which is worse than an inline form.
+  assert.match(app, /action === 'roster-open'/);
+  assert.match(app, /getElementById\('rosterDialog'\)/);
+  // Closing follows the same contract every other dialog on this page uses.
+  assert.match(html, /id="rosterDialog"[\s\S]{0,400}data-close-dialog/);
+  // The form itself moved rather than being duplicated.
+  assert.equal((html.match(/class="roster-builder/g) || []).length, 1);
+  assert.equal((html.match(/id="rosterList"/g) || []).length, 1);
+});

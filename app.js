@@ -3014,6 +3014,13 @@ $$('[data-action]').forEach(button => button.addEventListener('click', () => {
     setWorkspaceTab('submissions');
   }
   if (action === 'student-quick') confirmStudentJoin(button);
+  // The roster builder is a long form almost nobody on a first visit is ready to fill in. It
+  // opens on demand rather than sprawling down the page under everything else.
+  if (action === 'roster-open') {
+    const dialog = document.getElementById('rosterDialog');
+    if (dialog && !dialog.open) dialog.showModal();
+  }
+  if (action === 'roster-close') document.getElementById('rosterDialog')?.close();
   if (action === 'request-endorsement') openRequestEndorse();
   if (action === 'refresh-delivery') {
     refreshDeliveryHealth({ force: true }).then(primary => {
