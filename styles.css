@@ -2067,7 +2067,6 @@ body[data-audience="university"] #flowDemo { display: none; }
 .hero-company .word-gold,
 .hero-university .word-gold { color: #e2bd6b; }
 @media (prefers-reduced-motion: reduce) {
-  .word-gold { animation: none; background-position: -60% 0, 0 0; }
 }
 
 /* ---- Interactive gold icosahedron (decorative accent in the feature panel) ---- */
@@ -4603,9 +4602,6 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
   text-shadow: 0 2px 34px rgba(0,0,0,.45);
 }
 
-.hero-home .word-gold {
-  color: #d8a744;
-}
 
 .hero-home .home-kicker {
   color: #e6c37a;
@@ -4858,16 +4854,6 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 .ref-illus svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 2px; color: var(--gold-deep); }
 @media (max-width: 900px) { .ref-grid { grid-template-columns: 1fr; } }
 
-/* ---- Reconciling the dark hero with the gold word ----------------------------------
-   .word-gold paints a gradient via background-clip:text with -webkit-text-fill-color:
-   transparent. That transparent fill beats a plain `color`, so setting one on the dark hero
-   had no effect and the word kept the gradient picked for a white page — too dark on
-   #12120f. Brightened here, where the ground actually is dark. */
-.hero-home .word-gold {
-  background-image:
-    linear-gradient(102deg, transparent 40%, rgba(255,246,224,.95) 50%, transparent 60%),
-    linear-gradient(96deg, #C9A24B 0%, #E8C87E 44%, #FFF0C4 66%, #D8A744 90%);
-}
 
 /* The screening questions. Kind is colour-coded because the two are read differently: a
    technical question has a right answer, a judgement one does not. */

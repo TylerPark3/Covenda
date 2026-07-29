@@ -3017,7 +3017,7 @@ function renderReferrerDashboard() {
   const table = document.createElement('div'); table.className = 'referrer-students';
   const thead = document.createElement('div'); thead.className = 'referrer-students-head';
   const th = document.createElement('h3'); th.textContent = 'Students you referred';
-  const tc = document.createElement('span'); tc.textContent = total + ' students';
+  const tc = document.createElement('span'); tc.textContent = students.length + ' students';
   thead.append(th, tc); table.append(thead);
   students.forEach(s => {
     const row = document.createElement('div'); row.className = 'referrer-row';
