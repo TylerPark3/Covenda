@@ -1543,9 +1543,11 @@ export async function saveEvidenceRequest(member, input) {
 }
 
 export async function loadEvidenceRequests(member) {
-  return checked(member.supabase.from('company_evidence_requests')
+  // Same reasoning as loadTechnicalEvidence: a company's projects and roster must not depend
+  // on a table added later.
+  return optional(member.supabase.from('company_evidence_requests')
     .select('*').eq('company_user_id', member.user.id)
-    .order('created_at', { ascending: false }).limit(20), []);
+    .order('created_at', { ascending: false }).limit(20), [], 'company_evidence_requests');
 }
 
 export async function deleteEvidenceRequest(member, input) {
@@ -1679,9 +1681,16 @@ export async function saveTechnicalEvidence(member, input) {
 }
 
 export async function loadTechnicalEvidence(member) {
-  return checked(member.supabase.from('technical_evidence')
+  // optional(), not checked(). checked() throws, and throwing here took the WHOLE student
+  // portal down with PORTAL_SCHEMA_MISSING on any deployment where the migration had not been
+  // applied. A student's projects, batches and wallet have nothing to do with this table.
+  //
+  // Third time this exact shape has broken production. The rule: a read added after launch is
+  // optional until its migration is universally applied, and nothing inside the request can
+  // know whether it has been.
+  return optional(member.supabase.from('technical_evidence')
     .select('*').eq('student_user_id', member.user.id)
-    .order('created_at', { ascending: false }).limit(60), []);
+    .order('created_at', { ascending: false }).limit(60), [], 'technical_evidence');
 }
 
 export async function deleteTechnicalEvidence(member, input) {
