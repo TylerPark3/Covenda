@@ -69,3 +69,31 @@ test('schema health renders above the directory', () => {
   assert.ok(html.indexOf('id="adminSchema"') < html.indexOf('id="adminPeople"'));
   assert.ok(js.indexOf('renderSchemaHealth()') < js.indexOf('renderPeopleDirectory().catch'));
 });
+
+// ADMIN_UNAVAILABLE: "supabase is not defined". The client is only in scope inside the
+// unauthenticated helpers; every handler past authorizeAdmin must use operator.supabase.
+//
+// This shipped in three separate handlers without anyone noticing, because the failure looks
+// like a broken feature rather than a typo: the schema check, the people directory, and the
+// simulation runs all returned an error the UI presented as "could not load".
+test('no handler past authorizeAdmin references a client that is not in scope', () => {
+  const lines = api.split('\n');
+  const auth = lines.findIndex(l => l.includes('const operator = await authorizeAdmin'));
+  assert.ok(auth > 0, 'the authorization boundary moved');
+
+  const offenders = [];
+  for (let i = auth + 1; i < lines.length; i += 1) {
+    // A bare `supabase.` that is not `operator.supabase.` and not a local redeclaration.
+    if (/(?<![.\w])supabase\./.test(lines[i]) && !/const supabase\s*=/.test(lines[i])) {
+      offenders.push(`${i + 1}: ${lines[i].trim().slice(0, 70)}`);
+    }
+  }
+  assert.deepEqual(offenders, [], 'these lines will throw "supabase is not defined" at runtime');
+});
+
+// The whole file has to parse as a module, which node --check already covers, but a reference
+// error only surfaces when the branch runs. This is the cheap structural stand-in.
+test('the schema handler uses the authenticated client', () => {
+  assert.match(block, /operator\.supabase\.from\(spec\.table\)/);
+  assert.ok(!/(?<![.\w])supabase\.from\(spec\.table\)/.test(block));
+});

@@ -1038,7 +1038,7 @@ export default async function handler(req, res, dependencies = {}) {
         ];
 
         const checked = await Promise.all(EXPECTED.map(async spec => {
-          const { error, count } = await supabase.from(spec.table).select('*', { count: 'exact', head: true });
+          const { error, count } = await operator.supabase.from(spec.table).select('*', { count: 'exact', head: true });
           const missing = Boolean(error) && /does not exist|schema cache|relation/i.test(error.message || '');
           return {
             ...spec,
@@ -1066,8 +1066,8 @@ export default async function handler(req, res, dependencies = {}) {
       if (input.action === 'people-directory') {
         // Reads the view, not the log: one row per person rather than one per click.
         const [peopleResult, dupeResult] = await Promise.all([
-          supabase.from('people_directory').select('*').order('last_seen', { ascending: false }).limit(500),
-          supabase.from('people_possible_duplicates').select('*').limit(50),
+          operator.supabase.from('people_directory').select('*').order('last_seen', { ascending: false }).limit(500),
+          operator.supabase.from('people_possible_duplicates').select('*').limit(50),
         ]);
         // The error used to be destructured away, so a view that does not exist yet rendered
         // as an empty directory: no people, no duplicates, no explanation, and nothing to
@@ -1112,7 +1112,7 @@ export default async function handler(req, res, dependencies = {}) {
         });
       }
       if (input.action === 'simulation-runs') {
-        const { data } = await supabase.from('simulation_runs')
+        const { data } = await operator.supabase.from('simulation_runs')
           .select('id, user_id, scenario_id, specialization, status, started_at, completed_at, state, defense')
           .eq('status', 'completed').order('completed_at', { ascending: false }).limit(50);
 
@@ -1152,7 +1152,7 @@ export default async function handler(req, res, dependencies = {}) {
         const config = deliveryConfig(env);
         // Recent failures, so "configured" and "actually working" are answered separately —
         // a valid key with a bouncing from-address is configured and still delivering nothing.
-        const { data: recent } = await supabase.from('error_events')
+        const { data: recent } = await operator.supabase.from('error_events')
           .select('message, detail, created_at').eq('route', 'notify')
           .gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString())
           .order('created_at', { ascending: false }).limit(50);
