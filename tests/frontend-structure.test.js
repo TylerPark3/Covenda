@@ -1110,3 +1110,25 @@ test('gold emphasis marks a phrase, never a whole heading', () => {
   const plain = headings.filter(h => !h.includes('word-gold'));
   assert.ok(plain.length >= 5, `only ${plain.length} headings left plain, the device is losing its force`);
 });
+
+// Mono is for things read character by character: a reference code, a count, a timer, a URL
+// about to be copied. It had spread onto 45 rules, most of them labels and prose, and a page
+// mixing three faces in forty-five places is what reads as "too many fonts".
+test('the monospace is used for data, not for labels', () => {
+  const uses = [];
+  for (const block of styles.match(/[^{}]+\{[^{}]*\}/g) || []) {
+    if (!block.includes('var(--font-mono)')) continue;
+    uses.push(block.split('{')[0].trim().replace(/\s+/g, ' '));
+  }
+  assert.ok(uses.length <= 12, `${uses.length} rules use the monospace: ${uses.slice(0, 8).join(', ')}`);
+  for (const sel of uses) {
+    assert.ok(/-(n|count|timer|code|num)\b|reference|referral-link/.test(sel),
+      `${sel} is not code-like and should not be monospace`);
+  }
+});
+
+test('a selected industry reads as gold, not as a hole in the rail', () => {
+  const rule = styles.match(/\.student-vertical\.is-selected \{[^}]*\}/)[0];
+  assert.match(rule, /background: var\(--gold\)/);
+  assert.ok(!/background: var\(--ink\)/.test(rule), 'selection is still a black block');
+});

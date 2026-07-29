@@ -2982,10 +2982,6 @@ function renderReferrerDashboard() {
   ns.append(nb);
   note.append(ns);
   host.append(note);
-  const deferred = document.createElement('p'); deferred.className = 'referrer-deferred';
-  deferred.textContent = 'Cash or revenue-share to referrers is a deferred decision, not part of this pilot.';
-  host.append(deferred);
-
   window.requestAnimationFrame(() => { fill.style.width = weight + '%'; });
 }
 
