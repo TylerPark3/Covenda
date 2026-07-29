@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   ARTIFACT_TYPES, ARTIFACT_IDS, FIRM_TYPES, FIRM_IDS, DISCIPLINES,
   recordFinanceEvidence, financeProfile, emphasisFor, financeGaps, firmType,
+  claimsFromStoredFinanceEvidence,
 } from '../../api/finance-evidence.js';
 import { batchesByVertical } from '../../api/batches.js';
 
@@ -120,4 +122,61 @@ test('the firm types cover the finance specialisations in the catalogue', () => 
   for (const word of ['investment banking', 'private equity', 'venture capital', 'asset', 'accounting']) {
     assert.ok(labels.includes(word), `no firm type covers ${word}`);
   }
+});
+
+// ── Wiring ────────────────────────────────────────────────────────────────────────────
+// The lesson from this build: a model with no callers is not a feature. These assert the
+// route exists, the read degrades, and the write does not.
+test('the finance routes are wired into the portal', () => {
+  const api = readFileSync(new URL('../../api/portal.js', import.meta.url), 'utf8').replace(/\/\/.*$/gm, '');
+  for (const action of ['save-finance-evidence', 'delete-finance-evidence', 'target-firm-type']) {
+    assert.match(api, new RegExp(`input\\.action === '${action}'`), `${action} has no route`);
+  }
+  assert.match(api, /finance,\s*batchApplicationsOpen/, 'the finance profile never reaches the dashboard');
+});
+
+// Fourth time this shape has broken production, per the note in loadTechnicalEvidence.
+test('the finance read degrades and the finance write does not', () => {
+  const api = readFileSync(new URL('../../api/portal.js', import.meta.url), 'utf8');
+  const load = api.slice(api.indexOf('export async function loadFinanceEvidence'));
+  assert.match(load.slice(0, 400), /optional\(/, 'loadFinanceEvidence uses checked() and will take the portal down');
+
+  const save = api.slice(api.indexOf('export async function saveFinanceEvidence'));
+  assert.match(save.slice(0, 3000), /checked\(member\.supabase\.from\('finance_evidence'\)\.insert/, 'the write does not verify it landed');
+});
+
+test('the migration enforces the rules the model enforces', () => {
+  const sql = readFileSync(new URL('../../supabase/migrations/20260729400000_finance_evidence.sql', import.meta.url), 'utf8');
+  assert.match(sql, /subject text not null/, 'an artifact with no subject could be stored');
+  assert.match(sql, /finance_evidence_pointer_required/, 'a verified artifact could point at nothing');
+  assert.match(sql, /enable row level security/);
+  assert.match(sql, /notify pgrst, 'reload schema';\s*$/);
+  // Every artifact type the model knows must be storable, or saving one 500s on a CHECK.
+  for (const id of ARTIFACT_IDS) assert.ok(sql.includes(`'${id}'`), `${id} is not allowed by the CHECK constraint`);
+  // No score column, deliberately.
+  const cols = sql.slice(sql.indexOf('create table'), sql.indexOf('constraint'));
+  for (const banned of ['score', 'rating', 'return_pct', 'grade']) {
+    assert.ok(!cols.includes(banned), `the table has a ${banned} column`);
+  }
+});
+
+test('a stored row is rehydrated through the model, so the ceiling still applies', () => {
+  // The row claims `referral`; a parsed workbook cannot support that. If claims were stored
+  // instead of derived, fixing the ceiling would never reach rows saved before the fix.
+  const claims = claimsFromStoredFinanceEvidence([{
+    id: 'r1', artifact_type: 'lbo_model', evidence_source: 'parsed_workbook',
+    verification_level: 'referral', pointer: 'https://x/l', subject: 'Dollar General',
+    skills: ['LBO'], defense_result: { ok: true },
+  }]);
+  assert.ok(claims.length > 0);
+  assert.ok(claims.every(c => c.verification_tier === 'artifact'), 'the stored tier overrode the source ceiling');
+  const profile = financeProfile(claims);
+  assert.equal(profile.artifactCount, 1);
+  assert.equal(profile.defended, 1);
+  assert.equal(emphasisFor(profile, 'private_equity').leads[0].type, 'lbo_model');
+});
+
+test('an unknown stored type is skipped rather than throwing', () => {
+  assert.deepEqual(claimsFromStoredFinanceEvidence([{ artifact_type: 'crypto_moonshot', subject: 'x' }]), []);
+  assert.deepEqual(claimsFromStoredFinanceEvidence(null), []);
 });

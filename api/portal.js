@@ -24,6 +24,7 @@ import {
   unpromptedBuild, crossFunctional,
 } from './super-intern.js';
 import { allTechnicalClaims, technicalProfile, technicalGaps, recordTechnicalEvidence, recommendedEvidence, EVIDENCE_TYPES, OWNERSHIP_LEVELS } from './technical-evidence.js';
+import { claimsFromStoredFinanceEvidence, financeProfile, financeGaps, emphasisFor, recordFinanceEvidence, ARTIFACT_TYPES as FINANCE_ARTIFACTS, FIRM_TYPES as FINANCE_FIRMS } from './finance-evidence.js';
 import { summarise as summariseVetting, processFor } from './vetting.js';
 import { assessmentFor as supplierAssessment } from './assessments.js';
 import { scriptFor } from './session-script.js';
@@ -449,6 +450,25 @@ export async function loadMemberDashboard(member, env = process.env) {
     });
 
     const technical = { ...technicalBase, gaps: technicalGaps(technicalBase), entries: technicalEvidence, unprompted, reach, typeGuide, ownershipLevels: OWNERSHIP_LEVELS };
+
+    // The finance evidence graph, built the same way and for the same reason: a finance student
+    // read through the software graph shows up as having no evidence at all, because a DCF is
+    // not a repo. The firm type only reorders emphasis, so a student who has not picked one
+    // still gets a complete profile.
+    const financeEvidence = await loadFinanceEvidence(member);
+    const financeBase = financeProfile(claimsFromStoredFinanceEvidence(financeEvidence));
+    const finance = {
+      ...financeBase,
+      entries: financeEvidence,
+      gaps: financeGaps(financeBase, profile.target_firm_type || null),
+      emphasis: emphasisFor(financeBase, profile.target_firm_type || null),
+      targetFirmType: profile.target_firm_type || null,
+      // Same reason the technical type guide travels with the dashboard: if the form and the
+      // model describe an artifact's limit differently, the student is being told two things.
+      artifactGuide: Object.fromEntries(Object.entries(FINANCE_ARTIFACTS)
+        .map(([id, a]) => [id, { label: a.label, demonstrates: a.demonstrates, cannotShow: a.cannotShow, questions: a.ownershipQuestions }])),
+      firmTypes: Object.entries(FINANCE_FIRMS).map(([id, f]) => ({ id, label: f.label, evaluates: f.evaluates })),
+    };
     // The DB row carries snake_case columns and no verticalSlug or summary, so grafting only
     // `requirements` left the matcher blind to the vertical (its bonus could never fire for
     // anyone) and short of the words it matches against. Merge the whole catalog entry, with
@@ -467,7 +487,7 @@ export async function loadMemberDashboard(member, env = process.env) {
         }),
       };
     });
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, simulations, availableSimulations, batchApplicationsOpen: batchApplicationsOpen(env), batchesClosedMessage: BATCHES_CLOSED_MESSAGE, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, simulations, availableSimulations, finance, batchApplicationsOpen: batchApplicationsOpen(env), batchesClosedMessage: BATCHES_CLOSED_MESSAGE, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), practitionerAsk: commitmentFor(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -1945,6 +1965,87 @@ export async function deleteTechnicalEvidence(member, input) {
   return { removed: id };
 }
 
+// ── Finance evidence ──────────────────────────────────────────────────────────────────
+// Same three functions, same division of labour: recordFinanceEvidence validates and caps the
+// tier, this only persists what it produced. Nothing about the ceiling is restated here.
+export async function saveFinanceEvidence(member, input) {
+  const profile = await loadMemberProfile(member);
+  if (profile?.role !== 'student') throw new Error('Only student accounts carry finance evidence.');
+
+  const pointer = cleanUrl(input.pointer) || cleanUrl(input.url) || null;
+  const subject = cleanText(input.subject, 120);
+  const skills = (Array.isArray(input.skills) ? input.skills : [])
+    .map(s => cleanText(s, 60)).filter(Boolean).slice(0, 12);
+
+  const assessed = recordFinanceEvidence({
+    id: pointer || `${input.type}:${subject}`,
+    type: input.type,
+    source: input.source || (pointer ? 'connected_repo' : 'self_reported'),
+    tier: input.tier || (pointer ? 'artifact' : 'claimed'),
+    pointer,
+    subject,
+    skills,
+    published: Boolean(input.published),
+    defended: Boolean(input.defended),
+  });
+  if (!assessed.ok) throw new Error(assessed.reason);
+
+  const first = assessed.claims[0];
+  const row = {
+    student_user_id: member.user.id,
+    artifact_type: input.type,
+    evidence_source: first.evidence_meta.source,
+    verification_level: first.verification_tier,
+    subject,
+    title: cleanText(input.title, 160) || null,
+    pointer,
+    published: Boolean(input.published),
+    // Stored as text and validated by the column type, so an unparseable date is rejected
+    // rather than silently becoming today.
+    as_of: cleanText(input.asOf, 10) || null,
+    skills,
+    disciplines: [...new Set(assessed.claims.flatMap(c => c.evidence_meta.disciplines || []))],
+    provenance: input.provenance || null,
+    detail: {
+      thesis: cleanText(input.thesis, 1500) || null,
+      // The field that separates a view from a summary. Asked for every artifact type.
+      downside: cleanText(input.downside, 1500) || null,
+      keyDriver: cleanText(input.keyDriver, 600) || null,
+      whatIWouldChange: cleanText(input.whatIWouldChange, 1000) || null,
+    },
+  };
+
+  // checked(), not optional(): a write that silently does nothing is worse than an error.
+  const saved = await checked(member.supabase.from('finance_evidence').insert(row).select('*').single(), null);
+  if (!saved) throw new Error('Finance evidence could not be saved. The finance_evidence migration may not be applied yet.');
+  return { entry: saved, questions: assessed.questions, demonstrates: assessed.demonstrates, cannotShow: assessed.cannotShow };
+}
+
+export async function loadFinanceEvidence(member) {
+  // optional(). A read added after launch is optional until its migration is universally
+  // applied, and a finance table must not be able to take a software student's portal down.
+  return optional(member.supabase.from('finance_evidence')
+    .select('*').eq('student_user_id', member.user.id)
+    .order('created_at', { ascending: false }).limit(60), [], 'finance_evidence');
+}
+
+export async function deleteFinanceEvidence(member, input) {
+  const id = cleanText(input.id, 60);
+  if (!id) throw new Error('Choose an entry to remove.');
+  await member.supabase.from('finance_evidence').delete()
+    .eq('id', id).eq('student_user_id', member.user.id);
+  return { removed: id };
+}
+
+// Non-binding by construction: it reorders what a reader sees first and touches nothing else.
+export async function saveTargetFirmType(member, input) {
+  const id = cleanText(input.firmType, 40) || null;
+  if (id && !FINANCE_FIRMS[id]) throw new Error('That is not a firm type on the list.');
+  await checked(member.supabase.from('member_profiles')
+    .update({ target_firm_type: id }).eq('user_id', member.user.id), null);
+  return { targetFirmType: id };
+}
+
 export async function saveMemberVideo(member, input) {
   const url = cleanUrl(input.url);
   if (!url) throw new Error('That recording did not produce a usable link.');
@@ -3262,6 +3363,9 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'delete-evidence-request') return res.status(200).json({ ok: true, ...(await deleteEvidenceRequest(member, input)) });
     if (req.method === 'POST' && input.action === 'save-technical-evidence') return res.status(201).json({ ok: true, ...(await saveTechnicalEvidence(member, input)) });
     if (req.method === 'POST' && input.action === 'delete-technical-evidence') return res.status(200).json({ ok: true, ...(await deleteTechnicalEvidence(member, input)) });
+    if (req.method === 'POST' && input.action === 'save-finance-evidence') return res.status(201).json({ ok: true, ...(await saveFinanceEvidence(member, input)) });
+    if (req.method === 'POST' && input.action === 'delete-finance-evidence') return res.status(200).json({ ok: true, ...(await deleteFinanceEvidence(member, input)) });
+    if (req.method === 'POST' && input.action === 'target-firm-type') return res.status(200).json({ ok: true, ...(await saveTargetFirmType(member, input)) });
     if (req.method === 'POST' && input.action === 'save-video') return res.status(201).json({ ok: true, video: await saveMemberVideo(member, input) });
     if (req.method === 'POST' && input.action === 'delete-video') return res.status(200).json({ ok: true, ...(await deleteMemberVideo(member, input)) });
     if (req.method === 'POST' && input.action === 'register-club') return res.status(201).json({ ok: true, club: await registerClub(member, input) });

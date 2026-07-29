@@ -375,3 +375,27 @@ export function financeGaps(profile, firmId = null) {
   }
   return gaps;
 }
+
+// ── Rehydrating stored rows ───────────────────────────────────────────────────────────
+// Rows go back through recordFinanceEvidence rather than being read as claims directly. The
+// alternative is storing derived claims, and then a fix to the tier ceiling or the discipline
+// map only applies to artifacts saved after the fix. Deriving on read means one code path.
+export function claimsFromStoredFinanceEvidence(rows = []) {
+  const claims = [];
+  for (const row of rows || []) {
+    if (!row || !ARTIFACT_TYPES[row.artifact_type]) continue;
+    const result = recordFinanceEvidence({
+      id: row.id,
+      type: row.artifact_type,
+      source: row.evidence_source,
+      tier: row.verification_level,
+      pointer: row.pointer,
+      subject: row.subject,
+      skills: Array.isArray(row.skills) ? row.skills : [],
+      published: row.published,
+      defended: Boolean(row.defense_result),
+    });
+    claims.push(...(result.claims || []));
+  }
+  return claims;
+}
