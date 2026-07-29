@@ -1149,7 +1149,9 @@ export default async function handler(req, res, dependencies = {}) {
         return res.status(200).json({ ok: true, runs });
       }
       if (input.action === 'delivery-health') {
-        const config = deliveryConfig(env);
+        // `env` is not in scope in the request handler; the convention in this file is
+        // process.env, as the digest handler below already does.
+        const config = deliveryConfig(dependencies.env || process.env);
         // Recent failures, so "configured" and "actually working" are answered separately —
         // a valid key with a bouncing from-address is configured and still delivering nothing.
         const { data: recent } = await operator.supabase.from('error_events')

@@ -76,19 +76,30 @@ test('schema health renders above the directory', () => {
 // This shipped in three separate handlers without anyone noticing, because the failure looks
 // like a broken feature rather than a typo: the schema check, the people directory, and the
 // simulation runs all returned an error the UI presented as "could not load".
-test('no handler past authorizeAdmin references a client that is not in scope', () => {
+test('no handler past authorizeAdmin references a dependency that is not in scope', () => {
   const lines = api.split('\n');
   const auth = lines.findIndex(l => l.includes('const operator = await authorizeAdmin'));
   assert.ok(auth > 0, 'the authorization boundary moved');
 
+  // The module-level helpers receive these as parameters; the request handler does not. Each
+  // one has already shipped as a runtime ReferenceError inside a branch nobody exercised:
+  // `supabase` in three handlers, then `env` in a fourth.
+  const notInScope = ['supabase', 'env', 'createSupabaseClient'];
   const offenders = [];
   for (let i = auth + 1; i < lines.length; i += 1) {
-    // A bare `supabase.` that is not `operator.supabase.` and not a local redeclaration.
-    if (/(?<![.\w])supabase\./.test(lines[i]) && !/const supabase\s*=/.test(lines[i])) {
-      offenders.push(`${i + 1}: ${lines[i].trim().slice(0, 70)}`);
+    // Comments explain why a thing is NOT in scope, so they contain the very names this
+    // searches for. Third time this trap has bitten: "age" inside "stage", "rank" inside "not
+    // a ranking", and now `env` inside a comment about `env`.
+    const line = lines[i].replace(/\/\/.*$/, '').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const name of notInScope) {
+      // Bare use only: not a property access, not a local declaration, not an object key.
+      const bare = new RegExp(`(?<![.\\w$])${name}(?![\\w$:])`);
+      if (bare.test(line) && !new RegExp(`(const|let|var)\\s+${name}\\s*=`).test(line)) {
+        offenders.push(`${i + 1}: ${line.trim().slice(0, 70)}`);
+      }
     }
   }
-  assert.deepEqual(offenders, [], 'these lines will throw "supabase is not defined" at runtime');
+  assert.deepEqual(offenders, [], 'these lines will throw a ReferenceError at runtime');
 });
 
 // The whole file has to parse as a module, which node --check already covers, but a reference
