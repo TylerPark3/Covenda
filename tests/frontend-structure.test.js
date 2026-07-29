@@ -780,7 +780,8 @@ test('only the student path uses the folded-sheet transition, and it respects re
 // A referrer was told their "vouch gains weight" with nothing showing what that becomes.
 test('the referral section shows the outcome, labelled illustrative', () => {
   assert.match(html, /What a referral becomes/);
-  assert.match(html, /One vouch, six months on/);
+  // Tag-tolerant: the heading now carries a gold emphasis span mid-sentence.
+  assert.match(html.replace(/<[^>]+>/g, ''), /One vouch, six months on/);
   assert.match(html, /Your track record page/);
   // A vouch is a head start, never a bypass — that has to survive into the example.
   assert.match(html, /carries them to review, not past it/);
@@ -1082,4 +1083,22 @@ test('nothing both drifts and reveals', async () => {
   for (const drifting of ['exchange-source', 'exchange-workbench']) {
     assert.ok(!list.includes(drifting), `${drifting} is in the reveal list and also drifts`);
   }
+});
+
+// The gold italic marks the phrase carrying the claim. A heading that is ENTIRELY gold is not
+// an emphasis, and once every heading has one the device stops meaning anything at all.
+test('gold emphasis marks a phrase, never a whole heading', () => {
+  const main = html.slice(html.indexOf('<main'), html.indexOf('</main>'));
+  const headings = main.match(/<h2[^>]*>[\s\S]*?<\/h2>/g) || [];
+  const strip = x => x.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+  for (const heading of headings) {
+    const gold = heading.match(/<span class="word-gold">([\s\S]*?)<\/span>/);
+    if (!gold) continue;
+    assert.notEqual(strip(gold[1]), strip(heading), `this heading is entirely gold: ${strip(heading).slice(0, 50)}`);
+  }
+
+  // And some headings stay plain. Utility and sub-headings do not carry a claim to emphasise.
+  const plain = headings.filter(h => !h.includes('word-gold'));
+  assert.ok(plain.length >= 5, `only ${plain.length} headings left plain, the device is losing its force`);
 });
