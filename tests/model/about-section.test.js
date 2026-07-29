@@ -117,3 +117,24 @@ test('nothing in the section rounds its corners', () => {
 test('the two columns collapse on small screens', () => {
   assert.match(css, /@media \(max-width: 900px\) \{\s*\.about-inner \{ grid-template-columns: 1fr; \}/);
 });
+
+// The section-header treatment lives in TWO rules: one sets the display size, the other sets
+// the display FACE. Adding a heading to the first and not the second leaves it in the body
+// sans at weight 720 while every neighbouring header sits in the display face at 400, which
+// is a different family and a different weight from one omitted selector.
+test('a marketing section heading gets both halves of the shared treatment', () => {
+  const selectors = rule => (css.match(rule)[1]).split(',').map(s => s.trim()).filter(Boolean);
+  const size = selectors(/^(\.section-heading h2,[^{]*)\{[^}]*font-size: clamp\(38px/m);
+  const face = selectors(/^(\.section-heading h2,[^{]*)\{\s*font-family: var\(--font-display\)/m);
+
+  // The workspace headings are deliberately excluded from the face rule: they are dashboard
+  // chrome rather than marketing section headers.
+  const chrome = ['.workspace-title h1', '.simple-workspace-view h1'];
+  const missing = size.filter(s => !face.includes(s) && !chrome.includes(s));
+  assert.deepEqual(missing, [], 'these headings take the display size but not the display face');
+
+  for (const heading of ['.about-lede h2', '.recruiter-lede h2']) {
+    assert.ok(size.includes(heading), `${heading} is missing the shared size`);
+    assert.ok(face.includes(heading), `${heading} is missing the shared face`);
+  }
+});

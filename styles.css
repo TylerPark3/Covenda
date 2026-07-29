@@ -903,7 +903,12 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
   letter-spacing: -.055em;
   font-weight: 720;
 }
-.section-heading h2, .why-copy h2, .final-cta h2, .dialog-copy h2, .review-intro h3, .exchange-head h2 {
+/* The section-header face. Kept as a second rule because .dialog-copy and .review-intro take
+   the family without the display size above, so the two lists are genuinely different.
+   .about-lede and .recruiter-lede were added to the size rule and missed here, which left both
+   headings in the body sans at weight 720 while every other section header sat in the display
+   face at 400. Different family AND different weight, from one omitted selector. */
+.section-heading h2, .why-copy h2, .final-cta h2, .about-lede h2, .recruiter-lede h2, .dialog-copy h2, .review-intro h3, .exchange-head h2 {
   font-family: var(--font-display);
   font-weight: 400;
 }
