@@ -1145,3 +1145,13 @@ test('a selected industry reads as gold, not as a hole in the rail', () => {
   assert.match(rule, /overflow: hidden/, 'the field would spill past the card corners');
   assert.match(styles, /\.vertical-field \{[^}]*position: absolute/);
 });
+
+// The card is highlighted and the button reads "Join for X". A line underneath saying
+// "Selected: X" was the same fact a third time.
+test('the specialty prompt disappears once a choice is made', async () => {
+  const app = await readFile(new URL('../app.js', import.meta.url), 'utf8');
+  assert.ok(!/Selected: \$\{/.test(app), 'the redundant echo is back');
+  assert.match(app, /status\.hidden = Boolean\(state\.studentSpecialty\)/);
+  // The prompt still earns its place while there is something to prompt for.
+  assert.match(app, /Choose the specific work you want attached to your signup/);
+});

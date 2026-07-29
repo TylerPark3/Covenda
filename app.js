@@ -519,8 +519,11 @@ function selectStudentSpecialty(label) {
     button.classList.toggle('is-selected', selected);
     button.setAttribute('aria-pressed', String(selected));
   });
+  // Once a choice is made the card is highlighted and the button reads "Join for X", so an
+  // echo underneath said the same thing a third time. The prompt only earns its space while
+  // there is still something to prompt for.
   const status = $('#studentSpecialtyStatus');
-  if (status) status.textContent = `Selected: ${label}. This direction will be attached to your signup.`;
+  if (status) { status.textContent = ''; status.hidden = true; }
   updateStudentJoinChoice();
 }
 
@@ -558,8 +561,9 @@ function renderStudentSpecialties(workType) {
     button.addEventListener('click', () => selectStudentSpecialty(label));
     host.append(button);
   });
+  status.hidden = Boolean(state.studentSpecialty);
   status.textContent = state.studentSpecialty
-    ? `Selected: ${state.studentSpecialty}. This direction will be attached to your signup.`
+    ? ''
     : 'Choose the specific work you want attached to your signup.';
   updateStudentJoinChoice();
 }
