@@ -7,7 +7,7 @@
 //
 // So it is one command. A deploy that cannot be aliased is a failed ship, not a partial one.
 
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 
 const run = (command, args, opts = {}) =>
   execFileSync(command, args, { encoding: 'utf8', stdio: ['inherit', 'pipe', 'inherit'], ...opts });
@@ -37,14 +37,25 @@ function main() {
   // Verified against Vercel rather than by fetching the site: an intercepting proxy on a guest
   // network fails the fetch while the alias is perfectly fine, and that false alarm is worse
   // than no check at all.
-  const inspected = run('npx', ['vercel', 'inspect', DOMAIN]);
-  const live = (inspected.match(/https:\/\/[a-z0-9-]+\.vercel\.app/g) || []).pop();
+  //
+  // `vercel inspect` lists the deployment URL first and then EVERY alias pointing at it, so
+  // reading the last URL in the output picked up an unrelated alias and reported a healthy
+  // ship as broken. What matters is that the deployment just made appears in that set at all.
+  //
+  // `vercel inspect` writes its detail to STDERR, not stdout. execFileSync returns stdout
+  // only, so the first version of this check compared against an empty string and reported a
+  // ship that had actually worked as broken. spawnSync exposes both streams.
+  const probe = spawnSync('npx', ['vercel', 'inspect', DOMAIN], { encoding: 'utf8' });
+  const inspected = `${probe.stdout || ''}${probe.stderr || ''}`;
+  const host = deployment.replace('https://', '');
 
-  if (live && deployment.includes(live.replace('https://', '').split('.')[0])) {
+  if (inspected.includes(host)) {
     console.log(`\n  Live. ${DOMAIN} is serving this build.\n`);
   } else {
+    const listed = [...new Set(inspected.match(/https:\/\/[a-z0-9.-]+\.vercel\.app/g) || [])];
     console.error(`\n  ${DOMAIN} does not resolve to the build just deployed.`);
-    console.error(`  It points at: ${live || 'something unreadable'}\n`);
+    console.error(`  Expected: ${host}`);
+    console.error(`  It points at: ${listed.join(', ') || 'something unreadable'}\n`);
     process.exit(1);
   }
 }
