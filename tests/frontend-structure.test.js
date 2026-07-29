@@ -671,7 +671,12 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
   assert.match(script, /signals\.push\(\{ node, born: now, duration:/);
   assert.match(script, /const color = progress < \.22 \? WHITE : GOLD/);
   assert.match(script, /const target = Math\.max\(140, Math\.min\(240/);
-  assert.match(script, /linkCount < 520/);
+  // The cap exists so a dense field cannot spend an unbounded amount of a frame on links. Its
+  // value moved with LINK_DISTANCE: at the longer reach, 520 truncated the lattice mid-render
+  // and left one corner visibly emptier than the rest. What matters is that it is bounded.
+  const cap = Number(script.match(/linkCount < (\d+)/)[1]);
+  assert.ok(cap >= 600 && cap <= 1200, `link cap is ${cap}, either truncating or unbounded`);
+  assert.match(script, /const LINK_DISTANCE = 152;/);
   // Real 3D: depth, perspective projection, and far-to-near paint order.
   assert.match(script, /function project\(n\)/);
   assert.match(script, /FOCAL \/ z/);
