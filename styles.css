@@ -395,12 +395,18 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
   justify-content: center;
   gap: 10px;
   min-height: 50px;
-  padding: 12px 20px;
+  padding: 12px 22px;
   border-radius: 0;
+  /* Declared, not inherited. A <button> picks up the `font: inherit` reset; an <a> styled as a
+     button does not, so "Member sign in" rendered in the display serif purely because of where
+     it sat in the tree. A control's typography should not depend on its ancestors. */
+  font-family: var(--font-sans);
   font-size: 14px;
-  font-weight: 680;
-  letter-spacing: -.015em;
+  font-weight: 650;
+  letter-spacing: -.01em;
+  text-decoration: none;
   cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
 }
 /* Flat, de-"AI-slop" primary CTA: solid gold, hairline border, no gradient / inset shadows /
    shimmer sweep / hover lift. */
@@ -460,13 +466,16 @@ svg { display: block; width: 1.25em; height: 1.25em; fill: none; stroke: current
 .student-journey span, .student-journey b, .student-journey small { display: block; min-width: 0; }
 .student-journey b { font-size: 11.5px; }
 .student-journey small { margin-top: 2px; overflow: hidden; color: var(--soft); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+/* The secondary CTA. It sat at a .66 alpha border with a soft drop shadow, which read as a
+   disabled control rather than a real alternative to the primary. Full-strength border, no
+   shadow, and it fills on hover so the affordance is unmistakable. */
 .outline-button {
-  border: 1px solid rgba(180,123,32,.66);
-  background: #fff;
+  border: 1px solid var(--gold);
+  background: transparent;
   color: var(--gold-deep);
-  box-shadow: 0 4px 14px rgba(65,49,22,.05);
 }
-.outline-button:hover { background: var(--gold-pale); }
+.outline-button:hover { background: var(--gold-deep); border-color: var(--gold-deep); color: #fff; }
+.outline-button:hover svg { color: #fff; }
 .compact { min-height: 42px; padding: 9px 15px; font-size: 13px; }
 
 .quiet-link, .prompt-links button {

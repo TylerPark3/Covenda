@@ -745,7 +745,7 @@ function openReferralStep(){
     +'Thanks,\n'+who;
   const label=document.createElement('label');
   const cap=document.createElement('span'); cap.textContent='Copy this, edit it, send it';
-  const area=document.createElement('textarea'); area.rows=11; area.value=draft;
+  const area=document.createElement('textarea'); area.className='draft-area'; area.rows=14; area.value=draft;
   label.append(cap,area); d.body.append(label);
   const tips=document.createElement('ul'); tips.className='verif-tips';
   [['Ask someone who saw the work','A supervisor, research PI, club officer, or the founder you shipped for. A friend does not count.'],

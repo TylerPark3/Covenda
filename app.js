@@ -4643,8 +4643,15 @@ function initIcosahedron() {
         ctx.beginPath();
         ctx.moveTo(pts[e.a].sx, pts[e.a].sy);
         ctx.lineTo(pts[e.b].sx, pts[e.b].sy);
-        ctx.strokeStyle = `rgba(169,130,47,${(0.20 + depth * 0.46).toFixed(3)})`;
-        ctx.lineWidth = 0.7 + depth * 0.7;
+        // Gold, not bronze. rgba(169,130,47) at a 0.2 floor is an olive line you have to
+        // squint at; real gold shifts hue with depth as well as brightness, warm and light on
+        // the near edges, deeper and redder as it turns away. Interpolating both is what makes
+        // it read as metal rather than as a yellow wireframe.
+        const r = Math.round(166 + depth * 73);   // 166 -> 239
+        const g = Math.round(107 + depth * 109);  // 107 -> 216
+        const b = Math.round(13 + depth * 130);   //  13 -> 143
+        ctx.strokeStyle = `rgba(${r},${g},${b},${(0.42 + depth * 0.5).toFixed(3)})`;
+        ctx.lineWidth = 0.85 + depth * 0.85;
         ctx.stroke();
       });
     // vertices = students: all 12 as gold nodes (depth-scaled), a few gently pulsing
@@ -4654,11 +4661,13 @@ function initIcosahedron() {
       const nodeR = 1.7 + depth * 2.5;
       ctx.beginPath();
       ctx.arc(p.sx, p.sy, nodeR + 2.6 + pulse * 3.4, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(201,162,75,${(0.05 + depth * 0.09 + pulse * 0.11).toFixed(3)})`;
+      ctx.fillStyle = `rgba(230,191,102,${(0.07 + depth * 0.12 + pulse * 0.14).toFixed(3)})`;
       ctx.fill();
       ctx.beginPath();
       ctx.arc(p.sx, p.sy, nodeR, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(169,130,47,${(0.5 + depth * 0.45).toFixed(3)})`;
+      // The node picks up the same depth shift as the edge meeting it, so a vertex never
+      // reads as a different metal from its own lines.
+      ctx.fillStyle = `rgba(${Math.round(166 + depth * 60)},${Math.round(107 + depth * 96)},${Math.round(13 + depth * 108)},${(0.66 + depth * 0.34).toFixed(3)})`;
       ctx.fill();
       ctx.beginPath();
       ctx.arc(p.sx - nodeR * 0.28, p.sy - nodeR * 0.28, nodeR * 0.42, 0, Math.PI * 2);
