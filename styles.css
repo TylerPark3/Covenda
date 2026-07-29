@@ -2051,8 +2051,12 @@ body[data-audience="university"] #flowDemo { display: none; }
   font-style: italic;
   overflow: visible;
   color: var(--gold-deep); /* fallback if background-clip:text is unsupported */
-  padding-right: 0.44em;
-  margin-right: -0.36em;
+  /* The overhang allowance was measured against the old face. EB Garamond italic has a far
+     steeper slant and a longer exit stroke, so the final s of "students" fell outside the fill
+     box and lost its tail. Padding and margin move together, so the extra room is invisible in
+     layout: only the fill box grows. */
+  padding-right: 0.62em;
+  margin-right: -0.54em;
   /* And the same problem vertically, which only appeared once the display face became a serif.
      background-clip:text clips the fill to the BOX, and the box is the line box: Geist's
      shallow descenders sat inside it, EB Garamond's do not. So the p in "proof" and the g in

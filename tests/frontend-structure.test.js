@@ -971,8 +971,13 @@ test('the gold word leaves room for descenders as well as the italic overhang', 
   assert.match(rule, /background-clip: text/);
   assert.match(rule, /padding-bottom:\s*0?\.\d+em/, 'descenders will be clipped by the fill box');
   assert.match(rule, /margin-bottom:\s*-0?\.\d+em/, 'the padding must not push the line down');
-  // The horizontal fix has to survive too, or italic overhang clips at a line end.
-  assert.match(rule, /padding-right:\s*0?\.\d+em/);
+  // The horizontal fix has to survive too, or the italic exit stroke clips at a line end.
+  // EB Garamond needs materially more room than the face this was first measured against.
+  const padRight = Number(rule.match(/padding-right:\s*(0?\.\d+)em/)[1]);
+  assert.ok(padRight >= 0.6, `padding-right ${padRight}em is too tight for the italic overhang`);
+  // Padding and margin move together, so the extra room never shows up in layout.
+  const marginRight = Number(rule.match(/margin-right:\s*-(0?\.\d+)em/)[1]);
+  assert.ok(Math.abs((padRight - marginRight) - 0.08) < 0.001, 'the gold word now shifts the line');
 });
 
 // A serif needs more leading than the sans these values were tuned for.
