@@ -76,10 +76,25 @@ Verification is done against Vercel rather than by fetching the site. An interce
 a guest network fails the fetch while the alias is perfectly fine, and that false alarm is
 worse than no check at all.
 
+## Checking it actually works in a browser
+
+```
+npm run smoke
+```
+
+Needs `npm run local` running in another shell. It drives the real page through its real
+interactions in headless Chrome and fails on anything the console reports.
+
+This exists because of a bug the test suite could not catch. `total is not defined` was a
+ReferenceError in a top-level call: `node --check` passed, every unit test passed, and the page
+rendered with its intro screen, particle field and scroll reveal all silently missing, because
+a ReferenceError aborts the rest of the file. Nothing short of running it in a browser finds
+that.
+
 ## Normal loop
 
 1. Edit a file.
 2. Reload http://localhost:3000 — `vercel dev` picks up changes without a restart.
-3. `npm run check` when the change is done.
+3. `npm run check` when the change is done, and `npm run smoke` if you touched app.js or portal.js.
 4. `npm run ship` — tests, deploys, and points covenda.app at it.
 5. `git push origin HEAD:main`.
