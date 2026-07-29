@@ -3453,7 +3453,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .club-head h2 { margin: 12px 0 0; font-family: var(--font-display); font-weight: 500; font-size: clamp(30px, 3.9vw, 52px); line-height: 1.06; letter-spacing: -.045em; text-wrap: balance; }
 .club-lede { margin: 18px 0 0; max-width: 66ch; font-size: clamp(16.5px, 1.4vw, 19px); line-height: 1.55; color: var(--soft); }
 
-.club-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; margin-top: clamp(34px, 4vw, 54px); border-top: 1px solid var(--rule, var(--line-strong)); }
+.club-split { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 0; margin-top: clamp(34px, 4vw, 54px); border-top: 1px solid var(--rule, var(--line-strong)); }
 .club-now { padding: 34px 44px 34px 0; }
 .club-earned { padding: 34px 0 34px 44px; border-left: 1px solid var(--line); background: var(--gold-pale); }
 @media (max-width: 900px) {
@@ -3500,7 +3500,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .club-caveat { margin: 26px 24px 0 0; padding-top: 20px; border-top: 2px solid var(--gold); font-size: 15px; line-height: 1.6; color: var(--soft); max-width: 52ch; }
 .club-caveat b { display: block; margin-bottom: 5px; color: var(--ink); font-weight: 700; }
 
-.club-form { display: grid; gap: 14px; max-width: 44ch; }
+.club-form { display: grid; gap: 14px; max-width: 62ch; }
 
 .club-more { margin: 4px 0 12px; }
 .club-more summary { cursor: pointer; font-size: 15px; font-weight: 600; color: var(--gold-deep); list-style: none; }
@@ -5666,26 +5666,28 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
 
 /* ── Ambient drift on the exchange cards ───────────────────────────────────────────────
    The three panels sat perfectly still, which made a diagram about work moving between two
-   sides look like a printed figure. A slow, small drift gives it life without asking for
-   attention.
+   sides look like a printed figure.
 
-   Restrained on purpose. Amplitude is a few pixels and the cycles are long and deliberately
-   coprime, so the cards never fall into step and the pattern never becomes visible as a
-   pattern. Nothing scales, nothing rotates fast enough to notice, and the centre panel moves
-   least because it is the thing being read.
+   Animates `translate` and `rotate`, the independent transform properties, NOT `transform`.
+   The side cards already carry transform: translateX(...) for their position offset, and a
+   keyframe on `transform` replaces that outright: the drift did not add to the offset, it
+   fought it. The independent properties compose with transform instead of overwriting it, so
+   the offset survives and the drift rides on top.
 
-   Transform only, so this runs on the compositor and never triggers layout. */
+   Restrained on purpose. Amplitude is a few pixels, the cycles are long and coprime so the
+   cards never fall into step, and the centre panel moves least because it is the thing being
+   read. Compositor-only, so nothing here triggers layout. */
 @keyframes drift-a {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50%      { transform: translate3d(0, -7px, 0) rotate(-.35deg); }
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  50%      { translate: 0 -9px; rotate: -.4deg; }
 }
 @keyframes drift-b {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-  50%      { transform: translate3d(0, -9px, 0) rotate(.4deg); }
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  50%      { translate: 0 -11px; rotate: .45deg; }
 }
 @keyframes drift-centre {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50%      { transform: translate3d(0, -4px, 0); }
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -5px; }
 }
 
 .exchange-source--task { animation: drift-a 11s ease-in-out infinite; }
@@ -5698,29 +5700,3 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .exchange-source--task, .exchange-source--student, .exchange-workbench { animation: none; }
 }
-
-/* The verification mark, beside the heading it describes.
-   Reusing #icon-verified rather than drawing a second badge: a platform with two verification
-   marks has neither. The scalloped seal is deliberately not a plain tick, because a tick means
-   "done" and this means "vouched for". */
-.club-verified-mark {
-  display: inline-block;
-  width: .62em;
-  height: .62em;
-  margin-left: .22em;
-  color: var(--gold);
-  vertical-align: baseline;
-}
-/* The badge alone would read as decoration, or worse as a claim the club already has it. The
-   key says what earns it and, more importantly, that nobody is given it. */
-.club-verified-key {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  max-width: 54ch;
-  margin: 14px 0 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--muted);
-}
-.club-verified-key svg { flex: 0 0 auto; width: 17px; height: 17px; margin-top: 2px; color: var(--gold); }

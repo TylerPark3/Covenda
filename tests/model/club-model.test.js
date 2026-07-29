@@ -59,3 +59,16 @@ test('the verification mark says what earns it, and that nobody starts with it',
   assert.ok(marks.length >= 2 && new Set(marks).size === 1, `the club badge uses ${new Set(marks).size} different icons`);
   assert.equal(marks[0], 'icon-verified');
 });
+
+// A field that renders but never reaches the payload is worse than no field: somebody types
+// into it and the answer is thrown away.
+test('the club website is asked for and actually submitted', async () => {
+  const app = readFileSync(new URL('../../app.js', import.meta.url), 'utf8');
+  assert.match(html, /name="clubWebsite"/);
+  assert.match(app, /website: String\(data\.get\('clubWebsite'\)/);
+  // Every named input on the club form has to be in the payload, not just this one.
+  const form = html.slice(html.indexOf('id="clubRegisterForm"'), html.indexOf('</form>', html.indexOf('id="clubRegisterForm"')));
+  for (const [, name] of form.matchAll(/name="(club[A-Za-z]+)"/g)) {
+    assert.ok(app.includes(`data.get('${name}')`), `${name} is collected and never sent`);
+  }
+});

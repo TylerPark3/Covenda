@@ -1071,11 +1071,16 @@ test('the exchange cards drift, slowly and out of step', () => {
   assert.equal(new Set(durations).size, 3, 'two cards share a cycle and will synchronise');
   for (const d of durations) assert.ok(d >= 10, `a ${d}s cycle is fast enough to distract`);
 
-  // Transform only: this runs on the compositor and never triggers layout.
-  const frames = styles.slice(styles.indexOf('@keyframes drift-a'), styles.indexOf('.exchange-source--task'));
+  // The independent transform properties, NOT `transform`. The side cards already carry a
+  // transform for their position offset, and a keyframe on `transform` replaces it outright:
+  // the drift fought the offset instead of riding on it.
+  const frames = styles.slice(styles.indexOf('@keyframes drift-a'), styles.indexOf('.exchange-source--task { animation'));
+  assert.ok(!/\btransform:/.test(frames), 'drift animates transform and will overwrite the position offset');
   for (const [, prop] of frames.matchAll(/^\s+\d+%[^{]*\{\s*([a-z-]+):/gm)) {
-    assert.equal(prop, 'transform', `drift animates ${prop}, which is not compositor-safe`);
+    assert.ok(['translate', 'rotate', 'scale'].includes(prop), `drift animates ${prop}, which is not compositor-safe`);
   }
+  // The offset itself has to survive, or the cards sit in the wrong place.
+  assert.match(styles, /\.exchange-source--task \{ grid-area: task; transform: translateX/);
 });
 
 test('drift settles under a cursor and never runs against a motion preference', () => {

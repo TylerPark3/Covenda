@@ -5391,6 +5391,7 @@ function renderReadiness(readiness) {
           role: String(data.get('clubRole') || '').trim(),
           vertical: String(data.get('clubVertical') || ''),
           memberCount: String(data.get('clubSize') || ''),
+          website: String(data.get('clubWebsite') || '').trim(),
           intent: 'club_verification',
         },
       }),
