@@ -435,7 +435,7 @@ export async function loadMemberDashboard(member, env = process.env) {
         }),
       };
     });
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, simulations, availableSimulations, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, simulations, availableSimulations, batchApplicationsOpen: batchApplicationsOpen(env), batchesClosedMessage: BATCHES_CLOSED_MESSAGE, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), practitionerAsk: commitmentFor(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -1244,7 +1244,24 @@ export async function loadBatchApplications(member) {
   const { data, error } = await member.supabase.from('batch_applications').select('*').eq('student_user_id', member.user.id).order('created_at', { ascending: false }).limit(50);
   return error ? [] : (data || []);
 }
-export async function applyToBatch(member, input) {
+// Applications are CLOSED by default, and stay closed until this is deliberately switched on.
+//
+// The specialisations are being rebuilt: several of them do not yet verify the thing they
+// claim to verify, and a student who applies to one of those spends real hours on a bar that
+// is about to change underneath them. Defaulting to open would mean a forgotten env var is the
+// only thing standing between that and a real applicant.
+export function batchApplicationsOpen(env = process.env) {
+  return env.COVENDA_BATCH_APPLICATIONS_OPEN === 'true';
+}
+
+export const BATCHES_CLOSED_MESSAGE =
+  'Batch applications are closed while we rebuild how each one is vetted. They open again soon, '
+  + 'and nothing you have already submitted is affected.';
+
+export async function applyToBatch(member, input, env = process.env) {
+  // Enforced on the server, not only in the UI. A closed door that only exists in the client
+  // is not closed.
+  if (!batchApplicationsOpen(env)) throw new Error(BATCHES_CLOSED_MESSAGE);
   const profile = await checked(member.supabase.from('member_profiles').select('role,verticals,work_types,skills').eq('user_id', member.user.id).maybeSingle(), null);
   if (profile?.role !== 'student') throw new Error('Only student accounts can apply to a batch.');
   const batchId = cleanText(input.batchId, 50);

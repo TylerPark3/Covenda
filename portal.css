@@ -2387,3 +2387,9 @@ body { background: var(--surface); }
 .evreq-guide li { display:grid; gap:2px; padding:9px 11px; border-left:2px solid var(--gold); background:var(--surface-2); }
 .evreq-guide b { font-size:13px; font-weight:650; color:var(--text,var(--ink)); }
 .evreq-guide small { color:var(--soft); font-size:12px; line-height:1.5; }
+
+/* Batch applications paused. One banner above the list rather than the same note repeated on
+   twenty-five cards. */
+.batch-closed-notice { grid-column:1 / -1; display:grid; gap:5px; padding:16px 18px; border-left:3px solid var(--gold); background:var(--gold-pale); }
+.batch-closed-notice b { font-size:14px; font-weight:700; color:var(--gold-deep); }
+.batch-closed-notice p { margin:0; font-size:13.5px; line-height:1.6; color:var(--muted); }

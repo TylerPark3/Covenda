@@ -1802,6 +1802,13 @@ function renderBatches(){
   let batches=(state.dashboard.batches||[]).filter(b=>b.status==='open'||b.status==='reviewing');
   const appByBatch=new Map((state.dashboard.batchApplications||[]).map(a=>[a.batch_id,a]));
   root.replaceChildren();
+  if(state.dashboard?.batchApplicationsOpen===false){
+    const notice=document.createElement('div');notice.className='batch-closed-notice';
+    const b=document.createElement('b');b.textContent='Applications open again soon';
+    const p=document.createElement('p');
+    p.textContent=state.dashboard?.batchesClosedMessage||'Batch applications are paused while we rebuild how each one is vetted.';
+    notice.append(b,p);root.append(notice);
+  }
   renderBatchFilter(root);
   if(batchMinFit>0)batches=batches.filter(b=>{const f=batchFitOf(b);return f===null||f>=batchMinFit;});
   // Best fit first when we have anything to sort by; otherwise leave the curated order alone.
@@ -2145,7 +2152,18 @@ function batchCard(batch,application){
     done.append(mark,text);
     actions.append(done);
   }else{
-    const learn=document.createElement('button');learn.type='button';learn.className='portal-primary compact';learn.textContent='Learn more & apply';learn.disabled=batch.status!=='open';if(batch.status!=='open')learn.title='Applications are closed for this batch.';learn.addEventListener('click',()=>openBatchApply(batch));actions.append(learn);
+    // While the vetting is being rebuilt nobody can apply, so the button says so instead of
+    // being a live control that fails on submit. A disabled button with no explanation reads
+    // as broken; one that says what is happening reads as deliberate.
+    const closed=state.dashboard?.batchApplicationsOpen===false;
+    const learn=document.createElement('button');learn.type='button';
+    learn.className=closed?'portal-ghost compact':'portal-primary compact';
+    learn.textContent=closed?'Opening soon':'Learn more & apply';
+    learn.disabled=closed||batch.status!=='open';
+    if(closed)learn.title=state.dashboard?.batchesClosedMessage||'Applications open again soon.';
+    else if(batch.status!=='open')learn.title='Applications are closed for this batch.';
+    learn.addEventListener('click',()=>openBatchApply(batch));
+    actions.append(learn);
   }
   card.append(actions,detail);return card;
 }
