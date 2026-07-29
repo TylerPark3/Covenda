@@ -235,32 +235,72 @@ export function figureItOut({ vertical = 'this field', task = null } = {}) {
   };
 }
 
-// ── AI: leverage or dependence ────────────────────────────────────────────────────────
-// Banning the tools produces a test of who is willing to lie. The useful distinction is
-// whether the student can stand behind what came out.
+// ── AI: verification, not leverage ────────────────────────────────────────────────────
+// The first version of this module ranked students on "AI leverage". The evidence says that
+// is the wrong axis.
+//
+// Brynjolfsson, Li & Raymond (QJE 2025) measured AI assistance across 5,172 support agents:
+// gains concentrated among the LEAST experienced, and were close to flat for the most skilled.
+// AI compresses the productivity distribution within a role. Ranking on "uses AI well" would
+// therefore rank students on the trait AI is actively making least discriminating, and would
+// get less discriminating every year.
+//
+// What stays scarce is the other half. DORA 2025 found time saved generating code is
+// re-allocated to auditing it, with delivery throughput AND instability both rising; GitClear
+// measured code churn roughly doubling, from ~3.3% to 5.7-7.1%. The bottleneck moved from
+// producing output to deciding whether output can be trusted.
+//
+// So this measures error detection under AI assistance, not fluency with the tools.
 export const AI_BANDS = [
   {
-    id: 'dependent', label: 'Dependent',
-    looksLike: 'Cannot explain the output, spot its errors, or change it.',
-    reads: 'Every piece of their work needs full senior review, because nobody knows what is understood.',
+    id: 'unverified', label: 'Did not verify',
+    looksLike: 'Accepted the output. Did not notice the planted defect, or noticed and did not act.',
+    reads: 'Every piece of their work needs full senior review, because nobody knows what was checked.',
   },
   {
-    id: 'assisted', label: 'Assisted',
-    looksLike: 'Understands the output and can modify it, but did not check it independently.',
-    reads: 'Faster than unaided, and correctness still rests on somebody else.',
+    id: 'spotted', label: 'Caught it',
+    looksLike: 'Found the defect and could say what was wrong with it.',
+    reads: 'Reads output critically rather than accepting it. The floor for working unsupervised.',
   },
   {
-    id: 'leveraged', label: 'Leveraged',
-    looksLike: 'Used it to move faster, found what it got wrong, verified the rest, and can defend the result.',
-    reads: 'Multiplies their own output. This is the profile the whole thesis is about.',
+    id: 'traced', label: 'Caught it and found why',
+    looksLike: 'Found the defect, reproduced it, traced it to its cause, and said what else it implicates.',
+    reads: 'The scarce half. Where the work is going, this is the part that does not commoditise.',
   },
 ];
 
+// The Verification Test. A planted, plausible defect in AI-generated work, per vertical. The
+// question is not whether a student can get a model to produce an answer; almost everyone can.
+// It is whether they can decide the answer deserves to be trusted.
+export const VERIFICATION_DEFECTS = {
+  'software-ai': 'Generated code that passes the happy path and mishandles an edge case the test suite does not cover.',
+  'accounting-finance': 'A generated valuation whose arithmetic is right and whose driver assumption is not.',
+  'healthcare-operations': 'A generated research summary that states a real finding and misreports its population.',
+  'consumer-retail': 'A generated market analysis drawing a causal claim from correlational data.',
+  'professional-services': 'A generated landscape whose sources are real and whose inference from them does not follow.',
+};
+
+export function verificationTest(verticalSlug) {
+  const defect = VERIFICATION_DEFECTS[verticalSlug];
+  if (!defect) return null;
+  return {
+    dimensions: ['discernment', 'capability'],
+    minutes: 20,
+    // Told plainly. A student who suspects a trap performs differently from one who is working,
+    // and the framing has to produce the second.
+    framing: 'This was produced with AI assistance. Treat it the way you would treat a colleague\'s '
+      + 'draft you are about to put your name on.',
+    material: defect,
+    bands: AI_BANDS,
+    probes: AI_OWNERSHIP_PROBES,
+  };
+}
+
 export const AI_OWNERSHIP_PROBES = [
-  'Which part of this did the model get wrong, and how did you notice?',
-  'Why this approach rather than the obvious alternative?',
-  'What did you check, and what are you taking on trust?',
-  'What breaks first if this goes to production?',
+  'Which part of this is wrong, and how did you notice?',
+  'How would you check the parts you have not challenged?',
+  'What did you verify yourself, and what are you taking on trust?',
+  'What breaks first if this ships as written?',
 ];
 
 export function aiBand(id) {
@@ -271,6 +311,10 @@ export function aiBand(id) {
 // A company describes its constraint, and the assessment is built to close the expensive gaps
 // rather than to test everything equally.
 export const AUTONOMY_LEVELS = ['guided', 'semi_autonomous', 'autonomous', 'high_agency'];
+
+// The hard ceiling on the pre-trial battery. Not a target, a limit: past roughly this point
+// completion collapses and the assessment starts selecting for availability.
+export const BUDGET_MINUTES = 90;
 
 const AUTONOMY_WEIGHT = {
   guided: ['capability', 'communication'],
@@ -298,14 +342,41 @@ export function assessmentPlan({
   if (scarceSeniorTime) for (const d of ['agency', 'resourcefulness']) if (!focus.includes(d)) focus.unshift(d);
   if (domainKnowledge && !focus.includes('learningVelocity')) focus.push('learningVelocity');
 
-  const components = [
-    { id: 'objective', label: 'Objective questions', why: 'A measurable floor on what they already know.' },
-    { id: 'deep_dive', label: 'Deep Dive', why: 'Whether they can learn something hard and explain it.' },
+  // Everything below is built against a hard time budget, and that is the point.
+  //
+  // Completion rates fall off a cliff with length: short screens under an hour complete at
+  // 80-95%, one-to-two hours at 55-75%, three or more frequently below 50%. Past that you are
+  // measuring free time and desperation rather than capability, and the student this product
+  // is built for, the one already doing a lot, is exactly the one who drops.
+  //
+  // There is also a ceiling argument. The best-validated single predictor in the literature
+  // sits near .42, roughly 18% of variance. No battery assesses its way to certainty, so
+  // stacking stages buys very little and costs the candidates you most want.
+  //
+  // The trial does the real predicting. This only decides who is worth a trial.
+  const candidates = [
+    { id: 'objective', label: 'Objective questions', minutes: 25, why: 'A measurable floor on what they already know.' },
+    { id: 'verification', label: 'Verification test', minutes: 20, why: 'Whether they can tell trustworthy output from plausible output.' },
+    { id: 'deep_dive', label: 'Deep Dive', minutes: 12, why: 'Whether they can learn something hard and explain it.' },
+    { id: 'blocker', label: 'Blocker account', minutes: 15, why: 'What they do when the obvious path closes.', needs: 'agency' },
+    { id: 'figure_it_out', label: 'Figure It Out', minutes: 45, why: 'Finding and validating an answer nobody gave them.', needs: 'resourcefulness' },
+    { id: 'simulation', label: 'Scenario sitting', minutes: 35, why: 'Decisions under incomplete information, with the trade named.' },
   ];
-  if (focus.includes('agency')) components.push({ id: 'blocker', label: 'Blocker account', why: 'What they do when the obvious path closes.' });
-  if (focus.includes('resourcefulness')) components.push({ id: 'figure_it_out', label: 'Figure It Out', why: 'Finding and validating an answer nobody gave them.' });
-  components.push({ id: 'simulation', label: 'Scenario sitting', why: 'Decisions under incomplete information, with the trade named.' });
-  components.push({ id: 'defense', label: 'Defence', why: 'The only part no artifact and no score can stand in for.' });
+
+  const components = [];
+  let minutes = 0;
+  const deferred = [];
+  for (const c of candidates) {
+    if (c.needs && !focus.includes(c.needs)) continue;
+    // Objective and verification are never dropped: one sets the floor, the other measures the
+    // half of AI-era work that has not commoditised.
+    const required = ['objective', 'verification'].includes(c.id);
+    if (!required && minutes + c.minutes > BUDGET_MINUTES) { deferred.push(c); continue; }
+    components.push({ id: c.id, label: c.label, minutes: c.minutes, why: c.why });
+    minutes += c.minutes;
+  }
+  components.push({ id: 'defense', label: 'Defence', minutes: 10, why: 'The only part no artifact and no score can stand in for.' });
+  minutes += 10;
 
   return {
     version: SUPER_INTERN_VERSION,
@@ -313,7 +384,13 @@ export function assessmentPlan({
     autonomy: level,
     focus,
     components,
+    minutes,
+    budgetMinutes: BUDGET_MINUTES,
+    // Named rather than silently dropped. What did not fit belongs in the paid trial, which is
+    // where deeper validation should happen anyway.
+    deferredToTrial: deferred.map(c => ({ id: c.id, label: c.label, why: c.why })),
     deepDive: deepDiveFor(vertical),
+    verification: verificationTest(vertical),
     // Named so a company sees which of its own constraints shaped the assessment.
     because: [
       `Autonomy expected: ${level.replace(/_/g, ' ')}.`,
@@ -322,6 +399,7 @@ export function assessmentPlan({
         : seniorHoursPerWeek !== null ? `Around ${seniorHoursPerWeek} senior hours a week available.` : null,
       domainKnowledge ? 'Domain knowledge has to be learned on the job, so learning velocity is weighted.' : null,
       (onboardingBurden || []).length ? `Most expensive to teach: ${onboardingBurden.join(', ')}.` : null,
+      deferred.length ? `Held back to the paid trial to stay inside ${BUDGET_MINUTES} minutes: ${deferred.map(c => c.label).join(', ')}.` : null,
     ].filter(Boolean),
   };
 }
@@ -350,5 +428,92 @@ export function calibrationStatus(outcomes = []) {
     claim: recorded >= 20
       ? 'Enough outcomes recorded to check whether the assessment predicted anything.'
       : `${recorded} outcomes recorded. Covenda cannot yet claim these assessments predict time to productivity, and does not.`,
+  };
+}
+
+// ── The regulatory perimeter ──────────────────────────────────────────────────────────
+// The moment Covenda scores or ranks a student in a way that materially assists a hiring
+// decision, it is an Automated Employment Decision Tool, and several regimes apply at once:
+// NYC Local Law 144 (independent bias audit within the prior year, public summary, at least
+// 10 business days' candidate notice, $500-$1,500 per violation with each day separate),
+// Illinois HB 3773, the Colorado AI Act, California's ADS regulations, and the EU AI Act's
+// high-risk HR obligations from August 2026. There is no headcount exemption and no
+// self-certification: the audit has to be independent.
+//
+// This is cheap to design for now and expensive to retrofit, which is the only reason it is
+// here before a single placement exists.
+export const AEDT_VERSION = 'aedt-1.0.0';
+
+// Whether what Covenda produces is inside the perimeter at all. The distinction that matters
+// is not "do we use AI", it is "does a number we produce order candidates for a human".
+export function aedtPosture({ producesRanking = false, producesScore = false, humanDecides = true } = {}) {
+  const inScope = Boolean(producesRanking || producesScore);
+  return {
+    version: AEDT_VERSION,
+    inScope,
+    // Covenda's architecture is deliberately outside it: dimensions are reported separately and
+    // never summed, and no ordering is emitted. That is a compliance position as well as a
+    // product one, and it only holds while both remain true.
+    why: inScope
+      ? 'A score or ranking that materially assists a hiring decision is an AEDT wherever these rules apply.'
+      : 'Separate named dimensions with no composite and no ordering do not substitute for the human decision.',
+    obligationsIfInScope: [
+      'Independent bias audit within the prior year, by a third party.',
+      'Public summary of the audit results.',
+      'At least 10 business days notice to candidates before use.',
+      'Documented methodology a candidate can challenge.',
+    ],
+    humanDecides,
+  };
+}
+
+// Signals that can act as a proxy for a protected characteristic. Referral networks and club
+// affiliation are the sharpest case: they are Covenda's differentiation AND, if the network is
+// anchored in a narrow set of institutions, an adverse-impact exposure sitting directly on top
+// of it. Naming them is the first step to designing around them.
+export const PROXY_RISK_SIGNALS = [
+  { id: 'school', signal: 'School name', proxyFor: 'race, national origin, socioeconomic background' },
+  { id: 'referral_network', signal: 'Who referred them', proxyFor: 'the demographics of whoever Covenda already knows' },
+  { id: 'club', signal: 'Club or society affiliation', proxyFor: 'institution, and therefore the same characteristics as school' },
+  { id: 'location', signal: 'Postcode or region', proxyFor: 'race and national origin' },
+  { id: 'unpaid_work', signal: 'Unpaid projects and long take-homes', proxyFor: 'socioeconomic background, via who can afford the time' },
+];
+
+// A running check on whether the qualification process is leaning on proxies. Returns what to
+// look at, not a verdict: adverse impact is measured against outcomes, and there are none yet.
+export function proxyAudit({ signalsUsed = [], batteryMinutes = 0 } = {}) {
+  const flagged = PROXY_RISK_SIGNALS.filter(p => signalsUsed.includes(p.id));
+  // The time budget is itself a proxy risk, which is the part that is easy to miss.
+  if (batteryMinutes > BUDGET_MINUTES) {
+    flagged.push({ ...PROXY_RISK_SIGNALS.find(p => p.id === 'unpaid_work'), note: `${batteryMinutes} minutes is past the ${BUDGET_MINUTES} minute limit.` });
+  }
+  return {
+    version: AEDT_VERSION,
+    flagged,
+    clean: flagged.length === 0,
+    // Deliberately not a pass or fail. Adverse impact is an outcome measurement and Covenda has
+    // no outcomes; claiming a clean bill of health from a structural check would be the exact
+    // overclaim this product exists to refuse.
+    note: flagged.length
+      ? 'These signals can stand in for a protected characteristic. Track outcomes by group before relying on any of them.'
+      : 'No flagged proxies in use. This is a structural check, not an adverse-impact finding, which needs outcome data.',
+  };
+}
+
+// What a student is owed about a decision that involved them. Explainability is a regulatory
+// obligation and it is also the product: a student who cannot see why is back in the black box
+// the whole thing exists to replace.
+export function candidateDisclosure(plan = {}) {
+  return {
+    assessed: (plan.components || []).map(c => ({ component: c.label, minutes: c.minutes, measures: c.why })),
+    dimensions: (plan.focus || []).map(id => DIMENSIONS[id]).filter(Boolean)
+      .map(d => ({ dimension: d.label, reads: d.reads })),
+    shapedBy: plan.because || [],
+    notUsed: ['No composite score.', 'No ranking against other students.', 'No automated rejection.'],
+    rights: [
+      'You can see every component you were assessed on and what it measured.',
+      'A human makes the decision, and you can ask them to explain it.',
+      'You can correct anything factually wrong in your profile.',
+    ],
   };
 }

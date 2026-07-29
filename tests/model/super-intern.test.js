@@ -134,13 +134,12 @@ test('using AI is explicitly permitted in the framing', () => {
 });
 
 // ── AI ────────────────────────────────────────────────────────────────────────────────
-test('AI is banded by whether the student can stand behind the output', () => {
-  assert.deepEqual(AI_BANDS.map(b => b.id), ['dependent', 'assisted', 'leveraged']);
+test('AI bands are fully described and carry no score', () => {
   for (const band of AI_BANDS) {
     assert.ok(band.looksLike && band.reads, `${band.id} is underdescribed`);
     assert.ok(!('score' in band));
   }
-  assert.match(aiBand('dependent').reads, /senior review/i, 'the cost of dependence is senior time');
+  assert.match(aiBand('unverified').reads, /senior review/i, 'the cost of not verifying is senior time');
   assert.equal(aiBand('made-up'), null);
 });
 
@@ -163,4 +162,90 @@ test('the outcome measures are the ones the thesis rests on', () => {
   assert.ok(ids.includes('days_to_contribution'));
   assert.ok(ids.includes('independent_resolution'));
   for (const m of OUTCOME_MEASURES) assert.ok(m.unit, `${m.id} has no unit`);
+});
+
+// ── Corrections forced by the evidence ────────────────────────────────────────────────
+
+// The first version ranked students on "AI leverage". Brynjolfsson, Li & Raymond (QJE 2025)
+// measured gains concentrating among the LEAST experienced and near-flat for the most skilled:
+// AI compresses the distribution, so leverage is the trait it is making least discriminating.
+test('AI is banded by verification, not by fluency with the tools', () => {
+  assert.deepEqual(AI_BANDS.map(b => b.id), ['unverified', 'spotted', 'traced']);
+  const text = JSON.stringify(AI_BANDS).toLowerCase();
+  assert.ok(!/leveraged|multiplies their own output/.test(text), 'the leverage ranking is back');
+  assert.match(AI_BANDS[2].reads, /does not commoditise/i);
+});
+
+test('every vertical has a plantable defect for the verification test', async () => {
+  const { verificationTest, VERIFICATION_DEFECTS } = await import('../../api/super-intern.js');
+  for (const slug of batchesByVertical().map(v => v.verticalSlug)) {
+    assert.ok(VERIFICATION_DEFECTS[slug], `${slug} has no verification material`);
+    const t = verificationTest(slug);
+    assert.ok(t.minutes <= 25, 'the verification test must stay short');
+    assert.ok(t.dimensions.includes('discernment'));
+    // A student who suspects a trap works differently from one who is working.
+    assert.match(t.framing, /put your name on/i);
+  }
+  assert.equal(verificationTest('nope'), null);
+});
+
+// Completion collapses past roughly an hour and a half, and the student this is built for is
+// the busiest one. A seven-stage battery screens out the target.
+test('the battery is capped, and what does not fit is named', async () => {
+  const { BUDGET_MINUTES } = await import('../../api/super-intern.js');
+  assert.equal(BUDGET_MINUTES, 90);
+  for (const autonomy of ['guided', 'semi_autonomous', 'autonomous', 'high_agency']) {
+    const plan = assessmentPlan({ autonomy, seniorHoursPerWeek: 2 });
+    assert.ok(plan.minutes <= BUDGET_MINUTES, `${autonomy} battery runs to ${plan.minutes} minutes`);
+    assert.ok(Array.isArray(plan.deferredToTrial), 'dropped components must be named, not vanish');
+    for (const d of plan.deferredToTrial) assert.ok(d.why, `${d.id} was dropped with no reason`);
+  }
+});
+
+test('the floor and the verification test are never dropped to save time', () => {
+  for (const autonomy of ['guided', 'high_agency']) {
+    const ids = assessmentPlan({ autonomy }).components.map(c => c.id);
+    assert.ok(ids.includes('objective'), 'the measurable floor was dropped');
+    assert.ok(ids.includes('verification'), 'the half of AI-era work that has not commoditised was dropped');
+  }
+});
+
+// ── The regulatory perimeter ──────────────────────────────────────────────────────────
+test('the architecture stays outside the AEDT perimeter, and says what would put it inside', async () => {
+  const { aedtPosture } = await import('../../api/super-intern.js');
+  assert.equal(aedtPosture({}).inScope, false);
+  assert.equal(aedtPosture({ producesScore: true }).inScope, true, 'a composite score is an AEDT');
+  assert.equal(aedtPosture({ producesRanking: true }).inScope, true, 'an ordering is an AEDT');
+  assert.ok(aedtPosture({ producesScore: true }).obligationsIfInScope.some(o => /independent bias audit/i.test(o)));
+});
+
+// The sharpest case: the referral network is the differentiation AND the exposure.
+test('the referral network is named as a proxy risk, not exempted from it', async () => {
+  const { proxyAudit, PROXY_RISK_SIGNALS } = await import('../../api/super-intern.js');
+  const ids = PROXY_RISK_SIGNALS.map(p => p.id);
+  for (const id of ['school', 'referral_network', 'club']) {
+    assert.ok(ids.includes(id), `${id} is not flagged as a possible proxy`);
+  }
+  const audit = proxyAudit({ signalsUsed: ['referral_network'] });
+  assert.equal(audit.clean, false);
+  // A structural check is not an adverse-impact finding, and claiming otherwise would be the
+  // exact overclaim this product exists to refuse.
+  assert.match(audit.note, /not an adverse-impact finding|Track outcomes by group/);
+});
+
+test('an over-long battery is itself flagged as a socioeconomic proxy', async () => {
+  const { proxyAudit } = await import('../../api/super-intern.js');
+  const audit = proxyAudit({ signalsUsed: [], batteryMinutes: 180 });
+  assert.equal(audit.clean, false, 'a three-hour battery selects on who can afford the time');
+  assert.ok(audit.flagged.some(f => /socioeconomic/i.test(f.proxyFor)));
+});
+
+test('a student is told what they were assessed on and what was not used', async () => {
+  const { candidateDisclosure } = await import('../../api/super-intern.js');
+  const d = candidateDisclosure(assessmentPlan({ autonomy: 'high_agency', seniorHoursPerWeek: 2 }));
+  assert.ok(d.assessed.length >= 4);
+  for (const item of d.assessed) assert.ok(item.measures, 'a component with no stated purpose is a black box');
+  assert.ok(d.notUsed.some(n => /No composite score/.test(n)));
+  assert.ok(d.notUsed.some(n => /No automated rejection/.test(n)));
+  assert.ok(d.rights.some(r => /human makes the decision/i.test(r)));
 });
