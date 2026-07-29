@@ -65,6 +65,202 @@ function authHeaders() { return { Authorization: `Bearer ${token()}`, 'Content-T
 // The submissions table has one row per click, so reading it as a list of people gives a wrong
 // count and a wrong picture. This reads the people_directory view instead: one row per email,
 // with every vertical that person has expressed across every form they filled in.
+// ── The review queue ──────────────────────────────────────────────────────────────────
+// Where a human decides what the evidence is worth. Nothing else in the system does, and this
+// is deliberately the only place it happens.
+//
+// A reviewer places a BAND and writes why. Never a number: a score here would eventually be
+// averaged with a score somewhere else, and the composite that produces is the thing the whole
+// design refuses.
+let reviewData = null;
+
+async function renderReviewQueue() {
+  const host = document.getElementById('adminReview');
+  if (!host) return;
+  try {
+    reviewData = await adminRequest({ method: 'POST', body: JSON.stringify({ action: 'assessment-queue' }) });
+  } catch (error) {
+    host.hidden = false;
+    host.replaceChildren();
+    const box = document.createElement('div');
+    box.className = 'people-error';
+    const cap = document.createElement('strong');
+    cap.textContent = 'The review queue could not load';
+    const why = document.createElement('p');
+    why.textContent = error?.message || 'The request failed.';
+    box.append(cap, why);
+    host.append(box);
+    return;
+  }
+
+  host.hidden = false;
+  host.replaceChildren();
+
+  const head = document.createElement('div');
+  head.className = 'people-head';
+  const h = document.createElement('h3');
+  h.textContent = reviewData.awaiting ? `${reviewData.awaiting} awaiting review` : 'Nothing awaiting review';
+  const note = document.createElement('span');
+  note.textContent = 'A band and a reason. No scores, and nothing here is decided automatically.';
+  head.append(h, note);
+  host.append(head);
+
+  // Shown above the queue, because a process leaning on a proxy is a problem with every
+  // judgement below it rather than with any one of them.
+  const proxies = reviewData.proxies;
+  if (proxies && !proxies.clean) {
+    const warn = document.createElement('div');
+    warn.className = 'review-proxies';
+    const cap = document.createElement('strong');
+    cap.textContent = 'Signals that can stand in for a protected characteristic';
+    warn.append(cap);
+    const list = document.createElement('ul');
+    for (const flag of proxies.flagged) {
+      const li = document.createElement('li');
+      const name = document.createElement('b');
+      name.textContent = flag.signal;
+      const why = document.createElement('span');
+      why.textContent = `proxy for ${flag.proxyFor}`;
+      li.append(name, why);
+      list.append(li);
+    }
+    warn.append(list);
+    const note = document.createElement('p');
+    // Deliberately not a verdict: adverse impact is measured against outcomes, and there are none.
+    note.textContent = proxies.note;
+    warn.append(note);
+    host.append(warn);
+  }
+
+  if (!(reviewData.queue || []).length) {
+    const none = document.createElement('p');
+    none.className = 'evreq-none';
+    none.textContent = 'No sittings yet. They appear here as students submit them.';
+    host.append(none);
+    return;
+  }
+
+  for (const run of reviewData.queue) {
+    host.append(reviewRunCard(run));
+  }
+}
+
+function reviewRunCard(run) {
+  const card = document.createElement('article');
+  card.className = 'review-run' + (run.complete ? ' is-done' : '');
+
+  const top = document.createElement('div');
+  top.className = 'review-run-top';
+  const who = document.createElement('b');
+  who.textContent = [run.vertical, run.autonomy && run.autonomy.replace(/_/g, ' ')].filter(Boolean).join(' · ') || 'Sitting';
+  const state = document.createElement('span');
+  state.className = 'review-state';
+  state.textContent = run.complete ? 'Reviewed' : `${run.awaiting.length} to judge`;
+  top.append(who, state);
+  card.append(top);
+
+  for (const component of run.components || []) {
+    const observation = (run.observations || {})[component.id] || {};
+    // Only what the student has actually answered. A component they have not reached is not
+    // work for a reviewer.
+    if (!observation.answer) continue;
+    card.append(reviewComponent(run, component, observation));
+  }
+  return card;
+}
+
+// Which vocabulary this component is judged in. A blocker account is placed in agency bands, a
+// verification test in AI bands; offering all of them everywhere is how a reviewer picks the
+// wrong one.
+function bandsForComponent(componentId) {
+  const bands = reviewData?.bands || {};
+  if (componentId === 'blocker') return bands.agency || [];
+  if (componentId === 'verification') return bands.ai || [];
+  if (componentId === 'take_home') return bands.takeHome || [];
+  return [];
+}
+
+function reviewComponent(run, component, observation) {
+  const wrap = document.createElement('div');
+  wrap.className = 'review-comp' + (observation.band ? ' is-judged' : '');
+
+  const label = document.createElement('b');
+  label.textContent = component.label;
+  wrap.append(label);
+
+  const answer = document.createElement('p');
+  answer.className = 'review-answer';
+  answer.textContent = observation.answer;
+  wrap.append(answer);
+
+  if (observation.band) {
+    const done = document.createElement('p');
+    done.className = 'review-placed';
+    done.textContent = `${observation.band} · ${observation.reviewer || 'operator'}`;
+    const why = document.createElement('small');
+    why.textContent = observation.note || '';
+    done.append(document.createElement('br'), why);
+    wrap.append(done);
+    return wrap;
+  }
+
+  const bands = bandsForComponent(component.id);
+  if (!bands.length) {
+    // Not every component has a band vocabulary. Saying so beats offering an empty control.
+    const none = document.createElement('p');
+    none.className = 'review-nobands';
+    none.textContent = 'Read alongside the rest of the sitting. No band for this one.';
+    wrap.append(none);
+    return wrap;
+  }
+
+  const choices = document.createElement('div');
+  choices.className = 'review-bands';
+  let chosen = null;
+  for (const band of bands) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'review-band';
+    const name = document.createElement('b');
+    name.textContent = band.label;
+    const reads = document.createElement('small');
+    reads.textContent = band.reads;
+    b.append(name, reads);
+    b.addEventListener('click', () => {
+      chosen = band.id;
+      [...choices.children].forEach(c => c.classList.toggle('is-on', c === b));
+    });
+    choices.append(b);
+  }
+  wrap.append(choices);
+
+  const why = document.createElement('textarea');
+  why.className = 'review-why';
+  why.rows = 2;
+  why.placeholder = 'Why this band. One sentence is enough, and it is what stops two reviewers drifting apart.';
+  wrap.append(why);
+
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'admin-primary compact';
+  save.textContent = 'Record';
+  save.addEventListener('click', async () => {
+    if (!chosen) { save.textContent = 'Pick a band first'; return; }
+    save.disabled = true;
+    try {
+      await adminRequest({ method: 'POST', body: JSON.stringify({
+        action: 'record-observation', runId: run.id, componentId: component.id, band: chosen, note: why.value,
+      }) });
+      await renderReviewQueue();
+    } catch (error) {
+      save.disabled = false;
+      save.textContent = error.message || 'Could not record';
+    }
+  });
+  wrap.append(save);
+  return wrap;
+}
+
 // Which migrations have landed. Sits above the directory because a missing table is the most
 // common reason anything below it looks broken, and an operator should see the cause before
 // the symptom.
@@ -669,6 +865,7 @@ async function loadInbox({ announce = false } = {}) {
   renderDeliveryHealth().catch(() => {});
   renderSimulationRuns().catch(() => {});
   renderSchemaHealth().catch(() => {});
+  renderReviewQueue().catch(() => {});
   renderPeopleDirectory().catch(() => {});
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');
   if (announce) $('#adminSyncStatus').textContent='Refreshing…';

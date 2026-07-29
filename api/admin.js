@@ -1,4 +1,8 @@
 import { deliveryConfig } from './notify.js';
+import {
+  AGENCY_BANDS, AGENCY_DISQUALIFIERS, AI_BANDS, TAKE_HOME_RESPONSES, UNPROMPTED_TIERS,
+  DIMENSIONS, calibrationStatus, proxyAudit,
+} from './super-intern.js';
 import { scenarioById } from './simulation-run.js';
 import { createClient } from '@supabase/supabase-js';
 
@@ -1024,6 +1028,131 @@ export default async function handler(req, res, dependencies = {}) {
       // "Did the migration land" was previously unanswerable without opening the Supabase
       // console, which meant a missing table showed up as a broken feature rather than as a
       // missing table.
+      // ── The reviewer side ─────────────────────────────────────────────────────────────
+      // Everything above produces evidence; this is where a human decides what it is worth. It
+      // is deliberately the only place that happens: no route anywhere scores a student
+      // automatically, and the queue exists so that a person does it consistently rather than
+      // whenever they happen to look.
+      if (input.action === 'assessment-queue') {
+        const { data: runs } = await operator.supabase.from('assessment_runs')
+          .select('*').in('status', ['submitted', 'in_progress'])
+          .order('started_at', { ascending: true }).limit(50);
+
+        const planIds = [...new Set((runs || []).map(r => r.plan_id).filter(Boolean))];
+        const { data: plans } = planIds.length
+          ? await operator.supabase.from('assessment_plans').select('*').in('id', planIds)
+          : { data: [] };
+        const planById = new Map((plans || []).map(p => [p.id, p]));
+
+        const queue = (runs || []).map(run => {
+          const plan = planById.get(run.plan_id) || null;
+          const components = (plan?.components || []);
+          const observations = run.observations || {};
+          // Answered but not yet judged. This is the actual work, and surfacing it as a count
+          // stops a reviewer opening runs that need nothing from them.
+          const awaiting = components.filter(c => observations[c.id]?.answer && !observations[c.id]?.band);
+          return {
+            id: run.id,
+            status: run.status,
+            startedAt: run.started_at,
+            vertical: plan?.vertical || null,
+            autonomy: plan?.autonomy || null,
+            components,
+            observations,
+            awaiting: awaiting.map(c => c.id),
+            complete: components.length > 0 && awaiting.length === 0,
+          };
+        });
+
+        // What the qualification process is currently leaning on. The referral network and club
+        // affiliation are Covenda's differentiation AND, anchored in a narrow set of
+        // institutions, an adverse-impact exposure sitting directly on top of it. An operator
+        // should see that next to the queue rather than never.
+        const signalsUsed = ['referral_network', 'club'];
+        const longest = Math.max(0, ...(plans || []).map(p => Number(p.total_minutes) || 0));
+
+        return res.status(200).json({ ok: true,
+          queue,
+          proxies: proxyAudit({ signalsUsed, batteryMinutes: longest }),
+          // The vocabulary a reviewer places an answer into. Sent rather than duplicated in the
+          // client so the bands a reviewer sees are the bands the framework defines.
+          bands: { agency: AGENCY_BANDS, ai: AI_BANDS, takeHome: TAKE_HOME_RESPONSES, unprompted: UNPROMPTED_TIERS },
+          disqualifiers: AGENCY_DISQUALIFIERS,
+          dimensions: DIMENSIONS,
+          awaiting: queue.filter(q => q.awaiting.length).length,
+        });
+      }
+
+      // One reviewer's read of one component. A band and a reason, never a number: a score here
+      // would be averaged with another somewhere else, and the whole design refuses the
+      // composite that would produce.
+      if (input.action === 'record-observation') {
+        const runId = String(input.runId || '').trim();
+        const componentId = String(input.componentId || '').trim();
+        const band = String(input.band || '').trim();
+        const note = String(input.note || '').trim().slice(0, 2000);
+        if (!runId || !componentId || !band) {
+          return res.status(400).json({ ok: false, error: 'A run, a component and a band are all required.' });
+        }
+        // A band with no reasoning cannot be applied consistently by anybody else, and is the
+        // thing that makes two reviewers drift apart.
+        if (note.length < 15) {
+          return res.status(400).json({ ok: false, error: 'Say why in a sentence. A band with no reason behind it cannot be applied consistently.' });
+        }
+
+        const { data: run, error: runError } = await operator.supabase.from('assessment_runs')
+          .select('*').eq('id', runId).maybeSingle();
+        if (runError || !run) return res.status(404).json({ ok: false, error: 'That run does not exist.' });
+
+        const observations = { ...(run.observations || {}) };
+        observations[componentId] = {
+          ...(observations[componentId] || {}),
+          band,
+          note,
+          // Attributed. An unattributed judgement cannot be audited for drift, and drift is the
+          // thing the quarterly practitioner check exists to find.
+          reviewer: operator.email || 'operator',
+          reviewedAt: new Date().toISOString(),
+        };
+
+        const { data: saved, error } = await operator.supabase.from('assessment_runs')
+          .update({ observations }).eq('id', runId).select('*').single();
+        if (error) return res.status(503).json({ ok: false, error: 'That observation could not be saved.' });
+        return res.status(200).json({ ok: true, run: saved });
+      }
+
+      // What actually happened after a placement. The only table that can validate any of the
+      // assessment above, and the one the time-to-productivity claim rests on.
+      if (input.action === 'record-outcome') {
+        const num = (v, max) => {
+          if (v === '' || v == null) return null;
+          const n = Number(v);
+          return Number.isFinite(n) ? Math.max(0, Math.min(max, n)) : null;
+        };
+        const row = {
+          student_user_id: String(input.studentUserId || '').trim() || null,
+          company_user_id: String(input.companyUserId || '').trim() || null,
+          plan_id: String(input.planId || '').trim() || null,
+          days_to_contribution: num(input.daysToContribution, 3650),
+          senior_hours: num(input.seniorHours, 10000),
+          independent_resolution: num(input.independentResolution, 1),
+          rework_rate: num(input.reworkRate, 1),
+          would_continue: typeof input.wouldContinue === 'boolean' ? input.wouldContinue : null,
+          note: String(input.note || '').trim().slice(0, 2000) || null,
+        };
+        if (!row.student_user_id) return res.status(400).json({ ok: false, error: 'An outcome has to belong to a student.' });
+
+        const { error } = await operator.supabase.from('placement_outcomes').insert(row);
+        if (error) return res.status(503).json({ ok: false, error: 'That outcome could not be saved. The super_intern migration may not be applied yet.' });
+
+        const { data: all } = await operator.supabase.from('placement_outcomes').select('days_to_contribution');
+        return res.status(200).json({ ok: true,
+          // Reported back every time, because the honest answer to "does this predict anything"
+          // changes only when this number does.
+          calibration: calibrationStatus(all || []),
+        });
+      }
+
       if (input.action === 'schema-health') {
         const EXPECTED = [
           { table: 'batches', migration: '20260726260000_elite_batches', breaks: 'Every batch surface.' },

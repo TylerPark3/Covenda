@@ -115,7 +115,7 @@ test('the schema handler uses the authenticated client', () => {
 // half of the page empty.
 test('the full-width operator panels span both columns', () => {
   const css = readFileSync(root + 'admin.css', 'utf8');
-  const rule = css.match(/\.admin-health, \.admin-schema, \.admin-people, \.admin-sims \{[^}]*\}/);
+  const rule = css.match(/\.admin-health, \.admin-schema, \.admin-review, \.admin-people, \.admin-sims \{[^}]*\}/);
   assert.ok(rule, 'the full-width panels declare no column span');
   assert.match(rule[0], /grid-column: 1 \/ -1/);
   assert.match(rule[0], /max-width: 1240px/, 'unbounded text on a wide screen is unreadable');

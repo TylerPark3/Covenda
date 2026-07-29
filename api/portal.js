@@ -423,7 +423,32 @@ export async function loadMemberDashboard(member, env = process.env) {
       .map(([id, t]) => [id, { label: t.label, demonstrates: t.demonstrates, cannotShow: t.cannotShow }]));
     const simulations = await loadSimulations(member).catch(() => []);
     const availableSimulations = offerableSimulations(profile, batches || []);
-    const technical = { ...technicalBase, gaps: technicalGaps(technicalBase), entries: technicalEvidence, typeGuide, ownershipLevels: OWNERSHIP_LEVELS };
+
+    // The two reads that cost the student nothing, because the evidence already exists.
+    const unprompted = unpromptedBuild((technicalEvidence || []).map(e => ({
+      assigned: e.assigned,
+      deploymentUrl: e.deployment_url,
+      finished: e.project_status === 'finished' || Boolean(e.deployment_url),
+      usersReported: (e.detail || {}).usage || null,
+      changedAfterFeedback: Number(e.iterations) > 0,
+    })));
+    // Reach is read from the domain with the most EVIDENCED skills, so it measures reach from a
+    // centre rather than rewarding breadth on its own.
+    const FUNCTION_OF_DOMAIN = { backend: 'engineering', frontend: 'engineering', algorithms: 'engineering',
+      infrastructure: 'engineering', distributed: 'engineering', databases: 'analysis', aiml: 'research',
+      robotics: 'engineering', security: 'engineering', product: 'product' };
+    const evidenceByFunction = {};
+    for (const domain of technicalBase.breadth || []) {
+      const fn = FUNCTION_OF_DOMAIN[domain.id];
+      if (fn && domain.evidencedCount) (evidenceByFunction[fn] ||= []).push(domain.id);
+    }
+    const strongest = (technicalBase.breadth || []).find(d => d.evidencedCount > 0);
+    const reach = crossFunctional({
+      primary: strongest ? FUNCTION_OF_DOMAIN[strongest.id] || null : null,
+      evidenceByFunction,
+    });
+
+    const technical = { ...technicalBase, gaps: technicalGaps(technicalBase), entries: technicalEvidence, unprompted, reach, typeGuide, ownershipLevels: OWNERSHIP_LEVELS };
     // The DB row carries snake_case columns and no verticalSlug or summary, so grafting only
     // `requirements` left the matcher blind to the vertical (its bonus could never fire for
     // anyone) and short of the words it matches against. Merge the whole catalog entry, with

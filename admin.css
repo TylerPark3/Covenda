@@ -431,7 +431,7 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
    dropped straight into it becomes a grid item and lands in one of those columns, so the
    people directory was rendering inside the 440px rail with the whole left half of the page
    empty. These panels are not detail views; they span. */
-.admin-health, .admin-schema, .admin-people, .admin-sims {
+.admin-health, .admin-schema, .admin-review, .admin-people, .admin-sims {
   grid-column: 1 / -1;
   width: 100%;
   max-width: 1240px;
@@ -448,5 +448,43 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .person-rows .person-row { background: #fff; }
 
 @media (max-width: 1000px) {
-  .admin-health, .admin-schema, .admin-people, .admin-sims { grid-column: 1; }
+  .admin-health, .admin-schema, .admin-review, .admin-people, .admin-sims { grid-column: 1; }
 }
+
+/* The review queue. A reviewer places a band and writes why; there is no number anywhere in
+   here, and that is the point. */
+.admin-review { padding-bottom: 32px; }
+.review-run { margin-top: 16px; border: 1px solid #e2ded3; background: #fff; }
+.review-run.is-done { opacity: .6; }
+.review-run-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 18px; border-bottom: 1px solid #e2ded3; background: #faf8f3; }
+.review-run-top b { font-size: 14px; font-weight: 700; text-transform: capitalize; }
+.review-state { font-size: 12.5px; font-weight: 650; color: #8a6a1c; }
+
+.review-comp { display: grid; gap: 10px; padding: 16px 18px; border-bottom: 1px solid #efece4; }
+.review-comp:last-child { border-bottom: 0; }
+.review-comp.is-judged { background: #fbfaf7; }
+.review-comp > b { font-size: 14px; font-weight: 700; }
+/* The student's own words, set as prose rather than as a form value. */
+.review-answer { margin: 0; padding: 12px 14px; border-left: 2px solid #d8d3c6; background: #fafaf8; font-size: 14px; line-height: 1.6; color: #3a382f; white-space: pre-wrap; }
+
+.review-bands { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; }
+.review-band { display: grid; gap: 3px; padding: 11px 13px; border: 1px solid #ddd8cb; background: #fff; text-align: left; cursor: pointer; }
+.review-band:hover { border-color: #b47b20; }
+.review-band.is-on { border-color: #b47b20; background: #fbf7ed; }
+.review-band b { font-size: 12.5px; font-weight: 700; }
+.review-band small { font-size: 12.5px; line-height: 1.45; color: #6f6b62; }
+
+.review-why { width: 100%; padding: 10px 12px; border: 1px solid #ddd8cb; background: #fff; font-family: var(--font-body); font-weight: 400; font-size: 14px; line-height: 1.55; resize: vertical; }
+.review-placed { margin: 0; font-size: 12.5px; color: #6f6b62; }
+.review-placed small { color: #8a857a; }
+.review-nobands { margin: 0; font-size: 12.5px; color: #8a857a; }
+.review-comp > button { justify-self: start; }
+/* Proxy exposure, above the queue: a process leaning on a proxy is a problem with every
+   judgement below it, not with any one of them. */
+.review-proxies { margin-top: 14px; padding: 14px 18px; border: 1px solid #e2ded3; border-left: 4px solid #8a6a1c; background: #faf4e4; }
+.review-proxies strong { display: block; margin-bottom: 8px; font-size: 14px; }
+.review-proxies ul { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 5px; }
+.review-proxies li { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12.5px; }
+.review-proxies li b { font-weight: 700; }
+.review-proxies li span { color: #6f6b62; }
+.review-proxies p { margin: 0; font-size: 12.5px; line-height: 1.55; color: #6f6b62; }
