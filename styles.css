@@ -5576,34 +5576,64 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
 }
 
 /* ── For technical recruiters ──────────────────────────────────────────────────────────
-   The company hero speaks to a founder with a backlog. A recruiter has a req, a hiring
-   manager to satisfy, and a job description that asks them to assess technical fit without
-   the background to do it. Same product, different problem, so it gets its own band.
+   The company hero speaks to a founder with a backlog. A recruiter has a req and a hiring
+   manager to satisfy. Same product, different problem, so it gets its own band.
 
+   The diagram carries the argument, which is why the prose around it is three sentences.
    Built on the same tokens as .feature-band and .about-section either side of it. */
 .recruiter-band {
   padding: clamp(66px, 8vw, 120px) var(--page-gutter);
   border-top: 1px solid var(--line);
   background: #fff;
 }
-.recruiter-inner { width: min(100%, var(--content)); margin: 0 auto; display: grid; gap: clamp(30px, 4vw, 52px); }
-.recruiter-lede { max-width: 720px; }
-.recruiter-lede h2 { margin: 0 0 22px; text-wrap: balance; }
-.recruiter-body { max-width: 62ch; margin: 0 0 16px; font-size: var(--step-body); line-height: 1.68; color: var(--muted); }
-.recruiter-body:last-child { margin-bottom: 0; color: var(--ink); }
+.recruiter-inner { width: min(100%, var(--content)); margin: 0 auto; display: grid; gap: clamp(28px, 4vw, 46px); }
+.recruiter-lede { max-width: 660px; }
+.recruiter-lede h2 { margin: 0 0 18px; text-wrap: balance; }
+.recruiter-body { max-width: 58ch; margin: 0; font-size: var(--step-body); line-height: 1.65; color: var(--muted); }
 
-.recruiter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
-/* Hairline dividers rather than gaps: four related claims read as one table of contents,
-   not as four floating cards. */
-.recruiter-card { padding: 26px 28px; background: #fff; }
-.recruiter-card h3 { margin: 0 0 10px; font-size: 16px; font-weight: 700; letter-spacing: -.02em; line-height: 1.3; color: var(--ink); text-wrap: balance; }
-.recruiter-card p { margin: 0; font-size: var(--step-body-sm); line-height: 1.65; color: var(--muted); }
+/* The two-row comparison. Same three slots on each row so the eye reads down a column and
+   sees claimed against built, verified, defended. */
+.rmap { display: grid; gap: 14px; }
+.rmap-row {
+  display: grid;
+  grid-template-columns: minmax(74px, auto) minmax(0, 1fr) minmax(0, 232px);
+  gap: 14px;
+  align-items: center;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+}
+.rmap-row.is-after { border-color: var(--gold-light); background: linear-gradient(180deg, var(--gold-pale), #fff); }
 
-.recruiter-honest { display: grid; gap: 18px; justify-items: start; padding: 24px 28px; border-left: 3px solid var(--gold); background: var(--gold-pale); }
-.recruiter-honest p { display: flex; align-items: flex-start; gap: 10px; margin: 0; max-width: 68ch; font-size: var(--step-body-sm); line-height: 1.65; color: var(--ink); }
-.recruiter-honest svg { flex: 0 0 auto; width: 16px; height: 16px; margin-top: 3px; color: var(--gold-deep); }
-.recruiter-honest b { font-weight: 700; }
+.rmap-tag { align-self: start; padding: 5px 10px; border: 1px solid var(--line-strong); font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.rmap-tag.is-gold { border-color: var(--gold); background: var(--gold); color: #1c1300; }
 
-@media (max-width: 760px) {
+.rmap-steps { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rmap-steps li { position: relative; padding: 11px 12px; border: 1px dashed var(--line-strong); background: #fff; }
+/* Dashed for a claim, solid for something backed. The border weight is the information. */
+.rmap-steps li.is-on { border-style: solid; border-color: var(--gold); }
+.rmap-steps b { display: block; font-size: 13px; font-weight: 700; color: var(--muted); letter-spacing: -.01em; }
+.rmap-steps li.is-on b { color: var(--gold-deep); }
+.rmap-steps small { display: block; margin-top: 3px; font-size: 11.5px; line-height: 1.4; color: var(--soft); }
+
+.rmap-end { padding: 12px 14px; border-left: 3px solid var(--line-strong); }
+.rmap-end.is-clear { border-left-color: var(--success); }
+.rmap-end b { display: block; font-size: 13.5px; font-weight: 700; line-height: 1.35; color: var(--ink); text-wrap: balance; }
+.rmap-end small { display: block; margin-top: 4px; font-size: 12px; line-height: 1.45; color: var(--soft); }
+.rmap-end.is-stall b { color: var(--muted); }
+
+/* Hairline dividers rather than gaps: three related claims read as one block, not as three
+   floating cards. */
+.recruiter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+.recruiter-card { padding: 22px 24px; background: #fff; }
+.recruiter-card h3 { margin: 0 0 8px; font-size: 15px; font-weight: 700; letter-spacing: -.02em; line-height: 1.3; color: var(--ink); text-wrap: balance; }
+.recruiter-card p { margin: 0; font-size: var(--step-body-sm); line-height: 1.6; color: var(--muted); }
+
+.recruiter-honest { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 22px; border-left: 3px solid var(--gold); background: var(--gold-pale); }
+.recruiter-honest p { display: flex; align-items: flex-start; gap: 9px; margin: 0; max-width: 60ch; font-size: var(--step-body-sm); line-height: 1.55; color: var(--ink); }
+.recruiter-honest svg { flex: 0 0 auto; width: 15px; height: 15px; margin-top: 2px; color: var(--gold-deep); }
+
+@media (max-width: 860px) {
+  .rmap-row { grid-template-columns: 1fr; align-items: stretch; }
+  .rmap-steps { grid-auto-flow: row; }
   .recruiter-grid { grid-template-columns: 1fr; }
 }

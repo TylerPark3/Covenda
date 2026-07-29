@@ -581,43 +581,59 @@
         <a class="scroll-cue" href="#how"><span>See how Covenda reduces oversight</span><svg><use href="#icon-arrow-down"/></svg></a>
       </section>
 
-      <!-- For recruiters specifically. The founder framing above speaks to somebody with a
-           backlog and no one to do it; a recruiter has a req, a hiring manager to satisfy, and
-           is asked in the job description itself to "assess technical fit" without the
-           background to do it. Different problem, same product, so it gets its own section
-           rather than a rewrite of the one above.
+      <!-- For recruiters specifically. The founder hero above speaks to somebody with a
+           backlog; a recruiter has a req and a hiring manager to satisfy, and their own job
+           descriptions ask them to "assess technical fit" without the background to do it.
 
-           Every claim here is about what Covenda DOES, never about results it has produced. -->
+           The diagram carries the argument, so the prose does not have to repeat it. Built in
+           HTML rather than SVG, following .cred-map: as raw SVG it could not inherit the type
+           scale or the tokens, and labels would overflow their boxes. -->
       <section class="recruiter-band audience-content" data-for-audience="company" id="forRecruiters" aria-labelledby="recruiterTitle">
         <div class="recruiter-inner">
           <div class="recruiter-lede">
             <p class="feature-kicker">For technical recruiters</p>
             <h2 id="recruiterTitle">Your shortlist has to survive the <span class="word-gold">hiring manager</span>.</h2>
-            <p class="recruiter-body">Technical recruiting job descriptions ask for the same thing almost everywhere: source, screen, build a pipeline, and assess technical fit. The last one is the one nobody can do from a résumé, and it is the one your shortlist is judged on.</p>
-            <p class="recruiter-body">Covenda sends work, not claims. Every student arrives with something they built, a record of who verified it, and a recorded walkthrough where they answer for their own decisions. You forward that. The engineer on the other end can check it in ten minutes.</p>
+            <p class="recruiter-body">Source, screen, build a pipeline, assess technical fit. Only the last one decides whether your shortlist holds, and it is the one a résumé cannot answer.</p>
+          </div>
+
+          <div class="rmap" role="img" aria-label="A résumé shortlist reaches the hiring manager as unverified claims and stalls on the question can they actually do it. A Covenda shortlist arrives as work that was built, verified and defended, and the manager can check it.">
+            <div class="rmap-row is-before">
+              <span class="rmap-tag">Résumé</span>
+              <ol class="rmap-steps">
+                <li><b>Claimed</b><small>Listed it</small></li>
+                <li><b>Claimed</b><small>Listed it</small></li>
+                <li><b>Claimed</b><small>Listed it</small></li>
+              </ol>
+              <div class="rmap-end is-stall"><b>Can they actually do it?</b><small>Nobody in the loop can answer</small></div>
+            </div>
+            <div class="rmap-row is-after">
+              <span class="rmap-tag is-gold">Covenda</span>
+              <ol class="rmap-steps">
+                <li class="is-on"><b>Built</b><small>Repo they own</small></li>
+                <li class="is-on"><b>Verified</b><small>Against a published bar</small></li>
+                <li class="is-on"><b>Defended</b><small>On the record</small></li>
+              </ol>
+              <div class="rmap-end is-clear"><b>The manager checks it</b><small>Ten minutes, not a gut call</small></div>
+            </div>
           </div>
 
           <div class="recruiter-grid">
             <article class="recruiter-card">
-              <h3>Pipelines by specialisation, not by keyword</h3>
-              <p>Recruiters specialise: software, AI and ML, cloud and DevSecOps, security, hardware, data, healthcare IT. Covenda runs twenty-five specialisations across five verticals, so a pipeline is scoped the way you already think about your desk.</p>
+              <h3>Scoped like your desk</h3>
+              <p>Twenty-five specialisations across software, finance, healthcare, retail and professional services.</p>
             </article>
             <article class="recruiter-card">
-              <h3>Screening you did not have to do</h3>
-              <p>Every candidate has cleared a published bar before you see them. The bar is written down, so when a hiring manager asks what "vetted" means, there is an answer that is not a feeling.</p>
+              <h3>The bar is written down</h3>
+              <p>So "vetted" has an answer when a hiring manager asks what it meant.</p>
             </article>
             <article class="recruiter-card">
-              <h3>Evidence a manager can audit</h3>
-              <p>Connected repositories, defended walkthroughs, and referrals from people who staked their name. Each one is labelled with what it establishes and what it does not, so nothing oversells on its way to your hiring team.</p>
-            </article>
-            <article class="recruiter-card">
-              <h3>Early-career, done properly</h3>
-              <p>University and early-career technical recruiting is its own discipline, and it is the hardest place to tell promise from polish. That is the segment Covenda is built for rather than adapted to.</p>
+              <h3>Evidence states its own limits</h3>
+              <p>Each piece says what it proves and what it does not. Nothing oversells on the way to your team.</p>
             </article>
           </div>
 
           <div class="recruiter-honest">
-            <p><svg aria-hidden="true"><use href="#icon-lock"/></svg><b>What this is not.</b> Covenda has not placed a student yet, so there is no time-to-fill figure to show you and we will not invent one. There is no résumé database to search and no score to sort by. What exists is a vetting process, evidence that carries its own limits, and students who can defend their work on a call.</p>
+            <p><svg aria-hidden="true"><use href="#icon-lock"/></svg>No placements yet, so no time-to-fill to show you and none invented. No résumé database, no score to sort by.</p>
             <button class="gold-button" type="button" data-action="schedule-demo">Talk through a req<svg><use href="#icon-arrow-right"/></svg></button>
           </div>
         </div>
