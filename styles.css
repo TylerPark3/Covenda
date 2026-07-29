@@ -2048,53 +2048,24 @@ body[data-audience="university"] #flowDemo { display: none; }
    margin give the italic overhang room so the last letter isn't clipped, while
    keeping the visual spacing to the following character unchanged. */
 .word-gold {
+  /* ── WHY THIS IS A SOLID COLOUR AND NOT A CLIPPED GRADIENT ──────────────────────────
+     It was a gradient painted through background-clip: text. That technique clips the fill to
+     the inline box, and browsers disagree about which font metric sets that box: EB Garamond
+     reports head yMin -294, hhea descender -298 and OS/2 winDescent 390 against a 1000 em.
+     Four separate rounds of clipped glyphs came out of it — the p and f of "proof", the g of
+     "good", the italic g's left-swinging loop, the s of "students" — each fixed by padding one
+     more side and each followed by another.
+
+     A solid colour cannot be clipped by a box it does not have. The sheen it bought was worth
+     less than the word "proof" rendering correctly on the front page. */
   font-style: italic;
-  overflow: visible;
-  color: var(--gold-deep); /* fallback if background-clip:text is unsupported */
-  /* The overhang allowance was measured against the old face. EB Garamond italic has a far
-     steeper slant and a longer exit stroke, so the final s of "students" fell outside the fill
-     box and lost its tail. Padding and margin move together, so the extra room is invisible in
-     layout: only the fill box grows. */
-  padding-right: 0.62em;
-  margin-right: -0.54em;
-  /* And the same problem vertically, which only appeared once the display face became a serif.
-     background-clip:text clips the fill to the BOX, and the box is the line box: Geist's
-     shallow descenders sat inside it, EB Garamond's do not. So the p in "proof" and the g in
-     "good" lost their tails. Padded down and pulled back so the fill covers the descender
-     without changing where the line sits. */
-  padding-bottom: 0.44em;
-  margin-bottom: -0.44em;
-  /* And the LEFT, which is the one nobody expects on an italic. Italic glyphs lean right, so
-     right and bottom were the obvious sides to pad and both were done first. But the descender
-     loop of an italic g swings back UNDER and to the LEFT of its own origin, past the left
-     sidebearing, and that part of the loop fell outside the fill box entirely. Same for a j,
-     and for a y in some cuts. */
-  padding-left: 0.18em;
-  margin-left: -0.18em;
-  /* Clone the box per line fragment so the padding (and gold fill) covers the italic overhang
-     at EVERY line end — otherwise a word that ends a wrapped line (e.g. "domain") has its last
-     glyph's slant clipped by background-clip:text. */
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-  background-image:
-    linear-gradient(102deg, transparent 40%, rgba(255,251,240,.9) 50%, transparent 60%),
-    linear-gradient(96deg, #8A6A2F 0%, #A9822F 42%, #C9A24B 66%, #A9822F 88%);
-  background-size: 260% 100%, 100% 100%;
-  background-position: 200% 0, 0 0;
-  background-repeat: no-repeat;
-  -webkit-background-clip: text;
-  background-clip: text;
+  color: var(--gold);
 }
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  .word-gold { -webkit-text-fill-color: transparent; color: transparent; }
-}
-/* A single slow sheen sweep — light catching gold. Not a glow, not a flicker. */
-.word-gold { animation: word-gold-sheen 7s ease-in-out 1.2s infinite; }
-@keyframes word-gold-sheen {
-  0%, 22% { background-position: 200% 0, 0 0; }
-  40%, 100% { background-position: -60% 0, 0 0; }
-}
-.word-gold:hover { animation: word-gold-sheen 1.1s ease-in-out both; }
+/* Light gold on the dark hero, deep gold on white. Two values instead of a gradient, and both
+   hold contrast against their own ground. */
+.hero-home .word-gold,
+.hero-company .word-gold,
+.hero-university .word-gold { color: #e2bd6b; }
 @media (prefers-reduced-motion: reduce) {
   .word-gold { animation: none; background-position: -60% 0, 0 0; }
 }

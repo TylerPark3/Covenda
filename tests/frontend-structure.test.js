@@ -662,12 +662,6 @@ test('the tree explains the vetting system specifically', () => {
 // The gold word is painted with background-clip:text, so any glyph extending past the
 // padding box renders TRANSPARENT — which is why the italic "f" in "proof" looked cut off.
 // The padding must stay wide enough to cover Newsreader's italic overhang.
-test('the gold word covers its italic overhang', () => {
-  const rule = styles.match(/\.word-gold \{[\s\S]*?\}/)?.[0] || '';
-  const pad = Number(rule.match(/padding-right:\s*([\d.]+)em/)?.[1] || 0);
-  assert.ok(pad >= 0.4, `padding-right ${pad}em is too tight for an italic overhang`);
-  assert.match(rule, /box-decoration-break: clone/);
-});
 
 // The hero field argues the thesis: a large visible crowd, rare shining talent, and
 // periodic white-to-gold proof signals that make the idea readable without extra copy.
@@ -968,37 +962,6 @@ test('nothing is hidden unless the reveal can actually run', () => {
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,160}html\.js-reveal \.reveal \{ opacity: 1/);
 });
 
-// background-clip:text clips the fill to the LINE BOX. Geist's shallow descenders sat inside
-// it; EB Garamond's do not, so the p in "proof" and the g in "good" lost their tails the moment
-// the display face became a serif.
-test('the gold word leaves room for descenders as well as the italic overhang', () => {
-  const rule = styles.match(/\.word-gold \{[^}]*\}/)[0];
-  assert.match(rule, /background-clip: text/);
-  // .2em cleared the upright p of "good" and clipped the italic p and f of "proof". Sized for
-  // the italic, which is the deeper of the two.
-  // Sized from the font file, not by eye. EB Garamond reports head yMin -294, hhea descender
-  // -298 and OS/2 winDescent 390 against unitsPerEm 1000. Browsers disagree about which sets
-  // the inline content box, so the padding has to clear the LARGEST of them.
-  const padBottom = Number(rule.match(/padding-bottom:\s*(0?\.\d+)em/)[1]);
-  assert.ok(padBottom > 0.39, `padding-bottom ${padBottom}em does not clear winDescent (0.39em)`);
-  const marginBottom = Number(rule.match(/margin-bottom:\s*-(0?\.\d+)em/)[1]);
-  assert.equal(padBottom, marginBottom, 'the padding must not push the line down');
-  // The horizontal fix has to survive too, or the italic exit stroke clips at a line end.
-  // EB Garamond needs materially more room than the face this was first measured against.
-  const padRight = Number(rule.match(/padding-right:\s*(0?\.\d+)em/)[1]);
-  assert.ok(padRight >= 0.6, `padding-right ${padRight}em is too tight for the italic overhang`);
-  // Padding and margin move together, so the extra room never shows up in layout.
-  const marginRight = Number(rule.match(/margin-right:\s*-(0?\.\d+)em/)[1]);
-  assert.ok(Math.abs((padRight - marginRight) - 0.08) < 0.001, 'the gold word now shifts the line');
-
-  // The side nobody expects on an italic. Glyphs lean right, so right and bottom get padded
-  // first, but the descender loop of an italic g swings back under and to the LEFT of its own
-  // origin and falls outside the box there. Every side has to be covered, not the obvious ones.
-  const padLeft = Number(rule.match(/padding-left:\s*(0?\.\d+)em/)[1]);
-  const marginLeft = Number(rule.match(/margin-left:\s*-(0?\.\d+)em/)[1]);
-  assert.ok(padLeft > 0, 'an italic g loses the left of its descender loop');
-  assert.equal(padLeft, marginLeft, 'the left padding must not shift the line');
-});
 
 // A serif needs more leading than the sans these values were tuned for.
 test('no display rule sets a line-height that clips a descender', () => {
@@ -1173,4 +1136,26 @@ test('the roster builder opens on demand and its trigger works', async () => {
   // The form itself moved rather than being duplicated.
   assert.equal((html.match(/class="roster-builder/g) || []).length, 1);
   assert.equal((html.match(/id="rosterList"/g) || []).length, 1);
+});
+
+// The gold word was a gradient painted through background-clip: text, which clips the fill to
+// the inline box. Browsers disagree about which font metric sets that box, and four separate
+// rounds of clipped glyphs came out of it: the p and f of "proof", the g of "good", the italic
+// g's left-swinging descender loop, the s of "students". Each was fixed by padding one more
+// side, and each was followed by another.
+//
+// A solid colour cannot be clipped by a box it does not have.
+test('the gold word is a solid colour, not a clipped fill', () => {
+  // Comments explain why the technique is gone, so they contain its name. Fourth time this
+  // trap has bitten: "age" in "stage", "rank" in "not a ranking", "env" in a comment about
+  // env, and now this. Strip them and read the declarations.
+  const rule = styles.match(/\.word-gold \{[^}]*\}/)[0].replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.ok(!/background-clip/.test(rule), 'the clipped fill is back, and so is the whole class of bug');
+  assert.ok(!/-webkit-text-fill-color/.test(rule));
+  assert.match(rule, /color: var\(--gold\)/);
+  assert.match(rule, /font-style: italic/);
+  // No orphaned padding hacks left behind: they existed only to feed the fill box.
+  assert.ok(!/padding-(bottom|left|right)/.test(rule), 'padding survives with nothing to pad');
+  // And a brighter value where it sits on a dark ground.
+  assert.match(styles, /\.hero-home \.word-gold[\s\S]{0,120}color: #e2bd6b/);
 });
