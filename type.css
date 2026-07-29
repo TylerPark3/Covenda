@@ -23,7 +23,7 @@
    different treatment and a much older one.
 
    The rule is size, not importance. --font-display is the serif and applies to hero and
-   section headlines; --font-ui carries h3 downward, every label, and all UI chrome. A serif
+   section headlines; --font-sans carries h3 downward, every label, and all UI chrome. A serif
    at 15px is where this goes wrong.
 
    Headline weight is 700 rather than the 400 a serif wanted: the same number that reads as a
@@ -37,8 +37,6 @@
   --font-sans: "Geist", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-body: "Geist", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-ui: var(--font-body); /* legacy alias used by the marketing stylesheet */
-  --font-heading: var(--font-sans); /* h3 and below stay in the grotesque */
 
   /* One scale. Sizes clamp; weight + line-height live on the utility classes below so every
      text role maps to a named step instead of an ad-hoc size/weight per component. */

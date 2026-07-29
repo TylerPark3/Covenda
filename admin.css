@@ -403,7 +403,7 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .people-error { padding: 16px 18px; border: 1px solid #e2ded3; border-left: 4px solid #a43124; background: #fdf5f4; }
 .people-error strong { display: block; font-size: 14.5px; margin-bottom: 5px; }
 .people-error p { margin: 0 0 10px; font-size: 13.5px; line-height: 1.55; color: #6f6b62; }
-.people-dupe { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px !important; color: #14140f !important; }
+.people-dupe { font-family: var(--font-mono); font-size: 12.5px !important; color: #14140f !important; }
 .people-group { margin-bottom: 12px; border: 1px solid #e2ded3; background: #fff; }
 .people-group.is-unstated { opacity: .78; }
 .people-group-head { display: flex; align-items: center; justify-content: space-between; padding: 11px 18px; background: #faf6ec; border-bottom: 1px solid #e2ded3; }

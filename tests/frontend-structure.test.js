@@ -983,3 +983,27 @@ test('no display rule sets a line-height that clips a descender', () => {
     }
   }
 });
+
+// Four tokens, one definition, no aliases. --font-ui was a legacy alias for --font-body used by
+// exactly one rule, which is how two names for one thing quietly become two different things.
+test('every surface draws its type from the same four tokens', async () => {
+  const files = { 'styles.css': styles, 'type.css': typeCss };
+  for (const name of ['portal.css', 'admin.css']) {
+    files[name] = await readFile(new URL(`../${name}`, import.meta.url), 'utf8');
+  }
+  for (const [name, css] of Object.entries(files)) {
+    // No hardcoded stacks: every family comes through a token or inherits.
+    for (const [, value] of css.matchAll(/font-family:\s*([^;}]+)/g)) {
+      const clean = value.trim();
+      // A fallback inside the var() is fine: var(--font-display, inherit) still routes through
+      // the token. A bare stack does not.
+      assert.ok(/^var\(--font-(display|sans|body|mono)\s*(,[^)]*)?\)$/.test(clean) || clean === 'inherit',
+        `${name} sets a font stack outside the tokens: ${clean}`);
+    }
+    assert.ok(!/--font-(ui|heading)\b/.test(css), `${name} still references a retired token`);
+  }
+  // Defined once, in the shared file.
+  for (const token of ['display', 'sans', 'body', 'mono']) {
+    assert.equal((typeCss.match(new RegExp(`^\\s+--font-${token}:`, 'gm')) || []).length, 1);
+  }
+});
