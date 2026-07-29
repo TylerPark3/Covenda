@@ -1,0 +1,11 @@
+# Google needs the homepage AND the favicon to be crawlable before it will show a site icon
+# instead of a generic globe. Nothing here blocks either.
+User-agent: *
+Allow: /
+
+# Private surfaces. Not secrets, but nothing here belongs in a search result.
+Disallow: /portal.html
+Disallow: /admin.html
+Disallow: /api/
+
+Sitemap: https://covenda.app/sitemap.xml
