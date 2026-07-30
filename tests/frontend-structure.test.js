@@ -488,7 +488,15 @@ test('hero field keeps pointer discovery without shifting the 3D field', () => {
   // one, which is enough. What has to stay true is that gold is still distinguishable.
   const goldFill = script.match(/ctx\.fillStyle = `rgba\(255,224,151,\$\{\(\.78 \* q\.scale/);
   assert.ok(goldFill, 'gold nodes no longer render brighter than white ones');
-  assert.ok(!/createRadialGradient\(q\.x, q\.y/.test(script), 'the node aura is back');
+  // The ambient aura is gone: it sat on every gold node all the time and turned the field into
+  // blobs. A glow on a RESOLVED shape is a different thing and is wanted, so the guard is that
+  // any node glow is gated on the shape being formed rather than drawn unconditionally.
+  const code = script.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  for (const [, before] of code.matchAll(/([\s\S]{0,220})createRadialGradient\(q\.x, q\.y/g)) {
+    assert.match(before, /formed > 0\.25/, 'a node glow is drawn without checking the shape is formed');
+  }
+  // And the twinkling cross is gone with it.
+  assert.ok(!/const glint =/.test(code), 'the glint cross is back');
   // Reduced-motion returns before any listener is attached (the early `if (reduce) return`),
   // and coarse pointers never get a hover handler at all.
   assert.match(script, /\(hover: hover\) and \(pointer: fine\)/);

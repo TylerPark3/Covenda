@@ -5261,9 +5261,24 @@ function initHeroField(target) {
 
   const FIGURE = MORPH_SHAPES[canvas.dataset.morph] || null;
   const morphing = Boolean(FIGURE);
+  // A fraction of a revolution. A whole turn on a 60-point ring just looks like the ring
+  // spinning; a third of one reads as the points arriving from around the shape.
+  const SWIRL_TURNS = 0.34;
   let morph = 0;        // 0 = crowd, 1 = figure
   let morphTo = 0;
   let assigned = false;
+
+  // The centre the swirl orbits. Same numbers figureScreen uses, factored out so the two cannot
+  // drift apart: a swirl around a point that is not the shape's centre reads as a wobble.
+  function shapeBox() {
+    const isMark = canvas.dataset.morph === 'mark';
+    const size = isMark
+      ? Math.min(W * 0.42, H * 0.56)
+      : Math.min(W * 0.26, H * 1.34);
+    const cx = isMark ? W * 0.5 : W * 0.80;
+    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.435;
+    return { size, cx, top, cy: top + size * 0.5 };
+  }
 
   function figureScreen(index) {
     // Fitted to the shorter axis so the figure keeps its proportions in any hero shape, and
@@ -5314,6 +5329,9 @@ function initHeroField(target) {
         // Ordered along the shape rather than randomly, so the mark draws itself around each
         // ring and the figure builds from the head down instead of flickering into place.
         nodes[best].figDelay = (fi / FIGURE.length) * 0.55;
+        // Alternating direction and a per-node amount, so the field does not rotate as one rigid
+        // body. A uniform spin is a turntable; mixed spins are a galaxy.
+        nodes[best].spin = (fi % 2 ? 1 : -1) * (0.6 + (fi % 5) * 0.18);
       }
     });
   }
@@ -5347,7 +5365,7 @@ function initHeroField(target) {
     t += 1;
     // Eased rather than linear, and the same value drives position, colour and alpha so nothing
     // in the figure arrives out of time with the rest of it.
-    if (morphing) morph += (morphTo - morph) * (canvas.dataset.morph === 'mark' ? 0.014 : 0.024);
+    if (morphing) morph += (morphTo - morph) * (canvas.dataset.morph === 'mark' ? 0.055 : 0.038);
     for (const n of nodes) {
       n.x += n.vx; n.y += n.vy; n.z += n.vz;
       const bx = W * 0.9, by = H * 0.9;
@@ -5377,8 +5395,27 @@ function initHeroField(target) {
         const span = 1 - delay;
         const local = Math.max(0, Math.min(1, (morph - delay) / (span || 1)));
         const eased = local * local * (3 - 2 * local);
-        pts[i].x += (target.x - pts[i].x) * eased;
-        pts[i].y += (target.y - pts[i].y) * eased;
+
+        // Polar, not linear. Interpolating x and y draws every point along the shortest line to
+        // its slot, which reads as a snap-together. Interpolating the ANGLE and the RADIUS about
+        // the shape's centre sends them round as they come in, which is what makes it a galaxy
+        // collapsing rather than a diagram assembling.
+        const box = shapeBox();
+        const px = pts[i].x - box.cx, py = pts[i].y - box.cy;
+        const tx = target.x - box.cx, ty = target.y - box.cy;
+        const r0 = Math.hypot(px, py), r1 = Math.hypot(tx, ty);
+        const a0 = Math.atan2(py, px);
+        let da = Math.atan2(ty, tx) - a0;
+        // Shortest way round, or a point one degree clockwise of its slot takes the long way.
+        while (da > Math.PI) da -= Math.PI * 2;
+        while (da < -Math.PI) da += Math.PI * 2;
+        // The extra sweep peaks mid-transit and is zero at both ends, so the point still lands
+        // exactly on its slot however far it spun to get there.
+        const swirl = Math.sin(Math.PI * eased) * SWIRL_TURNS * Math.PI * 2 * (nodes[i].spin || 1);
+        const ang = a0 + da * eased + swirl;
+        const rad = r0 + (r1 - r0) * eased;
+        pts[i].x = box.cx + Math.cos(ang) * rad;
+        pts[i].y = box.cy + Math.sin(ang) * rad;
         pts[i].fade = 1;
         pts[i].figure = eased;
         // Only the detailed figure resolves in gold. The three behind it stay neutral, because
@@ -5466,13 +5503,21 @@ function initHeroField(target) {
         // is enough to make it read as gold without painting a halo around it.
         ctx.fillStyle = `rgba(255,224,151,${(.78 * q.scale + .18) * (q.fade ?? 1)})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r + 1 + pulse * .7, 0, Math.PI * 2); ctx.fill();
-        const glint = (5 + pulse * 7) * q.scale * (1 - (q.figure ?? 0) * 0.85);
-        ctx.strokeStyle = `rgba(255,238,199,${.32 + pulse * .36})`;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(q.x - glint, q.y); ctx.lineTo(q.x + glint, q.y);
-        ctx.moveTo(q.x, q.y - glint); ctx.lineTo(q.x, q.y + glint);
-        ctx.stroke();
+        // No glint cross. It drew a twinkling plus-sign through every gold node, which is the
+        // "flashing gold lights" effect: it reads as star clip-art rather than as light.
+        //
+        // A glow ONLY on a resolved shape. This is not the ambient aura that was removed: that
+        // one sat on every gold node all the time and turned the whole field into blobs. This
+        // one exists solely while a shape is formed, which is exactly where a glow is wanted.
+        const formed = q.figure ?? 0;
+        if (formed > 0.25) {
+          const lift = (formed - 0.25) / 0.75;
+          const glow = ctx.createRadialGradient(q.x, q.y, r * 0.5, q.x, q.y, r + 9 * lift);
+          glow.addColorStop(0, `rgba(255,232,168,${0.34 * lift})`);
+          glow.addColorStop(1, `rgba(${GOLD},0)`);
+          ctx.fillStyle = glow;
+          ctx.beginPath(); ctx.arc(q.x, q.y, r + 9 * lift, 0, Math.PI * 2); ctx.fill();
+        }
       } else {
         ctx.fillStyle = `rgba(${WHITE},${(.52 + q.scale * .4) * (q.fade ?? 1)})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
