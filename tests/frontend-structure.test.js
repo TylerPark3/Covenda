@@ -701,13 +701,21 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
   assert.match(script, /function spawnSignal\(now\)/);
   assert.match(script, /signals\.push\(\{ node, born: now, duration:/);
   assert.match(script, /const color = progress < \.22 \? WHITE : GOLD/);
-  assert.match(script, /const target = Math\.max\(140, Math\.min\(240/);
+  // Bounded and dense, asserted as a property rather than as two literals. The count went up
+  // when the link reach came down: a finer web needs more nodes to stay a web.
+  const [, lo, hi] = script.match(/const target = Math\.max\((\d+), Math\.min\((\d+)/);
+  assert.ok(Number(lo) >= 120, `field floor is ${lo}, too sparse to read as a crowd`);
+  assert.ok(Number(hi) <= 400, `field ceiling is ${hi}, unbounded enough to cost a frame`);
   // The cap exists so a dense field cannot spend an unbounded amount of a frame on links. Its
   // value moved with LINK_DISTANCE: at the longer reach, 520 truncated the lattice mid-render
   // and left one corner visibly emptier than the rest. What matters is that it is bounded.
   const cap = Number(script.match(/linkCount < (\d+)/)[1]);
   assert.ok(cap >= 600 && cap <= 1200, `link cap is ${cap}, either truncating or unbounded`);
-  assert.match(script, /const LINK_DISTANCE = 152;/);
+  // The reach is a property, not a constant to pin. It came down from 152 so the mesh reads as
+  // a fine web rather than as long struts; what has to stay true is that it links neighbours and
+  // not the whole canvas.
+  const reach = Number(script.match(/const LINK_DISTANCE = (\d+);/)[1]);
+  assert.ok(reach >= 80 && reach <= 170, `link reach is ${reach}px, either disconnected or a net`);
   // Real 3D: depth, perspective projection, and far-to-near paint order.
   assert.match(script, /function project\(n\)/);
   assert.match(script, /FOCAL \/ z/);

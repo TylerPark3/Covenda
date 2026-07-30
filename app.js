@@ -4879,7 +4879,7 @@ function initIcosahedron() {
         const g = Math.round(107 + depth * 109);  // 107 -> 216
         const b = Math.round(13 + depth * 130);   //  13 -> 143
         ctx.strokeStyle = `rgba(${r},${g},${b},${(0.42 + depth * 0.5).toFixed(3)})`;
-        ctx.lineWidth = 0.85 + depth * 0.85;
+        ctx.lineWidth = 0.4 + depth * 0.45;
         ctx.stroke();
       });
     // vertices = students. These have to SHINE, and previously they did not: the core was
@@ -5137,13 +5137,13 @@ function initHeroField(target) {
   const INK_LIFT = palette.lift;
   const FOCAL = 760;
   const DEPTH = 680;
-  const LINK_DISTANCE = 152;
+  const LINK_DISTANCE = 104;
   let W = 0, H = 0, nodes = [], signals = [], goldBonds = [], running = false, raf = 0, t = 0;
   let pointer = null;
   let nextSignalAt = 0, nextGoldBondAt = 0;
 
   function build() {
-    const target = Math.max(140, Math.min(240, Math.round((W * H) / 4200)));
+    const target = Math.max(200, Math.min(340, Math.round((W * H) / 2900)));
     nodes = Array.from({ length: target }, () => ({
       x: (Math.random() - 0.5) * W * 1.65,
       y: (Math.random() - 0.5) * H * 1.55,
@@ -5186,30 +5186,67 @@ function initHeroField(target) {
   // the figure survives a resize without recomputing anything.
   const MORPH_SHAPES = {
     // A standing person: the company hero, where the crowd resolves into one candidate.
+    // The company hero. A detailed figure on the right and three plain ones on the left: the
+    // crowd is systematic and interchangeable, the one that resolves is a person you can read.
+    // The difference between them IS the argument, so the detail is load-bearing rather than
+    // ornamental. A stick figure would have made both sides look the same.
     figure: (() => {
       const pts = [];
-      const push = (x, y) => pts.push({ x, y });
-      // Head as a ring rather than a disc: a solid head would be the one part that stopped
-      // looking like points.
-      for (let i = 0; i < 13; i += 1) {
-        const a = (i / 13) * Math.PI * 2;
-        push(0.5 + Math.cos(a) * 0.058, 0.155 + Math.sin(a) * 0.072);
+      const push = (x, y, lead = false) => pts.push({ x, y, lead });
+
+      // ── The one on the right, drawn properly ────────────────────────────────────────
+      // Anchored on a 0.62 centre line so the three background figures have the left third.
+      const CX = 0.5;
+      // Head, as a ring. A filled head would be the one part that stopped looking like points.
+      for (let i = 0; i < 16; i += 1) {
+        const t = (i / 16) * Math.PI * 2;
+        push(CX + Math.cos(t) * 0.049, 0.115 + Math.sin(t) * 0.060, true);
       }
-      for (let i = 0; i <= 5; i += 1) push(0.5, 0.245 + i * 0.032);
-      for (let i = -5; i <= 5; i += 1) push(0.5 + i * 0.032, 0.295);
+      push(CX, 0.183, true);                                           // neck
+      // Shoulders slope rather than sitting flat, which is most of what separates a drawn
+      // figure from a stick one.
+      for (let i = -5; i <= 5; i += 1) {
+        push(CX + i * 0.024, 0.215 + Math.abs(i) * 0.0035, true);
+      }
+      // Torso as an outline, so it has width: two sides tapering to the waist and back out.
+      for (let i = 0; i <= 7; i += 1) {
+        const t = i / 7;
+        const half = 0.118 - t * 0.045 + (t > 0.72 ? (t - 0.72) * 0.10 : 0);
+        push(CX - half, 0.225 + t * 0.20, true);
+        push(CX + half, 0.225 + t * 0.20, true);
+      }
+      // Arms bend at the elbow. A single straight run from shoulder to hand is the stick-figure
+      // tell; two segments at an angle reads as an arm.
       for (const side of [-1, 1]) {
-        for (let i = 1; i <= 8; i += 1) {
-          const t = i / 8;
-          push(0.5 + side * (0.17 + t * 0.20), 0.30 + t * 0.20);
+        for (let i = 1; i <= 5; i += 1) {                              // upper arm, outward
+          const t = i / 5;
+          push(CX + side * (0.125 + t * 0.075), 0.225 + t * 0.105, true);
         }
+        for (let i = 1; i <= 5; i += 1) {                              // forearm, down and in
+          const t = i / 5;
+          push(CX + side * (0.200 - t * 0.028), 0.330 + t * 0.105, true);
+        }
+        push(CX + side * 0.168, 0.452, true);                          // hand
       }
-      for (let i = -3; i <= 3; i += 1) push(0.5 + i * 0.021, 0.545);
+      for (let i = -3; i <= 3; i += 1) push(CX + i * 0.020, 0.432, true);   // hips
+      // Legs, each as two lines so they have thickness, tapering to the ankle.
       for (const side of [-1, 1]) {
-        for (let i = 1; i <= 9; i += 1) {
-          const t = i / 9;
-          push(0.5 + side * (0.035 + t * 0.115), 0.545 + t * 0.315);
+        for (let i = 1; i <= 10; i += 1) {
+          const t = i / 10;
+          const spread = 0.026 + t * 0.040;
+          const thick = 0.026 - t * 0.013;
+          push(CX + side * (spread - thick), 0.432 + t * 0.310, true);
+          push(CX + side * (spread + thick), 0.432 + t * 0.310, true);
         }
+        push(CX + side * (0.066 + 0.020), 0.752, true);                // foot
       }
+
+      // ── On the three background figures ──────────────────────────────────────────────
+      // Not here. They were drawn and they land on top of "Build the intern you need", because
+      // that headline is centred and wide and this band is only ~414px tall: there is no left
+      // third to put them in. Squeezing them in made three 25px smudges over the copy, which is
+      // worse than not having them. The systematic-crowd contrast wants either its own band or a
+      // hero that is not centre-aligned, and that is a layout decision rather than a tweak.
       return pts;
     })(),
 
@@ -5246,15 +5283,21 @@ function initHeroField(target) {
     // A person stands beside the copy; the mark sits behind it, centred, because it is the
     // thing the page is named after and putting it off to one side would read as an accident.
     const isMark = canvas.dataset.morph === 'mark';
+    // The figure box now holds four people, not one, so it has to be much wider than the
+    // single-figure version. At the old size each background figure was about nineteen pixels
+    // across and they collapsed into an unreadable cluster.
+    // The lead figure occupies 0.637 of the box vertically, so the box is deliberately TALLER
+    // than the band: sizing it to fit inside made every figure too small to read, and three
+    // background people 50px apart at 25px wide merged into one blob.
     const size = isMark
       ? Math.min(W * 0.42, H * 0.56)
-      : Math.min(W * 0.30, H * 0.78);
-    const cx = isMark ? W * 0.5 : W * 0.82;
+      : Math.min(W * 0.26, H * 1.34);
+    const cx = isMark ? W * 0.5 : W * 0.80;
     // The mark is centred on the headline, not on the hero. Dead-centre put the rings behind the
     // three path cards, which carry a tinted backdrop and swallowed the middle of both of them.
     // Framing the words is also the better composition: the thing the page is named after sits
     // around its own name.
-    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.56;
+    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.435;
     const p = FIGURE[index];
     return { x: cx + (p.x - 0.5) * size, y: top + p.y * size };
   }
@@ -5275,7 +5318,13 @@ function initHeroField(target) {
         const d = (candidate.pt.x - target.x) ** 2 + (candidate.pt.y - target.y) ** 2;
         if (d < bestDistance) { bestDistance = d; best = candidate.index; }
       }
-      if (best >= 0) { taken.add(best); nodes[best].fig = fi; }
+      if (best >= 0) {
+        taken.add(best);
+        nodes[best].fig = fi;
+        // Ordered along the shape rather than randomly, so the mark draws itself around each
+        // ring and the figure builds from the head down instead of flickering into place.
+        nodes[best].figDelay = (fi / FIGURE.length) * 0.55;
+      }
     });
   }
 
@@ -5319,7 +5368,7 @@ function initHeroField(target) {
     t += 1;
     // Eased rather than linear, and the same value drives position, colour and alpha so nothing
     // in the figure arrives out of time with the rest of it.
-    if (morphing) morph += (morphTo - morph) * 0.075;
+    if (morphing) morph += (morphTo - morph) * (canvas.dataset.morph === 'mark' ? 0.014 : 0.024);
     for (const n of nodes) {
       n.x += n.vx; n.y += n.vy; n.z += n.vz;
       const bx = W * 0.9, by = H * 0.9;
@@ -5344,34 +5393,44 @@ function initHeroField(target) {
         const fi = nodes[i].fig;
         if (fi === undefined) { pts[i].fade = 1 - morph; continue; }
         const target = figureScreen(fi);
-        pts[i].x += (target.x - pts[i].x) * morph;
-        pts[i].y += (target.y - pts[i].y) * morph;
+        // Each point runs its own eased progress inside the shared morph, so they arrive in a
+        // wave. Clamped, or a late point would still be moving after the morph has settled.
+        const delay = nodes[i].figDelay || 0;
+        const span = 1 - delay;
+        const local = Math.max(0, Math.min(1, (morph - delay) / (span || 1)));
+        const eased = local * local * (3 - 2 * local);
+        pts[i].x += (target.x - pts[i].x) * eased;
+        pts[i].y += (target.y - pts[i].y) * eased;
         pts[i].fade = 1;
-        pts[i].figure = morph;
+        pts[i].figure = eased;
+        // Only the detailed figure resolves in gold. The three behind it stay neutral, because
+        // the whole point is that they are interchangeable and it is not.
+        pts[i].lead = FIGURE[fi].lead !== false;
       }
     }
 
     // The ambient mesh makes the crowd legible as a connected field without becoming a web.
     let linkCount = 0;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = .6;
     for (let i = 0; i < nodes.length && linkCount < 900; i += 1) {
       for (let j = i + 1; j < nodes.length && linkCount < 900; j += 1) {
         const a = pts[i], b = pts[j];
+        // A figure is drawn in points only. Linking its nodes drew gold rods between every
+        // nearby pair, which turned a silhouette into scaffolding and made the struts the thing
+        // you saw. Shortening the reach was the first attempt and it only thinned them.
+        if ((a.figure ?? 0) > 0.06 || (b.figure ?? 0) > 0.06) continue;
         const distance = Math.hypot(a.x - b.x, a.y - b.y);
-        // The reach shortens as the figure resolves. Without this, every converged pair falls
-        // inside the crowd's link distance and the silhouette disappears under its own mesh.
-        const reach = LINK_DISTANCE * (1 - (morphing ? morph : 0) * 0.72);
-        if (distance > reach) continue;
+        if (distance > LINK_DISTANCE) continue;
         const depth = (a.scale + b.scale) / 2;
         const goldLink = nodes[i].gold || nodes[j].gold;
-        let alpha = (1 - distance / reach) * depth * (goldLink ? .58 : .30) * INK_LIFT;
+        let alpha = (1 - distance / LINK_DISTANCE) * depth * (goldLink ? .58 : .30) * INK_LIFT;
         // A link is only as present as the dimmer of the two nodes it joins, so the crowd's mesh
         // clears as the figure forms instead of smearing between the two states.
         alpha *= Math.min(a.fade ?? 1, b.fade ?? 1);
         if (alpha <= 0.004) continue;
         // Inside the figure every line is gold: the whole point is that what resolves is the
         // evidenced one.
-        const asGold = goldLink || Math.min(a.figure ?? 0, b.figure ?? 0) > 0.35;
+        const asGold = goldLink || (Math.min(a.figure ?? 0, b.figure ?? 0) > 0.35 && a.lead && b.lead);
         ctx.strokeStyle = asGold
           ? `rgba(${GOLD},${alpha})`
           : `rgba(${WHITE},${alpha})`;
@@ -5404,11 +5463,13 @@ function initHeroField(target) {
         .sort((a, b) => a.distance - b.distance)
         .slice(0, 7);
       for (const item of nearest) {
+        // Same reason: a cursor line landing on the figure reads as another rod.
+        if ((pts[item.index].figure ?? 0) > 0.06) continue;
+        // Always gold. These were the neutral colour, which on the light hero is plain grey and
+        // read as grey threads snagging on the pointer rather than as the field noticing it.
         const alpha = Math.max(.12, .52 - item.distance / 700) * INK_LIFT;
-        ctx.strokeStyle = nodes[item.index].gold
-          ? `rgba(${GOLD},${alpha + .18})`
-          : `rgba(${WHITE},${alpha})`;
-        ctx.lineWidth = nodes[item.index].gold ? 1.35 : .9;
+        ctx.strokeStyle = `rgba(${GOLD},${alpha + (nodes[item.index].gold ? .2 : .06)})`;
+        ctx.lineWidth = nodes[item.index].gold ? .9 : .55;
         ctx.beginPath();
         ctx.moveTo(pointer.x, pointer.y);
         ctx.lineTo(item.point.x, item.point.y);
@@ -5427,7 +5488,7 @@ function initHeroField(target) {
       const r = n.r * q.scale;
       // A node holding a figure point renders as gold whatever it started as. The crowd does not
       // contain enough gold nodes to draw a person, so the ones that resolve become the gold.
-      if (n.gold || (q.figure ?? 0) > 0.35) {
+      if (n.gold || ((q.figure ?? 0) > 0.35 && q.lead)) {
         const pulse = 0.5 + 0.5 * Math.sin(t * 0.03 + n.phase);
         // Held back as the figure resolves. Sixty nodes each carrying a radius-25 glow merge into
         // one luminous mass, and the silhouette disappears inside it.
