@@ -5497,6 +5497,10 @@ function initHeroField(target) {
       const index = nodes.indexOf(signal.node);
       const q = pts[index];
       if (!q) continue;
+      // Not on a figure. The signal's expanding ring is a 30px circle, and landing one on the
+      // resolved person put a stray hoop over its hand: the same problem as the links, in a
+      // different shape.
+      if ((q.figure ?? 0) > 0.06) continue;
       const progress = Math.min(1, (now - signal.born) / signal.duration);
       const bloom = Math.sin(progress * Math.PI);
       const color = progress < .22 ? WHITE : GOLD;
