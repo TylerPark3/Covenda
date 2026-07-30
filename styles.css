@@ -5634,17 +5634,20 @@ body[data-audience="home"] .proof-product-section { display: block; }
    being read, and nothing on it says which. So there is nothing on it. */
 .proof-application-stack {
   position: relative;
-  width: min(100%, 250px);
-  height: 240px;
+  width: min(100%, 270px);
+  height: 250px;
   margin: 24px auto 0;
 }
 .proof-application-stack > span,
 .proof-application-stack > b {
   position: absolute;
-  top: calc(30px + var(--sheet, 0) * 5px);
-  left: calc(var(--sheet, 0) * 7px);
-  width: 66%;
-  height: 170px;
+  /* A wider fan. At 7px per sheet the four in front of the gold one covered all but its edge,
+     so "somewhere in the pile" read as "hidden". At 13px each sheet keeps a visible margin and
+     the gold one is plainly a page in the stack rather than a sliver behind it. */
+  top: calc(24px + var(--sheet, 0) * 9px);
+  left: calc(var(--sheet, 0) * 13px);
+  width: 56%;
+  height: 158px;
   border: 1px solid var(--line-strong);
   background: #fff;
   box-shadow: 0 8px 22px rgba(18,18,15,.05);
@@ -5664,11 +5667,14 @@ body[data-audience="home"] .proof-product-section { display: block; }
    somebody reads it, and a sheet sitting on top of everything looks chosen for a reason. It is
    still a sheet of paper, so it keeps a border and a pale fill rather than becoming a gold block
    that hides the pile behind it. */
+/* No z-index. It was set to 1, which lifted this sheet in front of the whole pile and undid the
+   mid-pile placement: it sat on top and looked chosen. Without it, paint order follows DOM order,
+   so it is the fifth of nine and the four in front of it partly cover it. That is the claim: it
+   is somewhere in the pile, and nothing about it says which one it is. */
 .proof-application-stack > b.is-picked {
-  border-color: var(--gold);
+  border: 1.5px solid var(--gold);
   background: linear-gradient(180deg, #fdf6e6, #f7ead0);
-  box-shadow: 0 10px 26px rgba(180,123,32,.2);
-  z-index: 1;
+  box-shadow: 0 10px 26px rgba(180,123,32,.16);
 }
 /* They deal in, back to front, so the pile assembles rather than appearing. */
 .proof-lens.is-visible .proof-application-stack > span,
