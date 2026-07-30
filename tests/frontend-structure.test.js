@@ -482,7 +482,13 @@ test('hero field keeps pointer discovery without shifting the 3D field', () => {
   const reach = Number(script.match(/const LINK_DISTANCE = (\d+);/)[1]);
   assert.ok(reach <= 110, `link reach is ${reach}px, long enough to read as a string`);
   assert.match(script, /item\.distance < 150/, 'the cursor can reach across the canvas again');
-  assert.match(script, /createRadialGradient\(q\.x, q\.y/);
+  // The gold aura is gone. It was a radial gradient out to five node radii, so every gold node
+  // sat inside a ~25px soft blob: the field read as smudges rather than points, and on the
+  // resolved figure they merged into one mass. A gold node is brighter and larger than a white
+  // one, which is enough. What has to stay true is that gold is still distinguishable.
+  const goldFill = script.match(/ctx\.fillStyle = `rgba\(255,224,151,\$\{\(\.78 \* q\.scale/);
+  assert.ok(goldFill, 'gold nodes no longer render brighter than white ones');
+  assert.ok(!/createRadialGradient\(q\.x, q\.y/.test(script), 'the node aura is back');
   // Reduced-motion returns before any listener is attached (the early `if (reduce) return`),
   // and coarse pointers never get a hover handler at all.
   assert.match(script, /\(hover: hover\) and \(pointer: fine\)/);

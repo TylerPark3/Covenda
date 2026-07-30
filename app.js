@@ -5468,15 +5468,11 @@ function initHeroField(target) {
       // contain enough gold nodes to draw a person, so the ones that resolve become the gold.
       if (n.gold || ((q.figure ?? 0) > 0.35 && q.lead)) {
         const pulse = 0.5 + 0.5 * Math.sin(t * 0.03 + n.phase);
-        // Held back as the figure resolves. Sixty nodes each carrying a radius-25 glow merge into
-        // one luminous mass, and the silhouette disappears inside it.
-        const bloom = 1 - (q.figure ?? 0) * 0.72;
-        const aura = ctx.createRadialGradient(q.x, q.y, r, q.x, q.y, (r + 5) * 5 * bloom);
-        aura.addColorStop(0, `rgba(255,224,151,${.22 + pulse * .12})`);
-        aura.addColorStop(.34, `rgba(${GOLD},${.11 + pulse * .08})`);
-        aura.addColorStop(1, `rgba(${GOLD},0)`);
-        ctx.fillStyle = aura;
-        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 5) * 5 * bloom, 0, Math.PI * 2); ctx.fill();
+        // No aura. It was a radial gradient out to five times the node radius, which at this
+        // density meant every gold node sat inside a soft blob roughly 25px across: the field
+        // read as smudges rather than as points, and on the resolved figure they merged into one
+        // luminous mass. A gold node is brighter and slightly larger than a white one, and that
+        // is enough to make it read as gold without painting a halo around it.
         ctx.fillStyle = `rgba(255,224,151,${(.78 * q.scale + .18) * (q.fade ?? 1)})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r + 1 + pulse * .7, 0, Math.PI * 2); ctx.fill();
         const glint = (5 + pulse * 7) * q.scale * (1 - (q.figure ?? 0) * 0.85);
@@ -5507,12 +5503,9 @@ function initHeroField(target) {
       // to gold and settles back. Nothing is outlined.
       ctx.fillStyle = `rgba(${color},${.30 + bloom * .55})`;
       ctx.beginPath(); ctx.arc(q.x, q.y, 2.2 + bloom * 3.4, 0, Math.PI * 2); ctx.fill();
-      // A soft halo instead of an edge, so the pulse still carries at a glance.
-      const halo = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, 6 + bloom * 16);
-      halo.addColorStop(0, `rgba(${GOLD},${bloom * .34})`);
-      halo.addColorStop(1, `rgba(${GOLD},0)`);
-      ctx.fillStyle = halo;
-      ctx.beginPath(); ctx.arc(q.x, q.y, 6 + bloom * 16, 0, Math.PI * 2); ctx.fill();
+      // No halo either, for the same reason: it was a smaller version of the same blob. The
+      // pulse is carried by the dot's own size and brightness swelling, which is what a point of
+      // light actually does.
     }
 
     if (pointer) {
