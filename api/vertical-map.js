@@ -153,6 +153,23 @@ export const VERTICALS = {
     buildVsBuy: { buy: 'nothing', build: 'the mismatch between doc and behaviour' },
   },
 
+  'content-production': {
+    batch: 'Professional services',
+    anchors: ['Stripe Press', 'Substack'],
+    evaluates: 'Whether someone refuses to publish a claim they cannot source, even when it performs.',
+    simulation: 'A high-performing post built on a figure that traces back to nothing.',
+    skills: ['sourcing a claim', 'editorial judgement', 'holding a line under traffic pressure'],
+    buildVsBuy: { buy: 'nothing', build: 'the correction nobody asked for' },
+  },
+  'creator-marketing': {
+    batch: 'Professional services',
+    anchors: ['TikTok Creative Center', 'Later'],
+    evaluates: 'Whether someone can judge other people\u2019s work, not just produce their own.',
+    simulation: 'Four creators where the best audience fit carries the most brand risk.',
+    skills: ['creator judgement', 'briefing to a boundary', 'measuring the right thing'],
+    buildVsBuy: { buy: 'reach', build: 'the reason this creator and not that one' },
+  },
+
   // ── Consumer & retail ───────────────────────────────────────────────────────────────
   'growth-performance': {
     batch: 'Consumer & retail',

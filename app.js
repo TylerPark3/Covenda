@@ -511,7 +511,7 @@ const studentSpecialties = {
   'Accounting & finance': ['Investment banking', 'Private equity', 'Venture capital', 'Asset & wealth management', 'Accounting & audit'],
   'Healthcare operations': ['Clinical operations', 'Health data & analytics', 'Payer & revenue cycle', 'Regulatory & quality', 'Digital health product'],
   'Consumer & retail': ['Growth & performance', 'Brand & content', 'Merchandising & assortment', 'Supply chain & operations', 'E-commerce & marketplace'],
-  'Professional services': ['Management consulting', 'Strategy & research', 'Market intelligence', 'Legal operations', 'Technical writing'],
+  'Professional services': ['Management consulting', 'Strategy & research', 'Market intelligence', 'Legal operations', 'Technical writing', 'Content production', 'Creator & UGC marketing'],
 };
 
 function updateStudentJoinChoice() {
@@ -3189,14 +3189,6 @@ function renderReferrerDashboard() {
   });
   host.append(table);
 
-  const note = document.createElement('p'); note.className = 'referrer-note';
-  note.append(createIcon('icon-lock'));
-  const ns = document.createElement('span');
-  ns.append(document.createTextNode('Standing accumulates. Every student who clears a batch bar or completes reviewed work adds to it, and a referral that has not landed yet never counts against you. '));
-  const nb = document.createElement('b'); nb.textContent = 'Verified rungs are earned through reviewed work, never assigned.';
-  ns.append(nb);
-  note.append(ns);
-  host.append(note);
   window.requestAnimationFrame(() => { fill.style.width = weight + '%'; });
 }
 
@@ -4703,6 +4695,8 @@ const NARROW_TREE = {
     'Management consulting': [['Market research', 'Research'], ['Model / slide build', 'Data & spreadsheets'], ['Findings deck', 'Writing & documentation']],
     'Legal': [['Legal research', 'Research'], ['Document review', 'QA & testing'], ['Summaries & memos', 'Writing & documentation']],
     'Marketing & advertising': [['Audience research', 'Research'], ['Creative QA', 'QA & testing'], ['Brief writing', 'Writing & documentation']],
+    'Content production': [['Audience research', 'Research'], ['Writing & editing', 'Writing & documentation'], ['Performance review', 'Data & spreadsheets']],
+    'Creator & UGC marketing': [['Creator sourcing', 'Research'], ['Brief writing', 'Writing & documentation'], ['Campaign reporting', 'Data & spreadsheets']],
     'Real estate': [['Market comps', 'Research'], ['Financial modeling', 'Data & spreadsheets'], ['Listing documentation', 'Writing & documentation']],
   },
 };

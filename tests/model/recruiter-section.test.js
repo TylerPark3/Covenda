@@ -22,8 +22,8 @@ test('it names the recruiter\'s actual problem, not the founder\'s', () => {
 
 // The claim that a pipeline is scoped by specialisation has to be true of the catalogue.
 test('the specialisation count it claims matches the catalogue', () => {
-  assert.match(band, /twenty-five specialisations/i);
-  assert.equal(BATCH_CATALOG.length, 25, 'the copy says twenty-five and the catalogue disagrees');
+  assert.match(band, /twenty-seven specialisations/i);
+  assert.equal(BATCH_CATALOG.length, 27, 'the copy says twenty-seven and the catalogue disagrees');
 });
 
 // Every vertical the copy names has to be one Covenda actually runs.

@@ -14,8 +14,8 @@ test('every batch a student can open has a scenario behind it', () => {
 test('scenario ids are unique across both files', () => {
   const ids = Object.values(SCENARIOS).map(s => s.id);
   assert.equal(new Set(ids).size, ids.length);
-  // 25 specialisation defaults, plus any opt-in extras.
-  assert.equal(Object.values(SCENARIOS).filter(s => !s.optional).length, 25);
+  // One default per specialisation, plus any opt-in extras.
+  assert.equal(Object.values(SCENARIOS).filter(s => !s.optional).length, BATCH_CATALOG.length);
 });
 
 // scenarioFor() returns the FIRST match, so a second scenario claiming a live specialisation

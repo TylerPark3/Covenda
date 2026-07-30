@@ -164,6 +164,20 @@ export const PROFESSIONAL = {
       task: 'Write the getting-started page, then say what confused you first.',
       watchFor: ['Is it ordered by the reader\'s task or the source\'s structure', 'Do they name their own confusion honestly'],
     },
+    'content-production': {
+      title: 'Cut it to half the words',
+      minutes: 30,
+      supplied: 'A 900-word draft with one unsourced statistic in it.',
+      task: 'Publish a 450-word version, and list what you removed and why.',
+      watchFor: ['Do they find the unsourced figure without being told to look', 'Is what they cut the weakest material or just the last paragraphs'],
+    },
+    'creator-marketing': {
+      title: 'Brief one creator, reject three',
+      minutes: 30,
+      supplied: 'Four creator profiles with audience data, and one product page.',
+      task: 'Write the brief for the one you would fund, and one sentence on why each of the other three is out.',
+      watchFor: ['Is the rejection reasoned or just ranked by follower count', 'Does the brief set a boundary without dictating the content'],
+    },
   },
   concepts: [
     { q: 'Traffic is up 30%, revenue is flat. The first thing to check:',

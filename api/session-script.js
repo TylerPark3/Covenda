@@ -45,6 +45,7 @@ export const MODE_BY_SLUG = {
   // An artifact exists, but the reasoning behind it is the point.
   'venture-capital': 'hybrid', 'management-consulting': 'hybrid', 'strategy-research': 'hybrid',
   'market-intelligence': 'hybrid', 'legal-operations': 'hybrid', 'technical-writing': 'hybrid',
+  'content-production': 'hybrid', 'creator-marketing': 'hybrid',
   'brand-content': 'hybrid', 'digital-health-product': 'hybrid',
 };
 

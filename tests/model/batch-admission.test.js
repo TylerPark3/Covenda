@@ -141,11 +141,16 @@ test('no batch emits a single overall person score', () => {
 });
 
 // Branches are SECTOR level, not skill level: a fund recruits for private equity, not for
-// "financial modelling". Five per vertical keeps the board an even grid.
-test('every vertical carries exactly five sector-level batches', async () => {
+// "financial modelling".
+//
+// This used to require exactly five per vertical, and the reason given was that it kept the
+// board an even grid. The board is accordions now: each vertical collapses independently and its
+// row wraps, so an uneven group costs nothing. The floor is the part that was always load
+// bearing, since a vertical with two batches is not a vertical.
+test('every vertical carries at least five sector-level batches', async () => {
   const { batchesByVertical } = await import('../../api/batches.js');
   for (const group of batchesByVertical()) {
-    assert.equal(group.batches.length, 5, `${group.vertical} has ${group.batches.length}, expected 5`);
+    assert.ok(group.batches.length >= 5, `${group.vertical} has ${group.batches.length}, expected at least 5`);
   }
 });
 

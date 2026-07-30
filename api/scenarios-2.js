@@ -1200,3 +1200,122 @@ export const POLYMATH = {
 };
 
 SCENARIOS_2.push(POLYMATH);
+
+// ── Content production ────────────────────────────────────────────────────────────────
+// The hard part of this job is not writing, it is what you refuse to publish. Published work is
+// the rare case where the artifact is already public, so the sitting has to test the judgement
+// the portfolio cannot show: what you did when the piece that performed was the shaky one.
+export const NUMBERS = {
+  id: 'content-claim-1',
+  specialization: 'content-production',
+  title: 'The piece that worked and should not have',
+  minutes: 30,
+  skills: ['editorial judgement', 'sourcing a claim', 'holding a line under traffic pressure'],
+  brief: 'You write for a small B2B company. A post you published two weeks ago is the best-performing thing on the site.',
+  steps: [
+    {
+      id: 'traffic', kind: 'reveal', next: 'first',
+      title: 'What the post says',
+      body: 'The post claims teams using this category of tool "cut onboarding time by 60%". You took the figure from a vendor blog, which cited a webinar, which cited nothing. It is now the top result for two search terms and sales are linking to it in emails.',
+    },
+    {
+      id: 'first', kind: 'decide', title: 'You cannot source the number',
+      options: [
+        { id: 'pull', label: 'Unpublish it today and tell sales why', next: 'boss',
+          reveals: 'Ends the exposure immediately. Also removes your best-performing page and the emails already sent still reference it.',
+          defense: 'You deleted the page. What happens to the prospects who already read it and believed the number?' },
+        { id: 'soften', label: 'Replace the figure with a range you can source and keep the page live', next: 'boss',
+          reveals: 'Keeps the ranking and fixes the claim. The new range is less impressive and the post no longer says the thing it went viral for.',
+          defense: 'You changed the claim quietly. Who deserved to be told it changed, and did you tell them?' },
+        { id: 'attribute', label: 'Attribute it to the vendor and let the reader judge', next: 'boss',
+          reveals: 'Honest about provenance and costs nothing in traffic. It also passes an unverifiable number along with your company name on it.',
+          defense: 'Attribution moved the risk to the reader. Is that the same as the claim being true?' },
+      ],
+    },
+    {
+      id: 'boss', kind: 'reveal', next: 'ship',
+      title: 'Your manager weighs in',
+      body: 'Your manager says every competitor cites the same figure, nobody has ever asked for the source, and the post is generating real pipeline. They are not telling you to leave it. They are asking whether this is worth the traffic.',
+    },
+    {
+      id: 'ship', kind: 'decide', title: 'What you do with the rest of the archive',
+      options: [
+        { id: 'audit', label: 'Audit every post for unsourced figures before writing anything new', next: 'defend',
+          reveals: 'Finds the rest of the problem instead of the one instance. Costs a sprint of output and will surface claims other people wrote.',
+          defense: 'You paused new work to audit old work. What did you not publish, and was that the right trade?' },
+        { id: 'rule', label: 'Write a sourcing rule and apply it going forward only', next: 'defend',
+          reveals: 'Cheap, prevents recurrence, and leaves everything already published exactly as it is.',
+          defense: 'The rule protects future readers. What did you decide to owe the ones who already read it?' },
+        { id: 'own', label: 'Publish a short correction note and link it from the post', next: 'defend',
+          reveals: 'Puts the record straight in public. Invites attention to a mistake nobody had noticed.',
+          defense: 'You corrected it publicly. What would you say to a colleague who thinks that cost more than it fixed?' },
+      ],
+    },
+    {
+      id: 'produce', kind: 'produce', next: 'defend',
+      title: 'The correction, or the reason there is not one',
+      body: 'Write what now appears on the page: the corrected sentence if you changed it, or the note explaining why the original stands. Name the one reader you are writing it for.',
+    },
+    { id: 'defend', kind: 'defend', title: 'Defend your own decisions' },
+  ],
+};
+
+// ── Creator & UGC marketing ───────────────────────────────────────────────────────────
+// This role is judgement about other people's work, which is exactly what a portfolio of your
+// own work cannot demonstrate. So the sitting is a casting decision with a real cost either way.
+export const CASTING = {
+  id: 'creator-casting-1',
+  specialization: 'creator-marketing',
+  title: 'The creator who fits and does not',
+  minutes: 30,
+  skills: ['creator judgement', 'reading a brief against a brand', 'measuring the right thing'],
+  brief: 'You have a small budget to run a creator campaign for a student-facing product. Four creators replied.',
+  steps: [
+    {
+      id: 'shortlist', kind: 'reveal', next: 'first',
+      title: 'Who replied',
+      body: 'One has exactly your audience and posts opinions the founder would not want quoted beside the product. One is safe, on-brand and reaches a slightly older audience. One has half the reach and a comment section that actually discusses things. One will not disclose the partnership unless you insist.',
+    },
+    {
+      id: 'first', kind: 'decide', title: 'You can fund one',
+      options: [
+        { id: 'reach', label: 'The exact-audience creator, with a brief that sets boundaries', next: 'result',
+          reveals: 'Best audience fit and the boundaries are a request, not a control. You are accepting reputational variance you cannot undo.',
+          defense: 'Your brief asked them to avoid certain topics. What is your plan for the post where they do not?' },
+        { id: 'safe', label: 'The safe, on-brand creator', next: 'result',
+          reveals: 'Predictable and defensible. It also spends a student budget reaching people who are not students.',
+          defense: 'You optimised for safety. What did that cost the campaign it was supposed to serve?' },
+        { id: 'engaged', label: 'The smaller creator with the real comment section', next: 'result',
+          reveals: 'Highest chance of genuine consideration per viewer, and the absolute numbers will look like a failure on a reach report.',
+          defense: 'You chose depth over reach. How would you show that was right to someone reading only the reach number?' },
+      ],
+    },
+    {
+      id: 'result', kind: 'reveal', next: 'measure',
+      title: 'What came back',
+      body: 'The post did roughly three times the reach you forecast. Signups over the same week are flat. Two people in the comments asked a question the product page already answers.',
+    },
+    {
+      id: 'measure', kind: 'decide', title: 'Reach went up and nothing else did',
+      options: [
+        { id: 'attribute', label: 'Check whether signups are being attributed at all before concluding anything', next: 'defend',
+          reveals: 'The right first move: a flat number with broken tracking is not a result. Costs a day and may find nothing.',
+          defense: 'Suppose tracking was fine and the number really is flat. What was the campaign wrong about?' },
+        { id: 'landing', label: 'Fix the landing page the comments say is unclear, then rerun', next: 'defend',
+          reveals: 'Acts on the clearest signal you got. Spends more budget on a hypothesis you have not tested yet.',
+          defense: 'You blamed the landing page. What evidence would have told you it was the creator instead?' },
+        { id: 'stop', label: 'Report it honestly as reach without conversion and stop the spend', next: 'defend',
+          reveals: 'Protects the remaining budget and reports a real result. Ends the test before you know why it failed.',
+          defense: 'You stopped. What did you give up learning, and was the budget worth more than the answer?' },
+      ],
+    },
+    {
+      id: 'produce', kind: 'produce', next: 'defend',
+      title: 'The brief',
+      body: 'Write the brief you would send this creator: what you want, the one boundary you are setting, and the number you will judge it by. Then say what result would make you not run it again.',
+    },
+    { id: 'defend', kind: 'defend', title: 'Defend your own decisions' },
+  ],
+};
+
+SCENARIOS_2.push(NUMBERS, CASTING);

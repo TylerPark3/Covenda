@@ -267,6 +267,14 @@ const SPECIALISATIONS = [
    'Documentation that survives contact with the thing it documents.',
    'A documentation sample and a walkthrough of what you had to learn to write it.',
    [REQ.artifact(1, 'One documentation sample'), REQ.defense('a doc you wrote'), REQ.hours(5)]],
+  ['professional-services', 'content-production', 'Content production', 'open', 22, 15,
+   'Published work with a real audience is the rare case where the evidence is already public.',
+   'Three published pieces you made, plus a defence of one editorial call you would now reverse.',
+   [REQ.artifact(3, 'Three published pieces'), REQ.defense('an editorial call you made'), REQ.hours(5)]],
+  ['professional-services', 'creator-marketing', 'Creator & UGC marketing', 'open', 22, 15,
+   'Briefing creators is judgement about other people\u2019s work, which a portfolio cannot show on its own.',
+   'One campaign or creator brief with what you measured, defended on why you picked that creator.',
+   [REQ.artifact(1, 'One campaign or creator brief'), REQ.defense('a creator you chose'), REQ.hours(5)]],
 ];
 
 export const BATCH_CATALOG = SPECIALISATIONS.map(
@@ -452,6 +460,14 @@ export const BATCH_QUESTIONS = {
   'legal-operations': [
     ['technical', 'What are the first three things you check in a contract you have never seen before?'],
     ['judgement', 'A process is compliant and unusable. Which do you change?'],
+  ],
+  'content-production': [
+    ['judgement', 'A piece is performing well and you know the claim in it is shaky. What do you do?'],
+    ['technical', 'You have one hour and no budget. How do you decide what to publish today?'],
+  ],
+  'creator-marketing': [
+    ['judgement', 'A creator with the right audience posts things you would not want next to the brand. Brief them or pass?'],
+    ['technical', 'A campaign drove reach and no signups. What do you check first, and what would change your mind?'],
   ],
   'technical-writing': [
     ['technical', 'Document a process you do not understand yet. What is your first move?'],
@@ -650,6 +666,9 @@ export const SPECIALISATION_SKILLS = {
   'strategy-research': ['Research', 'Writing & documentation', 'Data analysis', 'Spreadsheets'],
   'market-intelligence': ['Research', 'Data analysis', 'Writing & documentation', 'Data visualization'],
   'legal-operations': ['Operations', 'Writing & documentation', 'Project management', 'Research'],
+  'content-production': ['Writing & documentation', 'Marketing & growth', 'Research', 'Data analysis'],
+  'creator-marketing': ['Marketing & growth', 'Writing & documentation', 'Data analysis', 'Research'],
+
   'technical-writing': ['Writing & documentation', 'Research', 'Git & version control', 'QA & testing'],
 };
 

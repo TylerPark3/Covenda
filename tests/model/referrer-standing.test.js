@@ -74,6 +74,9 @@ test('the counts shown include batch admissions', () => {
 
 // Nothing here is measured yet, and the label has to keep saying so.
 test('the meter still says it is illustrative', () => {
+  // The illustrative label is the guard that matters and it stays. "Standing accumulates..."
+  // is deleted: the branch above it now shows the roster splitting into verified / working /
+  // endorsed, so a paragraph explaining that the numbers accumulate described what is drawn.
   assert.match(app, /Illustrative · \$\{standing\.points\}/);
-  assert.match(app, /Standing accumulates/);
+  assert.ok(!/Standing accumulates/.test(app), 'the deleted explanation is back');
 });

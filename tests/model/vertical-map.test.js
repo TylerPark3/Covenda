@@ -28,8 +28,13 @@ test('every specialisation in the catalogue is mapped', () => {
   for (const slug of slugs) {
     assert.ok(VERTICALS[slug], `${slug} has no anchor or simulation direction`);
   }
-  assert.equal(coverage().total, 25);
-  assert.deepEqual(Object.values(coverage().byBatch), [5, 5, 5, 5, 5]);
+  // Derived from the catalogue rather than restated, so adding a specialisation cannot leave
+  // this number quietly wrong. Every vertical keeps a floor of five; professional services now
+  // carries seven, since content and creator work is professional services sold as a service.
+  assert.equal(coverage().total, BATCH_CATALOG.length);
+  for (const [vertical, n] of Object.entries(coverage().byBatch)) {
+    assert.ok(n >= 5, `${vertical} maps only ${n}`);
+  }
 });
 
 test('every vertical says what it evaluates and what to build versus buy', () => {

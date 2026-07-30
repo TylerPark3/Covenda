@@ -229,6 +229,23 @@ const steps = [
 
   // The batch board loads its groups over fetch, so only a browser can confirm they painted as
   // independent accordions in the right face.
+  // The referrer dashboard is built imperatively, so a stale variable reference after an edit
+  // is a ReferenceError that node --check cannot see and that leaves the panel simply empty.
+  ['referrer dashboard renders its branch', `(() => {
+    document.querySelector('[data-audience-option="university"]')?.click();
+    return new Promise(resolve => setTimeout(() => {
+      const card = document.querySelector('.referrer-cred-card');
+      if (!card) return resolve('the referrer card did not render');
+      if (!card.querySelector('.referrer-verified')) return resolve('the verified mark is missing from the name');
+      const nodes = [...card.querySelectorAll('.rg-node')];
+      if (nodes.length !== 3) return resolve('found ' + nodes.length + ' branch nodes, expected 3');
+      if (!card.querySelector('.rg-source-count')) return resolve('the roster count is missing');
+      if (!document.querySelector('.rg-note')) return resolve('the batch count line is missing');
+      if (document.body.innerText.includes('Standing accumulates')) return resolve('the deleted paragraph is back');
+      resolve(true);
+    }, 1400));
+  })()`],
+
   ['batch groups are independent accordions in the display face', `(() => {
     document.querySelector('[data-audience-option="student"]')?.click();
     return new Promise(resolve => setTimeout(() => {
@@ -281,7 +298,12 @@ const steps = [
 for (const [label, js] of steps) {
   const before = problems.length;
   const result = await evaluate(js);
-  await sleep(label === 'load home' ? 3000 : 700);
+  // Assertion steps read the DOM synchronously (or await their own promise), so the fixed
+  // 700ms wait after each one was pure cost. Twenty-one steps of it pushed the run past five
+  // minutes. Action steps still get the pause, because a click may start an animation or a
+  // fetch that the next step depends on.
+  const asserts = js.trimStart().startsWith('(() =>');
+  await sleep(label === 'load home' ? 3000 : asserts ? 60 : 700);
   // A step can leave the console clean and still be wrong, so a step that returns a string
   // reports that string as the failure. Anything else is judged on console output alone.
   // A step opts into assertions by being an IIFE that returns true or an explanation. Plain
