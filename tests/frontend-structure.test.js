@@ -151,8 +151,15 @@ test('the proof lens opens the homepage without removing the existing product st
   const compareAt = html.indexOf('class="compare-section"');
   const exchangeAt = html.indexOf('class="exchange-section"');
   assert.ok(heroAt >= 0 && heroAt < proofAt && proofAt < compareAt && compareAt < exchangeAt);
-  assert.match(html, /Here’s what that means\./);
-  assert.match(html, /More startups[\s\S]*need talent\./);
+  assert.match(html, /Startups need help, <span class="word-gold">students want startup work\./);
+  // The industry tags are gone: naming six verticals never supported the claim above them, and
+  // the claim itself is now stated instead of illustrated.
+  assert.match(html, /Talent reaches startups[\s\S]*by referral\./);
+  assert.ok(!/proof-node-field/.test(html), 'the industry tag grid is back');
+  assert.ok(!/Illustrative preview/.test(html), 'the preview label is back');
+  // The comparison now sits between the problem and the product.
+  assert.ok(html.indexOf('class="compare-section"') < html.indexOf('class="proof-product"'),
+    'Quality over quantity should come before Covenda makes the work visible');
   assert.match(html, /AI makes applications[\s\S]*harder to trust\./);
   assert.match(html, /More students want[\s\S]*startup work\./);
   assert.match(html, /Covenda makes the work visible\./);
@@ -1424,8 +1431,10 @@ test('no heading runs longer than six words', () => {
     const words = text.split(' ').filter(w => /[a-z0-9]/i.test(w));
     if (words.length > 6) over.push(`${words.length}w: ${text}`);
   }
-  // One known and deliberate: the full-screen intro is two four-word lines inside one h1.
-  const allowed = over.filter(o => !/Students get to prove/.test(o));
+  // Two known and deliberate. The full-screen intro is two four-word lines inside one h1, and
+  // the proof-lens heading is copy the founder wrote verbatim: his words outrank my cap, and
+  // exempting it by name is better than silently widening the rule for everything.
+  const allowed = over.filter(o => !/Students get to prove|Startups need help, students want startup work/.test(o));
   assert.deepEqual(allowed, [], `headings over the six-word cap: ${allowed.join(' | ')}`);
 });
 

@@ -5560,6 +5560,11 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
   text-transform: uppercase;
 }
 .proof-lens { margin-top: clamp(48px, 5.5vw, 72px); }
+/* The product rail is its own section now, between the comparison and the exchange. It carries
+   the page gutter itself, which nesting it inside .compare-inner would have doubled. */
+.proof-product-section { display: none; padding: 0 var(--page-gutter) clamp(64px, 8vw, 104px); }
+body[data-audience="home"] .proof-product-section { display: block; }
+.proof-product-section > .proof-product { width: min(100%, var(--content)); margin-inline: auto; }
 .proof-market {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(310px, .9fr) minmax(0, 1fr);
@@ -5597,80 +5602,78 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
   color: var(--gold-deep);
   transform: rotate(-90deg);
 }
-.proof-node-field {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  min-height: 240px;
-  align-content: center;
-  margin-top: 18px;
+/* ── The claim lists (§21) ─────────────────────────────────────────────────────────────
+   Both sides used to be pictures with a caption: six industry tags that named verticals without
+   supporting the claim above them, and a stack of blank sheets. A reader could do nothing with
+   either. These are the reasons, stated, with a hairline carrying the eye down them. */
+.proof-claim { display: grid; gap: 16px; margin: 20px 0 0; padding: 0; list-style: none; }
+.proof-claim li { display: grid; gap: 3px; padding-left: 15px; border-left: 1px solid var(--gold-light); }
+.proof-claim b {
+  color: var(--ink);
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--ls-subhead);
 }
-.proof-node-field span {
-  display: grid;
-  min-height: 66px;
-  place-items: center;
-  padding: 10px;
-  border: 1px solid var(--line-strong);
-  background: #fff;
-  font-size: var(--text-caption);
-  font-weight: var(--weight-bold);
-  opacity: 0;
-  transform: translateY(12px);
-}
-.proof-node-field span:nth-child(2),
-.proof-node-field span:nth-child(5) { transform: translateY(-3px); }
-.proof-lens.is-visible .proof-node-field span {
-  animation: proof-rise-in .45s calc(var(--i) * 90ms) ease-out forwards;
-}
-.proof-market-noise { text-align: center; }
-.proof-market-noise h3 { color: var(--gold-deep); }
+.proof-claim span { color: var(--muted); font-size: var(--text-body); line-height: var(--lh-body); text-wrap: pretty; }
+.proof-claim-noise { margin-top: 24px; text-align: left; }
+
+/* ── One application in gold ───────────────────────────────────────────────────────────
+   The old stack had a front sheet with placeholder rules drawn on it, which read as a wireframe
+   of a form rather than as a pile of applications. Now it is only the pile, deeper, with one
+   sheet picked out in gold: the point is that the gold one is not better, it is just the one
+   being read, and nothing on it says which. So there is nothing on it. */
 .proof-application-stack {
   position: relative;
-  width: min(100%, 230px);
+  width: min(100%, 250px);
   height: 240px;
-  margin: 22px auto 0;
+  margin: 24px auto 0;
 }
 .proof-application-stack > span,
-.proof-application-stack > div {
+.proof-application-stack > b {
   position: absolute;
-  top: calc(36px - var(--sheet, 0) * 6px);
-  right: calc(var(--sheet, 0) * 7px);
-  width: 72%;
-  height: 178px;
+  top: calc(30px + var(--sheet, 0) * 5px);
+  left: calc(var(--sheet, 0) * 7px);
+  width: 66%;
+  height: 170px;
   border: 1px solid var(--line-strong);
   background: #fff;
-  box-shadow: 0 8px 22px rgba(18,18,15,.035);
+  box-shadow: 0 8px 22px rgba(18,18,15,.05);
+  opacity: 0;
+  translate: 0 10px;
 }
-.proof-application-stack > span:nth-child(1) { --sheet: 6; }
-.proof-application-stack > span:nth-child(2) { --sheet: 5; }
-.proof-application-stack > span:nth-child(3) { --sheet: 4; }
-.proof-application-stack > span:nth-child(4) { --sheet: 3; }
-.proof-application-stack > span:nth-child(5) { --sheet: 2; }
-.proof-application-stack > span:nth-child(6) { --sheet: 1; }
-.proof-application-stack > div {
-  top: 36px;
-  right: 0;
-  padding: 19px;
-  text-align: left;
+.proof-application-stack > *:nth-child(1) { --sheet: 8; }
+.proof-application-stack > *:nth-child(2) { --sheet: 7; }
+.proof-application-stack > *:nth-child(3) { --sheet: 6; }
+.proof-application-stack > *:nth-child(4) { --sheet: 5; }
+.proof-application-stack > *:nth-child(5) { --sheet: 4; }
+.proof-application-stack > *:nth-child(6) { --sheet: 3; }
+.proof-application-stack > *:nth-child(7) { --sheet: 2; }
+.proof-application-stack > *:nth-child(8) { --sheet: 1; }
+.proof-application-stack > *:nth-child(9) { --sheet: 0; }
+/* Mid-pile, not in front. The claim is that this one is indistinguishable from the rest until
+   somebody reads it, and a sheet sitting on top of everything looks chosen for a reason. It is
+   still a sheet of paper, so it keeps a border and a pale fill rather than becoming a gold block
+   that hides the pile behind it. */
+.proof-application-stack > b.is-picked {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, #fdf6e6, #f7ead0);
+  box-shadow: 0 10px 26px rgba(180,123,32,.2);
+  z-index: 1;
 }
-.proof-application-stack b {
-  display: block;
-  padding-bottom: 15px;
-  border-bottom: 1px solid var(--line);
-  font-size: var(--text-caption);
-  letter-spacing: var(--ls-caption-caps);
-  text-transform: uppercase;
+/* They deal in, back to front, so the pile assembles rather than appearing. */
+.proof-lens.is-visible .proof-application-stack > span,
+.proof-lens.is-visible .proof-application-stack > b {
+  animation: proof-deal-in .5s ease-out forwards;
+  animation-delay: calc((9 - var(--sheet, 0)) * 55ms);
 }
-.proof-application-stack i {
-  display: block;
-  width: 100%;
-  height: 5px;
-  margin-top: 14px;
-  background: #e8e8e4;
+@keyframes proof-deal-in { to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .proof-application-stack > span,
+  .proof-application-stack > b { opacity: 1; translate: none; }
+  .proof-lens.is-visible .proof-application-stack > span,
+  .proof-lens.is-visible .proof-application-stack > b { animation: none; }
 }
-.proof-application-stack i:nth-of-type(2) { width: 82%; }
-.proof-application-stack i:nth-of-type(3) { width: 92%; }
-.proof-application-stack i:nth-of-type(4) { width: 58%; }
+
 .proof-student-field {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5918,7 +5921,6 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
     border-bottom: 1px solid var(--line-strong);
   }
   .proof-market > section:last-child { border-bottom: 0; }
-  .proof-node-field { min-height: 210px; }
   .proof-application-stack { height: 230px; }
   .proof-market-students { grid-column: auto; border-top: 0; }
   .proof-market-students .proof-student-field { grid-template-columns: 1fr 1fr; min-height: 210px; }
@@ -5937,7 +5939,6 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
   .proof-lens-actions button { width: 100%; min-width: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .proof-node-field span,
   .proof-student-field > span { opacity: 1; transform: none; animation: none!important; }
   .proof-product-step { transition: none; }
 }

@@ -144,36 +144,34 @@
 
       <section class="proof-lens-section" id="bridgeStory" aria-labelledby="proofLensTitle">
         <header class="proof-lens-heading">
-          <h2 id="proofLensTitle">Here’s what that means.</h2>
-          <p>Startups need help. Students want startup work. Applications make the match harder.</p>
-          <span>Illustrative preview</span>
+          <h2 id="proofLensTitle">Startups need help, <span class="word-gold">students want startup work.</span></h2>
+          <p>Applications are what make the match harder.</p>
         </header>
 
         <div class="proof-lens" id="proofLens">
           <div class="proof-market" aria-label="Startups and students are growing while applications become harder to trust">
             <section class="proof-market-side proof-market-startups" aria-labelledby="proofStartupTitle">
-              <h3 id="proofStartupTitle">More startups<br>need talent.</h3>
-              <div class="proof-node-field" aria-hidden="true">
-                <span style="--i:0">AI tools</span>
-                <span style="--i:1">Fintech</span>
-                <span style="--i:2">Climate</span>
-                <span style="--i:3">Health tech</span>
-                <span style="--i:4">Commerce</span>
-                <span style="--i:5">Dev tools</span>
-              </div>
-              <p><svg aria-hidden="true"><use href="#icon-arrow-right"/></svg> More teams need hands-on help.</p>
+              <h3 id="proofStartupTitle">Talent reaches startups <span class="word-gold">by referral.</span></h3>
+              <ul class="proof-claim" aria-label="How talent reaches startups today">
+                <li><b>Pay is competitive</b><span>Startups compete on compensation. That is not what stops the match.</span></li>
+                <li><b>The path is one address book</b><span>The strongest people arrive because somebody already knew them.</span></li>
+                <li><b>There is no process behind it</b><span>Nothing repeats it for a student nobody happens to know.</span></li>
+              </ul>
             </section>
 
             <section class="proof-market-noise" aria-labelledby="proofNoiseTitle">
-              <h3 id="proofNoiseTitle">AI makes applications<br>harder to trust.</h3>
+              <h3 id="proofNoiseTitle">AI makes applications <span class="word-gold">harder to trust.</span></h3>
+              <!-- One application in gold among many. The pile is the point: the gold one is not
+                   better, it is just the one being read, and nothing on it says which. -->
               <div class="proof-application-stack" aria-hidden="true">
-                <span></span><span></span><span></span><span></span><span></span><span></span>
-                <div>
-                  <b>Application</b>
-                  <i></i><i></i><i></i><i></i>
-                </div>
+                <span></span><span></span><span></span><span></span>
+                <b class="is-picked"></b>
+                <span></span><span></span><span></span><span></span>
               </div>
-              <p>More applications do not show who can do the work.</p>
+              <ul class="proof-claim proof-claim-noise" aria-label="Why an application says less than it used to">
+                <li><b>People overstate what they can do</b><span>Anyone can now describe work they have never done, which dilutes the pool everyone is read against.</span></li>
+                <li><b>The task itself gets automated</b><span>When the whole thing is generated, the application shows the tool rather than the person holding it.</span></li>
+              </ul>
             </section>
 
             <section class="proof-market-side proof-market-students" aria-labelledby="proofStudentTitle">
@@ -190,53 +188,6 @@
 
           <p class="proof-market-summary">Both sides are growing. Applications make it harder for them to find each other.</p>
 
-          <section class="proof-product" aria-labelledby="proofProductTitle">
-            <header>
-              <span aria-hidden="true"></span>
-              <h3 id="proofProductTitle">Covenda makes the work visible.</h3>
-              <span aria-hidden="true"></span>
-            </header>
-
-            <div class="proof-product-rail" role="group" aria-label="How Covenda works">
-              <button class="proof-product-step is-active" type="button" data-proof-step="0" aria-pressed="true">
-                <small>1</small>
-                <h4>Build a work profile</h4>
-                <div class="proof-profile-preview" aria-hidden="true">
-                  <span class="proof-avatar">ML</span>
-                  <strong>Maya L.</strong>
-                  <em>Product builder</em>
-                  <i>2 shipped projects</i><i>Product + research</i><i>10 hrs/week</i>
-                </div>
-              </button>
-
-              <button class="proof-product-step" type="button" data-proof-step="1" aria-pressed="false">
-                <small>2</small>
-                <h4>Filter for fit</h4>
-                <div class="proof-filter-preview" aria-hidden="true">
-                  <span><b>Work</b>Product design</span>
-                  <span><b>Stage</b>Early-stage</span>
-                  <span><b>Time</b>Available now</span>
-                </div>
-              </button>
-
-              <button class="proof-product-step" type="button" data-proof-step="2" aria-pressed="false">
-                <small>3</small>
-                <h4>Try one real project</h4>
-                <div class="proof-trial-preview" aria-hidden="true">
-                  <span>Trial project</span>
-                  <strong>Improve the signup flow</strong>
-                  <i>Paid · 2 weeks · named reviewer</i>
-                </div>
-              </button>
-
-              <button class="proof-product-step proof-product-outcome" type="button" data-proof-step="3" aria-pressed="false">
-                <small><svg aria-hidden="true"><use href="#icon-check"/></svg></small>
-                <h4>Trials become roles</h4>
-                <p>Internship · ongoing project · full-time<br>When both sides agree.</p>
-              </button>
-            </div>
-            <p class="proof-outcome-note">Illustrative path. A trial creates evidence, not a guaranteed offer.</p>
-          </section>
         </div>
 
         <div class="proof-lens-actions">
@@ -283,6 +234,60 @@
 
         </div>
       </section>
+
+      <!-- Lifted out of .proof-lens so the comparison sits between the problem and the
+           product. Nesting it inside the compare section would have doubled the page gutter. -->
+      <section class="proof-product-section" id="proofProduct">
+        <section class="proof-product" aria-labelledby="proofProductTitle">
+          <header>
+            <span aria-hidden="true"></span>
+            <h3 id="proofProductTitle">Covenda makes the work visible.</h3>
+            <span aria-hidden="true"></span>
+          </header>
+
+          <div class="proof-product-rail" role="group" aria-label="How Covenda works">
+            <button class="proof-product-step is-active" type="button" data-proof-step="0" aria-pressed="true">
+              <small>1</small>
+              <h4>Build a work profile</h4>
+              <div class="proof-profile-preview" aria-hidden="true">
+                <span class="proof-avatar">ML</span>
+                <strong>Maya L.</strong>
+                <em>Product builder</em>
+                <i>2 shipped projects</i><i>Product + research</i><i>10 hrs/week</i>
+              </div>
+            </button>
+
+            <button class="proof-product-step" type="button" data-proof-step="1" aria-pressed="false">
+              <small>2</small>
+              <h4>Filter for fit</h4>
+              <div class="proof-filter-preview" aria-hidden="true">
+                <span><b>Work</b>Product design</span>
+                <span><b>Stage</b>Early-stage</span>
+                <span><b>Time</b>Available now</span>
+              </div>
+            </button>
+
+            <button class="proof-product-step" type="button" data-proof-step="2" aria-pressed="false">
+              <small>3</small>
+              <h4>Try one real project</h4>
+              <div class="proof-trial-preview" aria-hidden="true">
+                <span>Trial project</span>
+                <strong>Improve the signup flow</strong>
+                <i>Paid · 2 weeks · named reviewer</i>
+              </div>
+            </button>
+
+            <button class="proof-product-step proof-product-outcome" type="button" data-proof-step="3" aria-pressed="false">
+              <small><svg aria-hidden="true"><use href="#icon-check"/></svg></small>
+              <h4>Trials become roles</h4>
+              <p>Internship · ongoing project · full-time<br>When both sides agree.</p>
+            </button>
+          </div>
+          <p class="proof-outcome-note">Illustrative path. A trial creates evidence, not a guaranteed offer.</p>
+        </section>
+      </section>
+
+
 
       <!-- Home-only. One two-way exchange: the company contributes real work, referred
            talent contributes execution, and the trial returns value to both sides. -->

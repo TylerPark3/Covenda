@@ -6314,7 +6314,10 @@ window.requestAnimationFrame(() => openIntro());
 (function initProofLens() {
   const lens = document.getElementById('proofLens');
   if (!lens) return;
-  const steps = Array.from(lens.querySelectorAll('[data-proof-step]'));
+  // The product rail moved out of #proofLens into its own section, so scoping this query to the
+  // lens would find nothing and the rail would silently stop responding to clicks.
+  const railHost = document.getElementById('proofProduct') || lens;
+  const steps = Array.from(railHost.querySelectorAll('[data-proof-step]'));
 
   function selectStep(index) {
     steps.forEach((step, stepIndex) => {
