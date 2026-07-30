@@ -5180,63 +5180,79 @@ function initHeroField(target) {
     // crowd is systematic and interchangeable, the one that resolves is a person you can read.
     // The difference between them IS the argument, so the detail is load-bearing rather than
     // ornamental. A stick figure would have made both sides look the same.
+    // The company hero. Faceted rather than drawn: every stroke below is a straight edge between
+    // two vertices, which is what makes the silhouette turn at hard corners instead of curving.
+    // The reference is a low-poly mask, and the tell of that style is that a head is a polygon
+    // with a brow ridge and a chin point, not an oval.
     figure: (() => {
       const pts = [];
-      const push = (x, y, lead = false) => pts.push({ x, y, lead });
-
-      // ── The one on the right, drawn properly ────────────────────────────────────────
-      // Anchored on a 0.62 centre line so the three background figures have the left third.
       const CX = 0.5;
-      // Head, as a ring. A filled head would be the one part that stopped looking like points.
-      for (let i = 0; i < 16; i += 1) {
-        const t = (i / 16) * Math.PI * 2;
-        push(CX + Math.cos(t) * 0.049, 0.115 + Math.sin(t) * 0.060, true);
-      }
-      push(CX, 0.183, true);                                           // neck
-      // Shoulders slope rather than sitting flat, which is most of what separates a drawn
-      // figure from a stick one.
-      for (let i = -5; i <= 5; i += 1) {
-        push(CX + i * 0.024, 0.215 + Math.abs(i) * 0.0035, true);
-      }
-      // Torso as an outline, so it has width: two sides tapering to the waist and back out.
-      for (let i = 0; i <= 7; i += 1) {
-        const t = i / 7;
-        const half = 0.118 - t * 0.045 + (t > 0.72 ? (t - 0.72) * 0.10 : 0);
-        push(CX - half, 0.225 + t * 0.20, true);
-        push(CX + half, 0.225 + t * 0.20, true);
-      }
-      // Arms bend at the elbow. A single straight run from shoulder to hand is the stick-figure
-      // tell; two segments at an angle reads as an arm.
-      for (const side of [-1, 1]) {
-        for (let i = 1; i <= 5; i += 1) {                              // upper arm, outward
-          const t = i / 5;
-          push(CX + side * (0.125 + t * 0.075), 0.225 + t * 0.105, true);
+      // Every feature is built from this, so nothing in the figure is a curve. Points are spaced
+      // along the edge rather than at its ends, which keeps the density even where two edges meet
+      // at a sharp angle and would otherwise pile up.
+      const edge = (ax, ay, bx, by, n) => {
+        for (let i = 0; i < n; i += 1) {
+          const t = i / n;
+          pts.push({ x: CX + ax + (bx - ax) * t, y: ay + (by - ay) * t });
         }
-        for (let i = 1; i <= 5; i += 1) {                              // forearm, down and in
-          const t = i / 5;
-          push(CX + side * (0.200 - t * 0.028), 0.330 + t * 0.105, true);
+      };
+      const chain = (points, per) => {
+        for (let i = 0; i < points.length - 1; i += 1) {
+          edge(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1], per);
         }
-        push(CX + side * 0.168, 0.452, true);                          // hand
-      }
-      for (let i = -3; i <= 3; i += 1) push(CX + i * 0.020, 0.432, true);   // hips
-      // Legs, each as two lines so they have thickness, tapering to the ankle.
-      for (const side of [-1, 1]) {
-        for (let i = 1; i <= 10; i += 1) {
-          const t = i / 10;
-          const spread = 0.026 + t * 0.040;
-          const thick = 0.026 - t * 0.013;
-          push(CX + side * (spread - thick), 0.432 + t * 0.310, true);
-          push(CX + side * (spread + thick), 0.432 + t * 0.310, true);
-        }
-        push(CX + side * (0.066 + 0.020), 0.752, true);                // foot
+      };
+
+      // Proportioned off a head unit rather than eyeballed. The first pass gave the head a
+      // quarter of the figure's height; a standing adult is about seven and a half heads, and at
+      // this scale that difference is the whole reason a figure reads as a person rather than as
+      // a doll. HEAD is one unit, everything below is a multiple of it.
+      const TOP = 0.048;
+      const HEAD = 0.112;
+      const y = u => TOP + HEAD * u;          // u = heads down from the crown
+
+      // ── Head: a faceted skull, not an oval ────────────────────────────────────────────
+      // Crown, temple, cheekbone, jaw, chin. Five direction changes down each side, which is
+      // what reads as carved rather than drawn.
+      chain([
+        [0, y(0)], [0.026, y(0.18)], [0.039, y(0.46)],
+        [0.041, y(0.72)], [0.032, y(0.88)],
+        [0.017, y(0.96)], [0, y(1)],
+        [-0.017, y(0.96)], [-0.032, y(0.88)],
+        [-0.041, y(0.72)], [-0.039, y(0.46)],
+        [-0.026, y(0.18)], [0, y(0)],
+      ], 2);
+      // No brow or nose facets. They were drawn and they filled the head solid: at this scale the
+      // head is about 42px across, and forty points inside it merge long before any feature
+      // resolves. The angular SILHOUETTE is what carries the reference; interior detail at this
+      // size is just density.
+
+      // ── Neck and shoulders: a wedge ──────────────────────────────────────────────────
+      chain([[-0.014, y(1)], [-0.017, y(1.22)], [-0.128, y(1.46)]], 3);
+      chain([[0.014, y(1)], [0.017, y(1.22)], [0.128, y(1.46)]], 3);
+
+      // ── Torso: a plated trapezoid, wide at the chest and cut in at the waist ─────────
+      chain([[-0.128, y(1.46)], [-0.116, y(2.30)], [-0.078, y(3.10)], [0, y(3.34)]], 4);
+      chain([[0.128, y(1.46)], [0.116, y(2.30)], [0.078, y(3.10)], [0, y(3.34)]], 4);
+      // Chest plate: the internal facet that gives the torso depth instead of outline.
+      chain([[-0.116, y(2.30)], [0, y(1.90)], [0.116, y(2.30)]], 4);
+      chain([[0, y(1.90)], [0, y(3.34)]], 5);
+
+      // ── Arms: two straight segments meeting at a hard elbow ─────────────────────────
+      for (const s of [-1, 1]) {
+        chain([[s * 0.128, y(1.46)], [s * 0.212, y(2.34)], [s * 0.186, y(3.30)]], 5);
+        edge(s * 0.186, y(3.30), s * 0.196, y(3.62), 2);
       }
 
-      // ── On the three background figures ──────────────────────────────────────────────
-      // Not here. They were drawn and they land on top of "Build the intern you need", because
-      // that headline is centred and wide and this band is only ~414px tall: there is no left
-      // third to put them in. Squeezing them in made three 25px smudges over the copy, which is
-      // worse than not having them. The systematic-crowd contrast wants either its own band or a
-      // hero that is not centre-aligned, and that is a layout decision rather than a tweak.
+      // ── Legs: hip wedge, then a straight thigh and shin with a knee corner ──────────
+      for (const s of [-1, 1]) {
+        chain([[s * 0.018, y(3.34)], [s * 0.074, y(3.70)], [s * 0.088, y(5.10)], [s * 0.066, y(6.62)]], 6);
+        edge(s * 0.066, y(6.62), s * 0.098, y(6.80), 2);
+      }
+      // Inner leg edges, so each leg is a shape rather than a line.
+      for (const s of [-1, 1]) {
+        chain([[s * 0.017, y(3.54)], [s * 0.031, y(5.10)], [s * 0.026, y(6.56)]], 5);
+      }
+
       return pts;
     })(),
 
@@ -5274,9 +5290,9 @@ function initHeroField(target) {
     const isMark = canvas.dataset.morph === 'mark';
     const size = isMark
       ? Math.min(W * 0.42, H * 0.56)
-      : Math.min(W * 0.26, H * 1.34);
+      : Math.min(W * 0.24, H * 1.18);
     const cx = isMark ? W * 0.5 : W * 0.80;
-    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.435;
+    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.47;
     return { size, cx, top, cy: top + size * 0.5 };
   }
 
@@ -5296,13 +5312,13 @@ function initHeroField(target) {
     // background people 50px apart at 25px wide merged into one blob.
     const size = isMark
       ? Math.min(W * 0.42, H * 0.56)
-      : Math.min(W * 0.26, H * 1.34);
+      : Math.min(W * 0.24, H * 1.18);
     const cx = isMark ? W * 0.5 : W * 0.80;
     // The mark is centred on the headline, not on the hero. Dead-centre put the rings behind the
     // three path cards, which carry a tinted backdrop and swallowed the middle of both of them.
     // Framing the words is also the better composition: the thing the page is named after sits
     // around its own name.
-    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.435;
+    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.47;
     const p = FIGURE[index];
     return { x: cx + (p.x - 0.5) * size, y: top + p.y * size };
   }
