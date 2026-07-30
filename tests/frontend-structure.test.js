@@ -761,11 +761,15 @@ test('the work exchange turns one project into clear value for both sides', () =
 });
 
 test('the qualification rail is shorter and visually distinct from the trial carousel', () => {
-  assert.match(html, /Before the project/);
-  assert.match(html, /Vetted before the/);
-  assert.match(html, /trial begins/);
+  // The "Before the project" kicker is gone: it said the same thing as the heading under it.
+  assert.match(html, /Vetted before the <span class="word-gold">trial begins\./);
   assert.match(html, /A referral starts the signal\. Evidence has to confirm it\./);
-  for (const label of ['Referred', 'Evidence checked', 'Admitted to a batch', 'Ready for a trial']) {
+  // Stage one is "Stand out" now, and it carries the ownership/artifact/walkthrough list that
+  // used to sit under stage two, so each stage's body describes its own graphic.
+  assert.match(html, /class="bf-label">Stand out</);
+  assert.match(html, /Stand out<\/p>[\s\S]{0,120}?<ul class="bf-rails">/, 'stage 1 lost the evidence list');
+  assert.match(html, /Evidence checked<\/p>[\s\S]{0,140}?<div class="bf-pool"/, 'stage 2 lost the pool');
+  for (const label of ['Stand out', 'Evidence checked', 'Admitted to a batch', 'Ready for a trial']) {
     assert.match(html, new RegExp(label));
   }
   assert.doesNotMatch(html, /Selective clubs and faculty screen first\. Covenda vets again/);

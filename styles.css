@@ -3507,10 +3507,10 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 }
 .bf-body { max-width: 24ch; margin: 0; color: var(--muted); font-size: var(--text-body); line-height: var(--lh-body); }
 
-.bf-pool { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; width: min(100%, 150px); margin-top: 6px; }
+.bf-pool { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; width: min(100%, 260px); margin-top: 12px; }
 .bf-pool i { aspect-ratio: 1; border-radius: 0; background: var(--line-strong); opacity: .42; }
 .bf-pool i:nth-child(3n+1) { background: var(--gold); opacity: .9; }
-.bf-batch { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; width: min(100%, 154px); margin-top: 6px; }
+.bf-batch { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; width: min(100%, 210px); margin-top: 12px; }
 .bf-batch i { aspect-ratio: 1; border-radius: 0; border: 1px solid var(--gold-deep); background: rgba(180,123,32,.12); }
 
 .bf-rails { display: flex; flex-wrap: wrap; gap: 8px 12px; margin: 4px 0 0; padding: 0; list-style: none; }
@@ -3968,7 +3968,7 @@ p, li, small, cite, label, input, textarea, select, button, .home-path strong,
    The rail was three ad-hoc clusters at different heights; it is one baseline now with a
    single divider between "choose your side" and "your account". */
 .site-header { height: 76px; gap: 32px; }
-.site-header .brand { font-size: var(--text-heading); letter-spacing: var(--ls-heading); }
+.site-header .brand { font-size: var(--text-subhead); letter-spacing: var(--ls-subhead); }
 .site-nav { gap: 30px; }
 .site-nav a { font-size: var(--text-body); font-weight: var(--weight-medium); letter-spacing: var(--ls-body); color: var(--muted); }
 .site-nav a:hover { color: var(--ink); }
@@ -4848,10 +4848,11 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 
 .site-header .brand {
   font-family: inherit;
-  font-size: var(--text-heading);
+  font-size: var(--text-subhead);
   font-weight: var(--weight-regular);
-  letter-spacing: var(--ls-heading);
+  letter-spacing: var(--ls-subhead);
 }
+.site-header .brand-mark { width: 28px; height: 28px; }
 
 .site-nav {
   align-items: stretch;
