@@ -760,6 +760,31 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
   assert.match(script, /if \(reduce\) return; \/\/ static frame only/);
 });
 
+test('the homepage field resolves once into the approved mark and returns the stars', () => {
+  assert.match(html, /id="heroFieldCanvas"[^>]*data-morph="mark"/);
+  // The canvas mark uses the same dimensions as the canonical 48-unit SVG. A much thinner
+  // canvas-only stroke is what made production read as two unrelated rings.
+  assert.match(script, /stroke: 4 \/ 48/);
+  assert.match(script, /radius: 10 \/ 48/);
+  assert.match(script, /centres: \[19 \/ 48, 29 \/ 48\]/);
+  assert.match(script, /function drawSolidMark\(solid\)/);
+  // One pointer entry commits the sequence; pointerleave cannot reverse or replay the mark.
+  assert.match(script, /let markTriggered = false/);
+  assert.match(script, /if \(isPersistentMark && markTriggered\) return/);
+  assert.match(script, /markTriggered = true/);
+  assert.match(script, /hero\.addEventListener\('pointerenter', showFigure\)/);
+  assert.match(script, /if \(event\.target\.closest\('a, button'\)\) return/);
+  // The animation is intentionally brisk, then the displaced ambient field returns slowly.
+  const assemblyRate = Number(script.match(/const MARK_ASSEMBLY_RATE = ([\d.]+);/)[1]);
+  const starReturnDuration = Number(script.match(/const STAR_RETURN_DURATION = (\d+);/)[1]);
+  assert.ok(assemblyRate >= 0.08, `mark assembly rate ${assemblyRate} is still too slow`);
+  assert.ok(starReturnDuration >= 4000, `star return ${starReturnDuration}ms is too abrupt`);
+  assert.match(script, /function returnedStarOpacity\(node\)/);
+  assert.match(script, /canvas\.dataset\.morphState = 'forming'/);
+  assert.match(script, /'stars-returning'/);
+  assert.match(script, /'complete'/);
+});
+
 // The first explanation is one two-way exchange, not another field of abstract nodes.
 // A visitor can understand the static frame, then inspect each phase with any input method.
 test('the work exchange turns one project into clear value for both sides', () => {
