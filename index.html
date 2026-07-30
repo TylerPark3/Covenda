@@ -1077,19 +1077,34 @@
         <div class="student-story audience-content" data-for-audience="student">
           
           <div class="story-layout">
-            <ol class="proof-rail">
-              <li><span>1</span><svg><use href="#icon-route"/></svg><h3>Tell us your skills</h3><p>Personalise your account into a quality demonstration of what you can do, instead of a résumé and AI slop.</p></li>
-              <li><span>2</span><svg><use href="#icon-file"/></svg><h3>Join a batch</h3><p>Let companies find you.</p></li>
-              <li><span>3</span><svg><use href="#icon-shield"/></svg><h3>Keep the proof</h3><p>Accepted work becomes a capability record, not a vague résumé bullet.</p></li>
+            <ol class="proof-rail" role="tablist" aria-label="What happens, step by step">
+              <li><span>1</span><svg><use href="#icon-route"/></svg><h3>Tell us your skills</h3><p>Personalise your account into a quality demonstration of what you can do, instead of a résumé and AI slop.</p><button type="button" class="proof-step-hit" id="proofStep-1" role="tab" aria-selected="true" aria-controls="proofPanel-1" data-rail-step="1"><span class="visually-hidden">Show step 1: tell us your skills</span></button></li>
+              <li><span>2</span><svg><use href="#icon-file"/></svg><h3>Join a batch</h3><p>Let companies find you.</p><button type="button" class="proof-step-hit" id="proofStep-2" role="tab" aria-selected="false" aria-controls="proofPanel-2" data-rail-step="2"><span class="visually-hidden">Show step 2: join a batch</span></button></li>
+              <li><span>3</span><svg><use href="#icon-shield"/></svg><h3>Keep the proof</h3><p>Accepted work becomes a capability record, not a vague résumé bullet.</p><button type="button" class="proof-step-hit" id="proofStep-3" role="tab" aria-selected="false" aria-controls="proofPanel-3" data-rail-step="3"><span class="visually-hidden">Show step 3: keep the proof</span></button></li>
             </ol>
-            <article class="work-record glass-panel">
-              <header><div><small>Example trial record</small><h3>Why signups stall at step 3</h3></div><span class="record-state"><svg><use href="#icon-shield"/></svg>Accepted</span></header>
+            <article class="work-record glass-panel" id="proofPanel-1" role="tabpanel" aria-labelledby="proofStep-1">
+              <header><div><small>Illustrative example</small><h3>What you can already do</h3></div><span class="record-state"><svg><use href="#icon-user"/></svg>Profile</span></header>
+              <div class="record-preview">
+                <div class="document-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                <div><span>Field</span><strong>Software &amp; AI, product engineering</strong><span>Strongest skill</span><strong>Front-end, can work independently</strong><span>Attached</span><strong>Two repos you own, one deployed project, one endorsement</strong></div>
+              </div>
+              <footer><span>What the profile carries</span><div class="capability-list"><b>Work you did, and what each piece proves</b><b>The hours you actually have</b><b>Nothing auto-generated</b></div></footer>
+            </article>
+            <article class="work-record glass-panel" id="proofPanel-2" role="tabpanel" aria-labelledby="proofStep-2" hidden>
+              <header><div><small>Illustrative example</small><h3>Software &amp; AI batch</h3></div><span class="record-state"><svg><use href="#icon-shield"/></svg>Open</span></header>
+              <div class="record-preview">
+                <div class="document-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+                <div><span>Published bar</span><strong>One project you own, defended live, with its limits stated</strong><span>Reviewed by</span><strong>A practitioner in the field, not a keyword filter</strong><span>What companies see</span><strong>The batch first, then your profile inside it</strong></div>
+              </div>
+              <footer><span>What clearing the bar does</span><div class="capability-list"><b>Companies reach the batch, not a queue</b><b>Your evidence travels with you</b><b>A referral helps, it is never required</b></div></footer>
+            </article>
+            <article class="work-record glass-panel" id="proofPanel-3" role="tabpanel" aria-labelledby="proofStep-3" hidden>
+              <header><div><small>Illustrative example</small><h3>Why signups stall at step 3</h3></div><span class="record-state"><svg><use href="#icon-shield"/></svg>Accepted</span></header>
               <div class="record-preview">
                 <div class="document-lines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
                 <div><span>Company</span><strong>Seed-stage B2B SaaS, 6 people</strong><span>Deliverable</span><strong>Funnel walkthrough of 400 sessions, plus 3 fixes ranked by build effort</strong><span>Scope</span><strong>14 hours over 2 weeks · $420 · public analytics export only</strong></div>
               </div>
               <footer><span>What the reviewer confirmed</span><div class="capability-list"><b>Found the drop-off was a required field, not pricing</b><b>Sized each fix before recommending</b><b>Shipped on the agreed date</b></div></footer>
-              <p class="record-illus">Illustrative. Covenda has no completed trials yet, this is the shape of the record, not a claim about one.</p>
             </article>
           </div>
         </div>

@@ -184,6 +184,49 @@ const steps = [
   // titles were bucketed by their old max size into the heading role, so "Talent vouched for by
   // people who know them" set at up to 40px in a 200px column and wrapped to six lines,
   // dwarfing the panel it pointed at. Four lines in a heading means the wrong role.
+  // Clicking a step must swap the panel beside it, and must not touch the product-lens buttons
+  // further up the page: those already owned data-proof-step, and an unscoped query collected
+  // all seven controls into one tablist.
+  ['proof rail: each step shows its own panel', `(() => {
+    document.querySelector('[data-audience-option="student"]')?.click();
+    const tabs = [...document.querySelectorAll('.proof-rail[role="tablist"] [data-rail-step]')];
+    if (tabs.length !== 3) return 'found ' + tabs.length + ' rail tabs';
+    for (const tab of tabs) {
+      tab.click();
+      const panel = document.getElementById(tab.getAttribute('aria-controls'));
+      if (!panel) return 'no panel for ' + tab.id;
+      if (panel.hidden) return tab.id + ' did not reveal its panel';
+      const others = tabs.filter(t => t !== tab)
+        .map(t => document.getElementById(t.getAttribute('aria-controls')))
+        .filter(p => p && !p.hidden);
+      if (others.length) return others.length + ' other panels stayed open';
+      if (tab.getAttribute('aria-selected') !== 'true') return tab.id + ' is not marked selected';
+      if (!tab.closest('li').classList.contains('is-current')) return tab.id + ' step is not marked current';
+    }
+    return true;
+  })()`],
+  ['proof rail: arrows move between steps', `(() => {
+    const tabs = [...document.querySelectorAll('.proof-rail[role="tablist"] [data-rail-step]')];
+    tabs[0].click(); tabs[0].focus();
+    tabs[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    if (document.activeElement !== tabs[1]) return 'ArrowRight did not move focus';
+    if (tabs[1].getAttribute('aria-selected') !== 'true') return 'ArrowRight did not select';
+    // Only the selected tab is in the tab order, so Tab leaves the group instead of walking it.
+    if (tabs[0].tabIndex !== -1 || tabs[1].tabIndex !== 0) return 'the roving tabindex is wrong';
+    tabs[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }));
+    if (document.activeElement !== tabs[2]) return 'End did not reach the last step';
+    return true;
+  })()`],
+  ['the product lens still owns its own buttons', `(() => {
+    const lens = [...document.querySelectorAll('.proof-product-step[data-proof-step]')];
+    if (lens.length !== 4) return 'found ' + lens.length + ' product-lens buttons';
+    for (const b of lens) {
+      if (b.hasAttribute('aria-selected')) return 'the rail tablist set aria-selected on a lens button';
+      if (!b.hasAttribute('aria-pressed')) return 'a lens button lost aria-pressed';
+    }
+    return true;
+  })()`],
+
   ['no heading wraps past three lines', `(() => {
     const bad = [];
     for (const el of document.querySelectorAll('h1,h2,h3,h4')) {

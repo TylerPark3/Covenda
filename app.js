@@ -5380,6 +5380,50 @@ function initHeroField(target) {
 initCovendaMotion();
 initFlowDemo();
 initIcosahedron();
+// ── The proof rail as tabs ────────────────────────────────────────────────────────────
+// Three steps that each illustrate something different, next to one panel that never changed.
+// Clicking a step now swaps the panel, so the graphic follows the step it belongs to.
+//
+// Full arrow-key support, because a tablist that only responds to clicks is a tablist in name
+// only: role="tab" tells a screen reader arrows will work, and then they must.
+function initProofSteps() {
+  // Scoped to the rail, and on its own attribute. `data-proof-step` was already taken by the
+  // four product-lens buttons further up the page, driven by different code with a different
+  // pattern (aria-pressed, no aria-controls). An unscoped [data-proof-step] query collected all
+  // seven and treated them as one tablist, which would have set aria-selected on buttons that
+  // do not use it and looked up panels that do not exist.
+  const rail = document.querySelector('.proof-rail[role="tablist"]');
+  const tabs = rail ? [...rail.querySelectorAll('[data-rail-step]')] : [];
+  if (!tabs.length) return;
+  const panels = tabs.map(tab => document.getElementById(tab.getAttribute('aria-controls')));
+  const select = index => {
+    const safe = (index + tabs.length) % tabs.length;
+    tabs.forEach((tab, i) => {
+      const on = i === safe;
+      tab.setAttribute('aria-selected', String(on));
+      // Only the selected tab is in the tab order, so Tab moves past the group rather than
+      // through it. That is what the roving-tabindex pattern is for.
+      tab.tabIndex = on ? 0 : -1;
+      tab.closest('li')?.classList.toggle('is-current', on);
+      if (panels[i]) panels[i].hidden = !on;
+    });
+  };
+  tabs.forEach((tab, i) => {
+    tab.tabIndex = i === 0 ? 0 : -1;
+    tab.addEventListener('click', () => select(i));
+    tab.addEventListener('keydown', event => {
+      const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+      const jump = event.key === 'Home' ? -i : event.key === 'End' ? tabs.length - 1 - i : null;
+      if (step === undefined && jump === null) return;
+      event.preventDefault();
+      const next = (i + (step ?? jump) + tabs.length) % tabs.length;
+      select(next);
+      tabs[next].focus();
+    });
+  });
+  select(0);
+}
+initProofSteps();
 initHeroField();
 // The student, company and referral pages open on a flat near-white ground with nothing on it.
 // They get the same field, on the light palette, so the top of every page belongs to the same

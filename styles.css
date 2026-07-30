@@ -6118,3 +6118,33 @@ textarea:focus-visible {
   min-height: 24px;
 }
 .back-site, .auth-back, .quiet-link { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── The proof rail, as a tablist (§18) ────────────────────────────────────────────────
+   The button covers its whole step rather than wrapping the content: .proof-rail targets
+   direct children (li > span, li > svg), so wrapping the text in a button would have broken
+   every one of those selectors at once. Same overlay pattern as the sign-up chips. */
+.proof-rail li { position: relative; }
+.proof-step-hit {
+  position: absolute;
+  inset: -10px -10px -10px -6px;
+  z-index: 2;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.proof-step-hit:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: -2px; }
+/* The step that owns the panel currently on screen. Without this the rail gives no clue which
+   of the three the graphic belongs to. */
+.proof-rail li.is-current > span { background: var(--gold); border-color: var(--gold); color: #fff; }
+.proof-rail li.is-current > svg { color: var(--gold); }
+.proof-rail li.is-current > h3 { color: var(--ink); }
+.proof-rail li:not(.is-current) > h3 { color: var(--gold-deep); }
+.proof-rail li:not(.is-current) { opacity: .72; transition: opacity var(--dur) var(--ease); }
+.proof-rail li:not(.is-current):hover { opacity: 1; }
+/* The panel is swapped, not resized: it fades in place so the column never jumps height. */
+.work-record[role="tabpanel"] { animation: panelIn var(--dur) var(--ease) both; }
+@keyframes panelIn { from { opacity: 0; translate: 0 6px; } to { opacity: 1; translate: 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .work-record[role="tabpanel"] { animation: none; }
+  .proof-rail li:not(.is-current) { transition: none; }
+}
