@@ -48,21 +48,33 @@ test('the ladder is not for sale, and says so', () => {
   // "Nothing here is granted or sold" was a third statement of this, one line under a heading
   // that already says it. The claim itself is not optional, so the guard follows it to the two
   // places that still carry it rather than being dropped with the sentence.
-  assert.match(html, /Verification is earned/, 'the ladder no longer says verification is earned');
-  assert.match(html, /Nobody starts with it/, 'nothing states that no club begins verified');
+  // This claim has now lost two of its three carriers to density edits, so the heading is the
+  // last one standing. It says the thing directly and in gold, and nothing may remove it
+  // without failing here.
+  assert.match(html, /Register free\.<br><span class="word-gold">Verification is earned\.<\/span>/,
+    'the only remaining statement that verification is earned has been changed');
+  assert.match(html, /Verification comes from what your members deliver/,
+    'nothing says what actually earns verification');
   assert.ok(!/granted or sold/.test(html), 'the deleted third copy is back');
 });
 
 // A badge next to the heading, and a line saying what earns it. The badge alone would read as
 // decoration, or worse as a claim the club already has one.
 test('the verification mark says what earns it, and that nobody starts with it', () => {
-  assert.match(html, /class="club-verified-mark"/);
-  assert.match(html, /class="club-verified-key"/);
-  assert.match(html, /Nobody starts with it/);
-  // Reuses the existing badge: a platform with two verification marks has neither.
-  const marks = [...html.matchAll(/class="club-verified-(?:mark|key)"[\s\S]{0,200}?href="#([a-z-]+)"/g)].map(m => m[1]);
-  assert.ok(marks.length >= 2 && new Set(marks).size === 1, `the club badge uses ${new Set(marks).size} different icons`);
-  assert.equal(marks[0], 'icon-verified');
+  // One mark, not two. There used to be a bare SVG beside the heading and a second copy inline
+  // in front of a sentence, neither with any CSS.
+  assert.equal((html.match(/class="club-verified-mark"/g) || []).length, 1);
+  assert.ok(!/club-verified-key/.test(html), 'the second inline copy of the mark is back');
+  // A badge with no label reads as decoration, or worse as a claim the club already has one.
+  assert.match(html, /class="club-verified-mark"[^>]*>[\s\S]{0,160}?Verify your club/);
+  // Reuses the existing badge: a platform with two verification marks has neither. There is one
+  // mark now rather than two, so the guard is that it points at the shared symbol and that no
+  // second verified symbol has been defined alongside it.
+  const mark = html.match(/class="club-verified-mark"[\s\S]{0,200}?href="#([a-z-]+)"/);
+  assert.ok(mark, 'the mark no longer references an icon');
+  assert.equal(mark[1], 'icon-verified');
+  const verifiedSymbols = [...html.matchAll(/<symbol id="(icon-[a-z-]*verif[a-z-]*)"/g)].map(m => m[1]);
+  assert.deepEqual(verifiedSymbols, ['icon-verified'], `${verifiedSymbols.length} verification symbols defined`);
 });
 
 // A field that renders but never reaches the payload is worse than no field: somebody types
