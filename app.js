@@ -5221,53 +5221,8 @@ function initHeroField(target) {
     if (now >= nextGoldBondAt) formGoldBond(now);
   }
 
-  // ── A real curve, not a decorative squiggle ──────────────────────────────────────────
-  // An Archimedean spiral: r = b*theta, the one where successive turns are a constant distance
-  // apart. That constant spacing is the whole property, and it is why this reads as a
-  // construction rather than as an arbitrary swirl: the eye can see the turns are evenly spaced
-  // without being told.
-  //
-  // Ink ground only, which is the "built by students" band. On the hero it would compete with
-  // the constellation that ground already carries.
-  function drawSpiral(time) {
-    if (canvas.dataset.palette !== 'ink') return;
-    // Anchored to the right of the band, where the field is densest and the copy is not.
-    const cx = W * 0.78, cy = H * 0.5;
-    // Three turns, not five. The band is wide and short, so scaling the radius off the shorter
-    // edge gave five turns about sixteen pixels apart: the constant spacing was true and
-    // completely unreadable. Three turns put real distance between them.
-    const turns = 3;
-    const thetaMax = turns * Math.PI * 2;
-    // Derived from the box rather than a magic pixel value, so it survives a resize.
-    const b = Math.min(W * 0.15, H * 0.46) / thetaMax;
-    const spin = time * 0.00004;
-    ctx.save();
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    for (let theta = 0; theta <= thetaMax; theta += 0.03) {
-      const r = b * theta;
-      const x = cx + r * Math.cos(theta + spin);
-      const y = cy + r * Math.sin(theta + spin);
-      if (theta === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.strokeStyle = `rgba(${WHITE},.34)`;
-    ctx.lineWidth = 1.15;
-    ctx.stroke();
-    // A mark on each full turn, so the constant spacing is legible rather than merely true.
-    for (let t = 1; t <= turns; t += 1) {
-      const theta = t * Math.PI * 2;
-      const r = b * theta;
-      ctx.beginPath();
-      ctx.arc(cx + r * Math.cos(theta + spin), cy + r * Math.sin(theta + spin), 2.4, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${GOLD},.62)`;
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
   function draw(now = performance.now()) {
     ctx.clearRect(0, 0, W, H);
-    drawSpiral(now);
     const pts = nodes.map(project);
 
     // The ambient mesh makes the crowd legible as a connected field without becoming a web.
