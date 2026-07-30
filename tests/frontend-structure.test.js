@@ -1595,3 +1595,24 @@ test('small text links meet the tap-target floor', () => {
   assert.match(rule, /min-height: 24px/);
   assert.match(rule, /padding-block/);
 });
+
+// The corners of the icosahedron have to read as points of light. They previously did not: the
+// core was painted in the same gold ramp as the edges meeting it, so on a gold ground a vertex
+// had nothing to stand out against and rendered as a dull brown dot.
+test('the icosahedron corners are lights, not dots', () => {
+  const fn = script.slice(script.indexOf('function initIcosahedron'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  // A falloff from a hot centre, not a flat disc: constant alpha reads as a smudge.
+  assert.match(body, /createRadialGradient\(p\.sx, p\.sy, 0, p\.sx, p\.sy, glowR\)/,
+    'the vertex glow is not a radial falloff');
+  // The core must be near-white so it is brighter than both the metal and the ground.
+  const core = body.match(/ctx\.fillStyle = `rgba\((\d+),(\d+),(\d+),\$\{\(0\.7 \+ depth/);
+  assert.ok(core, 'the vertex core is no longer a fixed near-white');
+  for (const channel of core.slice(1, 4)) {
+    assert.ok(Number(channel) >= 244, `vertex core channel ${channel} is too dark to shine`);
+  }
+  // Every corner breathes, and it resolves to a fixed brightness when motion is not wanted,
+  // because the reduced-motion path draws exactly once with time = 0.
+  assert.match(body, /const pulse = reduceMotion\s*\?\s*0\.5/);
+  assert.match(body, /activeNodes\.has\(i\) \? 1 : 0\.4/, 'only the active corners pulse again');
+});

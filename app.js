@@ -4848,25 +4848,43 @@ function initIcosahedron() {
         ctx.lineWidth = 0.85 + depth * 0.85;
         ctx.stroke();
       });
-    // vertices = students: all 12 as gold nodes (depth-scaled), a few gently pulsing
+    // vertices = students. These have to SHINE, and previously they did not: the core was
+    // painted in the same gold ramp as the edges meeting it, so against a gold ground a vertex
+    // had nothing to stand out from and read as a dull brown dot. A point of light is brighter
+    // than everything around it, including the metal it belongs to.
     pts.map((p, i) => ({ p, i })).sort((a, b) => a.p.z - b.p.z).forEach(({ p, i }) => {
       const depth = (p.z + 1) / 2;
-      const pulse = activeNodes.has(i) ? 0.5 + 0.5 * Math.sin(time * 0.0022 + i) : 0;
-      const nodeR = 1.7 + depth * 2.5;
+      // Every corner breathes, the three "active" ones harder. A vertex whose brightness never
+      // changes reads as a printed dot rather than as a light.
+      const pulse = reduceMotion
+        ? 0.5
+        : 0.5 + 0.5 * Math.sin(time * 0.0022 + i * 1.7) * (activeNodes.has(i) ? 1 : 0.4);
+      const nodeR = 1.8 + depth * 2.5;
+      const glowR = nodeR * (3.4 + pulse * 2);
+      // A radial falloff, not a flat disc. A constant-alpha circle is a smudge; brightness
+      // decaying from a hot centre is what the eye actually reads as a source of light.
+      const lift = (0.34 + depth * 0.44) * (0.6 + pulse * 0.4);
+      const glow = ctx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, glowR);
+      glow.addColorStop(0, `rgba(255,253,246,${(lift * 0.9).toFixed(3)})`);
+      glow.addColorStop(0.26, `rgba(255,234,172,${(lift * 0.5).toFixed(3)})`);
+      glow.addColorStop(0.6, `rgba(226,180,86,${(lift * 0.18).toFixed(3)})`);
+      glow.addColorStop(1, 'rgba(226,180,86,0)');
       ctx.beginPath();
-      ctx.arc(p.sx, p.sy, nodeR + 2.6 + pulse * 3.4, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(230,191,102,${(0.07 + depth * 0.12 + pulse * 0.14).toFixed(3)})`;
+      ctx.arc(p.sx, p.sy, glowR, 0, Math.PI * 2);
+      ctx.fillStyle = glow;
       ctx.fill();
+      // Near-white core. This is the change that makes it a highlight instead of a node.
       ctx.beginPath();
       ctx.arc(p.sx, p.sy, nodeR, 0, Math.PI * 2);
-      // The node picks up the same depth shift as the edge meeting it, so a vertex never
-      // reads as a different metal from its own lines.
-      ctx.fillStyle = `rgba(${Math.round(166 + depth * 60)},${Math.round(107 + depth * 96)},${Math.round(13 + depth * 108)},${(0.66 + depth * 0.34).toFixed(3)})`;
+      ctx.fillStyle = `rgba(255,252,244,${(0.7 + depth * 0.3).toFixed(3)})`;
       ctx.fill();
+      // A hairline gold rim keeps the corner tied to the metal it sits on, so the white core
+      // still belongs to the solid rather than floating in front of it.
       ctx.beginPath();
-      ctx.arc(p.sx - nodeR * 0.28, p.sy - nodeR * 0.28, nodeR * 0.42, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,250,238,${(0.45 * depth).toFixed(3)})`;
-      ctx.fill();
+      ctx.arc(p.sx, p.sy, nodeR, 0, Math.PI * 2);
+      ctx.strokeStyle = `rgba(${Math.round(150 + depth * 44)},${Math.round(98 + depth * 64)},${Math.round(22 + depth * 52)},${(0.44 + depth * 0.34).toFixed(3)})`;
+      ctx.lineWidth = 0.9;
+      ctx.stroke();
     });
     // traveling "signal" lights routing student -> student (globe-flight feel)
     ctx.lineCap = 'round';
