@@ -5169,6 +5169,85 @@ function initHeroField(target) {
     canvas.height = Math.max(1, Math.round(H * dpr));
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     build();
+    // build() replaces every node, so any figure assignment is gone. Lifting the mask on hover
+    // changes the canvas height, which fires the ResizeObserver, which lands here: the first
+    // version assigned targets and then had them wiped one frame later by its own hover class,
+    // so the figure never appeared at all. Re-derive against the new nodes if a figure is up.
+    if (morphing && morphTo === 1) { assigned = false; assignFigure(); }
+  }
+
+  // ── The crowd resolving into one person (§22) ─────────────────────────────────────────
+  // Hovering the hero pulls the field into a standing figure. It is the argument the section
+  // makes, rendered: a crowd of applicants nobody can read, and on attention it resolves into
+  // one person who can be. The figure is drawn in gold because gold is what this field already
+  // uses for evidenced, so the resolution reads as verification rather than as decoration.
+  //
+  // Points are normalised into a 0..1 box and converted to screen coordinates every frame, so
+  // the figure survives a resize without recomputing anything.
+  const FIGURE = (() => {
+    const pts = [];
+    const push = (x, y) => pts.push({ x, y });
+    // Head, as a ring rather than a filled disc: this field is made of points and a solid head
+    // would be the one part that stopped looking like one.
+    for (let i = 0; i < 13; i += 1) {
+      const a = (i / 13) * Math.PI * 2;
+      push(0.5 + Math.cos(a) * 0.058, 0.155 + Math.sin(a) * 0.072);
+    }
+    for (let i = 0; i <= 5; i += 1) push(0.5, 0.245 + i * 0.032);      // neck and spine
+    for (let i = -5; i <= 5; i += 1) push(0.5 + i * 0.032, 0.295);      // shoulders
+    for (const side of [-1, 1]) {                                       // arms, held out
+      for (let i = 1; i <= 8; i += 1) {
+        const t = i / 8;
+        push(0.5 + side * (0.17 + t * 0.20), 0.30 + t * 0.20);
+      }
+    }
+    for (let i = -3; i <= 3; i += 1) push(0.5 + i * 0.021, 0.545);      // hips
+    for (const side of [-1, 1]) {                                       // legs, apart
+      for (let i = 1; i <= 9; i += 1) {
+        const t = i / 9;
+        push(0.5 + side * (0.035 + t * 0.115), 0.545 + t * 0.315);
+      }
+    }
+    return pts;
+  })();
+
+  const morphing = canvas.dataset.morph === 'figure';
+  let morph = 0;        // 0 = crowd, 1 = figure
+  let morphTo = 0;
+  let assigned = false;
+
+  function figureScreen(index) {
+    // Fitted to the shorter axis so the figure keeps its proportions in any hero shape, and
+    // biased right so it does not sit under the headline.
+    // Fitted to the hero's own height with margin. The company hero is wide and short, so
+    // scaling off the width overflowed the bottom and the legs were cut off.
+    const size = Math.min(W * 0.30, H * 0.78);
+    const cx = W * 0.82;
+    // Nudged up rather than centred: the legs run to 0.86 of the figure box, so a true centre
+    // puts the feet on the band's edge and they get cut by whatever the hero sits above.
+    const top = H / 2 - size * 0.56;
+    const p = FIGURE[index];
+    return { x: cx + (p.x - 0.5) * size, y: top + p.y * size };
+  }
+
+  // Greedy nearest assignment, done once. Each target takes the closest node still free, so the
+  // crowd collapses inward instead of every node crossing the canvas to an arbitrary slot.
+  function assignFigure() {
+    if (assigned) return;
+    assigned = true;
+    const free = nodes.map((node, index) => ({ node, pt: project(node), index }));
+    const taken = new Set();
+    FIGURE.forEach((_, fi) => {
+      const target = figureScreen(fi);
+      let best = -1;
+      let bestDistance = Infinity;
+      for (const candidate of free) {
+        if (taken.has(candidate.index)) continue;
+        const d = (candidate.pt.x - target.x) ** 2 + (candidate.pt.y - target.y) ** 2;
+        if (d < bestDistance) { bestDistance = d; best = candidate.index; }
+      }
+      if (best >= 0) { taken.add(best); nodes[best].fig = fi; }
+    });
   }
 
   function project(n) {
@@ -5209,6 +5288,9 @@ function initHeroField(target) {
 
   function step(now) {
     t += 1;
+    // Eased rather than linear, and the same value drives position, colour and alpha so nothing
+    // in the figure arrives out of time with the rest of it.
+    if (morphing) morph += (morphTo - morph) * 0.075;
     for (const n of nodes) {
       n.x += n.vx; n.y += n.vy; n.z += n.vz;
       const bx = W * 0.9, by = H * 0.9;
@@ -5225,6 +5307,21 @@ function initHeroField(target) {
     ctx.clearRect(0, 0, W, H);
     const pts = nodes.map(project);
 
+    // Pull the projected points toward the figure. Lerping AFTER projection rather than before
+    // keeps the perspective the field already has, so the figure holds its depth instead of
+    // flattening onto one plane.
+    if (morphing && morph > 0.001) {
+      for (let i = 0; i < nodes.length; i += 1) {
+        const fi = nodes[i].fig;
+        if (fi === undefined) { pts[i].fade = 1 - morph; continue; }
+        const target = figureScreen(fi);
+        pts[i].x += (target.x - pts[i].x) * morph;
+        pts[i].y += (target.y - pts[i].y) * morph;
+        pts[i].fade = 1;
+        pts[i].figure = morph;
+      }
+    }
+
     // The ambient mesh makes the crowd legible as a connected field without becoming a web.
     let linkCount = 0;
     ctx.lineWidth = 1;
@@ -5232,11 +5329,21 @@ function initHeroField(target) {
       for (let j = i + 1; j < nodes.length && linkCount < 900; j += 1) {
         const a = pts[i], b = pts[j];
         const distance = Math.hypot(a.x - b.x, a.y - b.y);
-        if (distance > LINK_DISTANCE) continue;
+        // The reach shortens as the figure resolves. Without this, every converged pair falls
+        // inside the crowd's link distance and the silhouette disappears under its own mesh.
+        const reach = LINK_DISTANCE * (1 - (morphing ? morph : 0) * 0.72);
+        if (distance > reach) continue;
         const depth = (a.scale + b.scale) / 2;
         const goldLink = nodes[i].gold || nodes[j].gold;
-        const alpha = (1 - distance / LINK_DISTANCE) * depth * (goldLink ? .58 : .30) * INK_LIFT;
-        ctx.strokeStyle = goldLink
+        let alpha = (1 - distance / reach) * depth * (goldLink ? .58 : .30) * INK_LIFT;
+        // A link is only as present as the dimmer of the two nodes it joins, so the crowd's mesh
+        // clears as the figure forms instead of smearing between the two states.
+        alpha *= Math.min(a.fade ?? 1, b.fade ?? 1);
+        if (alpha <= 0.004) continue;
+        // Inside the figure every line is gold: the whole point is that what resolves is the
+        // evidenced one.
+        const asGold = goldLink || Math.min(a.figure ?? 0, b.figure ?? 0) > 0.35;
+        ctx.strokeStyle = asGold
           ? `rgba(${GOLD},${alpha})`
           : `rgba(${WHITE},${alpha})`;
         ctx.beginPath();
@@ -5285,18 +5392,26 @@ function initHeroField(target) {
     const order = nodes.map((n, i) => i).sort((a, b) => nodes[b].z - nodes[a].z);
     for (const i of order) {
       const n = nodes[i], q = pts[i];
+      // Everything not in the figure fades out, which is what "preserve only the gold" means
+      // here: at full morph the only thing left on the canvas is the person.
+      if ((q.fade ?? 1) <= 0.02) continue;
       const r = n.r * q.scale;
-      if (n.gold) {
+      // A node holding a figure point renders as gold whatever it started as. The crowd does not
+      // contain enough gold nodes to draw a person, so the ones that resolve become the gold.
+      if (n.gold || (q.figure ?? 0) > 0.35) {
         const pulse = 0.5 + 0.5 * Math.sin(t * 0.03 + n.phase);
-        const aura = ctx.createRadialGradient(q.x, q.y, r, q.x, q.y, (r + 5) * 5);
+        // Held back as the figure resolves. Sixty nodes each carrying a radius-25 glow merge into
+        // one luminous mass, and the silhouette disappears inside it.
+        const bloom = 1 - (q.figure ?? 0) * 0.72;
+        const aura = ctx.createRadialGradient(q.x, q.y, r, q.x, q.y, (r + 5) * 5 * bloom);
         aura.addColorStop(0, `rgba(255,224,151,${.22 + pulse * .12})`);
         aura.addColorStop(.34, `rgba(${GOLD},${.11 + pulse * .08})`);
         aura.addColorStop(1, `rgba(${GOLD},0)`);
         ctx.fillStyle = aura;
-        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 5) * 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = `rgba(255,224,151,${.78 * q.scale + .18})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, (r + 5) * 5 * bloom, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,224,151,${(.78 * q.scale + .18) * (q.fade ?? 1)})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r + 1 + pulse * .7, 0, Math.PI * 2); ctx.fill();
-        const glint = (5 + pulse * 7) * q.scale;
+        const glint = (5 + pulse * 7) * q.scale * (1 - (q.figure ?? 0) * 0.85);
         ctx.strokeStyle = `rgba(255,238,199,${.32 + pulse * .36})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -5304,7 +5419,7 @@ function initHeroField(target) {
         ctx.moveTo(q.x, q.y - glint); ctx.lineTo(q.x, q.y + glint);
         ctx.stroke();
       } else {
-        ctx.fillStyle = `rgba(${WHITE},${.52 + q.scale * .4})`;
+        ctx.fillStyle = `rgba(${WHITE},${(.52 + q.scale * .4) * (q.fade ?? 1)})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
       }
     }
@@ -5352,6 +5467,26 @@ function initHeroField(target) {
       pointer = { x: event.clientX - r.left, y: event.clientY - r.top };
     });
     hero.addEventListener('pointerleave', () => { pointer = null; });
+    // The morph is hover-only and hover-capable-only. On touch there is no hover to leave, so a
+    // figure that assembled on tap would have no way back and would sit there as a decoration.
+    if (morphing) {
+      // Listeners go on the hero, not the canvas: .hero-field is pointer-events: none, so the
+      // canvas never receives a pointer event of its own.
+      hero.addEventListener('pointerenter', () => {
+        // The field is normally capped to the top band of the hero and masked away before it
+        // reaches the copy. A standing figure needs the full height or it loses its legs, so the
+        // cap and the mask lift while the figure is up and return with it.
+        hero.classList.add('is-figure');
+        assignFigure();
+        morphTo = 1;
+        start();
+      });
+      hero.addEventListener('pointerleave', () => {
+        morphTo = 0;
+        hero.classList.remove('is-figure');
+        start();
+      });
+    }
   }
 }
 

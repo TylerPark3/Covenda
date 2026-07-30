@@ -2616,10 +2616,20 @@ body[data-audience="home"] .hero-home {
 .hero-student > *:not(.hero-field),
 .hero-company > *:not(.hero-field),
 .hero-university > *:not(.hero-field) { position: relative; z-index: 1; }
+/* Only the mask lifts. height: 100% was the first attempt and it was wrong: this section is
+   2000px tall because it contains the two cards below, so the canvas became 2000px, the figure
+   centred itself at 1000px and was drawn perfectly a thousand pixels below the fold. The band
+   height was never the problem; the mask fading out exactly where the legs go was. */
+.hero-company.is-figure .hero-field {
+  opacity: .95;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
 .hero-student .hero-field,
 .hero-company .hero-field,
 .hero-university .hero-field {
   height: clamp(280px, 46vh, 520px);
+  transition: height var(--dur) var(--ease), opacity var(--dur) var(--ease);
   inset: 0 0 auto;
   opacity: .5;
   -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.55) 55%, transparent 100%);
