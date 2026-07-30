@@ -65,7 +65,11 @@ test('the counts shown include batch admissions', () => {
   assert.equal(s.counts.batched, 2);
   assert.equal(s.counts.verified, 1);
   assert.equal(s.counts.endorsed, 1);
-  assert.match(app, /\['In a batch', counts\.batched\]/, 'the dashboard does not show batch admissions');
+  // Batch admissions are no longer a fourth peer stat: they cut across all three statuses
+  // rather than following them, so the dashboard states the count as the cross-cutting fact it
+  // is. It still has to be shown, which is what this guards.
+  assert.match(app, /\$\{counts\.batched\} of \$\{students\.length\} are in a batch/,
+    'the dashboard does not show batch admissions');
 });
 
 // Nothing here is measured yet, and the label has to keep saying so.

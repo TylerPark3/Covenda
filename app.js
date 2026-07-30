@@ -3114,6 +3114,13 @@ function renderReferrerDashboard() {
   const top = document.createElement('div'); top.className = 'referrer-cred-top';
   const idy = document.createElement('div'); idy.className = 'referrer-identity';
   const h3 = document.createElement('h3'); h3.textContent = name;
+  // The mark belongs beside the name, which is the thing being vouched for. Only for a founding
+  // referrer, so it stays something that had to be true rather than decoration on every card.
+  if (data.founding) {
+    const mark = createIcon('icon-verified');
+    mark.classList.add('referrer-verified');
+    h3.append(mark);
+  }
   const p = document.createElement('p'); p.textContent = data.role + ' · ' + data.institution;
   idy.append(h3, p);
   top.append(idy);
@@ -3135,14 +3142,36 @@ function renderReferrerDashboard() {
   const fill = document.createElement('div'); fill.className = 'referrer-meter-fill'; meter.append(fill);
   mw.append(mh, meter);
   card.append(mw);
-  const stats = document.createElement('div'); stats.className = 'referrer-stats';
-  [['Endorsed', counts.endorsed], ['In a batch', counts.batched], ['Working', counts.working], ['Verified', counts.verified]].forEach(([label, n]) => {
-    const st = document.createElement('div'); st.className = 'referrer-stat';
-    const b = document.createElement('b'); b.textContent = String(n);
-    const sp = document.createElement('span'); sp.textContent = label;
-    st.append(b, sp); stats.append(st);
-  });
-  card.append(stats);
+  // ── The four stats were not four peers ────────────────────────────────────────────────
+  // endorsed / working / verified are mutually exclusive: every student has exactly one, so
+  // together they partition the roster. `batched` is orthogonal, counting anyone with a batch
+  // whatever their status. Showing all four as equal boxes implied a sequence, which is why
+  // 2 -> 3 -> 2 -> 1 read as broken data, and left the fourth box orphaned on its own row.
+  //
+  // So: one node for the roster, branching to the three statuses that actually divide it, and
+  // the batch count stated as the cross-cutting fact it is.
+  const graph = document.createElement('div'); graph.className = 'referrer-graph';
+  const source = document.createElement('div'); source.className = 'rg-source';
+  const sn = document.createElement('b'); sn.className = 'rg-source-count'; sn.textContent = String(students.length);
+  const sl = document.createElement('span'); sl.textContent = students.length === 1 ? 'student referred' : 'students referred';
+  source.append(sn, sl);
+  const branch = document.createElement('ul'); branch.className = 'rg-branch';
+  // Verified first: the outcome that carries the most weight leads.
+  [['verified', 'Verified', counts.verified], ['working', 'Working', counts.working], ['endorsed', 'Endorsed', counts.endorsed]]
+    .forEach(([key, label, n]) => {
+      const li = document.createElement('li'); li.className = 'rg-node is-' + key;
+      const b = document.createElement('b'); b.textContent = String(n);
+      const sp = document.createElement('span'); sp.textContent = label;
+      li.append(b, sp);
+      // Weight follows the count, so the branch reads as a distribution and not as three
+      // identical boxes that happen to hold different numbers.
+      li.style.setProperty('--share', students.length ? String(n / students.length) : '0');
+      branch.append(li);
+    });
+  graph.append(source, branch);
+  const batchNote = document.createElement('p'); batchNote.className = 'rg-note';
+  batchNote.textContent = `${counts.batched} of ${students.length} are in a batch, at any stage.`;
+  card.append(graph, batchNote);
   host.append(card);
 
   const table = document.createElement('div'); table.className = 'referrer-students';
@@ -5187,8 +5216,53 @@ function initHeroField(target) {
     if (now >= nextGoldBondAt) formGoldBond(now);
   }
 
+  // ── A real curve, not a decorative squiggle ──────────────────────────────────────────
+  // An Archimedean spiral: r = b*theta, the one where successive turns are a constant distance
+  // apart. That constant spacing is the whole property, and it is why this reads as a
+  // construction rather than as an arbitrary swirl: the eye can see the turns are evenly spaced
+  // without being told.
+  //
+  // Ink ground only, which is the "built by students" band. On the hero it would compete with
+  // the constellation that ground already carries.
+  function drawSpiral(time) {
+    if (canvas.dataset.palette !== 'ink') return;
+    // Anchored to the right of the band, where the field is densest and the copy is not.
+    const cx = W * 0.78, cy = H * 0.5;
+    // Three turns, not five. The band is wide and short, so scaling the radius off the shorter
+    // edge gave five turns about sixteen pixels apart: the constant spacing was true and
+    // completely unreadable. Three turns put real distance between them.
+    const turns = 3;
+    const thetaMax = turns * Math.PI * 2;
+    // Derived from the box rather than a magic pixel value, so it survives a resize.
+    const b = Math.min(W * 0.15, H * 0.46) / thetaMax;
+    const spin = time * 0.00004;
+    ctx.save();
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let theta = 0; theta <= thetaMax; theta += 0.03) {
+      const r = b * theta;
+      const x = cx + r * Math.cos(theta + spin);
+      const y = cy + r * Math.sin(theta + spin);
+      if (theta === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = `rgba(${WHITE},.34)`;
+    ctx.lineWidth = 1.15;
+    ctx.stroke();
+    // A mark on each full turn, so the constant spacing is legible rather than merely true.
+    for (let t = 1; t <= turns; t += 1) {
+      const theta = t * Math.PI * 2;
+      const r = b * theta;
+      ctx.beginPath();
+      ctx.arc(cx + r * Math.cos(theta + spin), cy + r * Math.sin(theta + spin), 2.4, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${GOLD},.62)`;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   function draw(now = performance.now()) {
     ctx.clearRect(0, 0, W, H);
+    drawSpiral(now);
     const pts = nodes.map(project);
 
     // The ambient mesh makes the crowd legible as a connected field without becoming a web.

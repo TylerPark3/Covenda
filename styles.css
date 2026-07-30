@@ -6177,3 +6177,84 @@ textarea:focus-visible {
   .work-record[role="tabpanel"] { animation: none; }
   .proof-rail li:not(.is-current) { transition: none; }
 }
+
+/* ── Referrer track record (§19) ───────────────────────────────────────────────────────
+   Four stat boxes in a three-column grid left the fourth orphaned on its own row beside two
+   empty cells, and giving all four equal weight implied a sequence they do not form:
+   endorsed / working / verified are mutually exclusive and together partition the roster, while
+   "in a batch" cuts across all three. That is why 2 -> 3 -> 2 -> 1 read as broken data.
+
+   One node for the roster, branching to the three statuses that actually divide it, drawn with
+   CSS connectors rather than SVG so nothing depends on measuring the layout first. */
+.referrer-graph {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: clamp(22px, 4vw, 52px);
+  align-items: center;
+  margin-top: 22px;
+}
+.rg-source {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: 20px 26px;
+  border: 1px solid var(--gold);
+  background: #fff;
+  text-align: center;
+}
+.rg-source-count { font-family: var(--font-display); font-size: var(--text-heading); font-weight: var(--weight-regular); line-height: var(--lh-heading); }
+.rg-source span { color: var(--muted); font-size: var(--text-caption); }
+/* The stem out of the roster node. */
+.rg-source::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: clamp(11px, 2vw, 26px);
+  height: 1px;
+  background: var(--gold);
+}
+.rg-branch { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.rg-node {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+/* The connector into each branch, plus the spine joining them. */
+.rg-node::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: clamp(11px, 2vw, 26px);
+  height: 1px;
+  background: var(--line-strong);
+}
+.rg-branch::before {
+  content: '';
+  grid-area: 1 / 1 / -1 / -1;
+  align-self: stretch;
+  justify-self: start;
+  width: 1px;
+  margin-left: calc(clamp(11px, 2vw, 26px) * -1);
+  background: var(--line-strong);
+}
+.rg-node b { font-family: var(--font-display); font-size: var(--text-subhead); font-weight: var(--weight-regular); min-width: 1.4ch; }
+.rg-node span { color: var(--muted); font-size: var(--text-caption); font-weight: var(--weight-bold); letter-spacing: var(--ls-caption-caps); text-transform: uppercase; }
+/* Weight follows the count, so the branch reads as a distribution rather than three identical
+   boxes that happen to hold different numbers. */
+.rg-node { border-left: 3px solid color-mix(in srgb, var(--gold) calc(var(--share, 0) * 100%), var(--line)); }
+.rg-node.is-verified { border-color: var(--line); border-left-color: var(--success); }
+.rg-node.is-verified b { color: var(--success); }
+.rg-note { margin: 14px 0 0; color: var(--soft); font-size: var(--text-caption); }
+/* The mark sits on the name, which is the thing being vouched for. */
+.referrer-verified { width: 17px; height: 17px; margin-left: 7px; color: var(--gold); vertical-align: -2px; }
+@media (max-width: 640px) {
+  .referrer-graph { grid-template-columns: 1fr; gap: 16px; }
+  .rg-source::after, .rg-node::before, .rg-branch::before { display: none; }
+}
