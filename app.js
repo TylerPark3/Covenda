@@ -3882,15 +3882,29 @@ let batchWeb = null;
   const paint = groups => {
     grid.textContent = '';
     batchBriefIndex.clear();
-    (groups || []).forEach(group => {
-      const section = document.createElement('section');
+    // <details>, not a div plus a click handler. Twenty-five specialisations expanded at once is
+    // a wall nobody reads, and the native element gives keyboard support, Enter and Space, and
+    // find-in-page reaching collapsed content for free. Each group is independent, so opening
+    // one never closes another: a student comparing two verticals can hold both open.
+    (groups || []).forEach((group, index) => {
+      const section = document.createElement('details');
       section.className = 'batch-group';
-      const head = document.createElement('div');
+      // The first is open so the board shows what is inside a group rather than opening as five
+      // closed bars with nothing to look at.
+      section.open = index === 0;
+      const head = document.createElement('summary');
       head.className = 'batch-group-head';
       head.append(
         Object.assign(document.createElement('h3'), { textContent: group.vertical }),
         Object.assign(document.createElement('span'), { textContent: group.batches.length + ' batches' }),
+        Object.assign(document.createElement('svg'), {}),
       );
+      // The chevron is the affordance that says this opens. Built through createIcon so it uses
+      // the same sprite as everything else.
+      head.lastChild.remove();
+      const chevron = createIcon('icon-arrow-down');
+      chevron.classList.add('batch-group-chevron');
+      head.append(chevron);
       const row = document.createElement('div');
       row.className = 'batch-row';
       group.batches.forEach(brief => renderBatchCard(row, brief));

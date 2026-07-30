@@ -227,6 +227,26 @@ const steps = [
     return true;
   })()`],
 
+  // The batch board loads its groups over fetch, so only a browser can confirm they painted as
+  // independent accordions in the right face.
+  ['batch groups are independent accordions in the display face', `(() => {
+    document.querySelector('[data-audience-option="student"]')?.click();
+    return new Promise(resolve => setTimeout(() => {
+      const groups = [...document.querySelectorAll('details.batch-group')];
+      if (groups.length < 2) return resolve('found ' + groups.length + ' batch groups');
+      if (groups.filter(g => g.open).length !== 1) return resolve('expected exactly one group open on load');
+      const face = getComputedStyle(groups[0].querySelector('h3')).fontFamily;
+      if (!/Garamond/.test(face)) return resolve('group headings are set in ' + face);
+      if (!groups.every(g => g.querySelector('.batch-group-chevron'))) return resolve('a group has no chevron');
+      // Independent, so a student comparing two verticals can hold both open.
+      groups[1].open = true;
+      if (!(groups[0].open && groups[1].open)) return resolve('opening one group closed another');
+      // <summary> keeps keyboard support for free; losing the element would lose that silently.
+      if (groups[0].firstElementChild.tagName !== 'SUMMARY') return resolve('the head is not a summary');
+      resolve(true);
+    }, 2600));
+  })()`],
+
   ['no heading wraps past three lines', `(() => {
     const bad = [];
     for (const el of document.querySelectorAll('h1,h2,h3,h4')) {
