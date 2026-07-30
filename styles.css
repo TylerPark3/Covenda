@@ -2216,7 +2216,6 @@ body[data-audience="university"] #flowDemo { display: none; }
 .feature-band {
   position: relative;
   padding: clamp(66px, 8vw, 120px) var(--page-gutter);
-  border-top: 1px solid var(--line);
   background: #fff;
 }
 .feature-band-inner {
