@@ -2,6 +2,7 @@ import { put } from '@vercel/blob';
 import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import { Resend } from 'resend';
+import { checkLimit, requestSubject } from './limits.js';
 
 // Single source of truth for what the API accepts and the reference it mints.
 // The Supabase migration constraints MUST allow exactly these — a test
@@ -74,7 +75,10 @@ function sameOrigin(req) {
   }
 }
 
-function isRateLimited(req) {
+// Same-instance backstop, not the limiter. Serverless instances share no memory, so this resets
+// on every cold start and counts one instance out of however many are warm. Kept because it is
+// free and refuses a tight burst without a network round-trip; the durable check does the work.
+function burstLimited(req) {
   const now = Date.now();
   const rawAddress = text(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown', 200);
   const key = rawAddress.split(',')[0].trim() || 'unknown';
@@ -801,7 +805,19 @@ export default async function handler(req, res) {
     if (startedAt === null || Date.now() - startedAt < MIN_FORM_TIME_MS) {
       return res.status(429).json({ ok: false, error: 'Please wait a moment and try again.' });
     }
-    if (isRateLimited(req)) return res.status(429).json({ ok: false, error: 'Too many requests. Please try again later.' });
+    // Two layers: the in-process burst check above refuses a flood from one warm instance, and
+    // the durable counter below survives cold starts and holds across all of them. This intake
+    // writes a row and notifies an operator, so an unbounded loop costs storage and email.
+    if (burstLimited(req)) return res.status(429).json({ ok: false, error: 'Too many requests. Please try again later.' });
+    const durable = await checkLimit('submission', requestSubject(req));
+    if (!durable.allowed) {
+      const minutes = Math.max(1, Math.ceil((durable.resetIn || 3600) / 60));
+      return res.status(429).json({
+        ok: false,
+        error: `That is more submissions than we allow in an hour. Try again in about ${minutes} minute${minutes === 1 ? '' : 's'}.`,
+        retryAfterSeconds: durable.resetIn,
+      });
+    }
 
     const details = submissionDetails(body);
     const revisionOf = body.type === 'employer_intake' ? employerRevisionReference(body.revisionOf) : '';

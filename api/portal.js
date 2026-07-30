@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-import { recordError } from './limits.js';
+import { recordError, checkLimit, requestSubject } from './limits.js';
 import { scoreCandidate } from './scoring.js';
 import { requestAccommodation, saveTranscript } from './transcripts.js';
 import { reviewerLine } from './reviewers.js';
@@ -161,20 +161,35 @@ function bearerToken(req) {
   return /^Bearer\s+(.+)$/i.exec(cleanText(req.headers.authorization, 8_000))?.[1] || '';
 }
 
-function rateLimited(req, address) {
+// Same-instance backstop only. It cannot be the limiter: serverless instances share no memory,
+// so this resets on every cold start and counts one instance out of however many are warm. It
+// stays because it is free and it catches a tight burst before the durable check does a network
+// round-trip, but the durable check below is the one that actually holds.
+function burstLimited(req, address) {
   const now = Date.now();
-  const ip = cleanText(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown', 200).split(',')[0].trim();
-  const key = `${ip}:${address}`;
+  const key = `${requestSubject(req)}:${address}`;
   const recent = (emailBuckets.get(key) || []).filter(timestamp => now - timestamp < 10 * 60_000);
   recent.push(now);
   emailBuckets.set(key, recent);
   return recent.length > 4;
 }
 
+// A magic link is an email to an address the sender picks, so both sides are capped and either
+// can refuse. Capping only the caller lets a botnet fill one inbox; capping only the address
+// lets one host walk the alphabet.
+async function magicLinkLimited(req, email, env) {
+  if (burstLimited(req, email)) return true;
+  const [byCaller, byAddress] = await Promise.all([
+    checkLimit('magic-link-ip', requestSubject(req), { env }),
+    checkLimit('magic-link-address', email, { env }),
+  ]);
+  return !byCaller.allowed || !byAddress.allowed;
+}
+
 export async function requestMemberLink(address, req, { env = process.env, createSupabaseClient = createClient } = {}) {
   const email = cleanEmail(address);
   if (!email) throw new Error('Enter a valid email address.');
-  if (rateLimited(req, email)) throw new Error('Please wait before requesting another sign-in link.');
+  if (await magicLinkLimited(req, email, env)) throw new Error('Please wait before requesting another sign-in link.');
   const redirectTo = portalRedirectUrl(req);
 
   // Supabase's BUILT-IN mailer is the weak link: it is rate-limited to a handful of messages

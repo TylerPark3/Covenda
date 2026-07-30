@@ -32,11 +32,12 @@ test('student-first hero leads with optional joining, five work areas, and a scr
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(hero, /Let the company/);
   assert.equal((hero.match(/data-work-type=/g) || []).length, 5);
-  // The promise is that a direction is optional, carried by the open join mode and the line
-  // under the heading. The button label itself is free to change.
+  // The promise is that a direction is optional. The sentence that said so is deleted, so it is
+  // now carried structurally: a join mode that takes no work area, and an OR between that and
+  // the picker. Both have to survive, or joining silently starts requiring a choice.
+  // (The duplicated assertion here was my own leftover from an earlier edit.)
   assert.match(hero, /data-join-mode="open"/);
-  assert.match(hero, /No work area is required/);
-  assert.match(hero, /No work area is required/);
+  assert.match(hero, /class="student-choice-divider"/);
   assert.match(hero, /See how Covenda works/);
   assert.match(hero, /href="#how"/);
 });

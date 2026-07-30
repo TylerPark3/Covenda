@@ -25,7 +25,34 @@ export const LIMITS = {
   'upload-token': { windowSeconds: 3600, max: 40 },       // a long session might retake a lot
   'media-sign': { windowSeconds: 3600, max: 200 },        // one per play, generous
   'exercise-file': { windowSeconds: 3600, max: 60 },
+
+  // ── Pre-auth, and therefore reachable by anyone ─────────────────────────────────────
+  // Everything above is signed in and cost-driven. These four are open to the internet, and
+  // until now the only thing in front of them was an in-process Map, which is precisely the
+  // mechanism the header of this file describes as worse than nothing.
+  //
+  // A magic link is an email sent to an address the sender chooses, so it is limited twice: by
+  // who is asking, and by who is being written to. One key alone leaves a hole. Capping only
+  // the IP lets a botnet fill one inbox; capping only the address lets one host walk the
+  // alphabet. Both keys are checked and either can refuse.
+  'magic-link-ip': { windowSeconds: 600, max: 5 },
+  'magic-link-address': { windowSeconds: 3600, max: 6 },
+  // The public intake writes a row and notifies an operator. Two or three in an hour is a
+  // person changing their mind; thirty is a script.
+  'submission': { windowSeconds: 3600, max: 12 },
+  // Unauthenticated reads. Cheap individually, and a flood is still invocations somebody pays
+  // for, so the ceiling is high enough that browsing never reaches it.
+  'public-read': { windowSeconds: 3600, max: 240 },
 };
+
+// The caller-visible identity for a rate limit. Behind a proxy the client address is the FIRST
+// entry in x-forwarded-for; anything after it is the chain of proxies, and reading the last
+// entry limits Vercel rather than the caller.
+export function requestSubject(req) {
+  const header = req?.headers?.['x-forwarded-for'] || req?.socket?.remoteAddress || '';
+  const first = String(header).split(',')[0].trim();
+  return first ? first.slice(0, 120) : 'unknown';
+}
 
 function serviceClient(env = process.env, createImpl = createClient) {
   const url = env.SUPABASE_URL;
