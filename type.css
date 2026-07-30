@@ -38,33 +38,79 @@
   --font-body: "Geist", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* One scale. Sizes clamp; weight + line-height live on the utility classes below so every
-     text role maps to a named step instead of an ad-hoc size/weight per component. */
-  --step-display-xl: clamp(40px, 6.4vw, 76px);
-  --step-display-lg: clamp(32px, 4.4vw, 56px);
-  --step-h1: clamp(28px, 3.6vw, 40px);
-  --step-h2: clamp(22px, 2.8vw, 30px);
-  --step-h3: clamp(16px, 1.8vw, 20px);
-  --step-body-lg: 17px;
-  --step-body: 16px;
-  /* Supporting running text — card body, notes, field help. Previously these were
-     set ad-hoc at 12–13px, which read as cramped; --step-small is for micro-LABELS
-     (short, often uppercase), not for sentences anyone has to read. */
-  --step-body-sm: 15px;
-  --step-small: 12.5px;
-  --step-eyebrow: 11px;
+  /* ── FIVE SIZES. NOT SIX. ─────────────────────────────────────────────────────────────
+     The audit found 125 distinct font-size values across 1,430 declarations, of which 137
+     used a token. 78 of those values appeared exactly once: clamp(19px, 1.65vw, 25px),
+     clamp(9.5px, .82cqw, 11.5px), 43px, 1.14em. That is not a scale, it is a pile, and it
+     is the mechanical reason the site read as cluttered: nothing lined up because no two
+     components agreed on what "a card title" was.
+
+     Each token is permanently bound to ONE role. A section header is the same size on every
+     page, no exceptions. Line-height and letter-spacing are bound to the size rather than
+     set per component, because the previous 27 line-heights and 36 letter-spacings included
+     seven near-identical negative tracking values (-.008, -.012, -.015, -.018, -.033,
+     -.038, -.043) that no eye can tell apart.
+
+     Each size is a single clamp() so one role still scales from 375px to desktop. That is
+     five roles with a range each, not ten sizes. */
+  --text-display: clamp(38px, 6.2vw, 72px);   /* page headline, one per screen */
+  --text-heading: clamp(26px, 3.2vw, 40px);   /* section headers */
+  --text-subhead: clamp(17px, 1.5vw, 20px);   /* sub-sections, card titles */
+  --text-body: clamp(15px, 1.1vw, 16px);      /* all paragraph and list text */
+  --text-caption: 12.5px;                     /* labels, metadata, footnotes */
+
+  --lh-display: 1.06;
+  --lh-heading: 1.1;
+  --lh-subhead: 1.3;
+  --lh-body: 1.6;
+  --lh-caption: 1.45;
+
+  --ls-display: -.035em;
+  --ls-heading: -.025em;
+  --ls-subhead: -.015em;
+  --ls-body: 0;
+  --ls-caption: .01em;
+  /* Uppercase micro-labels need tracking opened up or they set solid. Same size token. */
+  --ls-caption-caps: .1em;
+
+  /* Not a sixth size. An optical correction: the display serif sets visually smaller than the
+     grotesque at the same point size, so a serif word inside a sans line needs nudging up to
+     match its neighbours. Relative on purpose, so it tracks whatever role it sits in. */
+  --optical-serif: 1.14em;
+
+  /* ── THREE WEIGHTS. ───────────────────────────────────────────────────────────────────
+     Was 19, of which 15 were one-offs (520, 560, 570, 580, 620, 640, 680, 720, 750, 760,
+     800). Weight is never a substitute for size: the role carries both. */
+  --weight-regular: 400;
+  --weight-medium: 550;
+  --weight-bold: 700;
+
+  /* ── MOTION. ─────────────────────────────────────────────────────────────────────────
+     One curve, two durations. No bounce, no spring. Scattered easings are a large part of
+     what reads as generated. */
+  --ease: cubic-bezier(.4, 0, .2, 1);
+  --dur-fast: 150ms;
+  --dur: 220ms;
+
+  /* Body text is held to a readable measure rather than the full column width. */
+  --measure: 68ch;
 }
 
-.t-display-xl { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-xl); line-height: 1.06; letter-spacing: -.038em; }
-.t-display-lg { font-family: var(--font-display); font-weight: 500; font-size: var(--step-display-lg); line-height: 1.06; letter-spacing: -.038em; }
-.t-h1 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-h1); line-height: 1.1; letter-spacing: -.02em; }
-.t-h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-h2); line-height: 1.15; letter-spacing: -.02em; }
-.t-h3 { font-family: var(--font-sans); font-weight: 650; font-size: var(--step-h3); line-height: 1.25; }
-.t-body-lg { font-family: var(--font-body); font-weight: 400; font-size: var(--step-body-lg); line-height: 1.6; }
-.t-body { font-family: var(--font-body); font-weight: 400; font-size: var(--step-body); line-height: 1.55; }
-.t-small { font-family: var(--font-body); font-weight: 500; font-size: var(--step-small); line-height: 1.5; }
-.t-eyebrow { font-family: var(--font-body); font-weight: 700; font-size: var(--step-eyebrow); letter-spacing: .12em; text-transform: uppercase; }
+/* Five roles, five classes. Each binds family, weight, size, measure and tracking together so
+   a role cannot be half-applied. The old set had ten classes pointing at ten --step-* tokens,
+   which is how a "card title" ended up meaning six different sizes. */
+.t-display { font-family: var(--font-display); font-weight: var(--weight-regular); font-size: var(--text-display); line-height: var(--lh-display); letter-spacing: var(--ls-display); }
+.t-heading { font-family: var(--font-display); font-weight: var(--weight-regular); font-size: var(--text-heading); line-height: var(--lh-heading); letter-spacing: var(--ls-heading); }
+.t-subhead { font-family: var(--font-sans); font-weight: var(--weight-medium); font-size: var(--text-subhead); line-height: var(--lh-subhead); letter-spacing: var(--ls-subhead); }
+.t-body { font-family: var(--font-body); font-weight: var(--weight-regular); font-size: var(--text-body); line-height: var(--lh-body); letter-spacing: var(--ls-body); }
+.t-caption { font-family: var(--font-body); font-weight: var(--weight-medium); font-size: var(--text-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption); }
+/* An uppercase caption is the same size role with tracking opened up, not a sixth size. */
+.t-eyebrow { font-family: var(--font-body); font-weight: var(--weight-bold); font-size: var(--text-caption); line-height: var(--lh-caption); letter-spacing: var(--ls-caption-caps); text-transform: uppercase; }
+/* Reserved for text read character by character: reference codes, timers, counts. */
 .t-mono { font-family: var(--font-mono); }
+
+/* Running text is held to a readable measure rather than the column it happens to sit in. */
+.t-body, .t-measure { max-width: var(--measure); }
 
 /* ---- §15 shared "elite" select (every dropdown, all surfaces) --------------------------
    One consistent, considered control instead of the browser default: custom gold chevron
@@ -84,10 +130,10 @@ select {
   padding-right: 40px !important;
   color: var(--ink, #0e1013);
   font: inherit;
-  font-size: 13px;
-  line-height: 1.3;
+  font-size: var(--text-body);
+  line-height: var(--lh-subhead);
   cursor: pointer;
-  transition: border-color .14s ease, box-shadow .14s ease;
+  transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 select:hover { border-color: var(--gold, #b47b20); }
 select:focus { outline: 0; border-color: var(--gold, #b47b20); box-shadow: 0 0 0 3px rgba(180,123,32,.12); }

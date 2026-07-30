@@ -30,7 +30,7 @@ test('HTML ids remain unique', () => {
 
 test('student-first hero leads with optional joining, five work areas, and a scroll continuation', () => {
   const hero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
-  assert.match(hero, /Do work that proves/);
+  assert.match(hero, /Let the company/);
   assert.equal((hero.match(/data-work-type=/g) || []).length, 5);
   // The promise is that a direction is optional, carried by the open join mode and the line
   // under the heading. The button label itself is free to change.
@@ -57,7 +57,7 @@ test('Covenda restores the skippable editorial intro and keeps it replayable', (
 
 test('the student entry separates signup without a choice from signup with a specific direction', () => {
   const studentHero = html.match(/<section class="hero hero-student"[\s\S]*?<\/section>/)?.[0] || '';
-  assert.match(studentHero, /Do work that proves/);
+  assert.match(studentHero, /Let the company/);
   assert.match(studentHero, /class="gold-button student-join-primary"[^>]*data-join-mode="open"/);
   // The picker is on industry verticals now, matching BATCH_CATALOG. It used to offer work
   // types — research, data, QA — a taxonomy nothing else on the platform spoke, so a
@@ -124,7 +124,18 @@ test('production home keeps the approved clean banner and talent-to-proof hero',
     assert.match(header, new RegExp(`>${label}<`));
   }
   assert.match(hero, /id="heroFieldCanvas"/);
-  assert.equal((hero.match(/class="home-path-index"/g) || []).length, 3);
+  // Three doors, not three steps. The 01/02/03 markers implied an order and a priority, and
+  // the approved treatment gives all three paths identical weight, so they are gone. The
+  // supporting line is the only text in each card.
+  assert.equal((hero.match(/class="home-path"/g) || []).length, 3);
+  assert.ok(!hero.includes('home-path-index'), 'the numbered markers are back');
+  assert.ok(!hero.includes('home-path-go'), 'a second affordance is back inside the card');
+  assert.match(hero, /Beyond the <span class="word-gold">Resume<\/span>/);
+  assert.ok(!/home-kicker|home-oneliner/.test(hero), 'the wordmark tagline is back');
+  for (const line of ['Prove your worth, get paid', 'Find the next unicorn talent',
+                      'For professors and clubs that are Covenda verified']) {
+    assert.ok(hero.includes(line), `the hero lost the approved line: ${line}`);
+  }
   assert.match(styles, /\.hero-home \{[\s\S]*linear-gradient\(145deg, #12120f/);
   assert.match(styles, /\.site-header \{[\s\S]*font-family: var\(--font-display\)/);
   assert.match(script, /function initHeroField\(target\)/);
@@ -927,12 +938,60 @@ test('the neutral palette carries no warm bias', () => {
 // The rule is SIZE, not importance. A serif at 15px reads as a mistake; the same face at 44px
 // reads as a decision.
 test('the serif is display-only and h3 downward stays in the grotesque', () => {
-  for (const [, weight] of typeCss.matchAll(/\.t-(?:display-\w+|h1|h2)\s*\{[^}]*font-weight:\s*(\d+)/g)) {
+  // The serif carries the two largest roles and nothing below them.
+  for (const role of ['display', 'heading']) {
+    const rule = typeCss.match(new RegExp(`\\.t-${role} \\{[^}]*\\}`))[0];
+    assert.match(rule, /font-family: var\(--font-display\)/, `.t-${role} lost the serif`);
     // A serif carries its own weight; 650 was calibrated for Geist and reads as a fake bold.
-    assert.ok(Number(weight) <= 600, `display serif set at ${weight}, too heavy`);
+    assert.match(rule, /font-weight: var\(--weight-regular\)/, `.t-${role} is set too heavy for a serif`);
   }
-  assert.match(typeCss, /\.t-h3 \{ font-family: var\(--font-sans\)/, 'h3 must not be the serif');
+  for (const role of ['subhead', 'caption']) {
+    const rule = typeCss.match(new RegExp(`\\.t-${role} \\{[^}]*\\}`))[0];
+    assert.ok(!rule.includes('--font-display'), `.t-${role} must not be the serif`);
+  }
   assert.match(typeCss, /\.t-body \{ font-family: var\(--font-body\)/);
+});
+
+// The whole point of the token system: five sizes and three weights, nothing else, anywhere.
+test('the type scale is exactly five sizes and three weights', async () => {
+  const sizes = new Set();
+  const weights = new Set();
+  for (const name of ['styles.css', 'portal.css', 'admin.css', 'type.css']) {
+    const css = (await readFile(new URL(`../${name}`, import.meta.url), 'utf8')).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const [, decl, val] of css.matchAll(/(font-size|font-weight|line-height|letter-spacing)\s*:\s*([^;}]+)/g)) {
+      const v = val.replace(/\s*!important\s*/, '').trim();
+      // `font-size: 0` and `line-height: 0` are layout devices for hiding glyphs and collapsing
+      // canvas wrappers, not typography, and are the only permitted raw values.
+      if (v === '0' || v === 'inherit') continue;
+      assert.ok(v.startsWith('var(--'), `${name} sets ${decl}: ${v} outside the token set`);
+      if (decl === 'font-size') sizes.add(v);
+      if (decl === 'font-weight') weights.add(v);
+    }
+  }
+  // --optical-serif is a relative nudge for a serif word inside a sans line, not a size role.
+  sizes.delete('var(--optical-serif)');
+  assert.deepEqual([...sizes].sort(), [
+    'var(--text-body)', 'var(--text-caption)', 'var(--text-display)',
+    'var(--text-heading)', 'var(--text-subhead)',
+  ], `${sizes.size} size tokens in use`);
+  assert.deepEqual([...weights].sort(), [
+    'var(--weight-bold)', 'var(--weight-medium)', 'var(--weight-regular)',
+  ], `${weights.size} weight tokens in use`);
+});
+
+// A size with no measure or tracking bound to it is a size that gets set ad hoc again later.
+test('every size role has a line-height and a tracking bound to it', () => {
+  for (const role of ['display', 'heading', 'subhead', 'body', 'caption']) {
+    for (const prop of ['text', 'lh', 'ls']) {
+      assert.match(typeCss, new RegExp(`--${prop}-${role}:\\s*[^;]+;`), `--${prop}-${role} is not defined`);
+    }
+  }
+  // One easing curve and two durations, so no component invents its own.
+  for (const token of ['--ease', '--dur-fast', '--dur']) {
+    assert.match(typeCss, new RegExp(`${token}:\\s*[^;]+;`), `${token} is not defined`);
+  }
+  assert.equal((typeCss.match(/cubic-bezier\(/g) || []).length, 1,
+    'more than one easing curve is defined');
 });
 
 // Every surface has to load the pair, or one page silently falls back to Helvetica.
@@ -948,14 +1007,16 @@ test('every page loads the same two families', async () => {
 // Display tracking is the header treatment on the sites referenced: large, tight, and set in
 // the body face rather than a contrasting display family.
 test('display headings are tracked tight, and label tracking stays positive', () => {
-  const displayRule = typeCss.match(/\.t-display-xl \{[^}]*\}/)[0];
-  const tracking = Number(displayRule.match(/letter-spacing:\s*(-?[\d.]+)em/)[1]);
-  assert.ok(tracking <= -0.03, `display tracking is ${tracking}em, too loose for a neo-grotesque`);
+  // The rule now names a token, so the value has to be resolved from :root to be checked.
+  const token = name => typeCss.match(new RegExp(`${name}:\\s*(-?[\\d.]+)em`))[1];
+  assert.match(typeCss.match(/\.t-display \{[^}]*\}/)[0], /letter-spacing: var\(--ls-display\)/);
+  assert.ok(Number(token('--ls-display')) <= -0.03,
+    `display tracking is ${token('--ls-display')}em, too loose for a neo-grotesque`);
 
   // Eyebrows and uppercase labels need POSITIVE tracking; tightening those collapses the
   // small-caps rhythm.
-  const eyebrow = typeCss.match(/\.t-eyebrow \{[^}]*\}/)[0];
-  assert.match(eyebrow, /letter-spacing:\s*\.\d+em/, 'eyebrow tracking must stay positive');
+  assert.match(typeCss.match(/\.t-eyebrow \{[^}]*\}/)[0], /letter-spacing: var\(--ls-caption-caps\)/);
+  assert.ok(Number(token('--ls-caption-caps')) > 0, 'uppercase label tracking must stay positive');
 });
 
 // Sections added since the reveal list was written were never in it, so they simply appeared.
@@ -1133,9 +1194,11 @@ test('a selected industry reads as gold, not as a hole in the rail', () => {
 test('the specialty prompt disappears once a choice is made', async () => {
   const app = await readFile(new URL('../app.js', import.meta.url), 'utf8');
   assert.ok(!/Selected: \$\{/.test(app), 'the redundant echo is back');
-  assert.match(app, /status\.hidden = Boolean\(state\.studentSpecialty\)/);
-  // The prompt still earns its place while there is something to prompt for.
-  assert.match(app, /Choose the specific work you want attached to your signup/);
+  // The status line is now always hidden and always empty: the heading asks the question and
+  // the buttons answer it, so there was nothing left for it to say.
+  assert.match(app, /status\.hidden = true;/);
+  // Deleted: it described the interface rather than adding anything to it.
+  assert.ok(!/Choose the specific work you want attached/.test(app), 'the redundant prompt is back');
 });
 
 // The roster builder was the longest thing on the page and the least likely to be used on a

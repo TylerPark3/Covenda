@@ -118,7 +118,7 @@ test('what a user types is never rendered at the label weight', () => {
   const css = readFileSync(new URL('../../portal.css', import.meta.url), 'utf8');
   const rule = css.match(/\.member-dialog label > input[^{]*\{[^}]*\}/);
   assert.ok(rule, 'dialog controls still inherit the label weight');
-  assert.match(rule[0], /font-weight: 400/);
+  assert.match(rule[0], /font-weight: var\(--weight-regular\)/);
   assert.match(rule[0], /textarea/);
 });
 
@@ -129,7 +129,7 @@ test('the referral draft is tall enough to show the sign-off', () => {
   const js = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
   assert.match(js, /area\.className='draft-area'/);
   const rule = css.match(/\.draft-area \{[^}]*\}/)[0];
-  assert.match(rule, /font-weight: 400/);
+  assert.match(rule, /font-weight: var\(--weight-regular\)/);
   const min = Number(rule.match(/min-height: (\d+)px/)[1]);
   assert.ok(min >= 260, `draft box is ${min}px, too short for the whole message`);
 });

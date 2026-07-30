@@ -124,7 +124,7 @@ test('the two columns collapse on small screens', () => {
 // is a different family and a different weight from one omitted selector.
 test('a marketing section heading gets both halves of the shared treatment', () => {
   const selectors = rule => (css.match(rule)[1]).split(',').map(s => s.trim()).filter(Boolean);
-  const size = selectors(/^(\.section-heading h2,[^{]*)\{[^}]*font-size: clamp\(38px/m);
+  const size = selectors(/^(\.section-heading h2,[^{]*)\{[^}]*font-size: var\(--text-heading\)/m);
   const face = selectors(/^(\.section-heading h2,[^{]*)\{\s*font-family: var\(--font-display\)/m);
 
   // The workspace headings are deliberately excluded from the face rule: they are dashboard

@@ -7,7 +7,7 @@
   <meta name="description" content="Covenda, the infrastructure that helps startups turn their unmet work into opportunities for exceptional emerging talent.">
   <!-- Company demo booking. Paste your Calendly event URL (must be an https calendly.com link). -->
   <meta name="covenda-calendly-url" content="https://calendly.com/thp2117-columbia/30min">
-  <title>Covenda · Real work becomes credible evidence</title>
+  <title>Covenda · Beyond the Resume</title>
   <!-- Google reads the search-result favicon from a crawlable raster at a multiple of 48px
        square. An SVG alone is supported but is the least reliably picked up, which is why the
        result was a generic globe. PNG first, SVG kept for crisp rendering where it is used. -->
@@ -20,14 +20,14 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Covenda">
   <meta property="og:url" content="https://covenda.app/">
-  <meta property="og:title" content="Covenda · Real work becomes credible evidence">
+  <meta property="og:title" content="Covenda · Beyond the Resume">
   <meta property="og:description" content="Students arrive with work they built, verified against a published bar, and defended on the record.">
   <meta property="og:image" content="https://covenda.app/assets/covenda-og.png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Covenda. Real work becomes credible evidence.">
+  <meta property="og:image:alt" content="Covenda. Beyond the Resume.">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Covenda · Real work becomes credible evidence">
+  <meta name="twitter:title" content="Covenda · Beyond the Resume">
   <meta name="twitter:description" content="Students arrive with work they built, verified against a published bar, and defended on the record.">
   <meta name="twitter:image" content="https://covenda.app/assets/covenda-og.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -125,26 +125,18 @@
       <section class="hero hero-home" aria-labelledby="homeHeroTitle">
         <canvas id="heroFieldCanvas" class="hero-field" aria-hidden="true"></canvas>
         <div class="hero-copy">
-          <p class="home-kicker">Covenda, the new way to find talent</p>
-          <h1 id="homeHeroTitle">Real work becomes<br>credible <span class="word-gold">proof</span>.</h1>
-          <p class="home-oneliner">Startups meet undergraduates through work you can audit.</p>
+          <h1 id="homeHeroTitle">Beyond the <span class="word-gold">Resume</span></h1>
 
         </div>
         <div class="home-paths" role="group" aria-label="Choose your path">
           <button type="button" class="home-path" data-audience-option="student" data-hero-entry>
-            <span class="home-path-index" aria-hidden="true">01</span>
-            <span class="home-path-copy"><strong>I’m a student</strong><small>Prove your skills on real, paid work</small></span>
-            <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+            <span class="home-path-copy"><strong>I’m a student</strong><small>Prove your worth, get paid</small></span>
           </button>
           <button type="button" class="home-path" data-audience-option="company">
-            <span class="home-path-index" aria-hidden="true">02</span>
-            <span class="home-path-copy"><strong>I’m a company</strong><small>Run a low-risk work-trial with vouched talent</small></span>
-            <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+            <span class="home-path-copy"><strong>I’m a company</strong><small>Find the next unicorn talent</small></span>
           </button>
           <button type="button" class="home-path" data-audience-option="university">
-            <span class="home-path-index" aria-hidden="true">03</span>
-            <span class="home-path-copy"><strong>I vouch for talent</strong><small>Professors, clubs &amp; industry pros</small></span>
-            <svg class="home-path-go" aria-hidden="true"><use href="#icon-arrow-right"/></svg>
+            <span class="home-path-copy"><strong>I vouch for talent</strong><small>For professors and clubs that are Covenda verified</small></span>
           </button>
         </div>
         <a class="scroll-cue" href="#bridgeStory"><span>See how Covenda works</span><svg><use href="#icon-arrow-down"/></svg></a>
@@ -460,7 +452,7 @@
 
       <section class="hero hero-student" id="studentPathfinder" aria-labelledby="studentHeroTitle">
         <div class="hero-copy">
-          <h1 id="studentHeroTitle">Do work that proves<br><span class="word-gold">what you can do.</span></h1>
+          <h1 id="studentHeroTitle">Let the company <span class="word-gold">find you</span></h1>
           <p>Join now without choosing a direction, or select the exact work you want before you sign up.</p>
         </div>
         <!-- F3: partner-referral landing. Populated + shown by app.js only when the
@@ -477,7 +469,7 @@
           <div class="student-open-join">
             <div>
               <p class="student-route-label">Join without choosing</p>
-              <h2>Join a talent batch now.</h2>
+              <h2>Join the Talent.</h2>
               <p>No work area is required. Add or change your direction whenever you are ready.</p>
             </div>
             <button class="gold-button student-join-primary" type="button" data-action="student-quick" data-join-mode="open">
@@ -502,7 +494,7 @@
               <button type="button" id="studentChoiceClear">Clear choice</button>
             </div>
             <div class="student-specialty-options" id="studentSpecialtyOptions" role="group" aria-label="Choose a specialty"></div>
-            <p class="student-specialty-status" id="studentSpecialtyStatus">Choose the specific work you want attached to your signup.</p>
+            <p class="student-specialty-status" id="studentSpecialtyStatus"></p>
             <button class="gold-button student-join-selected" id="studentJoinSelected" type="button" data-action="student-quick" data-join-mode="selected" disabled>
               <span id="studentJoinSelectedLabel">Choose a specialty to join</span><svg><use href="#icon-arrow-right"/></svg>
             </button>
@@ -847,7 +839,13 @@
            until now the page assumed the reader already knew what "it" was. No invented
            statistics here: the phenomenon is stated, and the cited research lives in the
            band below. -->
-      <p class="made-by">A professional launchpad, <span class="word-gold">built by students, for students.</span></p>
+      <div class="made-by">
+        <p class="made-by-copy">A professional launchpad, <span class="word-gold">built by students, for students.</span></p>
+        <!-- A real icosahedron: 12 vertices, 30 edges, orthographic three-quarter view.
+             Near edges are drawn brighter than far ones so the solid reads as solid. Static
+             and decorative, so it carries no accessible name and cannot shift layout. -->
+        <svg class="made-by-solid" viewBox="0 0 200 200" aria-hidden="true" focusable="false"><line x1='71.4' y1='27.6' x2='155.1' y2='32' class='e-near'/><line x1='71.4' y1='27.6' x2='136.2' y2='81.2' class='e-near'/><line x1='71.4' y1='27.6' x2='15' y2='81.2' class='e-near'/><line x1='71.4' y1='27.6' x2='49.6' y2='111.7' class='e-near'/><line x1='71.4' y1='27.6' x2='80.2' y2='32' class='e-far'/><line x1='155.1' y1='32' x2='136.2' y2='81.2' class='e-near'/><line x1='155.1' y1='32' x2='150.4' y2='88.3' class='e-far'/><line x1='155.1' y1='32' x2='80.2' y2='32' class='e-far'/><line x1='155.1' y1='32' x2='185' y2='118.8' class='e-near'/><line x1='136.2' y1='81.2' x2='119.8' y2='168' class='e-near'/><line x1='136.2' y1='81.2' x2='49.6' y2='111.7' class='e-near'/><line x1='136.2' y1='81.2' x2='185' y2='118.8' class='e-near'/><line x1='150.4' y1='88.3' x2='80.2' y2='32' class='e-far'/><line x1='150.4' y1='88.3' x2='185' y2='118.8' class='e-far'/><line x1='150.4' y1='88.3' x2='128.6' y2='172.4' class='e-far'/><line x1='150.4' y1='88.3' x2='63.8' y2='118.8' class='e-far'/><line x1='119.8' y1='168' x2='49.6' y2='111.7' class='e-near'/><line x1='119.8' y1='168' x2='185' y2='118.8' class='e-near'/><line x1='119.8' y1='168' x2='128.6' y2='172.4' class='e-near'/><line x1='119.8' y1='168' x2='44.9' y2='168' class='e-near'/><line x1='15' y1='81.2' x2='49.6' y2='111.7' class='e-near'/><line x1='15' y1='81.2' x2='80.2' y2='32' class='e-far'/><line x1='15' y1='81.2' x2='44.9' y2='168' class='e-far'/><line x1='15' y1='81.2' x2='63.8' y2='118.8' class='e-far'/><line x1='49.6' y1='111.7' x2='44.9' y2='168' class='e-near'/><line x1='80.2' y1='32' x2='63.8' y2='118.8' class='e-far'/><line x1='185' y1='118.8' x2='128.6' y2='172.4' class='e-far'/><line x1='128.6' y1='172.4' x2='44.9' y2='168' class='e-far'/><line x1='128.6' y1='172.4' x2='63.8' y2='118.8' class='e-far'/><line x1='44.9' y1='168' x2='63.8' y2='118.8' class='e-far'/><circle cx='71.4' cy='27.6' r='2.2' class='v-near'/><circle cx='155.1' cy='32' r='2.2' class='v-near'/><circle cx='136.2' cy='81.2' r='2.2' class='v-near'/><circle cx='150.4' cy='88.3' r='1.6' class='v-far'/><circle cx='119.8' cy='168' r='2.2' class='v-near'/><circle cx='15' cy='81.2' r='1.6' class='v-far'/><circle cx='49.6' cy='111.7' r='2.2' class='v-near'/><circle cx='80.2' cy='32' r='1.6' class='v-far'/><circle cx='185' cy='118.8' r='2.2' class='v-near'/><circle cx='128.6' cy='172.4' r='1.6' class='v-far'/><circle cx='44.9' cy='168' r='1.6' class='v-far'/><circle cx='63.8' cy='118.8' r='1.6' class='v-far'/></svg>
+      </div>
 
       <section class="slop-section" id="theProblem" aria-labelledby="slopTitle">
         <div class="slop-head">
@@ -1074,7 +1072,7 @@
           <div class="story-layout">
             <ol class="proof-rail">
               <li><span>1</span><svg><use href="#icon-route"/></svg><h3>Choose a work path</h3><p>Tell us what you want to build and the kinds of projects that fit.</p></li>
-              <li><span>2</span><svg><use href="#icon-file"/></svg><h3>Clear the bar, then run a trial</h3><p>Vetting is published, so you know what it takes. Then a paid trial with a named reviewer.</p></li>
+              <li><span>2</span><svg><use href="#icon-file"/></svg><h3>Clear the bar, then run a trial</h3><p>Apply for a batch and join the most talented students working for startups.</p></li>
               <li><span>3</span><svg><use href="#icon-shield"/></svg><h3>Keep the proof</h3><p>Accepted work becomes a capability record, not a vague résumé bullet.</p></li>
             </ol>
             <article class="work-record glass-panel">

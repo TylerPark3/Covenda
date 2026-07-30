@@ -1,0 +1,293 @@
+COVENDA TYPE + DENSITY AUDIT — 2026-07-29
+
+
+### font-size — 125 distinct values
+  14px                                       381 uses   e.g. styles.css:.site-nav a | styles.css:.audience-switch button
+  12.5px                                     255 uses   e.g. styles.css:.member-login-link | styles.css:.student-journey button > i
+  11px                                       149 uses   e.g. styles.css:.member-nav-avatar | styles.css:.student-journey small
+  var(--step-body-sm)                        128 uses   e.g. styles.css:/* Optional one-minute student video intro */ .field-help | styles.css:.video-rec-status
+  14.5px                                     114 uses   e.g. styles.css:.batch-desc | styles.css:.quick-done-head p
+  15px                                        76 uses   e.g. styles.css:.intro-skip | styles.css:.work-option
+  16px                                        45 uses   e.g. styles.css:body | styles.css:.intro-enter
+  17px                                        29 uses   e.g. styles.css:.section-heading p, .why-copy p | styles.css:.final-cta p
+  15.5px                                      24 uses   e.g. styles.css:.value-line | styles.css:.work-detail-desc
+  21px                                        20 uses   e.g. styles.css:.rec-title | styles.css:.profile-summary h2
+  20px                                        20 uses   e.g. styles.css:.quick-done-head h3 | styles.css:.work-record h3
+  18px                                        19 uses   e.g. styles.css:.compare-table td | styles.css:.club-rung strong
+  22px                                        12 uses   e.g. styles.css:.receipt-card h2 | styles.css:.cohort-brand
+  24px                                        11 uses   e.g. styles.css:.review-intro h3 | styles.css:.intro-brand
+  19px                                         9 uses   e.g. styles.css:.batch-title | styles.css:.brand
+  30px                                         8 uses   e.g. styles.css:.form-rail-promise h2 | styles.css:.fit-score-value
+  26px                                         6 uses   e.g. styles.css:.brand | styles.css:.rec-close
+  var(--step-body)                             6 uses   e.g. styles.css:.bd-lede | styles.css:.vdemo-need
+  16.5px                                       5 uses   e.g. styles.css:.bd-reqs strong, .bd-steps strong | styles.css:.ref-timeline strong
+  28px                                         4 uses   e.g. styles.css:.dialog-header h2 | styles.css:.spotlight-avatar
+  0                                            4 uses   e.g. styles.css:.receipt-recovery > summary > span:last-child | portal.css:.member-nav .portal-brand
+  var(--step-small)                            3 uses   e.g. styles.css:.batch-status | styles.css:.cohort-subhead
+  clamp(34px, 4vw, 58px)                       3 uses   e.g. styles.css:.compare-head h2 | styles.css:.contrast-head h2
+  clamp(38px, 4vw, 60px)                       2 uses   e.g. styles.css:.section-heading h2, .why-copy h2, .final-cta h2, .about-lede h2, .recruiter-lede h2, .workspace-ti
+  23px                                         2 uses   e.g. styles.css:.review-card h2 | styles.css:.form-rail-promise h2
+  clamp(20px, 2vw, 26px)                       2 uses   e.g. styles.css:.cohort-head h2 | styles.css:.proof-record-head h2
+  clamp(8px, .8cqw, 11px)                      2 uses   e.g. styles.css:.ct-k | styles.css:.ct-chip
+  29px                                         2 uses   e.g. styles.css:.site-header .brand | portal.css:.portfolio-avatar
+  var(--step-body-lg)                          2 uses   e.g. styles.css:.roster-open-cap | type.css:.t-body-lg
+  27px                                         2 uses   e.g. portal.css:.metric strong | portal.css:.member-dialog header h2
+  clamp(22px, 2vw, 31px)                       1 uses   e.g. styles.css:.intro-brand
+  clamp(64px, 8.4vw, 132px)                    1 uses   e.g. styles.css:.intro-statement
+  clamp(56px, 6.4vw, 98px)                     1 uses   e.g. styles.css:.hero h1
+  clamp(16px, 1.35vw, 21px)                    1 uses   e.g. styles.css:.hero-copy p
+  clamp(22px, 2.4vw, 30px)                     1 uses   e.g. styles.css:.company-job h2
+  clamp(21px, 2.3vw, 27px)                     1 uses   e.g. styles.css:.value-metric
+  clamp(90px, 22vw, 170px)                     1 uses   e.g. styles.css:.rec-count
+  clamp(38px, 4vw, 58px)                       1 uses   e.g. styles.css:.workspace-title h1
+  12.5px!important                             1 uses   e.g. styles.css:.check-grid label, .consent-row
+  clamp(50px, 12vw, 74px)                      1 uses   e.g. styles.css:.hero h1
+  clamp(51px, 15vw, 70px)                      1 uses   e.g. styles.css:.intro-statement
+  clamp(34px, 4vw, 56px)                       1 uses   e.g. styles.css:.feature-copy h2
+  clamp(17px, 1.5vw, 20px)                     1 uses   e.g. styles.css:.compare-lede
+  clamp(40px, 5vw, 68px)                       1 uses   e.g. styles.css:.company-product-demo-head h2
+  clamp(25px, 2.4vw, 34px)                     1 uses   e.g. styles.css:.company-demo-steps h3
+  clamp(30px, 5.5vw, 50px)                     1 uses   e.g. styles.css:.cohort-hero h1
+  clamp(15px, 1.6vw, 17px)                     1 uses   e.g. styles.css:.cohort-hero-sub
+  clamp(30px, 4.5vw, 42px)                     1 uses   e.g. styles.css:.cohort-stat-count
+  clamp(15px, 1.7vw, 18px)                     1 uses   e.g. styles.css:.contrast-head > p
+  clamp(18px, 2vw, 22px)                       1 uses   e.g. styles.css:.cohort-breakdown h2
+  34px                                         1 uses   e.g. styles.css:.cohort-empty-mark
+  clamp(20px, 2.4vw, 26px)                     1 uses   e.g. styles.css:.cohort-empty h2
+  clamp(18px, 2.2vw, 24px)                     1 uses   e.g. styles.css:.narrow-trail
+  clamp(38px, 4.4vw, 54px)                     1 uses   e.g. styles.css:.stat-list b
+  clamp(19px, 2.2vw, 25px)                     1 uses   e.g. styles.css:.founder-note p
+  clamp(32px, 3.2vw, 46px)                     1 uses   e.g. styles.css:.match-flow .section-heading h2
+  clamp(9px, .85cqw, 12px)                     1 uses   e.g. styles.css:.ct-eyebrow
+  clamp(26px, 3.3cqw, 54px)                    1 uses   e.g. styles.css:.ct-title
+  clamp(13px, 1.35cqw, 19px)                   1 uses   e.g. styles.css:.ct-t
+  clamp(10px, .98cqw, 13.5px)                  1 uses   e.g. styles.css:.ct-d
+  clamp(34px, 3.6vw, 54px)                     1 uses   e.g. styles.css:.gold-header h2
+  43px                                         1 uses   e.g. styles.css:.bf-n
+  clamp(21px, 2vw, 28px)                       1 uses   e.g. styles.css:.bf-label
+  clamp(26px, 3.4vw, 40px)                     1 uses   e.g. styles.css:.bd-head h3
+  clamp(30px, 3.9vw, 52px)                     1 uses   e.g. styles.css:.club-head h2
+  clamp(16.5px, 1.4vw, 19px)                   1 uses   e.g. styles.css:.club-lede
+  clamp(21px, 2.4vw, 27px)                     1 uses   e.g. styles.css:.ib-result-head h3
+  clamp(20px, 2.4vw, 27px)                     1 uses   e.g. styles.css:.vdemo-company
+  25px                                         1 uses   e.g. styles.css:.site-header .brand
+  clamp(34px, 6vw, 82px)                       1 uses   e.g. styles.css:.audience-transition span
+  clamp(26px, 3vw, 40px)                       1 uses   e.g. styles.css:.student-open-join h2
+  clamp(25px, 3vw, 38px)                       1 uses   e.g. styles.css:.student-vertical-picker legend span
+  clamp(19px, 1.65vw, 25px)                    1 uses   e.g. styles.css:.student-vertical > strong
+  clamp(20px, 2vw, 27px)                       1 uses   e.g. styles.css:.student-specialty-heading strong
+  clamp(46px, 13vw, 68px)                      1 uses   e.g. styles.css:.hero-student h1
+  clamp(15px, 1.25vw, 18px)                    1 uses   e.g. styles.css:.exchange-head > p
+  clamp(19px, 1.55vw, 25px)                    1 uses   e.g. styles.css:.exchange-source h3
+  clamp(25px, 2.15vw, 34px)                    1 uses   e.g. styles.css:.exchange-step-copy h3
+  clamp(16px, 1.4vw, 20px)                     1 uses   e.g. styles.css:.exchange-output strong
+  clamp(43px, 13vw, 58px)                      1 uses   e.g. styles.css:.exchange-head h2
+  clamp(9.5px, .85cqw, 11.5px)                 1 uses   e.g. styles.css:.ct-k
+  clamp(15px, 1.5cqw, 21px)                    1 uses   e.g. styles.css:.ct-t
+  clamp(12px, 1.05cqw, 14.5px)                 1 uses   e.g. styles.css:.ct-d
+  clamp(9.5px, .82cqw, 11.5px)                 1 uses   e.g. styles.css:.ct-chip
+  clamp(17px, 1.7vw, 22px)                     1 uses   e.g. styles.css:.hero-home .home-oneliner
+  clamp(20px, 1.8vw, 24px)                     1 uses   e.g. styles.css:.hero-home .home-path strong
+  clamp(19px, 2.1vw, 25px)                     1 uses   e.g. styles.css:.batch-group-head h3
+  clamp(18px, 1.5vw, 22px)                     1 uses   e.g. styles.css:.batch-card.is-pickable .batch-title
+  clamp(19px, 2vw, 24px)                       1 uses   e.g. styles.css:.tb-side h3
+  clamp(26px, 2.8vw, 38px)                     1 uses   e.g. styles.css:.batch-browse-head h3
+  clamp(34px, 4.4vw, 62px)                     1 uses   e.g. styles.css:.slop-head h2
+  clamp(20px, 2vw, 25px)                       1 uses   e.g. styles.css:.slop-card h3
+  clamp(17px, 1.5vw, 21px)                     1 uses   e.g. styles.css:.fd-stage h3, .fd-stage strong
+  clamp(14px, 1.05vw, 15.5px)                  1 uses   e.g. styles.css:.fd-stage p, .fd-stage li
+  clamp(30px, 3.4vw, 46px)                     1 uses   e.g. styles.css:.flow-demo-head h2
+  clamp(19px, 2vw, 26px)                       1 uses   e.g. styles.css:/* Who built this. It is not a footnote — a platform for students made BY students is the reason to
+  1.14em                                       1 uses   e.g. styles.css:/* The gold half is the display serif rather than the sans around it, which is the same pairing the
+  clamp(62px, 6.8vw, 96px)                     1 uses   e.g. styles.css:.proof-lens-heading h2
+  clamp(13px, 1.25vw, 17px)                    1 uses   e.g. styles.css:.proof-lens-heading > p
+  clamp(15px, 1.4vw, 20px)                     1 uses   e.g. styles.css:.proof-market h3
+  clamp(12px, 1.15vw, 15px)                    1 uses   e.g. styles.css:.proof-market-summary
+  clamp(32px, 3.8vw, 56px)                     1 uses   e.g. styles.css:.proof-product > header h3
+  clamp(14px, 1.25vw, 17px)                    1 uses   e.g. styles.css:.proof-product-step > h4
+  clamp(48px, 13vw, 66px)                      1 uses   e.g. styles.css:.proof-lens-heading h2
+  clamp(38px,5vw,56px)                         1 uses   e.g. portal.css:.auth-panel h2
+  clamp(36px,4.1vw,58px)                       1 uses   e.g. portal.css:.welcome-row h1,.page-heading h1
+  42px                                         1 uses   e.g. portal.css:.portfolio-avatar
+  clamp(38px,5vw,62px)                         1 uses   e.g. portal.css:.coming-soon h1
+  40px                                         1 uses   e.g. portal.css:.auth-panel h2
+  56px                                         1 uses   e.g. portal.css:.wallet-balance-card strong
+  clamp(34px,6vw,60px)                         1 uses   e.g. portal.css:.onboard-headline
+  clamp(30px,9vw,40px)                         1 uses   e.g. portal.css:.onboard-headline
+  var(--step-body-sm) !important               1 uses   e.g. portal.css:.ra-meta
+  clamp(80px, 14vw, 160px)                     1 uses   e.g. portal.css:.rec-count
+  32px                                         1 uses   e.g. portal.css:.sbd-head strong
+  clamp(38px, 6vw, 54px)                       1 uses   e.g. admin.css:.admin-login h1
+  clamp(34px, 4vw, 48px)                       1 uses   e.g. admin.css:.admin-queue h1
+  12.5px !important                            1 uses   e.g. admin.css:.people-dupe
+  var(--step-display-xl)                       1 uses   e.g. type.css:.t-display-xl
+  var(--step-display-lg)                       1 uses   e.g. type.css:.t-display-lg
+  var(--step-h1)                               1 uses   e.g. type.css:.t-h1
+  var(--step-h2)                               1 uses   e.g. type.css:.t-h2
+  var(--step-h3)                               1 uses   e.g. type.css:.t-h3
+  var(--step-eyebrow)                          1 uses   e.g. type.css:.t-eyebrow
+  13px                                         1 uses   e.g. type.css:/* ---- §15 shared "elite" select (every dropdown, all surfaces) -------------------------- One consi
+
+### font-weight — 19 distinct values
+  700                                        202 uses   e.g. styles.css:.member-nav-avatar | styles.css:.student-journey button > i
+  650                                        194 uses   e.g. styles.css:.member-login-link | styles.css:.brand
+  600                                        100 uses   e.g. styles.css:.site-nav a | styles.css:.work-option
+  500                                         65 uses   e.g. styles.css:.intro-brand | styles.css:.intro-statement
+  620                                         11 uses   e.g. styles.css:.intro-enter | styles.css:.workspace-link, .back-link
+  640                                         11 uses   e.g. styles.css:.form-dialog.is-guided .dialog-header h2 | styles.css:.flow-demo-kicker
+  400                                         10 uses   e.g. styles.css:.club-more summary span | portal.css:/* A label is bold; what somebody types into it is not. `font:
+  680                                          9 uses   e.g. styles.css:.value-metric | styles.css:.delivery-details dt
+  560                                          8 uses   e.g. styles.css:.capability-list b, .evidence-capabilities b | styles.css:.fit-table strong
+  550                                          6 uses   e.g. styles.css:.industry-card | styles.css:.narrow-option
+  720                                          5 uses   e.g. styles.css:.section-heading h2, .why-copy h2, .final-cta h2, .about-lede h2, .recruiter-lede h2, .workspace-ti
+  570                                          4 uses   e.g. styles.css:.scroll-cue | styles.css:.dashboard-paths > div
+  450                                          4 uses   e.g. styles.css:.form-dialog.is-guided .form-progress span > small | styles.css:input, textarea, select
+  750                                          4 uses   e.g. styles.css:.student-route-label | styles.css:.student-choice-divider
+  760                                          3 uses   e.g. styles.css:.exchange-source p, .exchange-output p | styles.css:.exchange-workbench-top > span
+  800                                          2 uses   e.g. portal.css:.intake-consent input:checked::after | admin.css:.match-score
+  520                                          1 uses   e.g. styles.css:.intro-skip
+  580                                          1 uses   e.g. styles.css:.audience-switch button
+  520!important                                1 uses   e.g. styles.css:.check-grid label, .consent-row
+
+### font-family — 9 distinct values
+  var(--font-sans)                            54 uses   e.g. styles.css:.brand | styles.css:.form-dialog.is-guided .form-progress span > i
+  var(--font-display)                         44 uses   e.g. styles.css:.intro-brand | styles.css:.intro-statement
+  var(--font-body)                            19 uses   e.g. styles.css:body | styles.css:/* ---- Type system, stated once ------------------------------------------------
+  inherit                                     17 uses   e.g. styles.css:.narrow-option | styles.css:.narrow-reset
+  var(--font-mono)                            13 uses   e.g. styles.css:.video-rec-count | styles.css:.rec-timer
+  var(--font-display,inherit)                  1 uses   e.g. portal.css:.pow-score
+  var(--font-display, Georgia, serif)          1 uses   e.g. portal.css:.rec-count
+  var(--font-mono, monospace)                  1 uses   e.g. portal.css:.rec-timer
+  var(--font-mono,ui-monospace,monospace)      1 uses   e.g. admin.css:.match-why
+
+### line-height — 27 distinct values
+  1.6                                        112 uses   e.g. styles.css:.company-job > p | styles.css:/* Optional one-minute student video intro */ .field-help
+  1.5                                        102 uses   e.g. styles.css:body | styles.css:.composer-hint
+  1.55                                        74 uses   e.g. styles.css:.delivery-details > p | styles.css:.industry-specializations
+  1.45                                        29 uses   e.g. styles.css:.company-composer textarea | styles.css:.receipt-progress span
+  1.06                                        26 uses   e.g. styles.css:.intro-statement | styles.css:.flow-demo-head h2
+  1                                           22 uses   e.g. styles.css:.rec-close | styles.css:.cohort-stat-count
+  1.65                                        17 uses   e.g. styles.css:.mf-foot | styles.css:.bd-lede
+  1.4                                         13 uses   e.g. styles.css:.receipt-recovery > summary small | styles.css:input, textarea, select
+  1.7                                          9 uses   e.g. styles.css:.section-heading p, .why-copy p | styles.css:.final-cta p
+  1.35                                         9 uses   e.g. styles.css:.packet-readiness li strong | styles.css:.proof-market h3
+  1.3                                          8 uses   e.g. styles.css:.chip | styles.css:.cohort-rung-label
+  1.08                                         5 uses   e.g. styles.css:.company-job h2 | styles.css:.form-rail-promise h2
+  1.25                                         4 uses   e.g. styles.css:.batch-title | styles.css:.role-title
+  1.62                                         3 uses   e.g. styles.css:.quick-join-dialog > form > .dialog-copy | styles.css:.vdemo-beats p
+  1.15                                         2 uses   e.g. styles.css:.review-card h2 | type.css:.t-h2
+  0                                            2 uses   e.g. styles.css:.credential-preview | styles.css:.referral-qr-code
+  1.2                                          2 uses   e.g. styles.css:.cred-ladder b | styles.css:.tb-side h3
+  1.28                                         1 uses   e.g. styles.css:.work-option
+  1.03                                         1 uses   e.g. styles.css:.section-heading h2, .why-copy h2, .final-cta h2, .about-lede h2, .recruiter-lede h2, .workspace-ti
+  .94                                          1 uses   e.g. styles.css:.intro-statement
+  1.05                                         1 uses   e.g. styles.css:.cohort-hero h1
+  1.04                                         1 uses   e.g. styles.css:.match-flow .section-heading h2
+  1.58                                         1 uses   e.g. styles.css:.ct-d
+  1.16                                         1 uses   e.g. styles.css:.batch-card.is-pickable .batch-title
+  1.22                                         1 uses   e.g. styles.css:.slop-card h3
+  1.68                                         1 uses   e.g. styles.css:/* Held near 60 characters so the three paragraphs read as an argument, not a block. */ .about-body
+  1.1                                          1 uses   e.g. type.css:.t-h1
+
+### letter-spacing — 36 distinct values
+  -.02em                                      63 uses   e.g. styles.css:.workspace-header > strong | styles.css:.activity-list h3, .company-status-list h3
+  -.045em                                     40 uses   e.g. styles.css:.intro-brand | styles.css:.intro-statement
+  -.038em                                     23 uses   e.g. styles.css:.company-job h2 | styles.css:.company-demo-steps h3
+  .06em                                       22 uses   e.g. styles.css:.company-job-eyebrow | styles.css:.work-record small, .evidence-panel > small, .review-card > small
+  -.01em                                      21 uses   e.g. styles.css:.gold-button, .outline-button, .locked-button | styles.css:.value-metric
+  .08em                                       20 uses   e.g. styles.css:.fd-field-label | styles.css:.trace-node small
+  .12em                                       17 uses   e.g. styles.css:.batch-function | styles.css:.rec-kicker
+  .07em                                       16 uses   e.g. styles.css:.profile-summary small | styles.css:.dialog-header small
+  -.015em                                     15 uses   e.g. styles.css:.site-nav a | styles.css:.ct-us
+  .04em                                       12 uses   e.g. styles.css:.sift-hint | styles.css:.video-duration, .video-host
+  -.033em                                     12 uses   e.g. styles.css:.proof-rail h3, .company-rail h3 | styles.css:.work-record h3
+  .1em                                        11 uses   e.g. styles.css:.form-rail-brand | styles.css:.work-detail-label
+  .05em                                       11 uses   e.g. portal.css:.packet-dl dt | portal.css:.batch-detail-block h4
+  -.043em                                      9 uses   e.g. styles.css:.profile-summary h2 | styles.css:.submission-empty h2
+  .09em                                        9 uses   e.g. styles.css:.exchange-source p | styles.css:.batch-card .batch-tier
+  .02em                                        8 uses   e.g. styles.css:.cred-tag | styles.css:.cand-filter > span
+  .14em                                        7 uses   e.g. styles.css:.school-strip-label | styles.css:.flow-demo-kicker
+  .03em                                        5 uses   e.g. styles.css:.site-footer | styles.css:.referrer-stat span
+  0                                            5 uses   e.g. styles.css:.site-nav a | styles.css:.student-vertical-picker legend small
+  .01em                                        4 uses   e.g. styles.css:.composer-fit | styles.css:.mf-sub
+  .16em                                        4 uses   e.g. styles.css:.compare-kicker | styles.css:/* ---- Home hero: brand statement + path chooser ---- */ .home-kicker
+  -.012em                                      3 uses   e.g. styles.css:.form-dialog.is-guided .form-progress span > strong | styles.css:.compare-table tbody th
+  -.008em                                      3 uses   e.g. styles.css:.form-dialog.is-guided .field-grid label, .form-dialog.is-guided .form-step > label | styles.css:.c
+  -.018em                                      2 uses   e.g. styles.css:.work-option | styles.css:.club-rung strong
+  .075em                                       2 uses   e.g. styles.css:.receipt-card small | styles.css:.delivery-details small
+  .065em                                       2 uses   e.g. styles.css:.packet-preview-label | styles.css:.packet-readiness > header small
+  .13em                                        2 uses   e.g. styles.css:.ico-hint | styles.css:.mf-label
+  .15em                                        2 uses   e.g. styles.css:.ct-k | styles.css:.student-specialty-heading p
+  .18em                                        2 uses   e.g. styles.css:.student-route-label | styles.css:.student-choice-divider
+  .11em                                        2 uses   e.g. styles.css:.proof-lens-heading > span | portal.css:.cred-next-cap
+  -.030em                                      1 uses   e.g. styles.css:.hero-copy p
+  -.03em                                       1 uses   e.g. styles.css:.form-rail-promise h2
+  -.025em                                      1 uses   e.g. styles.css:.form-dialog.is-guided .dialog-header h2
+  .22em                                        1 uses   e.g. styles.css:.ct-eyebrow
+  .2em                                         1 uses   e.g. styles.css:/* No figure inside — the tile is the gold field plus one centred label. */ .gold-tile-kicker
+  .3em                                         1 uses   e.g. admin.css:.admin-login #adminCodeForm input
+
+==========================================
+
+SECTION                         WORDS  HEADINGS>6w  BODY>40w  BODY>2sent
+hero                               56                                    
+bridgeStory                       182           1                       1
+compare-section                   109                                    
+workExchangeStory                 126           1                        
+studentPathfinder                 120           1                        
+hero                              230                                    
+forRecruiters                     163           1                        
+companyProductDemo                 86           1                       1
+hero                              392                                    
+theProblem                        197           1                       1
+whyNow                            383           1                        
+studentOfWeek                       9                                    
+how                               424           2                        
+whyCovenda                         47           1                        
+value-band                         55                                    
+why                               257           2                        
+batches                           151           1                       3
+verticalDemo                       29                                    
+ref-result                        140                                    
+clubRegister                      136           1                        
+referrerDashboard                  31                                    
+about                             178                                   1
+final-cta                         111           3                       1
+workspace-view                    429           3                        
+workspace-view                    170                                    
+workspace-view                     98                                    
+form-step                          54                                    
+form-step                         142                                    
+form-step                         209                                    
+form-step                          36                                    
+form-step                          77                                    
+form-step                          74                                    
+form-step                         151                                    
+form-step                          88                                    
+
+TOTAL WORDS in index.html sections: 5140
+sections: 34
+
+--- HEADINGS OVER 6 WORDS (20) ---
+  [bridgeStory] (8w) A strong trial can lead to a role.
+  [workExchangeStory] (8w) Talent vouched for by people who know them
+  [studentPathfinder] (8w) Do work that proves what you can do.
+  [forRecruiters] (9w) Your shortlist has to survive the hiring manager .
+  [companyProductDemo] (8w) Two ways to get the help you need.
+  [theProblem] (9w) Internship postings now get hundreds of applications nobody wrote.
+  [whyNow] (10w) The talent is available. Nothing pairs it to the work.
+  [how] (7w) Clear the bar, then run a trial
+  [how] (7w) Vetted talent, ready for a paid trial.
+  [whyCovenda] (7w) The referral you already trust, made repeatable.
+  [why] (9w) The best first project is useful without being risky.
+  [why] (8w) A pipeline of proof, not another job board.
+  [batches] (8w) Trials are the work. Batches are the shortlist.
+  [clubRegister] (7w) Registering takes a minute. Verification is earned.
+  [final-cta] (9w) Start with the work you want to prove .
+  [final-cta] (7w) Bring us the work that keeps slipping.
+  [final-cta] (7w) Vouch for the students you believe in.
+  [workspace-view] (7w) Build proof one project at a time.
+  [workspace-view] (8w) Turn one delayed problem into a bounded project.
+  [workspace-view] (8w) What we check before a project can launch
+
+--- BODY BLOCKS OVER 40 WORDS (0) ---

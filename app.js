@@ -424,8 +424,8 @@ function showToast(message) {
 }
 
 const audienceTitles = {
-  home: 'Covenda · Real work becomes credible proof',
-  student: 'Covenda · Real work becomes credible evidence',
+  home: 'Covenda · Beyond the Resume',
+  student: 'Covenda · Beyond the Resume',
   company: 'Covenda for startups · Run a work-trial with vouched talent',
   university: 'Covenda · Vouch for the students you believe in',
 };
@@ -575,10 +575,10 @@ function renderStudentSpecialties(workType) {
     button.addEventListener('click', () => selectStudentSpecialty(label));
     host.append(button);
   });
-  status.hidden = Boolean(state.studentSpecialty);
-  status.textContent = state.studentSpecialty
-    ? ''
-    : 'Choose the specific work you want attached to your signup.';
+  // No prompt text. The heading asks the question and the buttons are the answer, so a
+  // sentence telling the reader to press one of them was explaining the interface to itself.
+  status.hidden = true;
+  status.textContent = '';
   updateStudentJoinChoice();
 }
 
