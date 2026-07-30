@@ -123,7 +123,9 @@
 
     <main>
       <section class="hero hero-home" aria-labelledby="homeHeroTitle">
-        <canvas id="heroFieldCanvas" class="hero-field" aria-hidden="true"></canvas>
+        <!-- data-morph="mark": hovering resolves the field into the Covenda mark. Geometry comes
+             from assets/covenda-mark.svg, so it is the mark rather than a drawing of it. -->
+        <canvas id="heroFieldCanvas" class="hero-field" data-morph="mark" aria-hidden="true"></canvas>
         <div class="hero-copy">
           <h1 id="homeHeroTitle">Beyond the <span class="word-gold">Resume</span></h1>
 

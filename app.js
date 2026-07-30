@@ -5184,34 +5184,56 @@ function initHeroField(target) {
   //
   // Points are normalised into a 0..1 box and converted to screen coordinates every frame, so
   // the figure survives a resize without recomputing anything.
-  const FIGURE = (() => {
-    const pts = [];
-    const push = (x, y) => pts.push({ x, y });
-    // Head, as a ring rather than a filled disc: this field is made of points and a solid head
-    // would be the one part that stopped looking like one.
-    for (let i = 0; i < 13; i += 1) {
-      const a = (i / 13) * Math.PI * 2;
-      push(0.5 + Math.cos(a) * 0.058, 0.155 + Math.sin(a) * 0.072);
-    }
-    for (let i = 0; i <= 5; i += 1) push(0.5, 0.245 + i * 0.032);      // neck and spine
-    for (let i = -5; i <= 5; i += 1) push(0.5 + i * 0.032, 0.295);      // shoulders
-    for (const side of [-1, 1]) {                                       // arms, held out
-      for (let i = 1; i <= 8; i += 1) {
-        const t = i / 8;
-        push(0.5 + side * (0.17 + t * 0.20), 0.30 + t * 0.20);
+  const MORPH_SHAPES = {
+    // A standing person: the company hero, where the crowd resolves into one candidate.
+    figure: (() => {
+      const pts = [];
+      const push = (x, y) => pts.push({ x, y });
+      // Head as a ring rather than a disc: a solid head would be the one part that stopped
+      // looking like points.
+      for (let i = 0; i < 13; i += 1) {
+        const a = (i / 13) * Math.PI * 2;
+        push(0.5 + Math.cos(a) * 0.058, 0.155 + Math.sin(a) * 0.072);
       }
-    }
-    for (let i = -3; i <= 3; i += 1) push(0.5 + i * 0.021, 0.545);      // hips
-    for (const side of [-1, 1]) {                                       // legs, apart
-      for (let i = 1; i <= 9; i += 1) {
-        const t = i / 9;
-        push(0.5 + side * (0.035 + t * 0.115), 0.545 + t * 0.315);
+      for (let i = 0; i <= 5; i += 1) push(0.5, 0.245 + i * 0.032);
+      for (let i = -5; i <= 5; i += 1) push(0.5 + i * 0.032, 0.295);
+      for (const side of [-1, 1]) {
+        for (let i = 1; i <= 8; i += 1) {
+          const t = i / 8;
+          push(0.5 + side * (0.17 + t * 0.20), 0.30 + t * 0.20);
+        }
       }
-    }
-    return pts;
-  })();
+      for (let i = -3; i <= 3; i += 1) push(0.5 + i * 0.021, 0.545);
+      for (const side of [-1, 1]) {
+        for (let i = 1; i <= 9; i += 1) {
+          const t = i / 9;
+          push(0.5 + side * (0.035 + t * 0.115), 0.545 + t * 0.315);
+        }
+      }
+      return pts;
+    })(),
 
-  const morphing = canvas.dataset.morph === 'figure';
+    // The Covenda mark: two joined rings. Geometry taken from assets/covenda-mark.svg rather
+    // than eyeballed, so the resolved mark is the mark and not an approximation of it. That file
+    // is r=10 circles at (19,24) and (29,24) in a 48 box; these are the same numbers over 48.
+    mark: (() => {
+      const pts = [];
+      const R = 10 / 48;
+      // Enough points that the ring reads as a ring at hero scale and not as a polygon. 30 each
+      // puts them roughly six pixels apart on a 300px mark, which is about the node spacing the
+      // crowd already has, so the density does not change as it resolves.
+      for (const cx of [19 / 48, 29 / 48]) {
+        for (let i = 0; i < 30; i += 1) {
+          const a = (i / 30) * Math.PI * 2;
+          pts.push({ x: cx + Math.cos(a) * R, y: 0.5 + Math.sin(a) * R });
+        }
+      }
+      return pts;
+    })(),
+  };
+
+  const FIGURE = MORPH_SHAPES[canvas.dataset.morph] || null;
+  const morphing = Boolean(FIGURE);
   let morph = 0;        // 0 = crowd, 1 = figure
   let morphTo = 0;
   let assigned = false;
@@ -5221,11 +5243,18 @@ function initHeroField(target) {
     // biased right so it does not sit under the headline.
     // Fitted to the hero's own height with margin. The company hero is wide and short, so
     // scaling off the width overflowed the bottom and the legs were cut off.
-    const size = Math.min(W * 0.30, H * 0.78);
-    const cx = W * 0.82;
-    // Nudged up rather than centred: the legs run to 0.86 of the figure box, so a true centre
-    // puts the feet on the band's edge and they get cut by whatever the hero sits above.
-    const top = H / 2 - size * 0.56;
+    // A person stands beside the copy; the mark sits behind it, centred, because it is the
+    // thing the page is named after and putting it off to one side would read as an accident.
+    const isMark = canvas.dataset.morph === 'mark';
+    const size = isMark
+      ? Math.min(W * 0.42, H * 0.56)
+      : Math.min(W * 0.30, H * 0.78);
+    const cx = isMark ? W * 0.5 : W * 0.82;
+    // The mark is centred on the headline, not on the hero. Dead-centre put the rings behind the
+    // three path cards, which carry a tinted backdrop and swallowed the middle of both of them.
+    // Framing the words is also the better composition: the thing the page is named after sits
+    // around its own name.
+    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.56;
     const p = FIGURE[index];
     return { x: cx + (p.x - 0.5) * size, y: top + p.y * size };
   }
