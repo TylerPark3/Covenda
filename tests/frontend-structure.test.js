@@ -500,7 +500,10 @@ test('hero field keeps pointer discovery without shifting the 3D field', () => {
 // before the batch had shown what it requires. Select batches, then walk through them.
 test('batch board selects batches and walks through them full-width', () => {
   assert.match(html, /id="batchPickBar"/);
-  assert.match(html, /id="batchLearnMore"/);
+  // No "Learn more" button. It opened a deep dive built from the requirements that are being
+  // rebuilt, so it offered a door that is shut. The bar states the state instead.
+  assert.ok(!/id="batchLearnMore"/.test(html), 'the walkthrough trigger is back while applications are closed');
+  assert.match(script, /Applications open again soon/);
   assert.match(html, /id="batchDeep"/);
   assert.match(script, /const batchPicks = new Set\(\)/);
   // The whole card is the control — no separate "Select" button to hunt for — and it stays
@@ -550,8 +553,21 @@ test('school clubs can register and see the earned verification ladder', () => {
 // "Join an elite batch in your field" pinned the old heading. The section now leads with the
 // distinction instead, and "elite" survives where it belongs — on the batches that are.
 test('elite is a tier on the batch, not the section headline', () => {
-  assert.match(script, /brief\.tier === 'elite' \? 'Elite' : 'Open'/);
+  // The tier chip is off the marketing card for now: Elite-vs-Open describes how a batch is
+  // vetted, and that is the thing being rebuilt, so publishing it advertises a distinction about
+  // to change. The tier is still on the model, so nothing about the data lost the concept.
+  // Comments stripped first. My own comment explaining the removal names the code it removed,
+  // and a raw substring scan matches its own documentation. Sixth time in this build.
+  const code = script.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  // Scoped to the card. The deep-dive renderer still names the tier, and that is fine: its
+  // trigger is gone, so nothing reaches it while applications are closed.
+  const cardOnly = code.slice(code.indexOf('function renderBatchCard('), code.indexOf('const toggle = () =>'));
+  assert.ok(!/brief\.tier === 'elite'/.test(cardOnly), 'the tier chip is back on the public card');
   assert.match(html, /Trials work/);
+  // The card is the name and nothing else while applications are closed.
+  const cardFn = cardOnly;
+  assert.ok(!/batch-desc|batch-rail-chip|batch-req-count/.test(cardFn), 'the hidden card detail is back');
+  assert.match(cardFn, /className: 'batch-title', textContent: brief\.name/);
 });
 
 // Credibility is club-led now, and the geometric motif carries past the hero.
@@ -876,9 +892,16 @@ test('the batch application asks real questions, not a self-rating survey', asyn
 // track — ragged heights came from cards sizing to their own summary instead of the row.
 test('the batch grid is five even columns on a wide screen', () => {
   assert.match(styles, /@media \(min-width: 1180px\) \{ \.batch-row \{ grid-template-columns: repeat\(5/);
+  // height: 100% is what keeps the five cards level in a row, so it stays.
   assert.match(styles, /\.batch-card\.is-pickable \{[\s\S]*?height: 100%/);
-  assert.match(styles, /\.batch-card\.is-pickable \{[\s\S]*?grid-template-rows: auto auto 1fr auto/);
-  assert.match(styles, /\.batch-meta \{[\s\S]*?align-self: end/);
+  // The four-row grid and the .batch-meta footer are gone with the content they laid out: the
+  // card is a name and a tick while applications are closed, so it is two columns, not four rows.
+  assert.match(styles, /\.batch-card\.is-pickable \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) auto/);
+  // Scoped to the card. Unscoped this matched .form-rail, an unrelated component that legitimately
+  // uses four rows.
+  const pickable = styles.slice(styles.lastIndexOf('.batch-card.is-pickable {'));
+  assert.ok(!/grid-template-rows: auto auto 1fr auto/.test(pickable.slice(0, 500)),
+    'the four-row card layout is back');
 });
 
 // .batch-grid used to hold cards directly; it now holds five <section class="batch-group">

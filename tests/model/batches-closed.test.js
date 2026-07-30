@@ -22,7 +22,7 @@ test('the server refuses an application before it touches anything', async () =>
     // Any database call here means the refusal came too late to be a real gate.
     supabase: { from() { throw new Error('the request reached the database while closed'); } },
   };
-  await assert.rejects(() => applyToBatch(member, { batchId: 'b1' }, {}), /rebuild how each one is vetted/);
+  await assert.rejects(() => applyToBatch(member, { batchId: 'b1' }, {}), /Applications open again soon/);
 });
 
 test('the refusal says it is temporary and that prior work is safe', () => {

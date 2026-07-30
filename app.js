@@ -3686,24 +3686,13 @@ function renderBatchCard(row, brief) {
   card.dataset.batchPick = brief.slug;
   batchBriefIndex.set(brief.slug, brief);
 
-  const tier = document.createElement('span');
-  tier.className = 'batch-tier' + (brief.tier === 'elite' ? ' is-elite' : '');
-  tier.textContent = brief.tier === 'elite' ? 'Elite' : 'Open';
+  // Name only, deliberately. The tier chip, the summary, the machine-checked/expert-vetted rail
+  // and the requirement count all describe how a batch is vetted, and that is exactly what is
+  // being rebuilt: publishing those specifics now advertises a process about to change. The
+  // vertical heading above plus the name is what a student can act on today.
   card.append(
-    tier,
     Object.assign(document.createElement('h3'), { className: 'batch-title', textContent: brief.name }),
-    Object.assign(document.createElement('p'), { className: 'batch-desc', textContent: brief.summary }),
   );
-
-  const meta = document.createElement('div');
-  meta.className = 'batch-meta';
-  const rail = document.createElement('span');
-  rail.className = 'batch-rail-chip' + (brief.vetting.apiVerified ? ' is-api' : '');
-  rail.textContent = brief.vetting.apiVerified ? 'Machine-checked' : 'Expert-vetted';
-  meta.append(rail, Object.assign(document.createElement('span'), {
-    className: 'batch-req-count', textContent: brief.requirements.length + ' requirements',
-  }));
-  card.append(meta);
 
   const mark = document.createElement('span');
   mark.className = 'batch-mark';
@@ -3733,7 +3722,9 @@ function syncBatchPickBar() {
   if (!bar) return;
   const n = batchPicks.size;
   bar.hidden = n === 0;
-  $('#batchPickCount').textContent = n === 1 ? '1 batch selected' : n + ' batches selected';
+  $('#batchPickCount').textContent = n === 1
+    ? '1 batch shortlisted. Applications open again soon.'
+    : n + ' batches shortlisted. Applications open again soon.';
 }
 
 const HOW_TO_APPLY = [

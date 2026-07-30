@@ -65,11 +65,18 @@ test('duplicate aliases credit one requirement, not two', () => {
   assert.equal(one, two, 'three names for Machine learning triple-counted');
 });
 
-// The match was computed, filtered on and sorted by, but only ever DRAWN on the company card.
-test('the student card renders the match it filters by', () => {
-  const src = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
+// The percentage is gone from both cards. It read as a measurement, and it comes off a
+// transparent weighted model with no completed outcomes behind it: the numbers it produced
+// (1%, 25%) invited a precision it cannot support and a sort order it should not have. What a
+// student can actually argue with is the reason in words, and the skill ledger, so those stay.
+test('the student card explains the match in words rather than a percentage', () => {
+  // Comments stripped: the comment recording the removal names both the function and the string,
+  // so a raw scan matches its own documentation.
+  const src = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
   const card = src.slice(src.indexOf('function batchCard('), src.indexOf('let batchResumeUrl'));
-  assert.match(card, /compatPill\(batch\.compatibility\)/, 'student card never draws the match');
+  assert.ok(!/compatPill/.test(src), 'the percentage pill is back');
+  assert.ok(!/% match/.test(src), 'something still renders a match percentage');
   assert.match(card, /batchSkillLedger\(batch\)/);
   assert.match(card, /batch\.evaluates/, 'the card must say what the batch tests');
 });

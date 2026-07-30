@@ -3663,8 +3663,7 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 /* The tick: empty outline until picked, then it snaps in. This is the confirmation the
    separate "Select" button used to carry, moved onto the thing you actually clicked. */
 .batch-mark {
-  position: absolute; top: 16px; right: 16px;
-  display: grid; place-items: center; width: 28px; height: 28px;
+  display: grid; place-items: center; width: 24px; height: 24px; flex: 0 0 auto;
   border: 1.5px solid var(--line-strong); background: #fff;
   transition: border-color .16s ease, background .16s ease, transform .2s cubic-bezier(.2,.8,.3,1);
 }
@@ -5213,11 +5212,15 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 @media (min-width: 760px) and (max-width: 1179px) { .batch-row { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* Bigger, and the whole card is the control — so it needs to feel like one. */
+/* Name and tick, side by side. The four-row grid and the 244px floor were sized for a card that
+   carried a tier chip, a summary and two meta chips; with only a name left they produced a tall
+   empty box. There are two definitions of this selector in this file and the later one wins,
+   which is why fixing the earlier one changed nothing. */
 .batch-card.is-pickable {
   position: relative;
-  display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px;
-  height: 100%; min-height: 244px;
-  padding: clamp(20px, 2vw, 26px);
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 14px;
+  height: 100%; min-height: 0;
+  padding: 18px clamp(16px, 1.6vw, 20px);
   border: 1px solid var(--line-strong); background: #fff;
   cursor: pointer;
   transition: transform .16s cubic-bezier(.2,.8,.3,1), border-color .16s ease, box-shadow .16s ease;

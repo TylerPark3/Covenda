@@ -1326,8 +1326,7 @@ export function batchApplicationsOpen(env = process.env) {
 }
 
 export const BATCHES_CLOSED_MESSAGE =
-  'Batch applications are closed while we rebuild how each one is vetted. They open again soon, '
-  + 'and nothing you have already submitted is affected.';
+  'Applications open again soon. Nothing you have already submitted is affected.';
 
 export async function applyToBatch(member, input, env = process.env) {
   // Enforced on the server, not only in the UI. A closed door that only exists in the client

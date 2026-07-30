@@ -1589,15 +1589,10 @@ const batchRosters=new Map(); // batchId -> loaded accepted-student array (compa
 // How each batch lines up with the skills a student actually listed. Browsing help — the
 // admission bar is unchanged and unaffected by this number, which the copy says out loud.
 let batchMinFit=0;
-function compatPill(c){
-  if(!c||c.score===null)return null;
-  const s=Math.round(c.score);
-  const el=document.createElement('span');
-  el.className='compat-pill '+(s>=70?'is-high':s>=40?'is-mid':'is-low');
-  el.textContent=`${s}% match`;
-  el.title=c.why||'';
-  return el;
-}
+// compatPill used to render "{n}% match" here. A percentage reads as a measurement, and this one
+// comes off a transparent weighted model with no completed outcomes behind it: the numbers it
+// produced (1%, 25%) invited a precision it cannot support and a sort order it should not have.
+// The reason in words survives below, which is the part a student can argue with.
 function batchFitOf(batch){
   const c=batch&&batch.compatibility;
   return c&&c.score!==null?c.score:null;
@@ -1843,7 +1838,6 @@ function companyBatchCard(batch,access,admittedCount){
   const top=document.createElement('div');top.className='batch-card-top';
   const h=document.createElement('h3');h.textContent=batch.name;top.append(h);
   const marks=document.createElement('div');marks.className='batch-card-marks';
-  const cp=compatPill(batch.compatibility);if(cp)marks.append(cp);
   marks.append(pill(batch.tier==='elite'?'Elite':'Open',batch.tier==='elite'?'batch-tier is-elite':'batch-tier'));
   top.append(marks);
   card.append(top);
@@ -2099,7 +2093,6 @@ function batchCard(batch,application){
   // The match was computed, filtered on, and sorted by — but only ever DRAWN on the company
   // card. Students were filtering by a number they could not see, which is what made the
   // control read as broken rather than strict.
-  const cp=compatPill(batch.compatibility);if(cp)marks.append(cp);
   marks.append(pill(batch.tier==='elite'?'Elite':'Open',batch.tier==='elite'?'batch-tier is-elite':'batch-tier'));
   top.append(marks);
   card.append(top);
