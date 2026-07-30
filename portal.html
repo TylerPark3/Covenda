@@ -379,6 +379,35 @@
        fields are worth asking for: a hackathon has a team and a placement, a pull request has
        a merge status, and asking every question of every type is how a form stops being
        filled in. Fields below are shown and hidden by type in portal.js. -->
+  <!-- Finance evidence. Mirrors the technical dialog deliberately: a student who has used one
+       should not have to learn the other, and a second layout would drift from the first. What
+       differs is what finance evidence actually needs - a subject, an as-of date, and the
+       downside, because a pitch with no stated downside is a summary. -->
+  <dialog class="member-dialog compact-dialog" id="financeEvidenceDialog">
+    <form method="dialog" id="financeEvidenceForm">
+      <header><div><p class="eyebrow">Finance evidence</p><h2>Add work you have done.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="dialog-body">
+        <label>What kind of work is this?<select name="type" id="financeType" required></select></label>
+        <p class="te-explain" id="financeTypeExplain" aria-live="polite"></p>
+        <p class="te-explain te-limit" id="financeTypeLimit" aria-live="polite"></p>
+        <label>What is it about? <small>The company, sector, or target</small><input name="subject" maxlength="120" required placeholder="Cloudflare, or vertical SaaS"></label>
+        <label>What do you call it? <small>Optional</small><input name="title" maxlength="160" placeholder="Long Cloudflare, 18-month view"></label>
+        <div class="form-grid">
+          <label>Link to it <small>Optional</small><input name="pointer" type="url" placeholder="https://…"></label>
+          <label>As of <small>The date the analysis assumed</small><input name="asOf" type="date"></label>
+        </div>
+        <p class="te-note"><svg aria-hidden="true"><use href="#p-shield"/></svg>A link is what lets this count as more than self-reported. Without one it still appears, marked as listed rather than shown. The as-of date matters because a call is only judgeable against what was knowable when you made it.</p>
+        <label>Skills it demonstrates <small>Comma-separated, optional</small><input name="skills" placeholder="DCF, comps, credit analysis"></label>
+        <label>The view, in one paragraph<textarea name="thesis" rows="3" maxlength="1500" placeholder="What you concluded and the one driver it rests on."></textarea></label>
+        <label>What would make you wrong?<textarea name="downside" rows="3" maxlength="1500" placeholder="The case against, and what you would need to see to change your mind."></textarea></label>
+        <p class="te-ai-why">The downside is the field that separates a view from a summary. A pitch without one reads as marketing, and it is the first thing a reviewer asks about.</p>
+        <label class="te-check"><input type="checkbox" name="published"><span>This was published or submitted somewhere</span></label>
+      </div>
+      <footer><button type="button" data-close-dialog class="portal-ghost">Cancel</button><button type="submit" class="portal-primary">Add evidence</button></footer>
+      <p class="dialog-message" id="financeEvidenceMessage" aria-live="polite"></p>
+    </form>
+  </dialog>
+
   <dialog class="member-dialog compact-dialog" id="techEvidenceDialog">
     <form method="dialog" id="techEvidenceForm">
       <header><div><p class="eyebrow">Technical evidence</p><h2>Add something you built.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>

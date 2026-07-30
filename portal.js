@@ -3669,7 +3669,7 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   bar.append(search,vsel,skl,msel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderTechnicalProfile(root,state.dashboard);renderSimulations(root,state.dashboard);renderVideoLibrary(root);renderPayoutSetup(root);renderProofOfWork(root,profile);}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderTechnicalProfile(root,state.dashboard);renderFinanceProfile(root,state.dashboard);renderSimulations(root,state.dashboard);renderVideoLibrary(root);renderPayoutSetup(root);renderProofOfWork(root,profile);}
   if(profile?.role==='company'){renderCompanyVerification(root);renderAtsPanel(root);renderCompanyReferrals(root);renderCompanyProfileForm(root);}}
 
 // Live credibility meter — a checklist of REAL, earned signals (identity, completeness, proven
@@ -4224,7 +4224,9 @@ function renderTechEntries(root,d){
     const name=document.createElement('b');name.textContent=entry.title||'Untitled';
     top.append(name,techTierChip(entry.verification_level));
     const meta=document.createElement('small');
-    meta.textContent=[(entry.evidence_type||'').replace(/_/g,' '),(entry.skills||[]).join(', ')].filter(Boolean).join(' · ');
+    const typeLabel=state.dashboard?.technical?.typeGuide?.[entry.evidence_type]?.label
+      ||(entry.evidence_type||'').replace(/_/g,' ').replace(/^./,c=>c.toUpperCase());
+    meta.textContent=[typeLabel,(entry.skills||[]).join(', ')].filter(Boolean).join(' · ');
     const remove=document.createElement('button');
     remove.type='button';remove.className='tech-entry-remove';remove.textContent='Remove';
     remove.addEventListener('click',async()=>{
@@ -4253,6 +4255,189 @@ function techTierChip(tier){
   el.className='tech-tier is-'+tier;
   el.textContent=TIER_LABEL[tier]||tier;
   return el;
+}
+
+// ── Finance evidence (§20) ────────────────────────────────────────────────────────────
+// The graph, the table and the routes shipped without this, so a finance student could not add
+// a single artifact. The server accepted it; nothing asked for it.
+//
+// The artifact list comes from the dashboard payload rather than being duplicated here. Twelve
+// type names in two files is how the limit shown to a student stops matching the one a reviewer
+// reads, which is the exact drift the type guide was added to prevent.
+function financeGuide(){ return state.dashboard?.finance?.artifactGuide||{}; }
+
+function paintFinanceType(){
+  const guide=financeGuide();
+  const entry=guide[$('#financeType')?.value];
+  const explain=$('#financeTypeExplain');
+  const limit=$('#financeTypeLimit');
+  if(explain) explain.textContent=entry?.demonstrates||'';
+  // The limit is shown next to the field, not buried in a footnote. Every artifact type has one
+  // and a student who knows it going in defends better than one who is told afterwards.
+  if(limit) limit.textContent=entry?.cannotShow?('What it cannot show: '+entry.cannotShow):'';
+}
+
+function openFinanceEvidence(){
+  const dlg=$('#financeEvidenceDialog'); if(!dlg)return;
+  const typeSelect=$('#financeType');
+  const guide=financeGuide();
+  if(typeSelect){
+    typeSelect.replaceChildren();
+    for(const [value,entry] of Object.entries(guide)){
+      const o=document.createElement('option');o.value=value;o.textContent=entry.label;typeSelect.append(o);
+    }
+  }
+  setDialogMessage('#financeEvidenceMessage','');
+  paintFinanceType();
+  dlg.showModal();
+}
+
+function readFinanceEvidence(form){
+  const data=Object.fromEntries(new FormData(form).entries());
+  return {
+    action:'save-finance-evidence',
+    type:data.type,
+    subject:data.subject,
+    title:data.title||null,
+    pointer:data.pointer||null,
+    asOf:data.asOf||null,
+    skills:String(data.skills||'').split(',').map(x=>x.trim()).filter(Boolean),
+    thesis:data.thesis||null,
+    downside:data.downside||null,
+    published:Boolean(data.published),
+  };
+}
+
+$('#financeType')?.addEventListener('change',paintFinanceType);
+
+$('#financeEvidenceForm')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const form=event.target;
+  setDialogMessage('#financeEvidenceMessage','');
+  try{
+    const out=await portalRequest({method:'POST',body:JSON.stringify(readFinanceEvidence(form))});
+    // Same as the technical dialog: the ownership questions come back from the server so the
+    // student sees what a reviewer will ask before the dialog closes.
+    if((out.questions||[]).length){
+      setDialogMessage('#financeEvidenceMessage','Added. At defense you will be asked: '+out.questions[0]);
+      window.setTimeout(()=>$('#financeEvidenceDialog').close(),2600);
+    } else { $('#financeEvidenceDialog').close(); }
+    await loadDashboard();
+  }catch(error){ setDialogMessage('#financeEvidenceMessage',error.message,true); }
+});
+
+function renderFinanceEntries(root,d){
+  const entries=d?.finance?.entries||[];
+  if(!entries.length)return;
+  const guide=financeGuide();
+  const sec=document.createElement('div');sec.className='tech-section';
+  const cap=document.createElement('h4');cap.textContent='Work you added';
+  sec.append(cap);
+  const list=document.createElement('ul');list.className='tech-entries';
+  for(const entry of entries){
+    const li=document.createElement('li');
+    const top=document.createElement('div');top.className='tech-entry-top';
+    const name=document.createElement('b');name.textContent=entry.title||entry.subject||'Untitled';
+    top.append(name,techTierChip(entry.verification_level));
+    const meta=document.createElement('small');
+    meta.textContent=[guide[entry.artifact_type]?.label,entry.subject,entry.as_of].filter(Boolean).join(' · ');
+    const remove=document.createElement('button');
+    remove.type='button';remove.className='tech-entry-remove';remove.textContent='Remove';
+    remove.addEventListener('click',async()=>{
+      try{
+        await portalRequest({method:'POST',body:JSON.stringify({action:'delete-finance-evidence',id:entry.id})});
+        await loadDashboard();
+      }catch(error){ remove.textContent=error.message||'Could not remove'; remove.disabled=true; }
+    });
+    li.append(top,meta,remove);
+    list.append(li);
+  }
+  sec.append(list);root.append(sec);
+}
+
+// The same artifacts read differently depending on who is reading. This is the one place a
+// student can see that: pick a firm type and the profile reorders, with nothing hidden.
+function renderFinanceProfile(root,d){
+  const f=d?.finance; if(!f)return;
+  const panel=document.createElement('section');panel.className='panel-card tech-panel';
+  const head=document.createElement('div');head.className='tech-head';
+  const h=document.createElement('h3');h.textContent='Finance evidence';
+  const sub=document.createElement('p');
+  head.append(h,sub);panel.append(head);
+
+  if(!f.artifactCount){
+    sub.textContent='Nothing here yet. A stock pitch with a stated downside is the fastest thing to add.';
+    const add=document.createElement('button');
+    add.type='button';add.className='portal-primary compact tech-add';
+    add.textContent='Add your first artifact';
+    add.addEventListener('click',openFinanceEvidence);
+    panel.append(add);root.append(panel);return;
+  }
+
+  sub.textContent=`${f.artifactCount} ${f.artifactCount===1?'artifact':'artifacts'}, covering ${f.disciplinesCovered} of ${f.disciplinesAvailable} disciplines. ${f.defended} defended on the record.`;
+
+  // Who is reading. Non-binding by construction: it changes the order, never eligibility.
+  const firmRow=document.createElement('div');firmRow.className='tech-section';
+  const firmCap=document.createElement('h4');firmCap.textContent='Read it as';
+  const select=document.createElement('select');select.className='finance-firm-select';
+  const none=document.createElement('option');none.value='';none.textContent='As I built it';select.append(none);
+  for(const firm of f.firmTypes||[]){
+    const o=document.createElement('option');o.value=firm.id;o.textContent=firm.label;
+    if(firm.id===f.targetFirmType)o.selected=true;
+    select.append(o);
+  }
+  select.addEventListener('change',async()=>{
+    try{
+      await portalRequest({method:'POST',body:JSON.stringify({action:'target-firm-type',firmType:select.value||null})});
+      await loadDashboard();
+    }catch(error){ sub.textContent=error.message; }
+  });
+  const firmNote=document.createElement('small');
+  firmNote.textContent=f.emphasis?.note||'';
+  firmRow.append(firmCap,select,firmNote);panel.append(firmRow);
+
+  // What that firm reads first, then everything else. Nothing is hidden by the reordering: an
+  // artifact a firm does not weight still appears, it just stops being the headline.
+  if((f.emphasis?.leads||[]).length){
+    const sec=document.createElement('div');sec.className='tech-section';
+    const cap=document.createElement('h4');cap.textContent='Read first';
+    const list=document.createElement('ul');list.className='tech-entries';
+    for(const lead of f.emphasis.leads){
+      const li=document.createElement('li');
+      const top=document.createElement('div');top.className='tech-entry-top';
+      const b=document.createElement('b');b.textContent=`${lead.label}${lead.count>1?` × ${lead.count}`:''}`;
+      top.append(b);
+      const why=document.createElement('small');why.textContent=lead.why;
+      li.append(top,why);list.append(li);
+    }
+    sec.append(cap,list);panel.append(sec);
+  }
+  if((f.emphasis?.alsoHas||[]).length){
+    const sec=document.createElement('div');sec.className='tech-section';
+    const cap=document.createElement('h4');cap.textContent='Also on your profile';
+    const chips=document.createElement('div');chips.className='skills';
+    for(const item of f.emphasis.alsoHas) chips.append(pill(`${item.label}${item.count>1?` × ${item.count}`:''}`,'artifact-pill'));
+    sec.append(cap,chips);panel.append(sec);
+  }
+
+  // Gaps name the next artifact to build. A gap with no route attached is a rejection with
+  // extra words, which is why every one of these carries an ask.
+  if((f.gaps||[]).length){
+    const sec=document.createElement('div');sec.className='tech-section';
+    const cap=document.createElement('h4');cap.textContent='What to add next';
+    const list=document.createElement('ul');list.className='tech-gaps';
+    for(const gap of f.gaps){const li=document.createElement('li');li.textContent=gap.ask;list.append(li);}
+    sec.append(cap,list);panel.append(sec);
+  }
+
+  renderFinanceEntries(panel,d);
+
+  const add=document.createElement('button');
+  add.type='button';add.className='portal-ghost compact tech-add';
+  add.textContent='Add another artifact';
+  add.addEventListener('click',openFinanceEvidence);
+  panel.append(add);
+  root.append(panel);
 }
 
 function renderTechnicalProfile(root,d){

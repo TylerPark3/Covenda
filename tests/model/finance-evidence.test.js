@@ -180,3 +180,73 @@ test('an unknown stored type is skipped rather than throwing', () => {
   assert.deepEqual(claimsFromStoredFinanceEvidence([{ artifact_type: 'crypto_moonshot', subject: 'x' }]), []);
   assert.deepEqual(claimsFromStoredFinanceEvidence(null), []);
 });
+
+// ── The form (§20) ────────────────────────────────────────────────────────────────────
+// The graph, the table and the routes all shipped before this existed, so a finance student
+// could not add a single artifact. The server accepted it; nothing asked for it. These assert
+// the UI is actually reachable, because "the routes exist" is what I checked last time and it
+// was not the same thing.
+test('the finance form exists and is reachable from the portal', () => {
+  const html = readFileSync(new URL('../../portal.html', import.meta.url), 'utf8');
+  const js = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
+
+  assert.match(html, /id="financeEvidenceDialog"/);
+  assert.match(html, /id="financeEvidenceForm"/);
+  // Rendered beside the technical profile, or a student never sees it.
+  assert.match(js, /renderFinanceProfile\(root,state\.dashboard\)/, 'the panel is never mounted');
+  assert.match(js, /add\.addEventListener\('click',openFinanceEvidence\)/, 'nothing opens the dialog');
+});
+
+// Every field the client sends has to be a field the server reads, and the subject and downside
+// are the two the model refuses to do without.
+test('the form sends exactly what the route reads', () => {
+  const html = readFileSync(new URL('../../portal.html', import.meta.url), 'utf8');
+  const js = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
+  const api = readFileSync(new URL('../../api/portal.js', import.meta.url), 'utf8');
+
+  const dialog = html.slice(html.indexOf('id="financeEvidenceForm"'), html.indexOf('</dialog>', html.indexOf('id="financeEvidenceForm"')));
+  const save = api.slice(api.indexOf('export async function saveFinanceEvidence'));
+  const body = save.slice(0, save.indexOf('\n}'));
+
+  for (const field of ['type', 'subject', 'title', 'pointer', 'asOf', 'skills', 'thesis', 'downside', 'published']) {
+    assert.match(dialog, new RegExp(`name="${field}"`), `the form has no ${field} input`);
+    assert.match(js, new RegExp(`${field}:`), `readFinanceEvidence never sends ${field}`);
+    assert.ok(body.includes(`input.${field}`), `saveFinanceEvidence never reads ${field}`);
+  }
+  // A subject is required by the model and by the column, so the input must require it too
+  // rather than letting the student get to a server error.
+  assert.match(dialog, /name="subject"[^>]*required/, 'subject is optional in the form and required everywhere else');
+});
+
+// The type list and the limits come from the server so the form and the reviewer cannot describe
+// the same artifact differently. Twelve type names duplicated in the client is how that drifts.
+test('the form takes its artifact list from the server, not a local copy', () => {
+  const js = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
+  assert.match(js, /state\.dashboard\?\.finance\?\.artifactGuide/, 'the guide is not read from the payload');
+  assert.ok(!/stock_pitch|dcf_model|market_map/.test(js), 'the client hard-codes artifact types');
+  // Both halves are shown: what it demonstrates, and what it cannot.
+  assert.match(js, /entry\?\.demonstrates/);
+  assert.match(js, /entry\?\.cannotShow/);
+});
+
+// The firm type reorders and never gates, so nothing here may filter or hide.
+test('choosing a firm type reorders and hides nothing', () => {
+  const js = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
+  const panel = js.slice(js.indexOf('function renderFinanceProfile'));
+  const body = panel.slice(0, panel.indexOf('\n}\n'));
+  assert.match(body, /action:'target-firm-type'/);
+  // alsoHas is what a firm does not weight. Dropping it would make the reorder lie by omission.
+  assert.match(body, /emphasis\?\.alsoHas/, 'artifacts the firm does not read are not shown at all');
+  assert.match(body, /Also on your profile/);
+});
+
+// text-transform: capitalize on the shared <small> was title-casing whole sentences:
+// "Whether You Can Size A Space Nobody Has Sized For You."
+test('evidence sentences are not title-cased by the stylesheet', () => {
+  const css = readFileSync(new URL('../../portal.css', import.meta.url), 'utf8');
+  const rule = css.match(/\.tech-entries small \{[^}]*\}/)[0];
+  assert.ok(!/text-transform/.test(rule), 'the shared small is capitalizing sentences again');
+  // The one thing that needed it, the evidence type slug, is formatted in JS instead.
+  const js = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
+  assert.match(js, /typeGuide\?\.\[entry\.evidence_type\]\?\.label/);
+});

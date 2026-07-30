@@ -2349,7 +2349,7 @@ body { background: var(--surface); }
 .tech-entries li { display:grid; grid-template-columns:1fr auto; gap:4px 12px; padding:10px 12px; border:1px solid var(--line); background:var(--surface-1); }
 .tech-entry-top { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .tech-entry-top b { font-size: var(--text-body); font-weight: var(--weight-medium); color:var(--text,var(--ink)); }
-.tech-entries small { grid-column:1; color:var(--soft); font-size: var(--text-caption); text-transform:capitalize; }
+.tech-entries small { grid-column:1; color:var(--soft); font-size: var(--text-caption); line-height: var(--lh-caption); }
 .tech-entry-remove { grid-row:1 / span 2; grid-column:2; align-self:center; padding:5px 10px; border:1px solid var(--line-strong); background:transparent; color:var(--soft); font-size: var(--text-caption); cursor:pointer; }
 .tech-entry-remove:hover:not(:disabled) { border-color:var(--danger); color:var(--danger); }
 .tech-entry-remove:disabled { cursor:default; }
@@ -2468,3 +2468,26 @@ body { background: var(--surface); }
   outline: 0;
 }
 .draft-area:focus-visible { border-color: var(--gold); }
+
+/* ── Finance evidence (§20) ────────────────────────────────────────────────────────────
+   Three classes the finance dialog and panel introduced. Reusing the technical vocabulary
+   rather than inventing a second one: a student who has used one form should not have to
+   learn the other. */
+
+/* The limit sits directly under what the artifact demonstrates, so a student reads both
+   before choosing. It is deliberately not styled as a warning: every artifact type has a
+   limit, and colouring it red would make an honest constraint look like a problem. */
+.te-limit { color: var(--muted); font-style: italic; }
+
+/* Who is reading. Non-binding, so it is a plain control rather than a prominent one: it
+   changes the order of a profile and never its eligibility. */
+.finance-firm-select { width: min(100%, 300px); margin: 8px 0 10px; }
+.tech-section > .finance-firm-select + small { display: block; color: var(--muted); }
+
+.te-check { display: flex; align-items: center; gap: 10px; }
+.te-check input { width: 16px; height: 16px; min-height: 0; margin: 0; accent-color: var(--gold); }
+.te-check span { font-weight: var(--weight-regular); }
+
+/* An artifact name is a proper title, not a skill, so it is not capitalized: .skill-pill does
+   that and would turn "DCF model" into "DCF Model". */
+.artifact-pill { display:inline-flex; padding:5px 8px; border:1px solid var(--line); border-radius: 0; color:var(--muted); font-size: var(--text-body); font-weight: var(--weight-medium); }
