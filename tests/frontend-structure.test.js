@@ -141,7 +141,7 @@ test('production home keeps the approved clean banner and talent-to-proof hero',
   assert.match(styles, /\.site-header \{[\s\S]*font-family: var\(--font-display\)/);
   assert.match(script, /function initHeroField\(target\)/);
   assert.match(script, /gold: Math\.random\(\) < \.1/);
-  assert.match(script, /\.slice\(0, 7\)/);
+  assert.match(script, /\.slice\(0, 5\)/);
   assert.match(script, /spawnSignal\(now\)/);
 });
 
@@ -470,12 +470,18 @@ test('candidate browser is not on the public site', () => {
 test('hero field keeps pointer discovery without shifting the 3D field', () => {
   // The cursor finds nearby nodes, but no longer drives camera parallax.
   assert.doesNotMatch(script, /targetX = -\(\(pointer\.x/);
-  assert.match(script, /\.slice\(0, 7\)/);
+  // Five, and only ones genuinely near: seven-nearest could still reach across half the canvas.
+  assert.match(script, /\.slice\(0, 5\)/);
   assert.match(script, /ctx\.lineTo\(item\.point\.x, item\.point\.y\)/);
   assert.match(script, /pointerleave/);
-  assert.match(script, /function formGoldBond\(now\)/);
-  assert.match(script, /nextGoldBondAt = now \+ 10000/);
-  assert.match(script, /for \(const bond of goldBonds\)/);
+  // The gold-bond system is gone. It joined a random pair from every gold node on the canvas, so
+  // its line was unconstrained by distance and routinely spanned the whole field. The ambient mesh
+  // already connects near neighbours; a second system drawing longer lines over it only fought it.
+  assert.ok(!/goldBond/.test(script), 'the unbounded gold bonds are back');
+  // Every remaining line is bounded to a neighbour, which is the property that was actually wanted.
+  const reach = Number(script.match(/const LINK_DISTANCE = (\d+);/)[1]);
+  assert.ok(reach <= 110, `link reach is ${reach}px, long enough to read as a string`);
+  assert.match(script, /item\.distance < 150/, 'the cursor can reach across the canvas again');
   assert.match(script, /createRadialGradient\(q\.x, q\.y/);
   // Reduced-motion returns before any listener is attached (the early `if (reduce) return`),
   // and coarse pointers never get a hover handler at all.
@@ -715,7 +721,7 @@ test('the hero field turns talent into proof while keeping white nodes dominant'
   // a fine web rather than as long struts; what has to stay true is that it links neighbours and
   // not the whole canvas.
   const reach = Number(script.match(/const LINK_DISTANCE = (\d+);/)[1]);
-  assert.ok(reach >= 80 && reach <= 170, `link reach is ${reach}px, either disconnected or a net`);
+  assert.ok(reach >= 60 && reach <= 130, `link reach is ${reach}px, either disconnected or a net`);
   // Real 3D: depth, perspective projection, and far-to-near paint order.
   assert.match(script, /function project\(n\)/);
   assert.match(script, /FOCAL \/ z/);

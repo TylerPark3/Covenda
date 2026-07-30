@@ -4926,7 +4926,7 @@ function initIcosahedron() {
       const a = pts[tr.from], b = pts[tr.to];
       const dim = 0.3 + (((a.z + b.z) / 2 + 1) / 2) * 0.7;
       const hx = a.sx + (b.sx - a.sx) * tr.t, hy = a.sy + (b.sy - a.sy) * tr.t;
-      const tailT = Math.max(0, tr.t - 0.32);
+      const tailT = Math.max(0, tr.t - 0.14);
       const tx = a.sx + (b.sx - a.sx) * tailT, ty = a.sy + (b.sy - a.sy) * tailT;
       const grad = ctx.createLinearGradient(tx, ty, hx, hy);
       grad.addColorStop(0, 'rgba(233,198,121,0)');
@@ -5137,10 +5137,10 @@ function initHeroField(target) {
   const INK_LIFT = palette.lift;
   const FOCAL = 760;
   const DEPTH = 680;
-  const LINK_DISTANCE = 104;
-  let W = 0, H = 0, nodes = [], signals = [], goldBonds = [], running = false, raf = 0, t = 0;
+  const LINK_DISTANCE = 76;
+  let W = 0, H = 0, nodes = [], signals = [], running = false, raf = 0, t = 0;
   let pointer = null;
-  let nextSignalAt = 0, nextGoldBondAt = 0;
+  let nextSignalAt = 0;
 
   function build() {
     const target = Math.max(200, Math.min(340, Math.round((W * H) / 2900)));
@@ -5156,7 +5156,6 @@ function initHeroField(target) {
       phase: Math.random() * Math.PI * 2,
     }));
     signals = [];
-    goldBonds = [];
     nextSignalAt = performance.now() + 620;
     nextGoldBondAt = performance.now() + 10000;
   }
@@ -5347,22 +5346,11 @@ function initHeroField(target) {
     nextSignalAt = now + 560 + Math.random() * 760;
   }
 
-  function formGoldBond(now) {
-    const goldIndexes = nodes
-      .map((node, index) => node.gold ? index : -1)
-      .filter(index => index >= 0);
-    if (goldIndexes.length < 2) return;
-    const used = new Set(goldBonds.map(bond => `${Math.min(bond.a, bond.b)}:${Math.max(bond.a, bond.b)}`));
-    const candidates = [];
-    for (let i = 0; i < goldIndexes.length; i += 1) {
-      for (let j = i + 1; j < goldIndexes.length; j += 1) {
-        const key = `${goldIndexes[i]}:${goldIndexes[j]}`;
-        if (!used.has(key)) candidates.push({ a: goldIndexes[i], b: goldIndexes[j], born: now });
-      }
-    }
-    if (candidates.length) goldBonds.push(candidates[Math.floor(Math.random() * candidates.length)]);
-    nextGoldBondAt = now + 10000;
-  }
+  // formGoldBond used to live here. It picked a random pair from every gold node on the canvas,
+  // so the line it drew was unconstrained by distance and regularly spanned the whole field.
+  // Those were the long gold strings. There is no shortened version worth keeping: the ambient
+  // mesh already connects near neighbours, and a second system drawing longer lines on top of it
+  // was only ever going to fight it.
 
   function step(now) {
     t += 1;
@@ -5378,7 +5366,6 @@ function initHeroField(target) {
     }
     signals = signals.filter(signal => now - signal.born < signal.duration);
     if (now >= nextSignalAt) spawnSignal(now);
-    if (now >= nextGoldBondAt) formGoldBond(now);
   }
 
   function draw(now = performance.now()) {
@@ -5444,24 +5431,15 @@ function initHeroField(target) {
 
     // These are lasting, deliberately slow connections: one new gold-to-gold bond every
     // ten seconds. They are brighter than the ambient mesh but still sit behind the nodes.
-    for (const bond of goldBonds) {
-      const a = pts[bond.a], b = pts[bond.b];
-      if (!a || !b) continue;
-      const age = Math.min(1, (now - bond.born) / 900);
-      ctx.strokeStyle = `rgba(${GOLD},${.12 + age * .34})`;
-      ctx.lineWidth = 1.1 + age * .55;
-      ctx.beginPath();
-      ctx.moveTo(a.x, a.y);
-      ctx.lineTo(b.x, b.y);
-      ctx.stroke();
-    }
-
     // The cursor discovers the seven closest people and visibly connects to them.
     if (pointer) {
       const nearest = pts
         .map((point, index) => ({ point, index, distance: Math.hypot(point.x - pointer.x, point.y - pointer.y) }))
         .sort((a, b) => a.distance - b.distance)
-        .slice(0, 7);
+        .slice(0, 5)
+        // Only genuinely near ones. Connecting the fifth-nearest node across half the canvas
+        // is the same long-string problem in another form.
+        .filter(item => item.distance < 150);
       for (const item of nearest) {
         // Same reason: a cursor line landing on the figure reads as another rod.
         if ((pts[item.index].figure ?? 0) > 0.06) continue;
