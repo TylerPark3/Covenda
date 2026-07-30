@@ -3542,6 +3542,41 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .bf-arrow { display: none; }
 .bf-foot { margin: clamp(25px, 3vw, 38px) 0 0; color: var(--soft); font-size: var(--text-caption); }
 
+/* ── Step geometry (§23) ──────────────────────────────────────────────────────────────
+   One mark per step, encoding the only thing that genuinely changes across the four: how much
+   evidence exists. A loose point among scattered ones, then three being selected and linked,
+   then a closed triangle with the work filled in at a vertex, then a fully linked form with
+   every vertex solid. Built from the same triangulated language as the hero field, so it reads
+   as this site rather than as clip art, and it fills the void each card carried above its
+   bottom-aligned preview.
+
+   Decorative in the accessibility sense: the step's own heading and preview say what it means,
+   so these carry no accessible name. */
+.proof-step-geo {
+  align-self: center;
+  justify-self: center;
+  width: min(100%, 168px);
+  height: auto;
+  margin: 8px 20px;
+  overflow: visible;
+}
+.proof-step-geo .g-dim { fill: var(--line-strong); }
+.proof-step-geo .g-live { fill: var(--gold); }
+.proof-step-geo .g-fill { fill: var(--gold-deep); }
+.proof-step-geo .g-link { stroke: var(--gold); stroke-width: 1; opacity: .55; }
+.proof-step-geo .g-face { fill: rgba(180,123,32,.07); stroke: none; }
+.proof-step-geo .g-face.is-solid { fill: rgba(180,123,32,.13); }
+/* The active step's mark lifts with it, so the geometry tracks the tab rather than sitting
+   inert behind it. */
+.proof-product-step .g-live,
+.proof-product-step .g-fill { transition: r var(--dur) var(--ease); }
+.proof-product-step.is-active .g-live { r: 5.5; }
+.proof-product-step.is-active .g-link { opacity: .9; }
+.proof-product-step.is-active .g-face { fill: rgba(180,123,32,.14); }
+@media (prefers-reduced-motion: reduce) {
+  .proof-product-step .g-live, .proof-product-step .g-fill { transition: none; }
+}
+
 /* ── The signature reveal ─────────────────────────────────────────────────────────────
    Four stages, in the order the process actually runs. The stagger is a multiple of
    --stage-index, set by the observer, so the sequence is declared here in one place instead
@@ -5778,7 +5813,9 @@ body[data-audience="home"] .proof-product-section { display: block; }
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  /* Four rows now: number, heading, geometry, preview. The geometry takes the 1fr, which is the
+     space that used to sit empty above a bottom-aligned preview. */
+  grid-template-rows: auto auto 1fr auto;
   width: 100%;
   min-height: 330px;
   padding: 0;
@@ -5821,7 +5858,6 @@ body[data-audience="home"] .proof-product-section { display: block; }
 .proof-profile-preview,
 .proof-filter-preview,
 .proof-trial-preview {
-  align-self: end;
   margin: 0 14px 14px;
   padding: 17px;
   border: 1px solid var(--line);
