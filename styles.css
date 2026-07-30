@@ -952,8 +952,32 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
   font-size: var(--text-body);
 }
 .proof-rail li > svg, .company-rail li > svg { width: 31px; height: 31px; margin: 24px 0 17px; color: var(--gold-deep); stroke-width: 1.35; }
-.proof-rail h3, .company-rail h3 { margin: 0 0 9px; font-size: var(--text-body); letter-spacing: var(--ls-body); }
-.proof-rail p, .company-rail p { margin: 0; color: var(--muted); font-size: var(--text-body); line-height: var(--lh-body); }
+/* The step name is the thing being scanned, so it carries the gold and the display face —
+   the same treatment the section headers use, one role down. It was set in the body face at
+   the body size, which made it indistinguishable from the sentence underneath it. */
+.proof-rail h3, .company-rail h3 {
+  margin: 0 0 9px;
+  color: var(--gold-deep);
+  font-family: var(--font-display);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-regular);
+  line-height: var(--lh-subhead);
+  letter-spacing: var(--ls-subhead);
+}
+/* Held to a short measure so three columns of unequal copy still rag evenly rather than one
+   running two lines longer than its neighbours. */
+.proof-rail p, .company-rail p { margin: 0; max-width: 30ch; color: var(--muted); font-size: var(--text-body); line-height: var(--lh-body); }
+/* The number, the icon and the rule were three separate marks at three different heights. The
+   icon now sits in the same optical column as the number, and hovering a step lifts its own
+   number rather than nothing responding at all. */
+.proof-rail li > svg, .company-rail li > svg { margin: 22px 0 15px; transition: color var(--dur) var(--ease), translate var(--dur) var(--ease); }
+.proof-rail li > span { transition: background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease); }
+.proof-rail li:hover > span { background: var(--gold); color: #fff; }
+.proof-rail li:hover > svg { color: var(--gold); translate: 0 -2px; }
+@media (prefers-reduced-motion: reduce) {
+  .proof-rail li > svg, .proof-rail li > span { transition: none; }
+  .proof-rail li:hover > svg { translate: none; }
+}
 
 .work-record, .packet, .path-panel, .evidence-panel, .review-card {
   border-radius: 0;

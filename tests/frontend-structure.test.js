@@ -1418,9 +1418,8 @@ test('no heading runs longer than six words', () => {
     const words = text.split(' ').filter(w => /[a-z0-9]/i.test(w));
     if (words.length > 6) over.push(`${words.length}w: ${text}`);
   }
-  // Two known and deliberate: the full-screen intro is two four-word lines inside one h1, and
-  // "Clear the bar, then run a trial" is a step label the founder asked to keep intact.
-  const allowed = over.filter(o => !/Students get to prove|Clear the bar/.test(o));
+  // One known and deliberate: the full-screen intro is two four-word lines inside one h1.
+  const allowed = over.filter(o => !/Students get to prove/.test(o));
   assert.deepEqual(allowed, [], `headings over the six-word cap: ${allowed.join(' | ')}`);
 });
 
