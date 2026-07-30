@@ -4256,7 +4256,12 @@ function renderReferralLink() {
   const cohortOpen = $('#cohortLinkOpen');
   const cohortLink = partnerCohortLink();
   if (cohortInput) cohortInput.value = cohortLink;
-  if (cohortOpen) cohortOpen.href = cohortLink || '#';
+  // Shown only when it has a destination. It used to carry href="#" with target="_blank", which
+  // opens a blank copy of the current page rather than doing nothing.
+  if (cohortOpen) {
+    if (cohortLink) { cohortOpen.href = cohortLink; cohortOpen.hidden = false; }
+    else { cohortOpen.removeAttribute('href'); cohortOpen.hidden = true; }
+  }
   renderReferralQr(link);
   section.hidden = false;
 }

@@ -915,7 +915,7 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
    .about-lede and .recruiter-lede were added to the size rule and missed here, which left both
    headings in the body sans at weight 720 while every other section header sat in the display
    face at 400. Different family AND different weight, from one omitted selector. */
-.section-heading h2, .why-copy h2, .final-cta h2, .about-lede h2, .recruiter-lede h2, .dialog-copy h2, .review-intro h3, .exchange-head h2 {
+.section-heading h2, .why-copy h2, .final-cta h2, .about-lede h2, .recruiter-lede h2, .dialog-copy h2, .review-intro h3, .exchange-head h2, .cohort-hero h1, .cohort-empty h2 {
   font-family: var(--font-display);
   font-weight: var(--weight-regular);
 }
@@ -2594,10 +2594,16 @@ body[data-audience="home"] .compare-section { display: block; }
 }
 
 .hero-home { display: none; }
-/* flex, not block. This rule only exists to toggle the hero between audiences, but it outranks
-   the layout rule further down (attribute + class beats a bare class), so `display: block` here
-   silently defeated the column layout and margin-top:auto on the scroll cue did nothing. */
-body[data-audience="home"] .hero-home { display: flex; }
+/* Both the toggle AND the layout live here, and nowhere else.
+   `display` must not appear in the .hero-home block further down: that block comes later in the
+   file with the same specificity as `.hero-home { display: none }` above, so declaring flex
+   there beat the none and rendered the home hero on the student, company and referral pages
+   too. The column distributes the space: headline high, paths low enough to read as a separate
+   decision, and margin-top:auto on the cue anchors the bottom edge. */
+body[data-audience="home"] .hero-home {
+  display: flex;
+  flex-direction: column;
+}
 /* The official one-liner gets real weight in the hero — larger, ink-dark, tight measure. */
 /* Subtle gold "signal from noise" field behind the home hero. Sits above the soft
    background glows (z-index:-1) but below the content, which we lift to z-index:1. */
@@ -4175,12 +4181,12 @@ body.is-audience-transitioning .audience-transition span {
 .student-vertical:hover::before { opacity: .85; }
 /* Selected: the static grid gives way to the live field underneath it. */
 .student-vertical.is-selected::before { opacity: 0; scale: 1.08; }
-.student-vertical.is-selected { border-color: var(--gold); background: #14120d; color: #fff; }
+.student-vertical.is-selected { border-color: var(--gold); background: #2b2721; color: #fff; }
 .student-vertical.is-selected > small { position: relative; z-index: 1; color: rgba(255,255,255,.72); }
 /* The field sits behind the label, never over it — and held well back. At full strength the
    constellation ran straight through "Professional services" and the label stopped being
    readable, which is a background winning an argument with the content it exists to frame. */
-.vertical-field { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; opacity: .38; pointer-events: none; }
+.vertical-field { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; opacity: .5; pointer-events: none; }
 /* A scrim under the text, weighted to the left where the label sits, so the words keep their
    contrast wherever the field happens to be bright. */
 .student-vertical.is-selected::after {
@@ -4188,7 +4194,7 @@ body.is-audience-transitioning .audience-transition span {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: linear-gradient(100deg, rgba(20,18,13,.92) 0%, rgba(20,18,13,.7) 46%, rgba(20,18,13,.34) 100%);
+  background: linear-gradient(100deg, rgba(43,39,33,.78) 0%, rgba(43,39,33,.48) 46%, rgba(43,39,33,.16) 100%);
   pointer-events: none;
 }
 .student-vertical.is-selected > *:not(.vertical-field) { position: relative; z-index: 1; }
@@ -4901,15 +4907,6 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 .hero-home {
   isolation: isolate;
   min-height: calc(100svh - var(--header-height));
-  /* Was display:block, so the headline, the paths and the cue all stacked against the top and
-     the bottom two thirds of the screen was empty field. As a column the space is distributed:
-     the headline sits high, the paths sit low enough to read as a separate decision, and the
-     cue anchors the bottom instead of floating in the middle of nothing.
-
-     The gap is viewport-relative rather than a fixed margin so it collapses on a short screen
-     instead of pushing the cards below the fold. */
-  display: flex;
-  flex-direction: column;
   background:
     radial-gradient(circle at 72% 16%, rgba(184,130,25,.12), transparent 31%),
     radial-gradient(circle at 12% 80%, rgba(255,255,255,.045), transparent 34%),
@@ -6103,3 +6100,13 @@ textarea:focus-visible {
 /* Never rely on the ring alone where the element also carries meaning through colour. */
 .home-path:focus-visible { outline-offset: -2px; }
 
+/* ── Tap-target floor (§17) ────────────────────────────────────────────────────────────
+   A walk of every page at 375px found five controls under the 24px minimum, all of them bare
+   text links whose height was just their line box: .back-site at 17px, .auth-back and
+   .ghost-button at 19px, .quiet-link at 22px. Padding rather than font-size, so the type scale
+   is untouched and the target grows around the words. */
+.back-site, .auth-back, .ghost-button, .quiet-link, .scroll-cue, .draft-clear {
+  padding-block: 4px;
+  min-height: 24px;
+}
+.back-site, .auth-back, .quiet-link { display: inline-flex; align-items: center; gap: 6px; }

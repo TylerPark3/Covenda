@@ -4,33 +4,48 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Covenda · Join QR</title>
+  <link rel="icon" href="/favicon-48.png" sizes="48x48" type="image/png">
+  <link rel="icon" href="/favicon-96.png" sizes="96x96" type="image/png">
+  <link rel="icon" href="/favicon-192.png" sizes="192x192" type="image/png">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&amp;family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="type.css">
+  <!-- Self-contained on purpose: a partner may open this offline or print it, so it does not
+       pull the full marketing stylesheet. It does use the shared type tokens above, and its
+       local values match the system: square corners, flat gold, no gradient. -->
   <style>
-    :root { --ink:#1a1a17; --muted:#6b6b66; --line:#e6e4dd; --gold:#a9822f; --gold-deep:#8a6a2f; --paper:#faf9f6; }
+    :root { --ink:#0e1013; --muted:#5a5f66; --line:#dcdfe3; --line-strong:#c4c9cf; --gold:#b47b20; --gold-deep:#8b5709; --paper:#fff; }
     * { box-sizing:border-box; }
     body { margin:0; min-height:100vh; display:grid; place-items:start center; padding:26px 18px 44px;
-           font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+           font-family:var(--font-body); font-size:var(--text-body); line-height:var(--lh-body);
            color:var(--ink); background:var(--paper); }
-    .card { width:100%; max-width:430px; text-align:center; background:#fff; border:1px solid var(--line);
-            border-radius:20px; padding:26px 22px 22px; box-shadow:0 20px 50px -30px rgba(0,0,0,.35); }
-    .kicker { font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--gold-deep); margin:0; }
-    h1 { font-size:22px; margin:8px 0 4px; letter-spacing:-.01em; }
-    p.sub { margin:0 0 18px; color:var(--muted); font-size:14px; line-height:1.5; }
+    .card { width:100%; max-width:430px; text-align:center; background:#fff; border:1px solid var(--line-strong);
+            border-radius:0; padding:26px 22px 22px; box-shadow:0 18px 48px rgba(45,38,24,.09); }
+    .kicker { font-size:var(--text-caption); font-weight:var(--weight-bold); letter-spacing:var(--ls-caption-caps); text-transform:uppercase; color:var(--gold-deep); margin:0; }
+    h1 { font-family:var(--font-display); font-size:var(--text-heading); font-weight:var(--weight-regular); line-height:var(--lh-heading); letter-spacing:var(--ls-heading); margin:6px 0 4px; }
+    p.sub { margin:0 0 18px; color:var(--muted); font-size:var(--text-body); line-height:var(--lh-body); }
     .qrwrap { display:grid; place-items:center; min-height:240px; }
-    .qrwrap svg { width:min(272px,70vw); height:auto; border:1px solid var(--line); border-radius:14px; }
-    label { display:block; text-align:left; font-size:12px; font-weight:650; letter-spacing:.02em;
+    .qrwrap svg { width:min(272px,70vw); height:auto; border:1px solid var(--line); border-radius:0; }
+    label { display:block; text-align:left; font-size:var(--text-caption); font-weight:var(--weight-bold); letter-spacing:var(--ls-caption-caps);
             text-transform:uppercase; color:var(--muted); margin:18px 0 6px; }
-    input { width:100%; padding:13px 14px; font-size:16px; font-family:inherit; color:var(--ink);
-            border:1px solid var(--line); border-radius:12px; background:#fff; }
-    input:focus { outline:2px solid var(--gold); outline-offset:1px; }
+    input { width:100%; min-height:44px; padding:12px 14px; font-size:var(--text-body); font-family:inherit; color:var(--ink);
+            border:1px solid var(--line); border-radius:0; background:#fff; }
+    input:focus-visible { outline:2px solid var(--gold-deep); outline-offset:3px; }
     .actions { display:flex; flex-direction:column; gap:10px; margin-top:18px; }
-    a.btn { display:block; width:100%; padding:14px 16px; border-radius:12px; font-size:15px;
-            font-weight:650; text-decoration:none; text-align:center; font-family:inherit;
+    a.btn { display:block; width:100%; min-height:44px; padding:13px 16px; border-radius:0; font-size:var(--text-body);
+            font-weight:var(--weight-medium); text-decoration:none; text-align:center; font-family:inherit;
             border:1px solid transparent; cursor:pointer; }
-    .download { background:linear-gradient(96deg,#a9822f,#c9a24b); color:#fff; }
-    .open { border-color:var(--line); color:var(--ink); background:#fff; }
-    .link { margin-top:16px; font-size:12px; color:var(--muted); word-break:break-all; }
-    .hint { margin-top:14px; font-size:12.5px; color:var(--muted); line-height:1.5; }
+    .download { background:var(--gold); color:#fff; }
+    .download:hover { background:var(--gold-deep); }
+    .open { border-color:var(--line-strong); color:var(--ink); background:#fff; }
+    .open:hover { border-color:var(--gold); color:var(--gold-deep); }
+    a.btn:focus-visible { outline:2px solid var(--gold-deep); outline-offset:3px; }
+    .link { margin-top:16px; font-family:var(--font-mono); font-size:var(--text-caption); color:var(--muted); word-break:break-all; }
+    .hint { margin-top:14px; font-size:var(--text-caption); color:var(--muted); line-height:var(--lh-caption); }
     @media (prefers-color-scheme: dark) {
       body { background:#14140f; color:#f3f0e6; }
       .card { background:#1c1b15; border-color:#33322a; }
@@ -48,7 +63,7 @@
 
     <div class="qrwrap" id="qrwrap"></div>
 
-    <label for="ref">Partner referral code <span style="text-transform:none;font-weight:400">(optional — traces who brought each student)</span></label>
+    <label for="ref">Partner referral code <span style="text-transform:none;font-weight:var(--weight-regular)">(optional, traces who brought each student)</span></label>
     <input id="ref" placeholder="e.g. BERKELEY-ROBOTICS" autocomplete="off" autocapitalize="characters" spellcheck="false">
 
     <div class="actions">

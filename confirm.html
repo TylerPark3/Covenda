@@ -5,12 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Confirm a member · Covenda</title>
+  <link rel="icon" href="/favicon-48.png" sizes="48x48" type="image/png">
+  <link rel="icon" href="/favicon-96.png" sizes="96x96" type="image/png">
+  <link rel="icon" href="/favicon-192.png" sizes="192x192" type="image/png">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/type.css">
   <link rel="stylesheet" href="/styles.css">
   <style>
     /* A single-purpose page for someone who has never seen Covenda and will not return.
        Everything they need to decide, nothing else. */
-    body { display: grid; place-items: center; min-height: 100dvh; padding: 32px 20px; background: #fbf9f4; }
+    body { display: grid; place-items: center; min-height: 100dvh; padding: 32px 20px; background: #fff; }
     .cc { width: min(560px, 100%); padding: clamp(26px, 4vw, 44px); border: 1px solid var(--line-strong); background: #fff; }
     .cc-brand { display: flex; align-items: center; gap: 9px; margin-bottom: 26px; font-weight: 650; letter-spacing: -.01em; }
     .cc-brand img { width: 26px; height: 26px; }
@@ -24,6 +29,8 @@
     .cc label small { color: var(--soft); font-weight: 500; }
     .cc input { width: 100%; min-height: 46px; padding: 11px 13px; border: 1px solid var(--line-strong); background: #fff; font: inherit; font-size: 15px; outline: 0; }
     .cc input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(180,123,32,.1); }
+    .cc-exit { margin: 26px 0 0; font-size: 12.5px; }
+    .cc-exit a { display: inline-flex; align-items: center; min-height: 24px; padding-block: 4px; color: var(--gold-deep); font-weight: 650; }
     .cc-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
     .cc-actions button { min-height: 48px; padding: 0 20px; border: 1px solid var(--line-strong); background: #fff; font: inherit; font-weight: 650; font-size: 15px; cursor: pointer; }
     .cc-actions .is-primary { border-color: var(--gold-deep); background: var(--gold-deep); color: #fff; }
@@ -37,6 +44,7 @@
   <main class="cc" id="cc">
     <div class="cc-brand"><img src="/assets/covenda-mark.svg" alt="" width="26" height="26">Covenda</div>
     <div id="ccBody"><p class="cc-lede">Loading…</p></div>
+    <p class="cc-exit"><a href="/">Go to Covenda</a></p>
   </main>
 
   <script>
@@ -71,9 +79,9 @@
           var i = document.createElement('input'); i.name = name; i.type = type || 'text';
           l.append(s, i); form.append(l); return i;
         }
-        var nameInput = field('officerName', 'Your name', '— required', 'text');
-        var roleInput = field('officerRole', 'Your role in the club', '— optional', 'text');
-        var emailInput = field('officerEmail', 'Your email', '— optional', 'email');
+        var nameInput = field('officerName', 'Your name', 'required', 'text');
+        var roleInput = field('officerRole', 'Your role in the club', 'optional', 'text');
+        var emailInput = field('officerEmail', 'Your email', 'optional', 'email');
 
         var actions = el('div', 'cc-actions');
         var yes = el('button', 'is-primary', 'Yes, confirm them'); yes.type = 'button';
@@ -82,7 +90,7 @@
         var msg = el('p', 'cc-msg'); msg.setAttribute('aria-live', 'polite'); form.append(msg);
         body.append(form);
 
-        body.append(el('p', 'cc-note', 'Covenda places undergraduates on paid, reviewed project work. A confirmed membership is one of the signals companies weigh — which is why your name is recorded against it.'));
+        body.append(el('p', 'cc-note', 'Covenda places undergraduates on paid, reviewed project work. A confirmed membership is one of the signals companies weigh, which is why your name is recorded against it.'));
 
         function decide(decision) {
           if (decision === 'confirm' && nameInput.value.trim().length < 2) {
@@ -99,7 +107,7 @@
           }).then(function (r) { return r.json(); }).then(function (out) {
             if (!out.ok) throw new Error(out.error || 'That did not go through.');
             var done = el('div', 'cc-done');
-            done.append(el('h1', null, out.confirmed ? 'Confirmed — thank you' : 'Recorded — thank you'));
+            done.append(el('h1', null, out.confirmed ? 'Confirmed. Thank you' : 'Recorded. Thank you'));
             done.append(el('p', 'cc-lede', out.confirmed
               ? out.student + ' is now a confirmed member of ' + out.club + ' on Covenda. Nothing else is needed from you.'
               : 'We have recorded that ' + out.student + ' is not a member. Nothing else is needed from you.'));

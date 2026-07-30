@@ -1183,7 +1183,7 @@ test('a selected industry reads as gold, not as a hole in the rail', () => {
   const rule = styles.match(/\.student-vertical\.is-selected \{[^}]*\}/)[0];
   // Dark ground with the particle field behind it and white type, the same language as the
   // hero. A flat gold fill read as a swatch rather than as a selected card.
-  assert.match(rule, /background: #14120d/);
+  assert.match(rule, /background: #2b2721/);
   assert.match(rule, /border-color: var\(--gold\)/);
   // Clipping moved to the base rule, because the resting dot grid needs it too. Asserted
   // there rather than dropped: without it the field spills past the card corners.
@@ -1509,4 +1509,89 @@ test('titles inside cards take the subhead role, not the heading role', async ()
     }
   }
   assert.deepEqual(offenders, [], `card titles set at a section-header size:\n  ${offenders.join('\n  ')}`);
+});
+
+// ── Every page, not just the marketing one (§17) ──────────────────────────────────────
+// A walk of all six pages found join-qr.html running its own design system entirely, cohort's
+// page headline falling back to the body sans, two pages with no favicon at all, and confirm
+// stranded on the retired cream ground with no way back to the site. None of it was visible to
+// this suite, because every test here read index.html.
+const SECONDARY = ['portal.html', 'admin.html', 'cohort.html', 'confirm.html', 'join-qr.html'];
+
+test('every page declares the same favicon set', async () => {
+  for (const page of ['index.html', ...SECONDARY]) {
+    const src = await readFile(new URL(`../${page}`, import.meta.url), 'utf8');
+    // Without these the browser falls back to /favicon.ico, which does not exist and 404s.
+    assert.ok((src.match(/rel="icon"/g) || []).length >= 3, `${page} has no favicon set`);
+    assert.match(src, /rel="apple-touch-icon"/, `${page} has no touch icon`);
+  }
+});
+
+// The retired ground. type.css records why: cream plus an editorial serif is the exact
+// combination readers called out as AI-generated.
+test('no page reintroduces the warm cream ground', async () => {
+  for (const page of ['index.html', ...SECONDARY]) {
+    const src = await readFile(new URL(`../${page}`, import.meta.url), 'utf8');
+    for (const cream of ['#fbf9f4', '#faf9f6', '#F4F1EA', '#FDF9F0;']) {
+      // The gold gradient panels legitimately use warm tones as gradient stops, so only a flat
+      // page background counts.
+      const re = new RegExp(`background:\\s*${cream}`, 'i');
+      assert.ok(!re.test(src), `${page} sets a cream page background (${cream})`);
+    }
+  }
+});
+
+// A dead end is worse than an error. Both link-error pages are reached from an email.
+test('the pages reached from an email offer a way onward', async () => {
+  for (const page of ['confirm.html', 'cohort.html']) {
+    const src = await readFile(new URL(`../${page}`, import.meta.url), 'utf8');
+    assert.match(src, /href="(\/|https:\/\/covenda\.app\/?)"/, `${page} strands a visitor with no exit`);
+  }
+});
+
+// join-qr.html is deliberately self-contained so it works offline and prints, but self-contained
+// is not the same as off-brand: it had its own font stack, 20px rounded corners on a --radius: 0
+// site, and a gradient button that exists nowhere else.
+test('the standalone QR page uses the shared type system and the house geometry', async () => {
+  const src = await readFile(new URL('../join-qr.html', import.meta.url), 'utf8');
+  assert.match(src, /rel="stylesheet" href="type\.css"/, 'it does not load the shared type tokens');
+  assert.match(src, /family=Geist/, 'it does not load the house typeface');
+  assert.ok(!/-apple-system/.test(src), 'it still declares its own system font stack');
+  assert.ok(!/linear-gradient/.test(src), 'a gradient button is back');
+  for (const [, radius] of src.matchAll(/border-radius:\s*([^;]+)/g)) {
+    assert.equal(radius.trim(), '0', `border-radius: ${radius.trim()} on a square-cornered site`);
+  }
+});
+
+// Implementation detail leaking into user-facing copy. A student signing in cannot act on it.
+test('sign-in copy does not mention the mail transport', async () => {
+  const src = await readFile(new URL('../portal.html', import.meta.url), 'utf8');
+  assert.ok(!/SMTP/i.test(src), 'the sign-in page explains SMTP to a student');
+});
+
+// href="#" with target="_blank" opens a blank copy of the current page. It is only reachable
+// once a partner has a code, which is exactly when it must already work.
+test('the cohort link is only a link once it has a destination', async () => {
+  const src = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const tag = src.match(/<a[^>]*id="cohortLinkOpen"[^>]*>/)[0];
+  assert.ok(!/href="#"/.test(tag), 'it ships with a placeholder href');
+  assert.match(tag, /hidden/, 'it is visible before it has a destination');
+  assert.match(script, /cohortOpen\.removeAttribute\('href'\)/);
+});
+
+// Em dashes, in copy a person reads. Code comments are documentation and keep theirs.
+test('visitor-facing copy has no em dashes', async () => {
+  for (const page of ['cohort.html', 'admin.html']) {
+    const src = (await readFile(new URL(`../${page}`, import.meta.url), 'utf8'))
+      .replace(/<!--[\s\S]*?-->/g, '').replace(/^\s*\/\/.*$/gm, '');
+    assert.ok(!src.includes('—'), `${page} still has an em dash in visible copy`);
+  }
+});
+
+// Bare text links inherited only their line box: 17px on the admin back-link, well under the
+// 24px minimum, and the hardest thing on the page to hit on a phone.
+test('small text links meet the tap-target floor', () => {
+  const rule = styles.match(/\.back-site, \.auth-back, \.ghost-button, \.quiet-link[^{]*\{[^}]*\}/)[0];
+  assert.match(rule, /min-height: 24px/);
+  assert.match(rule, /padding-block/);
 });
