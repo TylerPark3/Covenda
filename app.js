@@ -5497,19 +5497,22 @@ function initHeroField(target) {
       const index = nodes.indexOf(signal.node);
       const q = pts[index];
       if (!q) continue;
-      // Not on a figure. The signal's expanding ring is a 30px circle, and landing one on the
-      // resolved person put a stray hoop over its hand: the same problem as the links, in a
-      // different shape.
       if ((q.figure ?? 0) > 0.06) continue;
       const progress = Math.min(1, (now - signal.born) / signal.duration);
       const bloom = Math.sin(progress * Math.PI);
       const color = progress < .22 ? WHITE : GOLD;
-      const radius = 5 + bloom * 25;
-      ctx.fillStyle = `rgba(${color},${.16 + bloom * .34})`;
-      ctx.beginPath(); ctx.arc(q.x, q.y, 2.5 + bloom * 2.2, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = `rgba(${GOLD},${bloom * .52})`;
-      ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.arc(q.x, q.y, radius, 0, Math.PI * 2); ctx.stroke();
+      // No expanding ring. It was a 30px stroked circle pulsing on random nodes the whole time,
+      // which read as hoops drawn over the field rather than as anything signalling. A signal is
+      // a node getting brighter, so that is all it is now: the dot swells and warms from neutral
+      // to gold and settles back. Nothing is outlined.
+      ctx.fillStyle = `rgba(${color},${.30 + bloom * .55})`;
+      ctx.beginPath(); ctx.arc(q.x, q.y, 2.2 + bloom * 3.4, 0, Math.PI * 2); ctx.fill();
+      // A soft halo instead of an edge, so the pulse still carries at a glance.
+      const halo = ctx.createRadialGradient(q.x, q.y, 0, q.x, q.y, 6 + bloom * 16);
+      halo.addColorStop(0, `rgba(${GOLD},${bloom * .34})`);
+      halo.addColorStop(1, `rgba(${GOLD},0)`);
+      ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(q.x, q.y, 6 + bloom * 16, 0, Math.PI * 2); ctx.fill();
     }
 
     if (pointer) {
