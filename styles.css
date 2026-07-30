@@ -2575,6 +2575,21 @@ body[data-audience="home"] .hero-home { display: block; }
 /* Subtle gold "signal from noise" field behind the home hero. Sits above the soft
    background glows (z-index:-1) but below the content, which we lift to z-index:1. */
 .hero-field { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+/* The three light pages: the field is atmosphere, so it is held to the top of the section and
+   faded out before it reaches the copy. It must never compete with a word. */
+.hero-student, .hero-company, .hero-university { position: relative; }
+.hero-student > *:not(.hero-field),
+.hero-company > *:not(.hero-field),
+.hero-university > *:not(.hero-field) { position: relative; z-index: 1; }
+.hero-student .hero-field,
+.hero-company .hero-field,
+.hero-university .hero-field {
+  height: clamp(280px, 46vh, 520px);
+  inset: 0 0 auto;
+  opacity: .5;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.55) 55%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.55) 55%, transparent 100%);
+}
 .hero-home > *:not(.hero-field) { position: relative; z-index: 1; }
 body[data-audience="home"] .hero-student,
 body[data-audience="home"] .hero-company,
@@ -4050,22 +4065,51 @@ body.is-audience-transitioning .audience-transition span {
   color: #62615c;
   text-align: left;
   cursor: pointer;
-  transition: color .18s ease, background .18s ease, transform .24s cubic-bezier(.2,.8,.2,1);
+  transition: color var(--dur) var(--ease), background var(--dur) var(--ease), translate var(--dur) var(--ease);
 }
 .student-vertical > strong {
   color: inherit;
-  font-family: var(--font-sans);
-  font-size: var(--text-heading);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--ls-heading);
-  line-height: var(--lh-heading);
+  font-family: var(--font-display);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--ls-subhead);
+  line-height: var(--lh-subhead);
 }
 .student-vertical > small { color: var(--muted); font-size: var(--text-caption); line-height: var(--lh-caption); }
-.student-vertical:hover { color: var(--ink); transform: translateY(-2px); }
-.student-vertical.is-selected { position: relative; overflow: hidden; border-color: var(--gold); background: #14120d; color: #fff; }
+.student-vertical::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: radial-gradient(circle at center, rgba(110,112,116,.5) 1px, transparent 1.4px);
+  background-size: 15px 15px;
+  background-position: 8px 8px;
+  opacity: .5;
+  transition: opacity var(--dur) var(--ease), scale var(--dur) var(--ease);
+  pointer-events: none;
+}
+.student-vertical { position: relative; overflow: hidden; }
+.student-vertical > * { position: relative; z-index: 1; }
+.student-vertical:hover { color: var(--ink); translate: 0 -2px; }
+.student-vertical:hover::before { opacity: .85; }
+/* Selected: the static grid gives way to the live field underneath it. */
+.student-vertical.is-selected::before { opacity: 0; scale: 1.08; }
+.student-vertical.is-selected { border-color: var(--gold); background: #14120d; color: #fff; }
 .student-vertical.is-selected > small { position: relative; z-index: 1; color: rgba(255,255,255,.72); }
-/* The field sits behind the label, never over it. */
-.vertical-field { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; pointer-events: none; }
+/* The field sits behind the label, never over it — and held well back. At full strength the
+   constellation ran straight through "Professional services" and the label stopped being
+   readable, which is a background winning an argument with the content it exists to frame. */
+.vertical-field { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; opacity: .38; pointer-events: none; }
+/* A scrim under the text, weighted to the left where the label sits, so the words keep their
+   contrast wherever the field happens to be bright. */
+.student-vertical.is-selected::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(100deg, rgba(20,18,13,.92) 0%, rgba(20,18,13,.7) 46%, rgba(20,18,13,.34) 100%);
+  pointer-events: none;
+}
 .student-vertical.is-selected > *:not(.vertical-field) { position: relative; z-index: 1; }
 .student-vertical.is-selected > small { color: rgba(255,255,255,.68); }
 .student-vertical:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 6px; }
@@ -4101,10 +4145,11 @@ body.is-audience-transitioning .audience-transition span {
   text-transform: uppercase;
 }
 .student-specialty-heading strong {
-  font-family: var(--font-sans);
-  font-size: var(--text-heading);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--ls-heading);
+  font-family: var(--font-display);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--ls-subhead);
+  line-height: var(--lh-subhead);
 }
 .student-specialty-heading button {
   padding: 2px 0;

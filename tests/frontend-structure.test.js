@@ -1185,8 +1185,16 @@ test('a selected industry reads as gold, not as a hole in the rail', () => {
   // hero. A flat gold fill read as a swatch rather than as a selected card.
   assert.match(rule, /background: #14120d/);
   assert.match(rule, /border-color: var\(--gold\)/);
-  assert.match(rule, /overflow: hidden/, 'the field would spill past the card corners');
+  // Clipping moved to the base rule, because the resting dot grid needs it too. Asserted
+  // there rather than dropped: without it the field spills past the card corners.
+  assert.match(styles, /\.student-vertical \{[^}]*overflow: hidden/, 'the card no longer clips its field');
   assert.match(styles, /\.vertical-field \{[^}]*position: absolute/);
+  // At rest the card shows the field as an ordered dot grid; selecting it hands over to the
+  // live canvas, so the click reads as the same material waking up.
+  assert.match(styles, /\.student-vertical::before \{[^}]*radial-gradient\(circle at center/);
+  assert.match(styles, /\.student-vertical\.is-selected::before \{[^}]*opacity: 0/);
+  // The work areas are a menu, so they are set in the menu's face, not in a competing sans.
+  assert.match(styles, /\.student-vertical > strong \{[^}]*font-family: var\(--font-display\)/);
 });
 
 // The card is highlighted and the button reads "Join for X". A line underneath saying

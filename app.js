@@ -5036,8 +5036,15 @@ function initHeroField(target) {
   if (!ctx) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const GOLD = '216,167,68';
-  const WHITE = '245,246,241';
+  // The same field, two grounds. The student, company and referral pages open on near-white,
+   // where the dark palette's near-white nodes are simply invisible, so the neutral flips to
+   // ink and the alphas come up. One renderer, because two copies of 200 lines of canvas is how
+   // the second one silently stops matching the first.
+  const light = canvas.dataset.palette === 'light';
+  const GOLD = light ? '164,112,26' : '216,167,68';
+  const WHITE = light ? '104,110,120' : '245,246,241';
+  // On light ground the eye needs more ink before a hairline registers at all.
+  const INK_LIFT = light ? 1.75 : 1;
   const FOCAL = 760;
   const DEPTH = 680;
   const LINK_DISTANCE = 152;
@@ -5138,7 +5145,7 @@ function initHeroField(target) {
         if (distance > LINK_DISTANCE) continue;
         const depth = (a.scale + b.scale) / 2;
         const goldLink = nodes[i].gold || nodes[j].gold;
-        const alpha = (1 - distance / LINK_DISTANCE) * depth * (goldLink ? .58 : .30);
+        const alpha = (1 - distance / LINK_DISTANCE) * depth * (goldLink ? .58 : .30) * INK_LIFT;
         ctx.strokeStyle = goldLink
           ? `rgba(${GOLD},${alpha})`
           : `rgba(${WHITE},${alpha})`;
@@ -5171,7 +5178,7 @@ function initHeroField(target) {
         .sort((a, b) => a.distance - b.distance)
         .slice(0, 7);
       for (const item of nearest) {
-        const alpha = Math.max(.12, .52 - item.distance / 700);
+        const alpha = Math.max(.12, .52 - item.distance / 700) * INK_LIFT;
         ctx.strokeStyle = nodes[item.index].gold
           ? `rgba(${GOLD},${alpha + .18})`
           : `rgba(${WHITE},${alpha})`;
@@ -5318,6 +5325,10 @@ initCovendaMotion();
 initFlowDemo();
 initIcosahedron();
 initHeroField();
+// The student, company and referral pages open on a flat near-white ground with nothing on it.
+// They get the same field, on the light palette, so the top of every page belongs to the same
+// site rather than only the home page having a character.
+document.querySelectorAll('[data-hero-field]').forEach(canvas => initHeroField(canvas));
 initScrollReveal();
 
 // ---- Stat count-up: "Why now" band numbers rise 0 -> value when they scroll into view. ----
