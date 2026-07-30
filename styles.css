@@ -4236,20 +4236,15 @@ body.is-audience-transitioning .audience-transition span {
 }
 .student-specialty-panel {
   display: grid;
-  grid-template-columns: minmax(180px, .7fr) minmax(0, 2fr);
-  gap: 18px clamp(24px, 4vw, 64px);
-  align-items: start;
+  gap: 14px;
   margin-top: 28px;
   padding: 28px 0 0;
   border-top: 1px solid var(--line);
 }
 .student-specialty-panel[hidden] { display: none; }
-.student-specialty-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
+/* Only "Clear choice" left in here, so it sits on its own line above the options rather than
+   opposite a label that no longer exists. */
+.student-specialty-heading { display: flex; justify-content: flex-start; }
 .student-specialty-heading p {
   margin: 0 0 7px;
   color: var(--muted);
@@ -4279,7 +4274,7 @@ body.is-audience-transitioning .audience-transition span {
 .student-specialty-heading button:hover { color: var(--ink); }
 .student-specialty-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 8px;
 }
 .student-specialty {
@@ -4314,14 +4309,12 @@ body.is-audience-transitioning .audience-transition span {
 .student-specialty.is-selected::after { border-color: var(--gold-deep); background: var(--gold); transform: translateY(-50%) rotate(135deg) scale(1.12); }
 .student-specialty:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 3px; }
 .student-specialty-status {
-  grid-column: 1 / -1;
   margin: 14px 0 0;
   color: var(--soft);
   font-size: var(--text-caption);
   line-height: var(--lh-caption);
 }
 .student-join-selected {
-  grid-column: 2;
   width: min(100%, 360px);
   min-height: 54px;
   justify-self: start;

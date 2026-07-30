@@ -543,16 +543,14 @@ function selectStudentSpecialty(label) {
 
 function renderStudentSpecialties(workType) {
   const host = $('#studentSpecialtyOptions');
-  const title = $('#studentSpecialtyTitle');
   const status = $('#studentSpecialtyStatus');
   const panel = $('#studentSpecialtyPanel');
   const empty = $('#studentSpecialtyEmpty');
-  if (!host || !title || !status || !panel || !empty) return;
+  if (!host || !status || !panel || !empty) return;
   const vertical = $(`.student-vertical[data-work-type="${workType}"]`);
   const choices = studentSpecialties[workType] || [];
   if (!vertical || !choices.length) {
     host.replaceChildren();
-    title.textContent = '';
     panel.hidden = true;
     empty.hidden = false;
     updateStudentJoinChoice();
@@ -560,7 +558,6 @@ function renderStudentSpecialties(workType) {
   }
   panel.hidden = false;
   empty.hidden = true;
-  title.textContent = vertical?.dataset.verticalLabel || workType;
   host.replaceChildren();
 
   if (!choices.includes(state.studentSpecialty)) state.studentSpecialty = '';
