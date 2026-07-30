@@ -517,8 +517,9 @@ test('school clubs can register and see the earned verification ladder', () => {
   // Reuses the existing intake — no new storage path, no new inbox.
   assert.match(script, /type: 'referrer_endorsement'/);
   assert.match(script, /intent: 'club_verification'/);
-  // Earned, never granted — the honesty line has to survive into the UI.
-  assert.match(html, /Nothing here is granted or sold/);
+  // Earned, never granted. The line that said this a third time is gone; the guarantee is
+  // carried by the heading above and by the badge key, both asserted here.
+  assert.match(html, /Nobody starts with it/);
   // The assumption every club will otherwise make, contradicted before they make it. The
   // wording shortened; the guarantee did not.
   assert.match(html, /Standing opens doors, it does not walk through them/);

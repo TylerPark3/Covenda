@@ -454,7 +454,7 @@
         <canvas class="hero-field" data-palette="light" data-hero-field aria-hidden="true"></canvas>
         <div class="hero-copy">
           <h1 id="studentHeroTitle">Let the company <span class="word-gold">find you</span></h1>
-          <p>Join now without choosing a direction, or select the exact work you want before you sign up.</p>
+          <p>Rather than feeding a profile to AI agents, or spending a minute on an application, put your work and interests somewhere built to last and grow in credibility.</p>
         </div>
         <!-- F3: partner-referral landing. Populated + shown by app.js only when the
              visitor arrives via a partner's ?ref= link. Not identity-verified. -->
@@ -844,10 +844,9 @@
            band below. -->
       <div class="made-by">
         <p class="made-by-copy">A professional launchpad, <span class="word-gold">built by students, for students.</span></p>
-        <!-- A real icosahedron: 12 vertices, 30 edges, orthographic three-quarter view.
-             Near edges are drawn brighter than far ones so the solid reads as solid. Static
-             and decorative, so it carries no accessible name and cannot shift layout. -->
-        <svg class="made-by-solid" viewBox="0 0 200 200" aria-hidden="true" focusable="false"><line x1='71.4' y1='27.6' x2='155.1' y2='32' class='e-near'/><line x1='71.4' y1='27.6' x2='136.2' y2='81.2' class='e-near'/><line x1='71.4' y1='27.6' x2='15' y2='81.2' class='e-near'/><line x1='71.4' y1='27.6' x2='49.6' y2='111.7' class='e-near'/><line x1='71.4' y1='27.6' x2='80.2' y2='32' class='e-far'/><line x1='155.1' y1='32' x2='136.2' y2='81.2' class='e-near'/><line x1='155.1' y1='32' x2='150.4' y2='88.3' class='e-far'/><line x1='155.1' y1='32' x2='80.2' y2='32' class='e-far'/><line x1='155.1' y1='32' x2='185' y2='118.8' class='e-near'/><line x1='136.2' y1='81.2' x2='119.8' y2='168' class='e-near'/><line x1='136.2' y1='81.2' x2='49.6' y2='111.7' class='e-near'/><line x1='136.2' y1='81.2' x2='185' y2='118.8' class='e-near'/><line x1='150.4' y1='88.3' x2='80.2' y2='32' class='e-far'/><line x1='150.4' y1='88.3' x2='185' y2='118.8' class='e-far'/><line x1='150.4' y1='88.3' x2='128.6' y2='172.4' class='e-far'/><line x1='150.4' y1='88.3' x2='63.8' y2='118.8' class='e-far'/><line x1='119.8' y1='168' x2='49.6' y2='111.7' class='e-near'/><line x1='119.8' y1='168' x2='185' y2='118.8' class='e-near'/><line x1='119.8' y1='168' x2='128.6' y2='172.4' class='e-near'/><line x1='119.8' y1='168' x2='44.9' y2='168' class='e-near'/><line x1='15' y1='81.2' x2='49.6' y2='111.7' class='e-near'/><line x1='15' y1='81.2' x2='80.2' y2='32' class='e-far'/><line x1='15' y1='81.2' x2='44.9' y2='168' class='e-far'/><line x1='15' y1='81.2' x2='63.8' y2='118.8' class='e-far'/><line x1='49.6' y1='111.7' x2='44.9' y2='168' class='e-near'/><line x1='80.2' y1='32' x2='63.8' y2='118.8' class='e-far'/><line x1='185' y1='118.8' x2='128.6' y2='172.4' class='e-far'/><line x1='128.6' y1='172.4' x2='44.9' y2='168' class='e-far'/><line x1='128.6' y1='172.4' x2='63.8' y2='118.8' class='e-far'/><line x1='44.9' y1='168' x2='63.8' y2='118.8' class='e-far'/><circle cx='71.4' cy='27.6' r='2.2' class='v-near'/><circle cx='155.1' cy='32' r='2.2' class='v-near'/><circle cx='136.2' cy='81.2' r='2.2' class='v-near'/><circle cx='150.4' cy='88.3' r='1.6' class='v-far'/><circle cx='119.8' cy='168' r='2.2' class='v-near'/><circle cx='15' cy='81.2' r='1.6' class='v-far'/><circle cx='49.6' cy='111.7' r='2.2' class='v-near'/><circle cx='80.2' cy='32' r='1.6' class='v-far'/><circle cx='185' cy='118.8' r='2.2' class='v-near'/><circle cx='128.6' cy='172.4' r='1.6' class='v-far'/><circle cx='44.9' cy='168' r='1.6' class='v-far'/><circle cx='63.8' cy='118.8' r='1.6' class='v-far'/></svg>
+        <!-- The same field as the hero, on the ink palette. It was a static SVG icosahedron;
+             a network that never moves is a diagram of a network rather than one. -->
+        <canvas class="made-by-field" data-hero-field data-palette="ink" aria-hidden="true"></canvas>
       </div>
 
       <section class="slop-section" id="theProblem" aria-labelledby="slopTitle">
@@ -1343,7 +1342,7 @@
                 <label>Your email<input name="clubEmail" type="email" autocomplete="email" placeholder="you@columbia.edu" required></label>
               </div>
               <details class="club-more">
-                <summary>Add more detail <span>Optional, and it speeds up verification</span></summary>
+                <summary>Add more detail <span>Optional</span></summary>
                 <div class="field-grid">
                   <label>Your role<input name="clubRole" placeholder="President, VP, officer"></label>
                   <label>Members you'd put forward<input name="clubSize" type="number" min="1" max="500" inputmode="numeric" placeholder="8"></label>
@@ -1360,7 +1359,6 @@
 
           <div class="club-earned">
             <p class="club-step-cap"><span>2</span> Earn verification</p>
-            <p class="club-step-what">Nothing here is granted or sold. Each rung opens when your members reach it.</p>
             <ol class="club-tiers" id="clubTiers"></ol>
             <!-- The thing every club will assume otherwise, said before they assume it. -->
             <p class="club-caveat"><b>Standing opens doors, it does not walk through them.</b> Members still apply with their own recorded work and are judged on it.</p>

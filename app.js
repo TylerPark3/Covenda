@@ -5081,15 +5081,26 @@ function initHeroField(target) {
   if (!ctx) return;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // The same field, two grounds. The student, company and referral pages open on near-white,
-   // where the dark palette's near-white nodes are simply invisible, so the neutral flips to
-   // ink and the alphas come up. One renderer, because two copies of 200 lines of canvas is how
-   // the second one silently stops matching the first.
-  const light = canvas.dataset.palette === 'light';
-  const GOLD = light ? '164,112,26' : '216,167,68';
-  const WHITE = light ? '104,110,120' : '245,246,241';
-  // On light ground the eye needs more ink before a hairline registers at all.
-  const INK_LIFT = light ? 1.75 : 1;
+  // ── One renderer, three grounds ──────────────────────────────────────────────────────
+  // The field has to sit on near-black (home hero), near-white (student, company, referral
+  // pages) and gold (the "built by students" band). A near-white node is invisible on white and
+  // a gold node is invisible on gold, so each ground names its own pair, and `lift` says how
+  // much more ink that ground needs before a hairline registers at all.
+  //
+  // Named palettes rather than a boolean, because the third ground is where a two-way flag
+  // starts lying. And one renderer rather than three copies of 200 lines of canvas, which is
+  // how the second copy silently stops matching the first.
+  const PALETTES = {
+    dark: { gold: '216,167,68', neutral: '245,246,241', lift: 1 },
+    light: { gold: '164,112,26', neutral: '104,110,120', lift: 1.75 },
+    // On gold, ink IS the contrast. Both channels go dark and the accent barely differs from
+    // the neutral, because a gold accent on a gold ground has nothing to say.
+    ink: { gold: '58,42,14', neutral: '32,28,22', lift: 2.1 },
+  };
+  const palette = PALETTES[canvas.dataset.palette] || PALETTES.dark;
+  const GOLD = palette.gold;
+  const WHITE = palette.neutral;
+  const INK_LIFT = palette.lift;
   const FOCAL = 760;
   const DEPTH = 680;
   const LINK_DISTANCE = 152;

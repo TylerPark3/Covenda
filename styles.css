@@ -5410,8 +5410,6 @@ body[data-audience="company"] .slop-section { display: block; }
 .made-by {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(150px, 18vw, 240px);
-  gap: clamp(20px, 3vw, 48px);
   align-items: center;
   width: min(100%, var(--content));
   margin: 0 auto clamp(30px, 4vw, 52px);
@@ -5448,20 +5446,30 @@ body[data-audience="company"] .slop-section { display: block; }
   font-size: var(--optical-serif);
   letter-spacing: var(--ls-caption);
 }
-.made-by-solid { width: 100%; height: auto; overflow: visible; }
-.made-by-solid line { fill: none; stroke-linecap: round; }
-.made-by-solid .e-near { stroke: rgba(58,42,14,.55); stroke-width: 1; }
-.made-by-solid .e-far { stroke: rgba(58,42,14,.22); stroke-width: .7; }
-.made-by-solid .v-near { fill: rgba(48,34,10,.8); }
-.made-by-solid .v-far { fill: rgba(48,34,10,.34); }
-/* One entrance, shared curve, and it resolves instantly if motion is not wanted. */
-@media (prefers-reduced-motion: no-preference) {
-  .made-by-solid { rotate: -6deg; transition: rotate 600ms var(--ease); }
-  .made-by:hover .made-by-solid { rotate: 6deg; }
+/* The field spans the whole band and is masked away from the copy, so it is strongest in the
+   column the static solid used to occupy and absent behind the words. A field that only filled
+   the right-hand column had too little area to read as a network at all. */
+.made-by-field {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  opacity: .62;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.25) 42%, #000 78%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.25) 42%, #000 78%);
+  pointer-events: none;
 }
+.made-by-copy { z-index: 1; }
+
 @media (max-width: 720px) {
-  .made-by { grid-template-columns: 1fr; justify-items: center; text-align: center; }
-  .made-by-solid { width: clamp(140px, 46vw, 200px); }
+  /* At this width there is no room beside the copy, so the field goes fully behind it and drops
+     to an intensity the text can sit on top of. */
+  .made-by-field {
+    opacity: .3;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
 }
 
 /* The batch board: filter in a rail, cards using the width that box was wasting. */

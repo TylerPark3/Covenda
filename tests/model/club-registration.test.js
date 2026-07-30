@@ -19,7 +19,9 @@ test('only the three fields that are actually required are visible', () => {
 
 test('the optional half is collapsed and labelled as optional', () => {
   assert.match(form, /<details class="club-more">/);
-  assert.match(form, /Optional, and it speeds up verification/);
+  // The label says optional and nothing more: the old version also promised faster
+  // verification, which is a claim about turnaround Covenda cannot yet stand behind.
+  assert.match(form, /<summary>Add more detail <span>Optional<\/span><\/summary>/);
 });
 
 test('required fields are marked required, so the browser helps before the server does', () => {

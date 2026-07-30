@@ -45,7 +45,12 @@ test('every rung has a real threshold, so "earned" means something checkable', (
 });
 
 test('the ladder is not for sale, and says so', () => {
-  assert.match(html, /Nothing here is granted or sold/);
+  // "Nothing here is granted or sold" was a third statement of this, one line under a heading
+  // that already says it. The claim itself is not optional, so the guard follows it to the two
+  // places that still carry it rather than being dropped with the sentence.
+  assert.match(html, /Verification is earned/, 'the ladder no longer says verification is earned');
+  assert.match(html, /Nobody starts with it/, 'nothing states that no club begins verified');
+  assert.ok(!/granted or sold/.test(html), 'the deleted third copy is back');
 });
 
 // A badge next to the heading, and a line saying what earns it. The badge alone would read as
