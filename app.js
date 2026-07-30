@@ -5499,10 +5499,9 @@ function initHeroField(target) {
       // light actually does.
     }
 
-    if (pointer) {
-      ctx.fillStyle = `rgba(${GOLD},.8)`;
-      ctx.beginPath(); ctx.arc(pointer.x, pointer.y, 2.2, 0, Math.PI * 2); ctx.fill();
-    }
+    // No dot at the cursor. It painted a gold point exactly under the pointer, which on the dark
+    // hero read as a lone stray dot travelling with the mouse rather than as part of the field.
+    // The hairlines reaching toward nearby nodes already show where the cursor is.
   }
 
   function frame(now) { step(now); draw(now); raf = requestAnimationFrame(frame); }
