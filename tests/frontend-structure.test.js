@@ -1483,3 +1483,30 @@ test('body text is capped to a readable measure', () => {
   assert.match(typeCss, /--measure:\s*\d+ch;/);
   assert.match(typeCss, /\.t-body, \.t-measure \{ max-width: var\(--measure\)/);
 });
+
+// A card title is never a section header. The size conversion bucketed by the old max value, so
+// anything that had been set at 23-43px landed on --text-heading regardless of how wide its
+// container was: "Talent vouched for by people who know them" ended up at up to 40px in a
+// ~300px column and wrapped to six lines, dwarfing the panel it pointed at.
+//
+// Static, not rendered, because how many lines something wraps to depends on the viewport, and
+// a browser check at one width silently passes at another. This asserts the role directly.
+test('titles inside cards take the subhead role, not the heading role', async () => {
+  const CARD = /(-card|-source|-output|-tile|-cell|-chip|-pill|-badge|-stage\b|-step\b|-item\b|-rung|\bli\b|\bdd\b|\bdt\b)/;
+  const offenders = [];
+  for (const name of ['styles.css', 'portal.css', 'admin.css']) {
+    const css = (await readFile(new URL(`../${name}`, import.meta.url), 'utf8')).replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const [, rawSel, body] of css.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
+      if (!/font-size:\s*var\(--text-(heading|display)\)/.test(body)) continue;
+      const sel = rawSel.trim().replace(/\s+/g, ' ');
+      if (!CARD.test(sel)) continue;
+      // Big numeric readouts are data, not titles: a balance or a countdown earns display.
+      if (/-count|-n\b|-value|-score|balance|timer/.test(sel)) continue;
+      // The exchange workbench panel is the focal object of its own diagram, not one card in a
+      // row. It is capped at 12ch so the heading size wraps to a deliberate two lines.
+      if (sel === '.exchange-step-copy h3') continue;
+      offenders.push(`${name}: ${sel}`);
+    }
+  }
+  assert.deepEqual(offenders, [], `card titles set at a section-header size:\n  ${offenders.join('\n  ')}`);
+});

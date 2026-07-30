@@ -180,6 +180,22 @@ const steps = [
   })()`],
   ['close sign-up', "document.getElementById('studentDialog').close()"],
 
+  // No unit test can see text wrapping, and this is how the type conversion went wrong: card
+  // titles were bucketed by their old max size into the heading role, so "Talent vouched for by
+  // people who know them" set at up to 40px in a 200px column and wrapped to six lines,
+  // dwarfing the panel it pointed at. Four lines in a heading means the wrong role.
+  ['no heading wraps past three lines', `(() => {
+    const bad = [];
+    for (const el of document.querySelectorAll('h1,h2,h3,h4')) {
+      if (el.offsetParent === null) continue;
+      const cs = getComputedStyle(el);
+      const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2;
+      const lines = Math.round(el.getBoundingClientRect().height / lh);
+      if (lines >= 4) bad.push(Math.round(parseFloat(cs.fontSize)) + 'px x' + lines + ' "' + el.textContent.trim().slice(0, 34) + '"');
+    }
+    return bad.length ? bad.join(' | ') : true;
+  })()`],
+
   // Same layout, and the one safety check that a radio group could have silently broken.
   ['company form: production access is still blocked', `(() => {
     document.getElementById('companyDialog').showModal();

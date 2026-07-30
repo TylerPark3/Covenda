@@ -1209,7 +1209,7 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
 .company-status-list li > span { display: grid; place-items: center; width: 34px; height: 34px; border: 1px solid var(--gold); border-radius: 50%; color: var(--gold-deep); font-size: var(--text-body); }
 .company-status-list li > b { justify-self: start; }
 .review-card { padding: 28px; }
-.review-card h2 { margin: 12px 0 20px; font-size: var(--text-heading); line-height: var(--lh-heading); }
+.review-card h2 { margin: 12px 0 20px; font-size: var(--text-subhead); line-height: var(--lh-subhead); }
 .review-card ul { list-style: none; margin: 0; padding: 0; }
 .review-card li { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: var(--text-body); }
 .review-card li svg { width: 17px; height: 17px; color: var(--gold-deep); }
@@ -4448,13 +4448,18 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
   letter-spacing: var(--ls-caption-caps);
   text-transform: uppercase;
 }
+/* These are card titles in a column roughly 200px wide, not section headers. The size
+   conversion bucketed them by their old max of 25px, which put them in the heading role at up
+   to 40px, and "Talent vouched for by people who know them" then wrapped to six lines and
+   dwarfed the panel it was pointing at. Subhead is the role a card title takes. */
 .exchange-source h3 {
   margin: 0;
   font-family: var(--font-sans);
-  font-size: var(--text-heading);
+  font-size: var(--text-subhead);
   font-weight: var(--weight-medium);
-  letter-spacing: var(--ls-heading);
-  line-height: var(--lh-heading);
+  letter-spacing: var(--ls-subhead);
+  line-height: var(--lh-subhead);
+  text-wrap: balance;
 }
 .exchange-flow {
   display: flex;
@@ -5377,7 +5382,7 @@ body[data-audience="company"] .slop-section { display: block; }
 .slop-grid { display: grid; gap: 1px; margin-top: clamp(38px, 5vw, 60px); background: #2b2619; border: 1px solid #2b2619; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
 .slop-card { display: grid; align-content: start; gap: 10px; padding: clamp(24px, 2.8vw, 34px); background: #14120d; }
 .slop-n { font-family: var(--font-mono); font-size: var(--text-caption); letter-spacing: var(--ls-caption); color: var(--gold-light); }
-.slop-card h3 { margin: 0; font-family: var(--font-sans); font-weight: var(--weight-bold); font-size: var(--text-heading); letter-spacing: var(--ls-heading); line-height: var(--lh-heading); color: #fff; }
+.slop-card h3 { margin: 0; font-family: var(--font-sans); font-weight: var(--weight-bold); font-size: var(--text-subhead); letter-spacing: var(--ls-subhead); line-height: var(--lh-subhead); color: #fff; }
 .slop-card p { margin: 0; color: #a9a190; font-size: var(--text-body); line-height: var(--lh-body); }
 
 .slop-answer { margin-top: clamp(34px, 4vw, 52px); padding: clamp(24px, 3vw, 38px); border: 1px solid var(--gold-deep); background: #191610; }
