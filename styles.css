@@ -5978,24 +5978,38 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
   background: linear-gradient(180deg, var(--gold-pale), #fff);
 }
 .about-side-cap { margin: 0 0 18px; font-size: var(--text-caption); font-weight: var(--weight-medium); letter-spacing: var(--ls-caption-caps); text-transform: uppercase; color: var(--gold-deep); }
-/* Three beats of one argument, so they are numbered: the third follows from the first two.
-   CSS counters skip display:none, so this is only correct while all three render. */
-.about-points { counter-reset: about; list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
-.about-points li { counter-increment: about; position: relative; padding-left: 34px; }
-.about-points li::before {
-  content: counter(about);
-  position: absolute; left: 0; top: 1px;
-  width: 22px; height: 22px;
-  display: grid; place-items: center;
-  border-radius: 0;
-  border: 1px solid var(--gold-light);
-  background: #fff;
-  color: var(--gold-deep);
-  font-size: var(--text-caption); font-weight: var(--weight-bold);
-  font-variant-numeric: tabular-nums;
+/* Two premises and a conclusion, not three steps.
+   This was a counter-numbered list with a boxed digit beside each item, and that is the shape
+   the eye reads as generated: three identical rows, bold sans title over grey body, a decorative
+   marker asserting an order the content does not have. The third line is what follows from the
+   first two, so it is set apart by a rule and given the display face rather than a number.
+   Removing the counter also removes the fragility the old comment warned about, since a CSS
+   counter skips display:none and was only correct while all three rendered. */
+.about-points { display: grid; gap: 14px; margin: 0; padding: 0; }
+.about-premise {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--lh-body);
+  color: var(--muted);
+  text-wrap: pretty;
 }
-.about-points b { display: block; margin-bottom: 4px; font-size: var(--text-body); font-weight: var(--weight-bold); color: var(--ink); }
-.about-points span { display: block; font-size: var(--text-body); line-height: var(--lh-body); color: var(--muted); }
+/* Inline lead-in rather than a stacked title, so each premise reads as a sentence someone wrote
+   instead of a card someone generated. */
+.about-premise b { color: var(--ink); font-weight: var(--weight-bold); }
+.about-conclusion {
+  margin: 6px 0 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--gold-light);
+  font-family: var(--font-display);
+  font-size: var(--text-subhead);
+  font-weight: var(--weight-regular);
+  line-height: var(--lh-subhead);
+  letter-spacing: var(--ls-subhead);
+  color: var(--ink);
+  text-wrap: pretty;
+}
+/* The one place the boldness is spent: the clause the whole section exists to land. */
+.about-conclusion em { color: var(--gold-deep); font-style: italic; }
 
 .about-social {
   margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--gold-light);

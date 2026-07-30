@@ -62,12 +62,21 @@ test('every style the markup asks for exists', () => {
   }
 });
 
-// CSS counters skip display:none, and a numbered list whose numbers come from a counter is
-// only correct while every item renders.
-test('the numbered points are a real sequence, not decoration', () => {
-  const items = about.match(/<li>/g) || [];
-  assert.equal(items.length, 3, 'the counter styling assumes exactly three points');
-  assert.match(css, /\.about-points\s*\{[^}]*counter-reset/);
+// The numbering is gone. It asserted a sequence the content does not have: the third line is
+// what follows from the first two, not a third step, and three boxed digits over three identical
+// bold-title-plus-grey-body rows is the shape that reads as generated.
+//
+// Removing the counter also removes the fragility the old version of this test guarded, since a
+// CSS counter skips display:none and was only correct while all three items rendered.
+test('the argument is two premises and a conclusion, not three numbered steps', () => {
+  assert.equal((about.match(/class="about-premise"/g) || []).length, 2);
+  assert.equal((about.match(/class="about-conclusion"/g) || []).length, 1);
+  assert.ok(!/counter-reset/.test(css.match(/\.about-points\s*\{[^}]*\}/)[0]), 'the counter is back');
+  assert.ok(!/\.about-points li::before/.test(css), 'the decorative digit is back');
+  // The conclusion is separated and set in the display face, so it does not read as a third peer.
+  const conclusion = css.match(/\.about-conclusion\s*\{[^}]*\}/)[0];
+  assert.match(conclusion, /border-top/);
+  assert.match(conclusion, /font-family: var\(--font-display\)/);
 });
 
 // The point of these: "consistent" has to be checkable, or it drifts the moment someone edits
