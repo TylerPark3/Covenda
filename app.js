@@ -5145,6 +5145,10 @@ function initHeroField(target) {
       r: 1.5 + Math.random() * 2.2,
       gold: Math.random() < .1,
       phase: Math.random() * Math.PI * 2,
+      // The ambient field returns after the mark resolves. Each node gets its own place in
+      // that return so the stars wake in a field of small blinks instead of one opacity fade.
+      starDelay: Math.random(),
+      starPhase: Math.random() * Math.PI,
     }));
     signals = [];
     nextSignalAt = performance.now() + 620;
@@ -5256,9 +5260,9 @@ function initHeroField(target) {
       return pts;
     })(),
 
-    // The Covenda mark: two joined rings. Geometry taken from assets/covenda-mark.svg rather
-    // than eyeballed, so the resolved mark is the mark and not an approximation of it. That file
-    // is r=10 circles at (19,24) and (29,24) in a 48 box; these are the same numbers over 48.
+    // The Covenda mark. The centreline follows assets/covenda-mark.svg exactly: two overlapping
+    // loops whose real 4/48 stroke weight creates the pointed almond-shaped negative space in
+    // the middle. These targets are only the assembly guide; drawSolidMark supplies the weight.
     mark: (() => {
       const pts = [];
       const R = 10 / 48;
@@ -5275,24 +5279,42 @@ function initHeroField(target) {
     })(),
   };
 
+  // Shared with assets/covenda-mark.svg: two centres, one radius, and the approved stroke ratio.
+  // Keeping the ratios here prevents the resolved canvas mark from degrading into two thin rings.
+  const MARK_GEOMETRY = {
+    centres: [19 / 48, 29 / 48],
+    radius: 10 / 48,
+    centreY: 0.5,
+    stroke: 4 / 48,
+  };
+
   const FIGURE = MORPH_SHAPES[canvas.dataset.morph] || null;
   const morphing = Boolean(FIGURE);
+  const isPersistentMark = canvas.dataset.morph === 'mark';
   // A fraction of a revolution. A whole turn on a 60-point ring just looks like the ring
   // spinning; a third of one reads as the points arriving from around the shape.
   const SWIRL_TURNS = 0.34;
+  const MARK_ASSEMBLY_RATE = 0.09;
+  const STAR_RETURN_DELAY = 320;
+  const STAR_RETURN_DURATION = 5200;
   let morph = 0;        // 0 = crowd, 1 = figure
   let morphTo = 0;
   let assigned = false;
+  let markTriggered = false;
+  let markLatched = false;
+  let starsReturnAt = 0;
+  let starReturn = 0;
+  if (isPersistentMark) canvas.dataset.morphState = 'idle';
 
   // The centre the swirl orbits. Same numbers figureScreen uses, factored out so the two cannot
   // drift apart: a swirl around a point that is not the shape's centre reads as a wobble.
   function shapeBox() {
     const isMark = canvas.dataset.morph === 'mark';
     const size = isMark
-      ? Math.min(W * 0.42, H * 0.56)
+      ? Math.min(W * 0.30, H * 0.40)
       : Math.min(W * 0.24, H * 1.18);
     const cx = isMark ? W * 0.5 : W * 0.80;
-    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.47;
+    const top = isMark ? H * 0.35 - size / 2 : H / 2 - size * 0.47;
     return { size, cx, top, cy: top + size * 0.5 };
   }
 
@@ -5311,14 +5333,14 @@ function initHeroField(target) {
     // than the band: sizing it to fit inside made every figure too small to read, and three
     // background people 50px apart at 25px wide merged into one blob.
     const size = isMark
-      ? Math.min(W * 0.42, H * 0.56)
+      ? Math.min(W * 0.30, H * 0.40)
       : Math.min(W * 0.24, H * 1.18);
     const cx = isMark ? W * 0.5 : W * 0.80;
     // The mark is centred on the headline, not on the hero. Dead-centre put the rings behind the
     // three path cards, which carry a tinted backdrop and swallowed the middle of both of them.
     // Framing the words is also the better composition: the thing the page is named after sits
     // around its own name.
-    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.47;
+    const top = isMark ? H * 0.35 - size / 2 : H / 2 - size * 0.47;
     const p = FIGURE[index];
     return { x: cx + (p.x - 0.5) * size, y: top + p.y * size };
   }
@@ -5344,7 +5366,7 @@ function initHeroField(target) {
         nodes[best].fig = fi;
         // Ordered along the shape rather than randomly, so the mark draws itself around each
         // ring and the figure builds from the head down instead of flickering into place.
-        nodes[best].figDelay = (fi / FIGURE.length) * 0.55;
+        nodes[best].figDelay = (fi / FIGURE.length) * (isPersistentMark ? 0.36 : 0.55);
         // Alternating direction and a per-node amount, so the field does not rotate as one rigid
         // body. A uniform spin is a turntable; mixed spins are a galaxy.
         nodes[best].spin = (fi % 2 ? 1 : -1) * (0.6 + (fi % 5) * 0.18);
@@ -5377,11 +5399,63 @@ function initHeroField(target) {
   // mesh already connects near neighbours, and a second system drawing longer lines on top of it
   // was only ever going to fight it.
 
+  // Once the guide points have landed, the approved mark takes over as one continuous stroke.
+  // Drawing both loops in one path prevents their overlap from becoming darker than the rest,
+  // while the real 4/48 weight creates the interlocked shape in the supplied reference.
+  function drawSolidMark(solid) {
+    if (solid <= 0.001) return;
+    const box = shapeBox();
+    const left = box.cx - box.size * 0.5;
+    const radius = MARK_GEOMETRY.radius * box.size;
+    const y = box.top + MARK_GEOMETRY.centreY * box.size;
+    ctx.save();
+    ctx.globalAlpha = solid;
+    ctx.lineWidth = Math.max(1, MARK_GEOMETRY.stroke * box.size);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgb(198,146,42)';
+    ctx.shadowColor = `rgba(180,123,32,${0.24 * solid})`;
+    ctx.shadowBlur = box.size * 0.018 * solid;
+    ctx.beginPath();
+    for (const centre of MARK_GEOMETRY.centres) {
+      const x = left + centre * box.size;
+      ctx.moveTo(x + radius, y);
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function returnedStarOpacity(node) {
+    if (starReturn <= 0) return 0;
+    const delay = node.starDelay * 0.72;
+    const local = Math.max(0, Math.min(1, (starReturn - delay) / 0.28));
+    const eased = local * local * (3 - 2 * local);
+    if (local >= 1) return 1;
+    // Two soft pulses while the node fades in, then a steady ambient point.
+    const blink = 0.58 + 0.42 * Math.sin(node.starPhase + local * Math.PI * 2) ** 2;
+    return eased * blink;
+  }
+
   function step(now) {
     t += 1;
     // Eased rather than linear, and the same value drives position, colour and alpha so nothing
     // in the figure arrives out of time with the rest of it.
-    if (morphing) morph += (morphTo - morph) * (canvas.dataset.morph === 'mark' ? 0.055 : 0.038);
+    if (morphing) morph += (morphTo - morph) * (isPersistentMark ? MARK_ASSEMBLY_RATE : 0.038);
+    if (isPersistentMark && markTriggered && !markLatched && morph > 0.985) {
+      morph = 1;
+      markLatched = true;
+      starsReturnAt = now + STAR_RETURN_DELAY;
+      canvas.dataset.morphState = 'locked';
+    }
+    if (markLatched) {
+      starReturn = Math.max(0, Math.min(1, (now - starsReturnAt) / STAR_RETURN_DURATION));
+      canvas.dataset.morphState = starReturn >= 1
+        ? 'complete'
+        : starReturn > 0
+          ? 'stars-returning'
+          : 'locked';
+    }
     for (const n of nodes) {
       n.x += n.vx; n.y += n.vy; n.z += n.vz;
       const bx = W * 0.9, by = H * 0.9;
@@ -5401,9 +5475,33 @@ function initHeroField(target) {
     // keeps the perspective the field already has, so the figure holds its depth instead of
     // flattening onto one plane.
     if (morphing && morph > 0.001) {
+      const box = shapeBox();
+      const escape = Math.max(W, H) * 1.15;
       for (let i = 0; i < nodes.length; i += 1) {
         const fi = nodes[i].fig;
-        if (fi === undefined) { pts[i].fade = 1 - morph; continue; }
+        if (fi === undefined) {
+          if (isPersistentMark && markLatched) {
+            // The displaced crowd is now the star field again. It reappears at its ambient
+            // position rather than flying back across the logo, and its links inherit the same
+            // staggered opacity below.
+            pts[i].fade = returnedStarOpacity(nodes[i]);
+            continue;
+          }
+          let dx = pts[i].x - box.cx;
+          let dy = pts[i].y - box.cy;
+          let distance = Math.hypot(dx, dy);
+          if (distance < 1) {
+            const angle = (i / nodes.length) * Math.PI * 2;
+            dx = Math.cos(angle);
+            dy = Math.sin(angle);
+            distance = 1;
+          }
+          const push = morph * morph * escape;
+          pts[i].x += (dx / distance) * push;
+          pts[i].y += (dy / distance) * push;
+          pts[i].fade = Math.max(0, 1 - morph * 1.4);
+          continue;
+        }
         const target = figureScreen(fi);
         // Each point runs its own eased progress inside the shared morph, so they arrive in a
         // wave. Clamped, or a late point would still be moving after the morph has settled.
@@ -5416,7 +5514,6 @@ function initHeroField(target) {
         // its slot, which reads as a snap-together. Interpolating the ANGLE and the RADIUS about
         // the shape's centre sends them round as they come in, which is what makes it a galaxy
         // collapsing rather than a diagram assembling.
-        const box = shapeBox();
         const px = pts[i].x - box.cx, py = pts[i].y - box.cy;
         const tx = target.x - box.cx, ty = target.y - box.cy;
         const r0 = Math.hypot(px, py), r1 = Math.hypot(tx, ty);
@@ -5438,6 +5535,13 @@ function initHeroField(target) {
         // the whole point is that they are interchangeable and it is not.
         pts[i].lead = FIGURE[fi].lead !== false;
       }
+    }
+
+    // During the last third of assembly the dotted guide fuses into the continuous mark.
+    let solid = 0;
+    if (isPersistentMark) {
+      solid = Math.max(0, Math.min(1, (morph - 0.68) / 0.32));
+      solid = solid * solid * (3 - 2 * solid);
     }
 
     // The ambient mesh makes the crowd legible as a connected field without becoming a web.
@@ -5489,7 +5593,9 @@ function initHeroField(target) {
         if ((pts[item.index].figure ?? 0) > 0.06) continue;
         // Always gold. These were the neutral colour, which on the light hero is plain grey and
         // read as grey threads snagging on the pointer rather than as the field noticing it.
-        const alpha = Math.max(.12, .52 - item.distance / 700) * INK_LIFT;
+        const visibility = pts[item.index].fade ?? 1;
+        if (visibility <= 0.05) continue;
+        const alpha = Math.max(.12, .52 - item.distance / 700) * INK_LIFT * visibility;
         ctx.strokeStyle = `rgba(${GOLD},${alpha + (nodes[item.index].gold ? .2 : .06)})`;
         ctx.lineWidth = nodes[item.index].gold ? .9 : .55;
         ctx.beginPath();
@@ -5517,7 +5623,8 @@ function initHeroField(target) {
         // read as smudges rather than as points, and on the resolved figure they merged into one
         // luminous mass. A gold node is brighter and slightly larger than a white one, and that
         // is enough to make it read as gold without painting a halo around it.
-        ctx.fillStyle = `rgba(255,224,151,${(.78 * q.scale + .18) * (q.fade ?? 1)})`;
+        const guideFade = (q.figure ?? 0) > 0.5 ? 1 - solid : 1;
+        ctx.fillStyle = `rgba(255,224,151,${(.78 * q.scale + .18) * (q.fade ?? 1) * guideFade})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r + 1 + pulse * .7, 0, Math.PI * 2); ctx.fill();
         // No glint cross. It drew a twinkling plus-sign through every gold node, which is the
         // "flashing gold lights" effect: it reads as star clip-art rather than as light.
@@ -5546,6 +5653,8 @@ function initHeroField(target) {
       const q = pts[index];
       if (!q) continue;
       if ((q.figure ?? 0) > 0.06) continue;
+      const visibility = q.fade ?? 1;
+      if (visibility <= 0.02) continue;
       const progress = Math.min(1, (now - signal.born) / signal.duration);
       const bloom = Math.sin(progress * Math.PI);
       const color = progress < .22 ? WHITE : GOLD;
@@ -5553,7 +5662,7 @@ function initHeroField(target) {
       // which read as hoops drawn over the field rather than as anything signalling. A signal is
       // a node getting brighter, so that is all it is now: the dot swells and warms from neutral
       // to gold and settles back. Nothing is outlined.
-      ctx.fillStyle = `rgba(${color},${.30 + bloom * .55})`;
+      ctx.fillStyle = `rgba(${color},${(.30 + bloom * .55) * visibility})`;
       ctx.beginPath(); ctx.arc(q.x, q.y, 2.2 + bloom * 3.4, 0, Math.PI * 2); ctx.fill();
       // No halo either, for the same reason: it was a smaller version of the same blob. The
       // pulse is carried by the dot's own size and brightness swelling, which is what a point of
@@ -5563,6 +5672,9 @@ function initHeroField(target) {
     // No dot at the cursor. It painted a gold point exactly under the pointer, which on the dark
     // hero read as a lone stray dot travelling with the mouse rather than as part of the field.
     // The hairlines reaching toward nearby nodes already show where the cursor is.
+
+    // Last, above the returning field: the logo remains fixed while the stars wake behind it.
+    drawSolidMark(solid);
   }
 
   function frame(now) { step(now); draw(now); raf = requestAnimationFrame(frame); }
@@ -5591,7 +5703,12 @@ function initHeroField(target) {
     if (morphing) {
       // Listeners go on the hero, not the canvas: .hero-field is pointer-events: none, so the
       // canvas never receives a pointer event of its own.
-      hero.addEventListener('pointerenter', () => {
+      const showFigure = () => {
+        if (isPersistentMark && markTriggered) return;
+        if (isPersistentMark) {
+          markTriggered = true;
+          canvas.dataset.morphState = 'forming';
+        }
         // The field is normally capped to the top band of the hero and masked away before it
         // reaches the copy. A standing figure needs the full height or it loses its legs, so the
         // cap and the mask lift while the figure is up and return with it.
@@ -5599,8 +5716,21 @@ function initHeroField(target) {
         assignFigure();
         morphTo = 1;
         start();
-      });
+      };
+      hero.addEventListener('pointerenter', showFigure);
+      // A click on otherwise empty hero space is a harmless fallback for trackpads and browser
+      // shells that do not reliably surface pointerenter. Links and buttons keep their normal
+      // behaviour; the fallback is desktop-only because this block requires a fine hover pointer.
+      if (isPersistentMark) {
+        hero.addEventListener('click', event => {
+          if (event.target.closest('a, button')) return;
+          showFigure();
+        });
+      }
       hero.addEventListener('pointerleave', () => {
+        // The homepage mark is a one-shot resolution. Leaving during assembly does not undo it,
+        // and returning later cannot replay it. The company figure remains hover-reactive.
+        if (isPersistentMark && markTriggered) return;
         morphTo = 0;
         hero.classList.remove('is-figure');
         start();
