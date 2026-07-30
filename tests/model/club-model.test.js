@@ -8,7 +8,7 @@ const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
 
 // The page used to imply registering led to verification. They are different things.
 test('the page separates registering from being verified', () => {
-  assert.match(html, /Registering takes a minute/);
+  assert.match(html, /Register free/);
   assert.match(html, /Verification is earned/);
   assert.match(html, /class="club-step-cap"><span>1<\/span> Register/);
   assert.match(html, /class="club-step-cap"><span>2<\/span> Earn verification/);

@@ -3497,6 +3497,60 @@ body:not([data-audience="home"]) .spotlight-section { display: none; }
 .bf-arrow { display: none; }
 .bf-foot { margin: clamp(25px, 3vw, 38px) 0 0; color: var(--soft); font-size: var(--text-caption); }
 
+/* ── The signature reveal ─────────────────────────────────────────────────────────────
+   Four stages, in the order the process actually runs. The stagger is a multiple of
+   --stage-index, set by the observer, so the sequence is declared here in one place instead
+   of being scheduled by a chain of JS timers.
+
+   Nothing moves the layout: opacity and a translate of a few pixels only, and the element
+   keeps its box the whole time, so there is no shift as each stage lands. */
+.js-reveal .batch-funnel .bf-stage,
+.js-reveal .batch-funnel .bf-arrow {
+  opacity: 0;
+  translate: 0 14px;
+}
+.js-reveal .batch-funnel.is-sequenced .bf-stage,
+.js-reveal .batch-funnel.is-sequenced .bf-arrow {
+  opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity var(--dur) var(--ease) calc(var(--stage-index, 0) * 110ms),
+    translate var(--dur) var(--ease) calc(var(--stage-index, 0) * 110ms);
+}
+/* The connecting line draws itself, so the arrow reads as the handoff it represents rather
+   than as a static mark that happens to sit between two cards. */
+.js-reveal .batch-funnel .bf-arrow-line { transform-origin: left center; scale: 0 1; }
+.js-reveal .batch-funnel.is-sequenced .bf-arrow-line {
+  scale: 1 1;
+  transition: scale var(--dur) var(--ease) calc(var(--stage-index, 0) * 110ms + 60ms);
+}
+/* Progressive disclosure, not more copy: the detail line is the hover/focus state of the
+   stage rather than body text printed under every card. Keyboard reaches it because the
+   card is focusable, and any touch device gets it because the query below shows it outright. */
+@media (hover: hover) and (pointer: fine) {
+  .batch-funnel .bf-body {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height var(--dur) var(--ease), opacity var(--dur-fast) var(--ease);
+  }
+  .batch-funnel .bf-stage:hover .bf-body,
+  .batch-funnel .bf-stage:focus-visible .bf-body,
+  .batch-funnel .bf-stage:focus-within .bf-body {
+    max-height: 6em;
+    opacity: 1;
+  }
+}
+.batch-funnel .bf-stage:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 6px; }
+
+/* Reduced motion: every stage is simply present. No transition, no starting offset, and the
+   hover disclosure stays available. */
+@media (prefers-reduced-motion: reduce) {
+  .js-reveal .batch-funnel .bf-stage,
+  .js-reveal .batch-funnel .bf-arrow { opacity: 1; translate: none; transition: none; }
+  .js-reveal .batch-funnel .bf-arrow-line { scale: 1 1; transition: none; }
+}
+
 /* Each qualification appears separately as the open rail enters view. */
 .batch-funnel.is-armed .bf-stage { opacity: 0; transform: translateY(24px) scale(.96); }
 .batch-funnel.is-playing .bf-stage {
@@ -5970,3 +6024,36 @@ body:not([data-audience="home"]) .proof-lens-section { display: none; }
 .roster-dialog .roster-builder { border: 0; box-shadow: none; padding: 22px 26px 30px; }
 .dialog-close { border: 0; background: transparent; color: var(--muted); font-size: var(--text-heading); line-height: var(--lh-heading); cursor: pointer; }
 .dialog-close:hover { color: var(--ink); }
+
+/* ── Keyboard focus, everywhere ────────────────────────────────────────────────────────
+   An audit at 375px found 16 interactive elements with no visible focus indicator at all:
+   the intro skip, the brand, the three hero paths, the scroll cue, the exchange arrows, the
+   product-step buttons. Each had been styled individually and each had been missed
+   individually, which is what happens when the floor is per-component rather than global.
+
+   :focus-visible, so a mouse click never paints a ring, and the ring is gold on light and
+   gold-light on the dark sections so it is visible on both grounds. Any component that wants
+   its own treatment still wins on specificity; this only catches what nothing else covers. */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--gold-deep);
+  outline-offset: 3px;
+}
+/* On the dark grounds the deep gold disappears into the ink. */
+.hero-home a:focus-visible,
+.hero-home button:focus-visible,
+.intro-screen button:focus-visible,
+.form-rail a:focus-visible,
+.form-rail button:focus-visible,
+.audience-transition button:focus-visible,
+.student-vertical.is-selected:focus-visible {
+  outline-color: var(--gold-light);
+}
+/* Never rely on the ring alone where the element also carries meaning through colour. */
+.home-path:focus-visible { outline-offset: -2px; }
+

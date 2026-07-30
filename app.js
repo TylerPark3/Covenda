@@ -4975,6 +4975,28 @@ function initScrollReveal() {
     '.recruiter-lede', '.recruiter-card', '.rmap-row', '.recruiter-honest',
   ].join(',');
   document.documentElement.classList.add('js-reveal');
+  // ── The signature moment ───────────────────────────────────────────────────────────
+  // The batch funnel is the one diagram whose motion carries meaning: the four stages ARE the
+  // order of the process, so revealing them in sequence tells the reader what the arrows only
+  // assert. Every other diagram on the page gets a single entrance and hover states, because
+  // scattered effects would spend the attention this one needs.
+  //
+  // The stagger is applied as a CSS custom property rather than a JS timer, so the whole thing
+  // resolves instantly under prefers-reduced-motion via the media query in styles.css, and
+  // there is no timer left running if the reader scrolls away mid-sequence.
+  const funnel = document.getElementById('flowDemo');
+  if (funnel) {
+    const stages = [...funnel.querySelectorAll('.bf-stage, .bf-arrow')];
+    stages.forEach((stage, index) => stage.style.setProperty('--stage-index', String(index)));
+    const funnelIO = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        funnel.classList.add('is-sequenced');
+        funnelIO.disconnect();
+      }
+    }, { threshold: 0.35 });
+    funnelIO.observe(funnel);
+  }
   const revealed = new WeakSet();
   const reveal = el => { el.classList.add('is-revealed'); revealed.add(el); };
   const io = new IntersectionObserver(entries => {

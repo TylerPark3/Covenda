@@ -231,7 +231,7 @@
 
               <button class="proof-product-step proof-product-outcome" type="button" data-proof-step="3" aria-pressed="false">
                 <small><svg aria-hidden="true"><use href="#icon-check"/></svg></small>
-                <h4>A strong trial can lead to a role.</h4>
+                <h4>Trials become roles</h4>
                 <p>Internship · ongoing project · full-time<br>When both sides agree.</p>
               </button>
             </div>
@@ -429,7 +429,7 @@
             <svg aria-hidden="true"><use href="#icon-student"/></svg>
             <div>
               <p>Referred student</p>
-              <h3>Talent vouched for by people who know them</h3>
+              <h3>Vouched by people who know them</h3>
             </div>
           </article>
 
@@ -514,7 +514,7 @@
           <article class="company-job company-job-builder">
             <p class="company-job-eyebrow"><svg><use href="#icon-user"/></svg>Tell us the problem</p>
             <h2>The intern you actually need</h2>
-            <p>Describe the work. We turn it into a paid trial and bring you people who have done it.</p>
+            <p>We turn it into a paid trial.</p>
             <!-- Six fields of field/work-type/skills/hours before a founder had seen a single
                  student was filtering they had no basis to do yet. One box, and we ask the
                  structured questions later, once there is a reason to. -->
@@ -606,7 +606,7 @@
         <div class="recruiter-inner">
           <div class="recruiter-lede">
             <p class="feature-kicker">For technical recruiters</p>
-            <h2 id="recruiterTitle">Your shortlist has to survive the <span class="word-gold">hiring manager</span>.</h2>
+            <h2 id="recruiterTitle">Shortlists that survive the <span class="word-gold">manager</span>.</h2>
             <p class="recruiter-body">Source, screen, build a pipeline, assess technical fit. Only the last one decides whether your shortlist holds, and it is the one a résumé cannot answer.</p>
           </div>
 
@@ -655,7 +655,7 @@
 
       <section class="company-product-demo audience-content" data-for-audience="company" id="companyProductDemo" data-demo-mode="find" aria-labelledby="companyProductDemoTitle">
         <div class="company-product-demo-head">
-          <h2 id="companyProductDemoTitle">Two ways to get the help you need.</h2>
+          <h2 id="companyProductDemoTitle">Two ways in</h2>
           <p>Find a matched student. Or post one paid trial.</p>
         </div>
 
@@ -853,7 +853,7 @@
       <section class="slop-section" id="theProblem" aria-labelledby="slopTitle">
         <div class="slop-head">
           <p class="feature-kicker">The problem</p>
-          <h2 id="slopTitle">Internship postings now get<br>hundreds of applications<br><span class="word-gold">nobody wrote.</span></h2>
+          <h2 id="slopTitle">Hundreds of applications<br><span class="word-gold">nobody wrote.</span></h2>
           <p>Four hundred cover letters in the same voice. The signal is gone, so hiring falls back on the school name and who you know, and the person you actually needed is somewhere in the pile.</p>
         </div>
 
@@ -890,7 +890,7 @@
         <div class="stat-band-inner">
           <div class="stat-band-head">
             <p class="feature-kicker">Why now</p>
-            <h2 id="statBandTitle">The talent is available.<br><span class="word-gold">Nothing pairs it to the work.</span></h2>
+            <h2 id="statBandTitle">Talent exists.<br><span class="word-gold">Nothing pairs it.</span></h2>
             <p>Startups can reach students big employers stopped hiring. The gap is knowing who delivers.</p>
           </div>
           <ul class="stat-list">
@@ -1020,14 +1020,19 @@
       <section class="how-section" id="how">
         <!-- A qualification rail, intentionally different from the trial carousel above:
              this explains who reaches the trial, not how the trial itself runs. -->
-        <div class="flow-demo batch-funnel" id="flowDemo" role="img" aria-label="A referral begins the signal, evidence is checked, qualified students enter a field-specific batch, and companies meet that vetted pool.">
+        <!-- role="group", not role="img". An image role hides its children from assistive tech, so
+           the four stage labels and their detail lines would have been unreachable, and the
+           focusable stages inside it unreachable-but-tabbable. As a group the summary is still
+           announced and every stage is read as the text it is. The hover disclosure below only
+           clips the detail visually, so it stays in the accessibility tree either way. -->
+        <div class="flow-demo batch-funnel" id="flowDemo" role="group" aria-label="How a student reaches a trial: a referral begins the signal, evidence is checked, qualified students enter a field-specific batch, and companies meet that vetted pool.">
           <div class="flow-demo-head">
             <p class="flow-demo-kicker">Before the project</p>
             <h2>Vetted before the<br><span class="word-gold">trial begins.</span></h2>
             <p>A referral starts the signal. Evidence has to confirm it.</p>
           </div>
           <div class="bf-track">
-            <div class="bf-stage bf-stage-1">
+            <div tabindex="0" class="bf-stage bf-stage-1">
               <span class="bf-n">01</span>
               <div class="bf-card">
                 <p class="bf-label">Referred</p>
@@ -1036,7 +1041,7 @@
               </div>
             </div>
             <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">signal</span><span class="bf-arrow-line"></span></div>
-            <div class="bf-stage bf-stage-2">
+            <div tabindex="0" class="bf-stage bf-stage-2">
               <span class="bf-n">02</span>
               <div class="bf-card">
                 <p class="bf-label">Evidence checked</p>
@@ -1049,7 +1054,7 @@
               </div>
             </div>
             <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">cleared</span><span class="bf-arrow-line"></span></div>
-            <div class="bf-stage bf-stage-3">
+            <div tabindex="0" class="bf-stage bf-stage-3">
               <span class="bf-n">03</span>
               <div class="bf-card bf-card-batch">
                 <p class="bf-label">Admitted to a batch</p>
@@ -1059,7 +1064,7 @@
               </div>
             </div>
             <div class="bf-arrow" aria-hidden="true"><span class="bf-arrow-label">ready</span><span class="bf-arrow-line"></span></div>
-            <div class="bf-stage bf-stage-4">
+            <div tabindex="0" class="bf-stage bf-stage-4">
               <span class="bf-n">04</span>
               <div class="bf-card bf-card-trial">
                 <p class="bf-label">Ready for a trial</p>
@@ -1092,8 +1097,8 @@
 
         <div class="company-story audience-content" data-for-audience="company">
           <div class="section-heading">
-            <h2>Vetted talent, ready<br><span class="word-gold">for a paid trial.</span></h2>
-            <p>You meet students who already cleared two rounds of vetting. Covenda carries the scoping and review so the trial saves more time than it costs.</p>
+            <h2>Vetted, ready<br><span class="word-gold">for a trial.</span></h2>
+            <p>Covenda carries the scoping and review.</p>
           </div>
           <div class="story-layout company-story-layout">
             <div>
@@ -1135,8 +1140,8 @@
         <div class="feature-band-inner">
           <div class="feature-copy">
             <p class="feature-kicker">What Covenda is</p>
-            <h2>The referral you already<br>trust, <span class="word-gold">made repeatable.</span></h2>
-            <p>Someone who has seen a student work vouches for them. We vet again against a published bar, then turn your backlog into a paid trial, so you decide on finished work, not a résumé.</p>
+            <h2>The referral, <span class="word-gold">made repeatable.</span></h2>
+            <p>You decide on finished work, not a résumé.</p>
           </div>
           <div class="feature-panel" aria-hidden="true">
             <span class="ico-kicker">Vouched, then vetted</span>
@@ -1199,7 +1204,7 @@
           <p class="cred-note"><svg><use href="#icon-lock"/></svg>An endorsement is a trust head-start, not a placement. The verified rungs are earned through reviewed work, never a black-box score.</p>
         </div>
         <div class="company-why audience-content" data-for-audience="company">
-          <div class="why-copy"><h2>The best first project is useful <span class="word-gold">without being risky.</span></h2><p>Start where context can be made portable, the finish can be reviewed, and the student does not need access to critical production systems.</p><button class="outline-button" type="button" data-action="company-form">Describe a real problem<svg><use href="#icon-arrow-right"/></svg></button></div>
+          <div class="why-copy"><h2>Useful <span class="word-gold">without being risky.</span></h2><p>Start where context can be made portable, the finish can be reviewed, and the student does not need access to critical production systems.</p><button class="outline-button" type="button" data-action="company-form">Describe a real problem<svg><use href="#icon-arrow-right"/></svg></button></div>
           <div class="fit-table" id="projectFit">
             <div><span>Good first fit</span><strong>Public-source research, data cleanup, QA, documentation, workflow mapping</strong></div>
             <div><span>Needs redesign</span><strong>Unclear deliverables, heavy live supervision, undocumented context</strong></div>
@@ -1207,7 +1212,7 @@
           </div>
         </div>
         <div class="university-why audience-content" data-for-audience="university">
-          <div class="why-copy"><h2>A pipeline of proof, <span class="word-gold">not another job board.</span></h2><p>The students you vouch for get bounded, paid, reviewed work-trials, and your vouch gains weight as they deliver. No marketplace to run, no accounts to manage.</p><button class="outline-button" type="button" data-action="university-roster">Add students you vouch for<svg><use href="#icon-arrow-right"/></svg></button></div>
+          <div class="why-copy"><h2>A pipeline of <span class="word-gold">proof.</span></h2><p>The students you vouch for get bounded, paid, reviewed work-trials, and your vouch gains weight as they deliver. No marketplace to run, no accounts to manage.</p><button class="outline-button" type="button" data-action="university-roster">Add students you vouch for<svg><use href="#icon-arrow-right"/></svg></button></div>
           <div class="fit-table" id="partnerFit">
             <div><span>Good fit</span><strong>Professors, club officers, and industry pros who can speak to a student’s real ability</strong></div>
             <div><span>How data is used</span><strong>Names and school emails go to the Covenda pilot team only, no public listing</strong></div>
@@ -1219,7 +1224,7 @@
       <section class="batches-section" id="batches">
         <div class="section-heading">
           <p class="feature-kicker">Trials and batches</p>
-          <h2>Trials are the work.<br><span class="word-gold">Batches are the shortlist.</span></h2>
+          <h2>Trials work.<br><span class="word-gold">Batches shortlist.</span></h2>
           <p>Two different things, and they only make sense together, one earns the evidence, the other is what companies pay to search.</p>
         </div>
 
@@ -1322,7 +1327,7 @@
       <section class="club-register audience-content" data-for-audience="university" id="clubRegister">
         <div class="club-head">
           <p class="feature-kicker">For school clubs</p>
-          <h2>Registering takes a minute.<br><span class="word-gold">Verification is earned.</span><svg class="club-verified-mark" aria-hidden="true"><use href="#icon-verified"/></svg></h2>
+          <h2>Register free.<br><span class="word-gold">Verification is earned.</span><svg class="club-verified-mark" aria-hidden="true"><use href="#icon-verified"/></svg></h2>
           <p class="club-verified-key"><svg aria-hidden="true"><use href="#icon-verified"/></svg>This mark sits on a club profile once its members have actually delivered. Nobody starts with it.</p>
           <p class="club-lede">Anyone can register. Verification comes from what your members deliver.</p>
         </div>
@@ -1404,9 +1409,9 @@
       </section>
 
       <section class="final-cta">
-        <div data-for-audience="student" class="audience-content"><h2>Start with the work you want to <span class="word-gold">prove</span>.</h2><p>Submit an interest profile. We’ll use it to shape the first pilot group, not to promise a job or automatic match.</p><button class="gold-button" type="button" data-action="student-form">Build my interest profile<svg><use href="#icon-arrow-right"/></svg></button></div>
-        <div data-for-audience="company" class="audience-content"><h2>Bring us the work that <span class="word-gold">keeps slipping.</span></h2><p>Book 20 minutes to walk through a real problem, or write it up. We assess whether it can become a safe, scoped, paid project.</p><div class="cta-actions"><button class="gold-button" type="button" data-action="schedule-demo">Schedule a demo<svg><use href="#icon-arrow-right"/></svg></button><button class="outline-button" type="button" data-action="company-form">Start a Project Packet<svg><use href="#icon-arrow-right"/></svg></button></div></div>
-        <div data-for-audience="university" class="audience-content"><h2>Vouch for the students <span class="word-gold">you believe in.</span></h2><p>Add the students you’d stake your name on. Covenda routes paid work-trials as they open, and your vouch gains weight as they deliver. Founder-led, no placement guarantee.</p><button class="gold-button" type="button" data-action="university-roster">Add students you vouch for<svg><use href="#icon-arrow-right"/></svg></button></div>
+        <div data-for-audience="student" class="audience-content"><h2>Start with the work you <span class="word-gold">own</span>.</h2><p>Submit an interest profile. We’ll use it to shape the first pilot group, not to promise a job or automatic match.</p><button class="gold-button" type="button" data-action="student-form">Build my interest profile<svg><use href="#icon-arrow-right"/></svg></button></div>
+        <div data-for-audience="company" class="audience-content"><h2>Bring the work that <span class="word-gold">slips.</span></h2><p>Book 20 minutes to walk through a real problem, or write it up. We assess whether it can become a safe, scoped, paid project.</p><div class="cta-actions"><button class="gold-button" type="button" data-action="schedule-demo">Schedule a demo<svg><use href="#icon-arrow-right"/></svg></button><button class="outline-button" type="button" data-action="company-form">Start a Project Packet<svg><use href="#icon-arrow-right"/></svg></button></div></div>
+        <div data-for-audience="university" class="audience-content"><h2>Vouch for students <span class="word-gold">you back.</span></h2><p>Add the students you’d stake your name on. Covenda routes paid work-trials as they open, and your vouch gains weight as they deliver. Founder-led, no placement guarantee.</p><button class="gold-button" type="button" data-action="university-roster">Add students you vouch for<svg><use href="#icon-arrow-right"/></svg></button></div>
       </section>
     </main>
 
@@ -1449,7 +1454,7 @@
       <main class="workspace-main">
         <section class="workspace-view is-active" data-workspace-view="overview">
           <div class="student-dashboard audience-content" data-for-audience="student">
-            <div class="workspace-title"><h1>Build proof one project at a time.</h1><p>Your interests, submissions, and reviewed work stay organized here.</p></div>
+            <div class="workspace-title"><h1>Build proof, one project</h1><p>Your interests, submissions, and reviewed work stay organized here.</p></div>
             <div class="workspace-draft-banner" id="studentDraftBanner" hidden><svg><use href="#icon-write"/></svg><div><strong>Interest profile draft saved</strong><span id="studentDraftMeta">Continue where you left off on this device.</span></div><button class="outline-button compact" type="button" data-action="student-form">Continue draft</button></div>
             <div class="dashboard-grid">
               <div>
@@ -1466,7 +1471,7 @@
                   <ol class="activity-list">
                     <li><span class="activity-number"><svg><use href="#icon-check"/></svg></span><div><h3>Interest profile</h3><p>Tell us what you want to build proof of.</p></div><div class="activity-action"><span class="status ready" id="studentProfileStatus">Ready to submit</span><button class="gold-button compact" type="button" data-action="student-form">Complete interest profile</button></div></li>
                     <li><span class="activity-number">2</span><div><h3>Project application</h3><p>Available if a reviewed pilot project fits your interests.</p></div><div class="activity-action"><span class="status" id="studentReviewStatus"><svg><use href="#icon-clock"/></svg>Available after review</span><button class="locked-button" type="button" disabled><svg><use href="#icon-lock"/></svg>Locked</button></div></li>
-                    <li><span class="activity-number">3</span><div><h3>Verified work record</h3><p>Created after accepted paid work.</p></div><div class="activity-action"><span class="status">Created after accepted work</span><button class="locked-button" type="button" disabled><svg><use href="#icon-lock"/></svg>Locked</button></div></li>
+                    <li><span class="activity-number">3</span><div><h3>Verified work record</h3></div><div class="activity-action"><span class="status">Created after accepted work</span><button class="locked-button" type="button" disabled><svg><use href="#icon-lock"/></svg>Locked</button></div></li>
                   </ol>
                 </section>
               </div>
@@ -1495,7 +1500,7 @@
           </div>
 
           <div class="company-dashboard audience-content" data-for-audience="company">
-            <div class="workspace-title"><h1>Turn one delayed problem into a bounded project.</h1><p>Your submissions and Covenda’s scoping decisions stay visible in one place.</p></div>
+            <div class="workspace-title"><h1>One delayed problem, scoped</h1><p>Your submissions and Covenda’s scoping decisions stay visible in one place.</p></div>
             <div class="workspace-draft-banner" id="companyDraftBanner" hidden><svg><use href="#icon-file"/></svg><div><strong>Company problem draft saved</strong><span id="companyDraftMeta">Your working Project Packet stays on this device.</span></div><button class="outline-button compact" type="button" data-action="company-form">Continue draft</button></div>
             <div class="company-dashboard-grid">
               <section class="company-status-panel">
@@ -1509,7 +1514,7 @@
               </section>
               <aside class="review-card glass-panel">
                 <small>Covenda scoping review</small>
-                <h2>What we check before a project can launch</h2>
+                <h2>Checked before launch</h2>
                 <ul><li><svg><use href="#icon-check"/></svg>Useful, reviewable deliverable</li><li><svg><use href="#icon-check"/></svg>Sufficient approved context</li><li><svg><use href="#icon-check"/></svg>No restricted information</li><li><svg><use href="#icon-check"/></svg>Named company reviewer</li><li><svg><use href="#icon-check"/></svg>Positive time-saving case</li></ul>
                 <p>Payment and publication are not active in this pilot workspace.</p>
               </aside>
@@ -1602,7 +1607,7 @@
       <aside class="form-rail">
         <p class="form-rail-brand"><svg><use href="#icon-shield"/></svg>Covenda</p>
         <div class="form-rail-promise">
-          <h2 id="studentDialogTitle">Show what you can already <em>do</em>.</h2>
+          <h2 id="studentDialogTitle">Show what you can <em>do</em>.</h2>
           <p>Four steps. Nothing here is a test, and none of it is published.</p>
         </div>
         <div class="form-progress" aria-label="Student form progress">
@@ -1835,7 +1840,7 @@
 
   <dialog class="form-dialog quick-join-dialog" id="requestEndorseDialog" aria-labelledby="requestEndorseTitle">
     <form id="requestEndorseForm" novalidate>
-      <header class="dialog-header"><div><small>Request an endorsement</small><h2 id="requestEndorseTitle">Ask a professor or club to vouch for you.</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
+      <header class="dialog-header"><div><small>Request an endorsement</small><h2 id="requestEndorseTitle">Ask someone to vouch for you</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
       <p class="dialog-copy">Name the professor, club officer, or pro who'd vouch for you. An endorsement is a signal, not a placement.</p>
       <div class="field-grid">
         <label>Endorser name<input name="endorserName" autocomplete="name" required></label>
@@ -1871,7 +1876,7 @@
       <aside class="form-rail">
         <p class="form-rail-brand"><svg><use href="#icon-shield"/></svg>Covenda</p>
         <div class="form-rail-promise">
-          <h2 id="companyDialogTitle">Start with the work, not a <em>job post</em>.</h2>
+          <h2 id="companyDialogTitle">The work, not a <em>job post</em>.</h2>
           <p>Four steps. You describe one delayed piece of work; a person scopes it with you.</p>
         </div>
         <div class="form-progress" aria-label="Company form progress">
@@ -2015,7 +2020,7 @@
        score returns how-to-fix reasons and the next step is always an invitation. -->
   <dialog class="form-dialog readiness-dialog" id="readinessDialog" aria-labelledby="readinessTitle">
     <form id="readinessForm" novalidate>
-      <header class="dialog-header"><div><small>Free · no account, nothing stored</small><h2 id="readinessTitle">Is your work ready for a student?</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
+      <header class="dialog-header"><div><small>Free · no account, nothing stored</small><h2 id="readinessTitle">Is your work ready?</h2></div><button type="button" class="icon-button" data-close-dialog aria-label="Close"><svg><use href="#icon-close"/></svg></button></header>
       <p class="dialog-copy">Six questions. Three scores, with the reasoning shown.</p>
       <div class="field-grid">
         <label class="wide">What would finishing unlock?<textarea name="goal" rows="3" placeholder="One or two sentences…"></textarea></label>

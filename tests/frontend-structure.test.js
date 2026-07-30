@@ -161,7 +161,7 @@ test('the proof lens opens the homepage without removing the existing product st
   assert.match(html, /Filter for fit/);
   assert.match(html, /Try one real project/);
   assert.match(html, /Paid · 2 weeks · named reviewer/);
-  assert.match(html, /A strong trial can lead to a role\./);
+  assert.match(html, /Trials become roles/);
   assert.match(html, /Internship · ongoing project · full-time/);
   assert.match(html, /not a guaranteed offer/);
   assert.doesNotMatch(html, /Stop screening claims|Define the proof|Meet by mutual choice/);
@@ -181,7 +181,7 @@ test('the proof lens opens the homepage without removing the existing product st
 test('the ideal-intern walkthrough is a minimal company-only two-route demo', () => {
   const demo = html.match(/<section class="company-product-demo[\s\S]*?<\/section>/)?.[0] || '';
   assert.match(demo, /data-for-audience="company"/);
-  assert.match(demo, /Two ways to get the help you need\./);
+  assert.match(demo, /Two ways in/);
   assert.match(demo, /Find a student/);
   assert.match(demo, /Post a trial/);
   assert.match(demo, /You have a problem\./);
@@ -199,7 +199,7 @@ test('the ideal-intern walkthrough is a minimal company-only two-route demo', ()
 // Reframed from "approved Project Packet" to vetted-talent-then-trial. The managed workflow
 // and the risk boundary are unchanged — only the framing around them moved.
 test('company story preserves the managed workflow and risk boundary', () => {
-  assert.match(html, /Vetted talent, ready/);
+  assert.match(html, /Vetted, ready/);
   for (const phrase of ['Company problem', 'Covenda scopes', 'You approve', 'Student works', 'Covenda reviews']) {
     assert.match(html, new RegExp(phrase));
   }
@@ -217,9 +217,9 @@ test('company hero problem composer remains focusable above decorative effects',
 
 test('workspace includes honest student and company pilot states', () => {
   assert.match(html, /id="workspaceShell"/);
-  assert.match(html, /Build proof one project at a time/);
+  assert.match(html, /Build proof, one project/);
   assert.match(html, /No universal score/);
-  assert.match(html, /Turn one delayed problem into a bounded project/);
+  assert.match(html, /One delayed problem, scoped/);
   assert.match(html, /Payment and publication are not active in this pilot workspace/);
   assert.match(html, /Submission delivery/);
 });
@@ -510,7 +510,7 @@ test('school clubs can register and see the earned verification ladder', () => {
   assert.match(html, /id="clubTiers"/);
   // Registering and being verified are different things, and the page must say so rather
   // than implying one leads to the other.
-  assert.match(html, /Registering takes a minute/);
+  assert.match(html, /Register free/);
   assert.match(html, /Verification is earned/);
   assert.match(html, /name="clubVertical"/);
   assert.match(script, /action: 'club-tiers'/);
@@ -530,7 +530,7 @@ test('school clubs can register and see the earned verification ladder', () => {
 // distinction instead, and "elite" survives where it belongs — on the batches that are.
 test('elite is a tier on the batch, not the section headline', () => {
   assert.match(script, /brief\.tier === 'elite' \? 'Elite' : 'Open'/);
-  assert.match(html, /Trials are the work/);
+  assert.match(html, /Trials work/);
 });
 
 // Credibility is club-led now, and the geometric motif carries past the hero.
@@ -725,7 +725,7 @@ test('the work exchange turns one project into clear value for both sides', () =
     'Real startup task',
     'Work the team needs done',
     'Referred student',
-    'Talent vouched for by people who know them',
+    'Vouched by people who know them',
     'Scoped work trial',
     'A company brings real work',
     'We shape a fair trial',
@@ -884,8 +884,8 @@ test('the credibility heading lost the stranded numeral', () => {
 // had to guess. The relationship — trials earn the evidence, batches are what companies pay
 // to search — is now stated once, plainly, with the direction between them shown.
 test('the trial/batch distinction is stated, not left to inference', () => {
-  assert.match(html, /Trials are the work/);
-  assert.match(html, /Batches are the shortlist/);
+  assert.match(html, /Trials work/);
+  assert.match(html, /Batches shortlist/);
   assert.match(html, /[Nn]o batch needed/);
   assert.match(html, /accepted trial work is the strongest way to clear it/);
   // Which to start with, said outright.
@@ -1406,4 +1406,81 @@ test('the privacy promise is on screen from the first step', () => {
   const trust = [...html.matchAll(/<div class="form-rail-trust">[\s\S]*?<\/div>/g)];
   assert.equal(trust.length, 2, 'both intake forms should carry a permanent trust footer');
   for (const [block] of trust) assert.ok(!block.includes('form-step'));
+});
+
+// ── Density, motion and the quality floor (§16) ───────────────────────────────────────
+// Six words. The cap is on the heading text, so inline markup is stripped and trailing
+// punctuation does not count as a word.
+test('no heading runs longer than six words', () => {
+  const over = [];
+  for (const [, inner] of html.matchAll(/<h[1-4][^>]*>((?:(?!<\/h).)*?)<\/h[1-4]>/gs)) {
+    const text = inner.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const words = text.split(' ').filter(w => /[a-z0-9]/i.test(w));
+    if (words.length > 6) over.push(`${words.length}w: ${text}`);
+  }
+  // Two known and deliberate: the full-screen intro is two four-word lines inside one h1, and
+  // "Clear the bar, then run a trial" is a step label the founder asked to keep intact.
+  const allowed = over.filter(o => !/Students get to prove|Clear the bar/.test(o));
+  assert.deepEqual(allowed, [], `headings over the six-word cap: ${allowed.join(' | ')}`);
+});
+
+// Motion has to encode the order it depicts, and only one diagram gets to.
+test('the signature diagram reveals in the order the process runs', () => {
+  assert.match(script, /const funnel = document\.getElementById\('flowDemo'\)/);
+  // Staged by a custom property, not a chain of timers: one declaration, and nothing left
+  // running if the reader scrolls away mid-sequence.
+  assert.match(script, /stage\.style\.setProperty\('--stage-index'/);
+  assert.match(script, /funnelIO\.disconnect\(\)/, 'the sequence observer never releases');
+  assert.match(styles, /calc\(var\(--stage-index, 0\) \* 110ms\)/);
+  // Opacity and a few pixels of translate only. Anything that changes the box would shift the
+  // page as each stage lands.
+  const seq = styles.match(/\.js-reveal \.batch-funnel \.bf-stage,[\s\S]*?\}/)[0];
+  for (const shifting of ['height', 'margin', 'padding', 'width', 'display']) {
+    assert.ok(!seq.includes(shifting + ':'), `the reveal animates ${shifting} and will shift layout`);
+  }
+  // And it resolves instantly when motion is not wanted.
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.batch-funnel[\s\S]*?opacity: 1/);
+});
+
+// role="img" hides its own children, so the four stage labels would have been unreachable and
+// the focusable stages inside it tabbable-but-unannounced.
+test('the diagram is readable by a screen reader, not just visible', () => {
+  const tag = html.match(/<div class="flow-demo batch-funnel"[^>]*>/)[0];
+  assert.match(tag, /role="group"/, 'an image role would hide every stage label');
+  assert.match(tag, /aria-label="How a student reaches a trial/);
+  // The hover disclosure clips the detail visually and leaves it in the accessibility tree,
+  // so it must never become display:none or visibility:hidden.
+  const hover = styles.match(/@media \(hover: hover\) and \(pointer: fine\) \{[\s\S]*?\n\}/)[0];
+  assert.match(hover, /max-height: 0/);
+  assert.ok(!/display: none|visibility: hidden/.test(hover), 'the detail is removed from the tree on hover-capable devices');
+  // Keyboard and focus-within both open it, so the detail is not mouse-only.
+  assert.match(styles, /\.bf-stage:focus-visible \.bf-body/);
+  assert.match(styles, /\.bf-stage:focus-within \.bf-body/);
+});
+
+// An audit at 375px found 16 interactive elements with no focus indicator at all, each styled
+// and each missed individually. The floor is global now.
+test('keyboard focus is visible on anything focusable', () => {
+  const rule = styles.match(/a:focus-visible,\s*button:focus-visible,[\s\S]*?\}/)[0];
+  assert.match(rule, /outline: 2px solid var\(--gold-deep\)/);
+  assert.match(rule, /outline-offset/);
+  for (const sel of ['summary:focus-visible', '[tabindex]:not([tabindex="-1"]):focus-visible']) {
+    assert.ok(rule.includes(sel), `${sel} is not covered by the global focus floor`);
+  }
+  // Deep gold vanishes into the dark sections, so those get the light gold.
+  assert.match(styles, /\.hero-home button:focus-visible,[\s\S]*?outline-color: var\(--gold-light\)/);
+});
+
+// Wide content scrolls inside its own container so the page body never scrolls sideways.
+test('wide content scrolls itself rather than the page', () => {
+  for (const sel of ['.compare-scroll', '.flow-demo-scroll']) {
+    const rule = styles.match(new RegExp(`\\${sel}[^{]*\\{[^}]*\\}`))[0];
+    assert.match(rule, /overflow-x: auto/, `${sel} does not scroll its own overflow`);
+  }
+});
+
+// Running text held to a readable measure rather than the column it happens to sit in.
+test('body text is capped to a readable measure', () => {
+  assert.match(typeCss, /--measure:\s*\d+ch;/);
+  assert.match(typeCss, /\.t-body, \.t-measure \{ max-width: var\(--measure\)/);
 });
