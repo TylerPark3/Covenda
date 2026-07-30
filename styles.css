@@ -2594,7 +2594,10 @@ body[data-audience="home"] .compare-section { display: block; }
 }
 
 .hero-home { display: none; }
-body[data-audience="home"] .hero-home { display: block; }
+/* flex, not block. This rule only exists to toggle the hero between audiences, but it outranks
+   the layout rule further down (attribute + class beats a bare class), so `display: block` here
+   silently defeated the column layout and margin-top:auto on the scroll cue did nothing. */
+body[data-audience="home"] .hero-home { display: flex; }
 /* The official one-liner gets real weight in the hero — larger, ink-dark, tight measure. */
 /* Subtle gold "signal from noise" field behind the home hero. Sits above the soft
    background glows (z-index:-1) but below the content, which we lift to z-index:1. */
@@ -4893,6 +4896,15 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 .hero-home {
   isolation: isolate;
   min-height: calc(100svh - var(--header-height));
+  /* Was display:block, so the headline, the paths and the cue all stacked against the top and
+     the bottom two thirds of the screen was empty field. As a column the space is distributed:
+     the headline sits high, the paths sit low enough to read as a separate decision, and the
+     cue anchors the bottom instead of floating in the middle of nothing.
+
+     The gap is viewport-relative rather than a fixed margin so it collapses on a short screen
+     instead of pushing the cards below the fold. */
+  display: flex;
+  flex-direction: column;
   background:
     radial-gradient(circle at 72% 16%, rgba(184,130,25,.12), transparent 31%),
     radial-gradient(circle at 12% 80%, rgba(255,255,255,.045), transparent 34%),
@@ -4917,7 +4929,7 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
 
 .hero-home .hero-copy {
   max-width: 1120px;
-  padding-top: 0;
+  padding-top: clamp(8px, 5vh, 56px);
 }
 
 .hero-home h1 {
@@ -4942,7 +4954,12 @@ body:not([data-audience="home"]) .exchange-section { display: none; }
   line-height: var(--lh-subhead);
 }
 
+/* Pushed to the bottom of the column, so it marks the edge of the screen rather than sitting
+   in the middle of empty field. */
+.hero-home .scroll-cue { margin-top: auto; }
+
 .hero-home .home-paths {
+  margin-top: clamp(48px, 17vh, 180px);
   width: min(100%, 1120px);
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
