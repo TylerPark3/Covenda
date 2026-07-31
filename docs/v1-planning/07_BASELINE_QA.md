@@ -73,13 +73,23 @@ Not a defect. `api/evidence.js` holds one ladder and maps it to presentation ban
 
 `placement_outcomes` exists; zero references in `portal.js` or `admin.js`. Ch. 32's north star cannot be measured. → **R-05**
 
-### Q-09 — Walkthrough has no accessibility path · **High**
+### Q-09 — The accommodation route was promised and then blocked · **FIXED**
 
-Required video with no text alternative, captions requirement, or accommodation route. `accommodation_requests` exists in schema and is unwired. → **R-09 / D-12**
+The original finding — "no accessibility path" — was wrong. The route exists and is well built: a *"Need a different way to do this?"* panel beside the walkthrough, `aria-live` status, focus management, and copy that asks for no diagnosis.
 
-### Q-10 — Examples presented as real · **Medium**
+The real defect was worse than a missing feature. The panel said *"applying is not blocked while you wait"*, `requestAccommodation` returned the same sentence — and `portal.js` refused to submit without a video regardless. A student who cannot record was told to ask, told asking would not block them, and then blocked.
 
-Every example on the site is illustrative. A product whose thesis is evidence over claims cannot lead with synthetic evidence. → **R-08 / D8**
+Fixed: an open (or arranged) accommodation request lifts the video requirement, open requests are returned to the client so they survive a reload, and the refusal message now points at the accommodation route instead of only refusing. The free-text `need` is never sent to the client — it can describe a disability and the gate does not need it.
+
+### ~~Q-10 — Examples presented as real~~ · **LARGELY WITHDRAWN**
+
+They are labelled. 14 markers in `index.html` and 14 in `app.js`: *"Illustrative match"*, *"Illustrative flow. No placement or outcome is claimed."*, *"Illustrative walkthrough, no real company, no real student."* The original finding assumed synthetic examples were passed off as real; they are not, and the disclaimers are specific rather than boilerplate.
+
+The substantive point survives in weaker form: the labels are honest but small, and **five real consented profiles would still beat fifty labelled-illustrative ones**. That is a go-to-market argument, not a defect.
+
+**One open question I cannot answer.** `index.html:719` renders a portrait photograph of a named individual, "Maya Chen", from `/assets/maya-chen-illustrative.jpg` (162 KB, live). The filename and the adjacent label both say illustrative. If that image is stock or generated, this is fine. **If it is a photograph of a real person, a fabricated profile attached to their face is a consent problem no disclaimer covers** — and the answer is not in the repository. Worth confirming before the site is shown widely.
+
+Minor and real: the image carries `alt=""`, so a screen reader announces nothing while a sighted visitor sees a person. Either the portrait is decorative — in which case the name and caption carry the meaning and that is consistent — or it is not, in which case it needs a description. Currently ambiguous.
 
 ### Q-11 — Render has no fault isolation · **High (systemic)**
 
@@ -121,8 +131,6 @@ The test suite is a real asset at 1,323 tests, but **all four critical defects p
 
 1. **Q-08** wire outcome capture — nothing else produces learnable data
 2. **Q-11** render fault isolation — prevents recurrence of Q-01/Q-02
-5. **Q-09** accessibility path
-6. **Q-10** remove illustrative examples
 7. Authenticated end-to-end QA, now that sign-in works
 
 ---
