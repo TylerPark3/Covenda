@@ -2745,6 +2745,9 @@ body { background: var(--surface); }
    Sections state their own absence rather than vanishing. A dashboard that hides what you
    have not done reads as complete when it is not, which is the opposite of the point. */
 .tech-empty { margin: 0; color: var(--soft); font-size: var(--text-body); line-height: var(--lh-body); font-style: italic; }
+/* A section that failed to render. Deliberately not styled like .tech-empty: "nothing here yet"
+   and "this broke" must never look the same, or a crash reads as an honest empty state. */
+.section-error { margin: 0; color: var(--danger); font-size: var(--text-caption); line-height: var(--lh-caption); }
 .tech-sub { display: block; margin: 8px 0 0; color: var(--muted); font-size: var(--text-caption); line-height: var(--lh-caption); }
 
 /* ── What to work on, per batch (§39) ─────────────────────────────────────────────────

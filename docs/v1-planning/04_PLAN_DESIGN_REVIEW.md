@@ -6,7 +6,28 @@ Output of `04_PLAN_DESIGN_REVIEW.md`. Reviewed against the live product, `portal
 
 ---
 
-## Headline finding: the product renders a score it forbids
+## ⚠️ Correction: the headline finding below is WRONG. D-01 is withdrawn.
+
+Checking the call sites disproves it. The two renderers serve **different audiences, deliberately**:
+
+| Renderer | Called from | Audience |
+|---|---|---|
+| `fitTier` — tier label, no number | `applicantCard` (`portal.js:515`, `application.fit_score`) | **Company viewing a candidate** |
+| `fitPill` — `% fit` + uncertainty band | `discoverCard` (`:1611`), `openDiscoverDetail` (`:2913`) | **Student viewing a project** |
+
+The rule in the codebase is scoped precisely — *"an employer sees a tier, never a raw percentage. A number invites arithmetic the score cannot support — a company comparing 71 against 68 is reading precision that is not there."* The company-facing path uses `fitTier`. It obeys its own rule.
+
+A student seeing their own fit to an opportunity, with the uncertainty band shown, is decision support for the person the number is about. That is not "reducing a person to one opaque score" (Ch. 1.5 instruction 4), which concerns third parties evaluating people.
+
+**D-01 is withdrawn. Do not delete `fitPill`.** Deleting it would have removed the student's uncertainty band and made the discover view less honest, not more.
+
+The reasoning error: I matched a *pattern* (two similar functions, one with a warning comment) that had been correct three times before — `armedButton`, the evidence ladders, `endProjectControl` — and asserted it a fourth time without checking who each caller served. Duplication is not automatically drift.
+
+The remaining ratings below stand. The section that follows is retained deliberately, as the record of a wrong call.
+
+---
+
+## ~~Headline finding: the product renders a score it forbids~~ *(withdrawn — see above)*
 
 `portal.js` contains two fit renderers:
 
@@ -153,8 +174,8 @@ This is where a founder decides whether Covenda is worth a second brief. It dese
 | Visual identity | **8/10** | Distinctive, restrained, actively subtracting |
 | Typography | **8/10** | Real scale, 3 weights, disciplined |
 | Information hierarchy | **5/10** | Three-door landing; evidence too late in onboarding |
-| Evidence-first design | **6/10** | Tiers modelled well; undercut by `fitPill` |
-| Honesty of display | **4/10** | Raw `% fit` contradicts the stated rule |
+| Evidence-first design | **7/10** | Tiers modelled well and audience-scoped correctly |
+| Honesty of display | **7/10** | Company sees a tier; student sees their own fit with an uncertainty band. Correct. |
 | Empty/partial states | **5/10** | Present but inconsistent; shortlist unbuilt |
 | Accessibility | **3/10** | No walkthrough alternative; focus/ARIA gaps |
 | Destructive confirmation | **8/10** | `armedButton`, now single implementation |
@@ -166,7 +187,7 @@ This is where a founder decides whether Covenda is worth a second brief. It dese
 
 | ID | Change | Priority |
 |---|---|---|
-| D-01 | Delete `fitPill`; route all call sites through `fitTier` | **Blocking** |
+| ~~D-01~~ | ~~Delete `fitPill`~~ — **withdrawn**, the two renderers serve different audiences by design | — |
 | D-02 | Replace "Find the next unicorn talent" | High |
 | D-03 | Landing leads with the founder; other paths secondary | High |
 | D-04 | Move evidence capture to onboarding screen 2 | High |
@@ -186,7 +207,7 @@ This is where a founder decides whether Covenda is worth a second brief. It dese
 1. **How much of the intro animation survives contact with a founder in a hurry?** It is beautiful and it is between the visitor and the value. I would keep it, gated on `prefers-reduced-motion` and skippable on first frame — but this is your call.
 2. **Does the landing page keep three doors?** D-03 argues one. If you believe the student side drives word-of-mouth at Columbia, three may be right and the founder-first argument is wrong.
 3. **Tier labels.** "Strong signal / promising / early signal" is honest but soft. A founder may want something more decisive. Changing it changes what the product claims.
-4. **Does the company ever see the number?** D-01 says never. There is a defensible position that a sophisticated technical founder should see the score *with* its uncertainty band. I lean strongly no — precision that isn't there invites arithmetic.
+4. **Does the company ever see the number?** Today it does not, and I think that is right. There is a defensible position that a sophisticated technical founder should see the score *with* its uncertainty band, exactly as the student does. Worth deciding explicitly rather than by default.
 
 ---
 
