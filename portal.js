@@ -4,8 +4,8 @@
 // Truthiness is the wrong test for "is this a list". An object where an array belongs is truthy,
 // so `x||[]` hands it straight to for-of, which throws — and because the render is one
 // uninterrupted pass, that throw takes the whole page with it, not just the one section. This
-// crashed the portal on t.unprompted returning {} instead of []. Shape is what matters, so the
-// check is on shape. Real iterables (Set, Map) pass through untouched; everything else becomes
+// crashed the portal on t.unprompted, which was never a list at all — see agency-section. Shape
+// is what matters, so the check is on shape. Real iterables (Set, Map) pass through untouched; everything else becomes
 // an empty list and the section simply renders nothing.
 function asList(value){
   if(Array.isArray(value))return value;
@@ -5105,7 +5105,17 @@ function renderTechnicalVertical(root,d){
     const bits=[];
     if(t.repeatedBuilder)bits.push('Built more than once');
     if(t.ownedOutright)bits.push(`${t.ownedOutright} owned outright`);
-    for(const sig of asList(t.unprompted)) bits.push(sig.label||sig);
+    // unpromptedBuild returns ONE object describing the agency dimension — { tier, band, count,
+    // repeated, ... } — not a list of signals. Iterating it threw, and threw for every student
+    // who reached this section, not just one with odd data. asList() stopped the crash but read
+    // the object as an empty list, so the section went quietly blank instead. Neither is right:
+    // the data was always there and always shaped like this.
+    const u=t.unprompted;
+    if(u&&u.tier&&u.tier!=='none'){
+      if(u.band&&u.band.label)bits.push(u.band.label);
+      // `repeated` duplicates repeatedBuilder above, so it is deliberately not repeated here.
+      if(u.count)bits.push(`${u.count} built without being asked`);
+    }
     if(!bits.length)return;
     const chips=document.createElement('div');chips.className='skills';
     for(const b of bits) chips.append(pill(b,'artifact-pill'));

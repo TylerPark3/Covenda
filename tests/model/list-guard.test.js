@@ -73,7 +73,17 @@ test('nothing survives that would throw on a non-list', () => {
   );
 });
 
-// The exact line that was reported from production.
-test('the reported crash site is guarded', () => {
-  assert.match(src['portal.js'], /for\(const sig of asList\(t\.unprompted\)\)/);
+// The exact line reported from production. asList() stopped it throwing, but the real fix was
+// to stop treating it as a list at all: unpromptedBuild returns one object, always has, and
+// reading it as an empty list only replaced a crash with a silently blank section. See
+// tests/model/agency-section.test.js.
+test('the reported crash site no longer iterates an object', () => {
+  // Scoped to the section itself. The whole file still quotes the original buggy line inside a
+  // comment in buildSection, which is documentation worth keeping — a file-wide match would be
+  // testing the prose rather than the code.
+  const p = src['portal.js'];
+  const agency = p.slice(p.indexOf("techSection('Agency'"), p.indexOf("techSection('Builder history'"));
+  assert.doesNotMatch(agency, /of asList\(t\.unprompted\)/, 'not guarded-as-a-list');
+  assert.doesNotMatch(agency, /of \(?t\.unprompted/, 'and not iterated raw');
+  assert.match(agency, /const u=t\.unprompted;/, 'it is read as the object it is');
 });

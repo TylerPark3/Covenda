@@ -72,6 +72,30 @@ test('recording a failure never fails the request', async () => {
 });
 
 test('long values are truncated rather than stored whole', () => {
-  const out = safeDetail({ note: 'x'.repeat(1000) });
-  assert.equal(out.note.length, 200);
+  // Deliberately not `note`: that key is now stripped outright as prose about a person, which
+  // would make this assert the wrong thing. Truncation is about size, so the fixture is a key
+  // that is allowed through.
+  const out = safeDetail({ summary: 'x'.repeat(1000) });
+  assert.equal(out.summary.length, 200);
+});
+
+// Prose written about a named person does not belong in a log. `rationale` is an operator's
+// candid assessment of a candidate, `note` a founder's comment on an outcome, and `need` an
+// accommodation request that can describe a disability. None is a secret; all three are worse
+// to leak than a token, because a token can be rotated.
+test('safeDetail strips prose written about a person', () => {
+  const out = safeDetail({
+    rationale: 'strong systems thinker, weak on communication',
+    note: 'left after two weeks',
+    need: 'I need longer than the timer allows',
+    humanRationale: 'nested naming still caught',
+    projectId: 'p1',
+    count: 3,
+  });
+  assert.equal('rationale' in out, false);
+  assert.equal('note' in out, false);
+  assert.equal('need' in out, false);
+  assert.equal('humanRationale' in out, false, 'the match is on the word, not the exact key');
+  assert.equal(out.projectId, 'p1', 'ordinary identifiers still pass');
+  assert.equal(out.count, 3);
 });
