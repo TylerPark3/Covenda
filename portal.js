@@ -1089,7 +1089,58 @@ function renderActions(){const root=$('#nextActions');root.replaceChildren();con
 
 function emptyList(root,iconId,title,copy,action){root.replaceChildren();const box=document.createElement('div');box.className='list-empty';const mark=document.createElement('span');mark.append(icon(iconId));const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=copy;box.append(mark,h,p);if(action&&action.label&&typeof action.run==='function'){const b=document.createElement('button');b.type='button';b.className='empty-cta';b.textContent=action.label;b.addEventListener('click',action.run);box.append(b);}root.append(box);}
 
-function renderProjects(){const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();if(!items.length){const isStudent=state.dashboard.profile?.role==='student';emptyList(root,'p-project','No projects in this workspace yet.',isStudent?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.',isStudent?{label:'Discover projects →',run:()=>setView('discover')}:{label:'Post a project →',run:openIntake});return;}for(const project of items){if(project.status==='archived')continue;if(project.status==='complete'){root.append(verifiedCard(project,{full:true}));continue;}if(project.status==='proposed'){root.append(packetCard(project));continue;}const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');const visibility=cell('Visibility',titleCase(project.visibility));row.append(main,status,due,visibility);if(['company','university'].includes(state.dashboard.profile?.role)&&project.owner_user_id===state.dashboard.user.id&&!['complete','archived'].includes(project.status))row.append(endProjectControl(project));root.append(row);}}
+// ── R-02: the shortlist, as the company sees it ───────────────────────────────────────
+// The money surface. A founder decides here whether Covenda is worth a second brief, so the
+// hierarchy is deliberate: evidence band, then the operator's reasoning, then who the person is.
+// Not a profile card with the reasoning buried under it.
+//
+// No score and no rank. Five candidates in any order will be read as a ranking, so the page says
+// outright that the order means nothing — a disclaimer is cheaper than a wrong inference.
+function shortlistSection(list){
+  const box=document.createElement('section');box.className='shortlist';
+  const head=document.createElement('div');head.className='shortlist-head';
+  const h=document.createElement('h3');h.textContent=`Shortlist · ${list.title}`;
+  const note=document.createElement('p');note.className='shortlist-note';
+  note.textContent=`${list.candidates.length} ${list.candidates.length===1?'candidate':'candidates'}, chosen by hand. Listed in no particular order — nothing here is ranked.`;
+  head.append(h,note);box.append(head);
+  for(const c of asList(list.candidates)) box.append(shortlistCard(c));
+  return box;
+}
+
+function shortlistCard(c){
+  const card=document.createElement('article');card.className='shortlist-card';
+
+  // Evidence first: what this person has actually shown.
+  const band=document.createElement('span');
+  band.className='shortlist-band is-'+(c.evidenceBand||'self_reported');
+  band.textContent=titleCase(c.evidenceBand||'self_reported')+' evidence';
+  card.append(band);
+
+  // The reasoning is the product, so it is the largest thing on the card.
+  if(c.rationale){
+    const why=document.createElement('p');why.className='shortlist-why';why.textContent=c.rationale;
+    card.append(why);
+  }
+
+  const who=document.createElement('div');who.className='shortlist-who';
+  const nm=document.createElement('strong');nm.textContent=c.name;
+  who.append(nm);
+  if(c.headline){const hl=document.createElement('span');hl.textContent=c.headline;who.append(hl);}
+  if(c.school){const sc=document.createElement('small');sc.textContent=c.school;who.append(sc);}
+  card.append(who);
+
+  // The engine's own explanation, kept secondary: it is context for the operator's judgement,
+  // not a second opinion competing with it.
+  if(c.explanation){
+    const det=document.createElement('details');det.className='shortlist-detail';
+    const sum=document.createElement('summary');sum.textContent='How this was assembled';
+    const pre=document.createElement('p');pre.textContent=c.explanation;
+    det.append(sum,pre);card.append(det);
+  }
+  return card;
+}
+
+function renderProjects(){const root=$('#projectList');const items=state.dashboard.projects;root.replaceChildren();for(const list of asList(state.dashboard.shortlists))root.append(shortlistSection(list));if(!items.length&&!asList(state.dashboard.shortlists).length){const isStudent=state.dashboard.profile?.role==='student';emptyList(root,'p-project','No projects in this workspace yet.',isStudent?'Assigned work will appear here with its status and due date.':'Post a private draft when you are ready to shape the first project.',isStudent?{label:'Discover projects →',run:()=>setView('discover')}:{label:'Post a project →',run:openIntake});return;}for(const project of items){if(project.status==='archived')continue;if(project.status==='complete'){root.append(verifiedCard(project,{full:true}));continue;}if(project.status==='proposed'){root.append(packetCard(project));continue;}const row=document.createElement('article');row.className='list-row';const main=document.createElement('div');const h=document.createElement('h3');h.textContent=project.title;const p=document.createElement('p');p.textContent=project.summary;main.append(h,p);const status=document.createElement('div');status.className='list-cell';const statusSmall=document.createElement('small');statusSmall.textContent='Status';status.append(statusSmall,pill(statusLabels[project.status]||titleCase(project.status),'status-pill',project.status));const due=cell('Target',project.target_date?dateLabel(project.target_date):'Not scheduled');const visibility=cell('Visibility',titleCase(project.visibility));row.append(main,status,due,visibility);if(['company','university'].includes(state.dashboard.profile?.role)&&project.owner_user_id===state.dashboard.user.id&&!['complete','archived'].includes(project.status))row.append(endProjectControl(project));root.append(row);}}
 function cell(label,value){const div=document.createElement('div');div.className='list-cell';const small=document.createElement('small');small.textContent=label;const strong=document.createElement('strong');strong.textContent=value;div.append(small,strong);return div;}
 // Packet-first intake (GTM Move 1): a Covenda-scoped packet the company accepts (funds it) or declines.
 function packetCard(project){

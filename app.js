@@ -704,12 +704,6 @@ function validateStep(form) {
     group.scrollIntoView({ block: 'center', behavior: 'smooth' });
     return false;
   }
-  if (form.id === 'studentForm' && step.dataset.studentStep === '2') {
-    if (!$$('input[name="studentIndustry"]:checked', form).length) {
-      message.textContent = 'Choose at least one industry.';
-      return false;
-    }
-  }
   return true;
 }
 

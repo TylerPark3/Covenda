@@ -2766,3 +2766,35 @@ body { background: var(--surface); }
 .readiness-more > summary::-webkit-details-marker { display: none; }
 .readiness-more > summary:hover { color: var(--ink); }
 .readiness-note { margin: 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--soft); font-size: var(--text-caption); line-height: var(--lh-caption); font-style: italic; }
+
+/* ── R-02: the company's shortlist ────────────────────────────────────────────────────
+   The surface a founder uses to decide whether Covenda is worth a second brief. Hierarchy
+   is evidence → reasoning → identity, and the reasoning is the largest text on the card
+   because the reasoning is the product. No score is rendered anywhere by design. */
+.shortlist { margin: 0 0 26px; padding: 22px 24px; border: 1px solid var(--line-strong); background: var(--surface-1, #fff); }
+.shortlist-head { margin-bottom: 16px; }
+.shortlist-head h3 { margin: 0; font-family: var(--font-display); font-weight: var(--weight-regular); font-size: var(--text-subhead); letter-spacing: var(--ls-subhead); }
+/* Said out loud, because five items in a column read as a ranking whatever the intent. */
+.shortlist-note { margin: 5px 0 0; color: var(--muted); font-size: var(--text-caption); line-height: var(--lh-caption); }
+
+.shortlist-card { padding: 16px 0; border-top: 1px solid var(--line); }
+.shortlist-card:first-of-type { border-top: 0; }
+
+.shortlist-band { display: inline-block; margin-bottom: 9px; padding: 3px 9px; border: 1px solid var(--line-strong); font-size: var(--text-caption); font-weight: var(--weight-medium); color: var(--muted); }
+/* Tier is carried by the label text as well as the colour, so colour is never the only signal. */
+.shortlist-band.is-gold { border-color: var(--gold-deep); color: var(--gold-deep); }
+.shortlist-band.is-silver { border-color: var(--line-strong); color: var(--text); }
+.shortlist-band.is-bronze { border-color: var(--line); color: var(--muted); }
+.shortlist-band.is-self_reported { border-style: dashed; color: var(--soft); }
+
+.shortlist-why { margin: 0 0 10px; font-size: var(--text-body); line-height: var(--lh-body); color: var(--text); }
+
+.shortlist-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.shortlist-who strong { font-size: var(--text-body); }
+.shortlist-who span { color: var(--muted); font-size: var(--text-caption); }
+.shortlist-who small { color: var(--soft); font-size: var(--text-caption); }
+
+.shortlist-detail { margin-top: 10px; }
+.shortlist-detail summary { color: var(--muted); font-size: var(--text-caption); cursor: pointer; }
+.shortlist-detail summary:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 2px; }
+.shortlist-detail p { margin: 8px 0 0; color: var(--muted); font-size: var(--text-caption); line-height: var(--lh-caption); white-space: pre-wrap; }
