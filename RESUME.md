@@ -25,26 +25,35 @@ npx vercel alias set <the-deployment-url-it-printed> covenda.app
 
 ## State right now
 
-- **733 tests green**
+- **1,339 tests green**
 - Live at covenda.app, `main` is the deploy branch
 - Working with Dylan on the same repo. He pushes to `main` too — always `git fetch` before
   pushing, and never force. A rejected push means he got there first; merge, do not override.
 
 ## Migrations
 
-Applied: everything through `20260728100000_fit_dimensions`.
+Run `npm run sql` and paste the bundle after any migration change. The applied head is not
+tracked here any more: this file said `fit_dimensions` while eleven later migrations sat
+unapplied, including `infrastructure` (rate limits, the error log). Both fail open by design, so
+nothing broke and nothing was protected either — the limiter enforced nothing for days while
+appearing to. A stale note is worse than no note, so the note is gone. Check Supabase.
 
-**NOT yet applied: `20260728200000_infrastructure`.** Rate limits, the error log, and the
-`video_url` index. Until it runs, the limiter and the error log both fail open — nothing
-breaks, but neither is protecting anything. Run `npm run sql`.
+**Not yet applied: `20260731100000_outcome_worklist`** — adds `result` and `introduction_id` to
+`placement_outcomes` and powers the operator worklist. The admin surface reports it as missing
+until the bundle runs.
 
 ## Built and NOT wired
 
 Honest list. Each is written and tested; nothing imports it.
 
+`api/evidence.js` used to be on this list, described as a second evidence ladder competing with
+a `studentEvidenceTier` in `portal.js`. That was wrong and cost a planning cycle. Eight modules
+import it, `api/portal.js` among them, and `studentEvidenceTier` is a one-line wrapper around
+its `claimsFromProfile` + `presentationBand`. There is one ladder — `claimed → artifact →
+referral → trial` — and one presentation mapping onto it. Nothing to collapse.
+
 | Module | What it would do |
 |---|---|
-| `api/evidence.js` | The source registry and per-source ceilings. `portal.js` has its own `studentEvidenceTier` instead, so there are two ladders. Collapsing them is the next real step. |
 | `api/batch-churn.js` | Inactivity removal policy. No caller. |
 | `api/ml-data.js` | Training-data export. Nothing calls it. |
 | `api/analyze-model.js` | Model analysis. No caller. |

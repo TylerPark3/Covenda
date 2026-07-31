@@ -65,9 +65,9 @@ Hit Porkbun's parking wildcard `*.covenda.app → pixie.porkbun.com` and failed 
 
 `fitPill` renders `${s}% fit` at 3 call sites; `fitTier` renders a tier label and carries the comment *"The number stays available to the operator, never rendered to the company."* Violates Ch. 4.2, Ch. 1.5 instruction 4, and D10. → **D-01**
 
-### Q-07 — Two evidence ladders · **High**
+### ~~Q-07 — Two evidence ladders~~ · **WITHDRAWN**
 
-`api/evidence.js` vs `portal.js`'s `studentEvidenceTier`. Two definitions of "verified" in a product whose thesis is verification. → **R-07**
+Not a defect. `api/evidence.js` holds one ladder and maps it to presentation bands in the same file; `studentEvidenceTier` in `api/portal.js` is a one-line wrapper importing from it. Asserted from RESUME.md without verification. RESUME.md corrected.
 
 ### Q-08 — Outcome capture has no UI · **High**
 
@@ -121,8 +121,6 @@ The test suite is a real asset at 1,323 tests, but **all four critical defects p
 
 1. **Q-08** wire outcome capture — nothing else produces learnable data
 2. **Q-11** render fault isolation — prevents recurrence of Q-01/Q-02
-3. **Q-06** delete `fitPill`
-4. **Q-07** collapse evidence ladders
 5. **Q-09** accessibility path
 6. **Q-10** remove illustrative examples
 7. Authenticated end-to-end QA, now that sign-in works

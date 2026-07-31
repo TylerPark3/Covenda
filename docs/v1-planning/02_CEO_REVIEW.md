@@ -98,7 +98,7 @@ Everything here **already exists in the repository**. V1 requires almost no new 
 3. ~~**Gap analysis view**~~ → exists as readiness/evidence-tier logic, needs reframing
 
 **Collapse (debt that will bite)**
-4. **One evidence ladder.** `api/evidence.js` and `portal.js`'s `studentEvidenceTier` are two competing definitions of the same concept. Fix before any new evidence UI. Two ladders means two truths about what "verified" means.
+4. ~~**One evidence ladder.**~~ **Withdrawn** — verification shows one ladder in `api/evidence.js`, with presentation bands mapped onto it in the same file. `studentEvidenceTier` is a wrapper around it, not a rival.
 
 ---
 
@@ -176,7 +176,7 @@ Binding on `/spec`, `/plan-design-review`, `/plan-eng-review`, `/cso`, `/qa-only
 | D4 | Shortlisting, DNA, verification are **manual** in V1 | Decision |
 | D5 | Pilot is **free**; price is written commitment + 5-day SLA | Decision |
 | D6 | New build limited to **shortlist object, outcome form, gap analysis** | Decision |
-| D7 | Evidence ladders **collapsed to one** before new evidence UI | Requirement |
+| ~~D7~~ | ~~Evidence ladders collapsed~~ — **withdrawn**, there is only one ladder | — |
 | D8 | Illustrative examples **removed or unmistakably marked** | Requirement |
 | D9 | Student consent gate on every introduction | Requirement (permanent) |
 | D10 | No universal score, no prestige proxy, no hiring claim | Requirement (permanent) |

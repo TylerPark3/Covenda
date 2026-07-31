@@ -43,7 +43,7 @@ Auth and roles · student/company profiles · company verification · evidence i
 
 | Defect | Source | Action |
 |---|---|---|
-| Two evidence ladders (`api/evidence.js` vs `studentEvidenceTier`) | RESUME.md | **R-07**, blocking |
+| ~~Two evidence ladders~~ | RESUME.md — **stale, no such defect** | R-07 withdrawn |
 | Walkthrough has no accessibility path | RESUME.md / D15 | **R-09**, blocking |
 | Illustrative examples presented as real | D8 | **R-08**, blocking |
 | `batch-churn`, `ml-data`, `analyze-model`, `proof-methods` unwired | RESUME.md | Leave dormant (D14) |
@@ -251,7 +251,16 @@ Each has: story · rationale · preconditions · happy path · states · data ·
 
 ---
 
-### R-07 — Collapse the evidence ladders *(blocking)*
+### ~~R-07 — Collapse the evidence ladders~~ *(WITHDRAWN)*
+> **R-07 / D7 WITHDRAWN.** There is only one evidence ladder. `api/evidence.js` defines
+> `TIERS = ['claimed','artifact','referral','trial']` and maps them to presentation bands
+> (`self_reported/bronze/silver/gold`) in the same file via `presentationBand`. The
+> `studentEvidenceTier` named in RESUME.md lives in `api/portal.js`, not `portal.js`, and is a
+> one-line wrapper that imports `claimsFromProfile` and `presentationBand` from `evidence.js`.
+> Eight modules import that file. Tiers and bands are two layers of one design, not two ladders.
+> This was asserted as blocking on RESUME.md's word without verification; RESUME.md has been
+> corrected.
+
 
 **Story.** As an engineer I need one definition of evidence tier.
 

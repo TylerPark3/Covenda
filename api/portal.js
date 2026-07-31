@@ -5,7 +5,7 @@ import { scoreCandidate } from './scoring.js';
 import { requestAccommodation, saveTranscript } from './transcripts.js';
 import { reviewerLine } from './reviewers.js';
 import { commitmentFor } from './professional-review.js';
-import { claimsFromProfile, presentationBand } from './evidence.js';
+import { claimsFromProfile, presentationBand, TIERS } from './evidence.js';
 import { advanceSimulation, loadSimulations, startSimulation } from './simulation-run.js';
 
 import { supabaseConfiguration } from './submissions.js';
@@ -507,7 +507,8 @@ export async function loadMemberDashboard(member, env = process.env) {
     // student already recorded, so the score gains two dimensions without asking for anything
     // new. Computed once here rather than per batch.
     const tierBySkill = {};
-    const TIER_ORDER = ['claimed', 'artifact', 'referral', 'trial'];
+    // evidence.js owns the ladder. A local copy here agreed with it only by coincidence.
+    const TIER_ORDER = TIERS;
     for (const claim of allTechnicalClaims(profile, technicalEvidence)) {
       if (!claim?.skill) continue;
       const key = canonicalizeSkill(claim.skill).canonical;

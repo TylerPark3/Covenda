@@ -42,11 +42,11 @@ This has now appeared four times:
 | Correct | Left in place | Consequence |
 |---|---|---|
 | `armedButton` | `cancelProjectButton`, plus copies in delete/withdraw | Withdraw silently stopped setting `is-armed` |
-| `api/evidence.js` | `portal.js` `studentEvidenceTier` | Two definitions of "verified" |
+| ~~`api/evidence.js`~~ | ~~`studentEvidenceTier`~~ | **Not an instance** — a wrapper, not a rival |
 | `fitTier` (tier label) | `fitPill` (`% fit`) | Product renders a score its own comment forbids |
 | `endProjectControl` | `cancelProjectButton` (dead) | Dead code carrying duplicate confirm logic |
 
-Three are now fixed. Two remain: the evidence ladders (**R-07**) and `fitPill` (**D-01**).
+Two were real and are fixed. Two claimed instances were not instances at all: the evidence ladders (R-07) and `fitPill` (D-01) both turned out to be correct designs I mistook for drift. The pattern is real; my hit rate on spotting it was 50%.
 
 **E-04: extraction is not complete until the callers move and the original is deleted.** Worth a standing review rule, because in every instance the *replaced* implementation kept being used — sometimes more than the replacement.
 
@@ -103,8 +103,6 @@ Minimum fix: a startup assertion that the applied migration head matches the exp
 
 | ID | Work | Est. |
 |---|---|---|
-| R-07 | Collapse the two evidence ladders | M |
-| D-01 | Delete `fitPill`, route through `fitTier` | S |
 | R-05 | Wire `placement_outcomes` — operator worklist + form | M |
 | R-01/R-02 | Wire `matches` into an operator shortlist builder and company view | L |
 | E-01 | Per-section fault isolation in render | M |
