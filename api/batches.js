@@ -23,8 +23,10 @@ import { TIERS } from './evidence.js';
 
 export const BATCH_ADMISSION_VERSION = 'batch-admission-1.0.0';
 
-// Evidence tiers, weakest → strongest. Mirrors skill_claim.verification_tier.
-export const TIER_ORDER = ['claimed', 'artifact', 'referral', 'trial'];
+// Evidence tiers, weakest → strongest. Re-exported from evidence.js rather than restated: this
+// file already imported TIERS and then declared an identical literal beside it, which is how a
+// single ladder quietly becomes two that agree only by coincidence.
+export const TIER_ORDER = TIERS;
 export function tierAtLeast(tier, minimum) {
   const have = TIER_ORDER.indexOf(String(tier));
   const need = TIER_ORDER.indexOf(String(minimum));
