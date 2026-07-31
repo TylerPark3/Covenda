@@ -113,7 +113,20 @@ async function loadDashboard() {
     const dashboard=await portalRequest(); state.dashboard=dashboard; showMember(); renderDashboard(); startMessagePolling(); consumeProjectSeed();
     if (shouldOnboard(dashboard.profile)) startOnboarding();
     else handleCheckoutReturn();
-  } catch(error) { if(session().accessToken) showAuth(error.message,true); }
+  } catch(error) {
+    if(!session().accessToken) return;
+    // A crash while rendering is not an authentication failure. Sending a signed-in member to
+    // the sign-in screen with a raw JavaScript message asks them to fix, by signing in again,
+    // the one thing signing in again cannot touch. Saved onboarding progress is both the state
+    // most likely to be bad and the only part safe to drop, so clear it and say what to do —
+    // otherwise a reload replays the same crash forever.
+    if(error instanceof TypeError||error instanceof RangeError||error instanceof ReferenceError){
+      clearOnboard();
+      showAuth('The portal could not finish loading, so the saved progress behind it was cleared. Reload the page to continue.',true);
+      return;
+    }
+    showAuth(error.message,true);
+  }
 }
 
 function profileCompletion(profile) {
@@ -5547,6 +5560,21 @@ let onboardState={step:0,values:{role:'student',verticals:[],workTypes:[]},savin
 function onboardKey(){const d=state.dashboard;return 'covendaOnboard:'+(d?.user?.id||d?.user?.email||'anon');}
 function persistOnboard(){try{localStorage.setItem(onboardKey(),JSON.stringify({step:onboardState.step,values:onboardState.values}));}catch{}}
 function clearOnboard(){try{localStorage.removeItem(onboardKey());}catch{}}
+// Restore saved answers only where they still match the shape this flow expects. The old
+// spread merge trusted localStorage completely, so a payload written by an earlier build — an
+// object where a list belongs — replaced a guarded array and reached `new Set(...)`, which
+// throws. That TypeError escaped loadDashboard and rendered as a sign-in error, so a signed-in
+// member was told to sign in again by a bug their session could not fix and a reload could not
+// clear. Unknown keys are dropped rather than carried along.
+function mergeSavedOnboard(base,saved){
+  const out={...base};
+  for(const [key,value] of Object.entries(saved||{})){
+    if(!(key in base))continue;
+    if(Array.isArray(base[key])){if(Array.isArray(value))out[key]=[...value];continue;}
+    if(value===null||['string','number','boolean'].includes(typeof value))out[key]=value;
+  }
+  return out;
+}
 // A brand-new member, or a student who has a row but never finished onboarding.
 function shouldOnboard(profile){
   if(!profile) return true;
@@ -5569,7 +5597,7 @@ function startOnboarding(){
     skills:Array.isArray(profile?.skills)?profile.skills.join(', '):'',
     avatarUrl:profile?.avatar_url||'',
   },saving:false};
-  try{const raw=localStorage.getItem(onboardKey());if(raw){const saved=JSON.parse(raw);onboardState.values={...onboardState.values,...saved.values};onboardState.step=Math.min(Math.max(saved.step||0,0),ONBOARD_SCREENS.length-1);}}catch{}
+  try{const raw=localStorage.getItem(onboardKey());if(raw){const saved=JSON.parse(raw);onboardState.values=mergeSavedOnboard(onboardState.values,saved.values);onboardState.step=Math.min(Math.max(saved.step||0,0),ONBOARD_SCREENS.length-1);}}catch{}
   $('#portalAuth').hidden=true;$('#portalLoading').hidden=true;$('#memberShell').hidden=true;$('#onboardFlow').hidden=false;
   renderOnboard();
 }
@@ -5642,7 +5670,9 @@ function renderOnboardProfileScreen({values,controls,body,msg}){
   controls.append(avatarWrap,upload,caption,label);body.append(msg,cta);return input;
 }
 function renderOnboardMultiScreen({screen,values,controls,body,msg}){
-  const selected=new Set(values[screen.field]||[]);
+  // `||[]` only catches falsy values, so anything truthy and non-iterable used to reach the
+  // Set constructor and throw. The shape is what matters here, not the truthiness.
+  const selected=new Set(Array.isArray(values[screen.field])?values[screen.field]:[]);
   const grid=document.createElement('div');grid.className='onboard-cards onboard-cards-multi';let first=null;
   const cta=onboardCta('Continue',()=>{if(selected.size)onboardNext();},{disabled:!selected.size});
   screen.options.forEach((opt,idx)=>{const card=document.createElement('button');card.type='button';card.className='onboard-card onboard-chip'+(selected.has(opt)?' is-selected':'');card.setAttribute('aria-pressed',selected.has(opt)?'true':'false');const ic=ONBOARD_ICONS[opt];if(ic)card.append(icon(ic));const b=document.createElement('strong');b.textContent=opt;card.append(b);card.addEventListener('click',()=>{if(selected.has(opt))selected.delete(opt);else selected.add(opt);card.classList.toggle('is-selected');card.setAttribute('aria-pressed',selected.has(opt)?'true':'false');onboardState.values[screen.field]=[...selected];persistOnboard();cta.disabled=!selected.size;});grid.append(card);if(idx===0)first=card;});
