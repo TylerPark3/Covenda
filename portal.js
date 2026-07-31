@@ -1,6 +1,18 @@
 // Theme. Stored per browser rather than per account: it is a property of where someone is
 // sitting, not who they are, and syncing it would fight a user who wants dark at night and
 // light in a bright office.
+// Truthiness is the wrong test for "is this a list". An object where an array belongs is truthy,
+// so `x||[]` hands it straight to for-of, which throws — and because the render is one
+// uninterrupted pass, that throw takes the whole page with it, not just the one section. This
+// crashed the portal on t.unprompted returning {} instead of []. Shape is what matters, so the
+// check is on shape. Real iterables (Set, Map) pass through untouched; everything else becomes
+// an empty list and the section simply renders nothing.
+function asList(value){
+  if(Array.isArray(value))return value;
+  if(value&&typeof value!=='string'&&typeof value[Symbol.iterator]==='function')return value;
+  return [];
+}
+
 (function initTheme(){
   const KEY='covenda-theme';
   const apply=t=>{ document.documentElement.dataset.theme=t; };
@@ -1397,7 +1409,7 @@ let messageDraftAttachments=[];
 function clearMessageDraft(){messageDraftAttachments=[];const ta=$('#messageBody');if(ta){ta.value='';ta.style.height='auto';}renderMessageAttachments();const status=$('#messageFormStatus');if(status){status.textContent='';status.classList.remove('is-error');}}
 function selectMessageProject(projectId){if(projectId!==state.messageProjectId)clearMessageDraft();state.messageProjectId=projectId;renderMessages();}
 // §4c live messages: poll for new messages across the caller's projects and merge them in.
-function latestMessageTimestamp(){let latest='';for(const m of (state.dashboard?.messages||[])){if(!latest||new Date(m.created_at)>new Date(latest))latest=m.created_at;}return latest;}
+function latestMessageTimestamp(){let latest='';for(const m of asList(state.dashboard?.messages)){if(!latest||new Date(m.created_at)>new Date(latest))latest=m.created_at;}return latest;}
 let messagePollTimer=null;
 async function pollMessages(){
   if(!session().accessToken||!state.dashboard)return;
@@ -2008,7 +2020,7 @@ function batchVettingBlock(brief){
   badge.className='batch-rail-badge'+(brief.vetting.apiVerified?' is-api':'');
   badge.textContent=brief.vetting.apiVerified?'Platform-verified evidence':'Human rail, no API can prove this work';
   wrap.append(badge);
-  for(const rail of brief.vetting.rails){
+  for(const rail of asList(brief.vetting.rails)){
     const row=document.createElement('div');row.className='batch-rail';
     const name=document.createElement('strong');name.textContent=rail.label;
     const how=document.createElement('p');how.textContent=rail.how;
@@ -2059,7 +2071,7 @@ function batchRequirementsBlock(brief,standing){
     wrap.append(sum);
   }
   const list=document.createElement('ul');list.className='batch-req-list';
-  for(const req of brief.requirements){
+  for(const req of asList(brief.requirements)){
     const check=standing?.checks?.find(c=>c.key===req.key)||null;
     const li=document.createElement('li');li.className=check?(check.met?'is-met':'is-open'):'is-unknown';
     const label=document.createElement('strong');label.textContent=req.label;li.append(label);
@@ -2077,7 +2089,7 @@ function batchWorkflowBlock(brief){
   const wrap=document.createElement('div');wrap.className='batch-detail-block batch-workflow';
   const h=document.createElement('h4');h.textContent='How you evaluate this batch';wrap.append(h);
   const ol=document.createElement('ol');ol.className='batch-workflow-list';
-  for(const step of brief.companyWorkflow){
+  for(const step of asList(brief.companyWorkflow)){
     const li=document.createElement('li');
     const n=document.createElement('span');n.className='batch-step-n';n.textContent=String(step.step);
     const body=document.createElement('div');
@@ -3814,7 +3826,7 @@ function paintAssessmentDisclosure(data,batch){
   }
 
   const list=document.createElement('ol');list.className='asd-steps';
-  for(const c of plan.components||[]){
+  for(const c of asList(plan.components)){
     const li=document.createElement('li');
     const top=document.createElement('div');top.className='asd-step-top';
     const n=document.createElement('b');n.textContent=c.label;
@@ -3830,7 +3842,7 @@ function paintAssessmentDisclosure(data,batch){
   const cap=document.createElement('b');cap.textContent='What we do not do';
   not.append(cap);
   const ul=document.createElement('ul');
-  for(const item of disclosure.notUsed||[]){const li=document.createElement('li');li.textContent=item;ul.append(li);}
+  for(const item of asList(disclosure.notUsed)){const li=document.createElement('li');li.textContent=item;ul.append(li);}
   not.append(ul);
   host.append(not);
 
@@ -3839,7 +3851,7 @@ function paintAssessmentDisclosure(data,batch){
     const rc=document.createElement('b');rc.textContent='Either way';
     rights.append(rc);
     const rl=document.createElement('ul');
-    for(const r of disclosure.rights){const li=document.createElement('li');li.textContent=r;rl.append(li);}
+    for(const r of asList(disclosure.rights)){const li=document.createElement('li');li.textContent=r;rl.append(li);}
     rights.append(rl);host.append(rights);
   }
 
@@ -3904,14 +3916,14 @@ function openEnvironment(){
   if(v&&!v.options.length){
     // Verticals from the batch briefs already on the dashboard, so the list cannot drift.
     const seen=new Set();
-    for(const b of state.dashboard?.batchBriefs||[]){
+    for(const b of asList(state.dashboard?.batchBriefs)){
       const slug=b.verticalSlug; if(!slug||seen.has(slug))continue; seen.add(slug);
       const o=document.createElement('option');o.value=slug;o.textContent=b.vertical||b.discipline||slug;v.append(o);
     }
   }
   const a=$('#envAutonomy');
   if(a&&!a.options.length){
-    for(const level of state.dashboard?.superIntern?.autonomyLevels||[]){
+    for(const level of asList(state.dashboard?.superIntern?.autonomyLevels)){
       const o=document.createElement('option');o.value=level;o.textContent=AUTONOMY_LABELS[level]||level;a.append(o);
     }
     a.value='semi_autonomous';
@@ -3967,7 +3979,7 @@ function renderBatchBuilder(root,d){
     built.append(cap);
 
     const list=document.createElement('ol');list.className='sib-steps';
-    for(const c of plan.components||[]){
+    for(const c of asList(plan.components)){
       const li=document.createElement('li');
       const n=document.createElement('b');n.textContent=c.label;
       const m=document.createElement('span');m.className='sib-min';m.textContent=c.minutes+'m';
@@ -4042,7 +4054,7 @@ function renderEvidenceRequests(root,d){
       top.append(remove);
       li.append(top);
       const chips=document.createElement('div');chips.className='evreq-chips';
-      for(const priority of request.priorities||[]){
+      for(const priority of asList(request.priorities)){
         const chip=document.createElement('span');chip.className='evreq-chip';chip.textContent=priority;chips.append(chip);
       }
       li.append(chips);
@@ -4668,7 +4680,7 @@ function renderCompatibility(root,d){
     const sec=document.createElement('div');sec.className='tech-section';
     const cap=document.createElement('h4');cap.textContent='Matched, but nothing behind it';
     const list=document.createElement('ul');list.className='tech-entries';
-    for(const item of c.unbacked){
+    for(const item of asList(c.unbacked)){
       const li=document.createElement('li');
       const top=document.createElement('div');top.className='tech-entry-top';
       const b=document.createElement('b');b.textContent=item.skill;
@@ -4936,7 +4948,7 @@ function renderFinanceProfile(root,d){
   const firmCap=document.createElement('h4');firmCap.textContent='Read it as';
   const select=document.createElement('select');select.className='finance-firm-select';
   const none=document.createElement('option');none.value='';none.textContent='As I built it';select.append(none);
-  for(const firm of f.firmTypes||[]){
+  for(const firm of asList(f.firmTypes)){
     const o=document.createElement('option');o.value=firm.id;o.textContent=firm.label;
     if(firm.id===f.targetFirmType)o.selected=true;
     select.append(o);
@@ -4957,7 +4969,7 @@ function renderFinanceProfile(root,d){
     const sec=document.createElement('div');sec.className='tech-section';
     const cap=document.createElement('h4');cap.textContent='Read first';
     const list=document.createElement('ul');list.className='tech-entries';
-    for(const lead of f.emphasis.leads){
+    for(const lead of asList(f.emphasis.leads)){
       const li=document.createElement('li');
       const top=document.createElement('div');top.className='tech-entry-top';
       const b=document.createElement('b');b.textContent=`${lead.label}${lead.count>1?` × ${lead.count}`:''}`;
@@ -4971,7 +4983,7 @@ function renderFinanceProfile(root,d){
     const sec=document.createElement('div');sec.className='tech-section';
     const cap=document.createElement('h4');cap.textContent='Also on your profile';
     const chips=document.createElement('div');chips.className='skills';
-    for(const item of f.emphasis.alsoHas) chips.append(pill(`${item.label}${item.count>1?` × ${item.count}`:''}`,'artifact-pill'));
+    for(const item of asList(f.emphasis.alsoHas)) chips.append(pill(`${item.label}${item.count>1?` × ${item.count}`:''}`,'artifact-pill'));
     sec.append(cap,chips);panel.append(sec);
   }
 
@@ -4981,7 +4993,7 @@ function renderFinanceProfile(root,d){
     const sec=document.createElement('div');sec.className='tech-section';
     const cap=document.createElement('h4');cap.textContent='What to add next';
     const list=document.createElement('ul');list.className='tech-gaps';
-    for(const gap of f.gaps){const li=document.createElement('li');li.textContent=gap.ask;list.append(li);}
+    for(const gap of asList(f.gaps)){const li=document.createElement('li');li.textContent=gap.ask;list.append(li);}
     sec.append(cap,list);panel.append(sec);
   }
 
@@ -5033,7 +5045,7 @@ function renderTechnicalVertical(root,d){
   panel.append(techSection('Technical breadth',body=>{
     if(!(t.breadth||[]).length)return;
     const chips=document.createElement('div');chips.className='skills';
-    for(const dom of t.breadth) chips.append(pill(`${dom.label} · ${dom.evidencedCount||dom.count||0}`,'artifact-pill'));
+    for(const dom of asList(t.breadth)) chips.append(pill(`${dom.label} · ${dom.evidencedCount||dom.count||0}`,'artifact-pill'));
     body.append(chips);
     const n=document.createElement('small');n.className='tech-sub';
     n.textContent=`${t.domainsTouched} of ${t.domainsAvailable} domains touched.`;
@@ -5060,7 +5072,7 @@ function renderTechnicalVertical(root,d){
     const bits=[];
     if(t.repeatedBuilder)bits.push('Built more than once');
     if(t.ownedOutright)bits.push(`${t.ownedOutright} owned outright`);
-    for(const sig of (t.unprompted||[])) bits.push(sig.label||sig);
+    for(const sig of asList(t.unprompted)) bits.push(sig.label||sig);
     if(!bits.length)return;
     const chips=document.createElement('div');chips.className='skills';
     for(const b of bits) chips.append(pill(b,'artifact-pill'));
@@ -5156,7 +5168,7 @@ function renderTechnicalProfile(root,d){
     const list=document.createElement('ul');list.className='tech-domains';
     // Drawn from EVIDENCED skills only, so typing more never widens the bar.
     const widest=Math.max(1,...t.breadth.map(x=>x.evidencedCount));
-    for(const domain of t.breadth){
+    for(const domain of asList(t.breadth)){
       const li=document.createElement('li');li.className='tech-domain is-'+domain.best;
       const name=document.createElement('b');name.textContent=domain.domain;
       const bar=document.createElement('span');bar.className='tech-bar';
@@ -5239,7 +5251,7 @@ function renderTechnicalProfile(root,d){
     why.textContent='Nothing here counts against you. It is what a company cannot see yet.';
     sec.append(cap,why);
     const list=document.createElement('ul');list.className='tech-gaps';
-    for(const gap of t.gaps){const li=document.createElement('li');li.textContent=gap.ask;list.append(li);}
+    for(const gap of asList(t.gaps)){const li=document.createElement('li');li.textContent=gap.ask;list.append(li);}
     sec.append(list);panel.append(sec);
   }
 
