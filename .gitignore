@@ -8,3 +8,6 @@ design_handoff_covenda_motion/
 supabase/bundles/
 supabase/.last-bundle
 .gstack/
+
+# Claude Code worktrees — scratch, never part of the repo
+.claude/worktrees/
