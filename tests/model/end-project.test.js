@@ -68,7 +68,16 @@ test('the control names the consequence for whoever else is involved', () => {
 
 test('every irreversible action arms before it fires', () => {
   const src = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
-  const fn = src.slice(src.indexOf('function armedButton'), src.indexOf('function cancelProjectButton'));
+  const fn = src.slice(src.indexOf('function armedButton'), src.indexOf('function deleteDraftButton'));
   assert.match(fn, /if\(!armed\)/, 'the first click must only arm');
   assert.match(fn, /setTimeout/, 'and disarm on its own so a stray click does not linger');
+});
+
+// Copies are how the arming behaviour drifted apart in the first place — one of them had
+// stopped setting is-armed, so it confirmed without ever looking armed. One implementation
+// means one place to get it right.
+test('there is exactly one arming implementation', () => {
+  const src = readFileSync(new URL('../../portal.js', import.meta.url), 'utf8');
+  assert.equal(src.match(/let armed=false,timer=0;/g)?.length, 1, 'the arming state lives in armedButton alone');
+  assert.equal(src.includes('function cancelProjectButton'), false, 'endProjectControl replaced it; the dead copy is gone');
 });
