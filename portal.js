@@ -3193,6 +3193,16 @@ function transcriptEditor(video){
 
 // A route to a person, for everything a text box cannot cover. Never asks for a diagnosis:
 // requiring someone to classify their own disability to apply for work is its own barrier.
+// Requests sent during this visit. The dashboard carries the ones made earlier, so a student who
+// asks for an accommodation and comes back tomorrow is not blocked again by a page that forgot.
+const accommodationsSentThisVisit=new Set();
+function accommodationKey(context,reference){return `${context}:${reference||''}`;}
+function hasOpenAccommodation(context,reference){
+  if(accommodationsSentThisVisit.has(accommodationKey(context,reference)))return true;
+  return asList(state.dashboard?.accommodations)
+    .some(a=>a&&a.context===context&&(!a.reference||!reference||String(a.reference)===String(reference)));
+}
+
 function accommodationLink(context,reference){
   const wrap=document.createElement('div'); wrap.className='accom';
   const btn=document.createElement('button'); btn.type='button'; btn.className='accom-open';
@@ -3208,6 +3218,7 @@ function accommodationLink(context,reference){
     send.disabled=true; state.textContent='Sending…';
     try{
       const out=await portalRequest({method:'POST',body:JSON.stringify({action:'request-accommodation',context,reference,need:area.value})});
+      accommodationsSentThisVisit.add(accommodationKey(context,reference));
       state.textContent=out.result?.note||'Sent.'; area.hidden=true; send.hidden=true;
     }catch(error){ state.textContent=error.message; send.disabled=false; }
   });
@@ -5840,7 +5851,11 @@ $('#applyForm').addEventListener('submit',async event=>{event.preventDefault();c
 $('#batchApplyForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const form=event.currentTarget;const button=$('button[type="submit"]',form);const e=form.elements;
   if(e.note.value.trim().length<40){setDialogMessage('#batchApplyMessage','Tell us why this cohort fits you, a few sentences at least.',true);e.note.focus();return;}
-  if(!e.videoUrl.value.trim()){setDialogMessage('#batchApplyMessage','Record your walkthrough, or pick one you already made.',true);e.videoUrl.focus();return;}
+  // The accommodation panel and the server both promise "applying is not blocked while you
+  // wait", and this gate used to block anyway — the student was told one thing by the panel and
+  // another by the button. An open request is the student saying the default route does not work
+  // for them, which is exactly the case the promise was written for.
+  if(!e.videoUrl.value.trim()&&!hasOpenAccommodation('batch_application',e.batchId.value)){setDialogMessage('#batchApplyMessage','Record your walkthrough, or pick one you already made. If recording will not work for you, use "Need a different way to do this?" above.',true);e.videoUrl.focus();return;}
   // The exercise carries a Required badge, so it has to actually gate. A badge that does not
   // block is worse than no badge.
   const exercisePart=$('#baPartExercise');

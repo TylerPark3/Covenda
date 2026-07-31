@@ -420,8 +420,9 @@ export async function loadMemberDashboard(member, env = process.env) {
     const matchedCount = rankedOpportunities.filter(project => project.matched).length;
     // Students hold credits too once escrow is released, so they get a balance (the
     // Wallet view itself stays company/university only).
-    const [walletBalance, creditLedger, payoutRequests, batches, batchApplications, videos] = await Promise.all([
+    const [walletBalance, creditLedger, payoutRequests, batches, batchApplications, videos, accommodations] = await Promise.all([
       creditBalance(member), loadCreditLedger(member), loadPayoutRequests(member), loadBatches(member), loadBatchApplications(member), loadMemberVideos(member),
+      loadOpenAccommodations(member),
     ]);
     const batchStanding = await loadBatchStanding(member);
     const verification = await loadVerificationStanding(member);
@@ -569,7 +570,7 @@ export async function loadMemberDashboard(member, env = process.env) {
     // batchesWithFit so it reports exactly the numbers the cards print, never a second scoring.
     const compatibility = compatibilityStanding(batchesWithFit);
 
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, simulations, availableSimulations, finance, coursework, compatibility, roles, batchApplicationsOpen: batchApplicationsOpen(env), batchesClosedMessage: BATCHES_CLOSED_MESSAGE, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, simulations, availableSimulations, finance, coursework, compatibility, roles, batchApplicationsOpen: batchApplicationsOpen(env), batchesClosedMessage: BATCHES_CLOSED_MESSAGE, accommodations, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), practitionerAsk: commitmentFor(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -1388,6 +1389,22 @@ export async function loadBatchApplications(member) {
 // claim to verify, and a student who applies to one of those spends real hours on a bar that
 // is about to change underneath them. Defaulting to open would mean a forgotten env var is the
 // only thing standing between that and a real applicant.
+// Open accommodation requests, so the client can honour the promise the request itself makes.
+// requestAccommodation replies "applying is not blocked while you wait", and until now the
+// submit gate blocked anyway — the student was told one thing by the panel and another by the
+// button. Returned as context+reference pairs only; the free-text need never leaves the operator
+// surface, because it can describe a disability and the client has no reason to hold it.
+export async function loadOpenAccommodations(member) {
+  const { data, error } = await member.supabase
+    .from('accommodation_requests')
+    .select('context, reference, status')
+    .eq('user_id', member.user.id)
+    .in('status', ['open', 'arranged']);
+  // Optional surface: a member whose database predates the table still gets a dashboard.
+  if (error) return [];
+  return (data || []).map(r => ({ context: r.context, reference: r.reference, status: r.status }));
+}
+
 export function batchApplicationsOpen(env = process.env) {
   return env.COVENDA_BATCH_APPLICATIONS_OPEN === 'true';
 }
