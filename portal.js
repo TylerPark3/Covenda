@@ -432,59 +432,34 @@ function endProjectControl(project){
     run:()=>portalRequest({method:'POST',body:JSON.stringify({action:'cancel-project',projectId:project.id})}),
   });
 }
-// Two-step confirm for anything irreversible. Extracted because cancel, delete and end all
-// had their own copy of this and they had already drifted apart.
-function armedButton({label,confirm,busy,run,className='portal-ghost cancel-project'}){
+// Two-step confirm for anything irreversible. Extracted because cancel, delete and end all had
+// their own copy of this and they had already drifted apart — the withdraw copy, for one, had
+// quietly stopped setting is-armed. Every arming control routes through here now, so there is a
+// single place a confirmation can be got wrong.
+function armedButton({label,confirm,busy,run,className='portal-ghost cancel-project',view='projects'}){
   const b=document.createElement('button');b.type='button';b.className=className;b.textContent=label;
   let armed=false,timer=0;
   b.addEventListener('click',async()=>{
     if(!armed){armed=true;b.textContent=confirm;b.classList.add('is-armed');timer=window.setTimeout(()=>{armed=false;b.textContent=label;b.classList.remove('is-armed');},5000);return;}
     window.clearTimeout(timer);b.disabled=true;b.textContent=busy;
-    try{await run();await loadDashboard();setView('projects');}
+    try{await run();await loadDashboard();setView(view);}
     catch(error){b.textContent=error.message;b.disabled=false;armed=false;b.classList.remove('is-armed');}
   });
   return b;
 }
-
-function cancelProjectButton(project){
-  const refund=(Number(project.credits_held)||0)+(Number(project.platform_fee_credits)||0);
-  const label=`Cancel project · refund ${refund.toLocaleString()} credits`;
-  const b=document.createElement('button');b.type='button';b.className='portal-ghost cancel-project';b.textContent=label;
-  let armed=false,timer=0;
-  b.addEventListener('click',async()=>{
-    if(!armed){armed=true;b.textContent='Click again to confirm the refund';b.classList.add('is-armed');timer=window.setTimeout(()=>{armed=false;b.textContent=label;b.classList.remove('is-armed');},5000);return;}
-    window.clearTimeout(timer);b.disabled=true;b.textContent='Cancelling…';
-    try{await portalRequest({method:'POST',body:JSON.stringify({action:'cancel-project',projectId:project.id})});await loadDashboard();setView('projects');}
-    catch(error){b.textContent=error.message;b.disabled=false;armed=false;b.classList.remove('is-armed');}
-  });
-  return b;
-}
-// Deleting a draft is safe (no escrow, no applicants) but still irreversible, so it arms on
-// the first click like the cancel button.
+// Deleting a draft is safe (no escrow, no applicants) but still irreversible, so it arms first.
 function deleteDraftButton(project){
-  const label='Delete draft';
-  const b=document.createElement('button');b.type='button';b.className='portal-ghost cancel-project';b.textContent=label;
-  let armed=false,timer=0;
-  b.addEventListener('click',async()=>{
-    if(!armed){armed=true;b.textContent='Click again to delete';b.classList.add('is-armed');timer=window.setTimeout(()=>{armed=false;b.textContent=label;b.classList.remove('is-armed');},5000);return;}
-    window.clearTimeout(timer);b.disabled=true;b.textContent='Deleting…';
-    try{await portalRequest({method:'POST',body:JSON.stringify({action:'delete-project',projectId:project.id})});await loadDashboard();setView('projects');}
-    catch(error){b.textContent=error.message;b.disabled=false;armed=false;b.classList.remove('is-armed');}
+  return armedButton({
+    label:'Delete draft', confirm:'Click again to delete', busy:'Deleting…',
+    run:()=>portalRequest({method:'POST',body:JSON.stringify({action:'delete-project',projectId:project.id})}),
   });
-  return b;
 }
 // A student withdraws (removes) an application they haven't been accepted into; arms once.
 function withdrawApplicationButton(application){
-  const label='Withdraw';
-  const b=document.createElement('button');b.type='button';b.className='row-action';b.textContent=label;
-  let armed=false,timer=0;
-  b.addEventListener('click',async()=>{
-    if(!armed){armed=true;b.textContent='Click to confirm';timer=window.setTimeout(()=>{armed=false;b.textContent=label;},5000);return;}
-    window.clearTimeout(timer);b.disabled=true;b.textContent='Withdrawing…';
-    try{await portalRequest({method:'POST',body:JSON.stringify({action:'withdraw-application',applicationId:application.id})});await loadDashboard();setView('activity');}
-    catch(error){b.textContent=error.message;b.disabled=false;armed=false;}
+  return armedButton({
+    label:'Withdraw', confirm:'Click to confirm', busy:'Withdrawing…', className:'row-action', view:'activity',
+    run:()=>portalRequest({method:'POST',body:JSON.stringify({action:'withdraw-application',applicationId:application.id})}),
   });
-  return b;
 }
 async function runAcceptApplication(applicationId,button){button.disabled=true;const original=button.textContent;button.textContent='Accepting…';try{await portalRequest({method:'POST',body:JSON.stringify({action:'accept-application',applicationId})});await loadDashboard();setView('overview');}catch(error){button.textContent=error.message;button.disabled=false;setTimeout(()=>{button.textContent=original;},4000);}}
 async function runDeclineApplication(applicationId,button){button.disabled=true;const original=button.textContent;button.textContent='Declining…';try{await portalRequest({method:'POST',body:JSON.stringify({action:'decline-application',applicationId})});await loadDashboard();setView('activity');}catch(error){button.textContent=error.message;button.disabled=false;setTimeout(()=>{button.textContent=original;},4000);}}
