@@ -621,7 +621,8 @@ export async function loadMemberDashboard(member, env = process.env) {
   const [companyProfile, companyVerification] = profile.role === 'company'
     ? await Promise.all([loadCompanyProfile(member), loadCompanyStanding(member, profile)])
     : [null, null];
-  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, briefing: await companyBriefing(member),
+  const shortlists = await loadCompanyShortlists(member);
+  return { user, profile, projects, opportunities: [], applications, studentDirectory, intakes, messages, verifiedCount, shortlists, walletBalance, creditLedger, projectRequests, batches, batchAccess, batchAdmitted, companyProfile, companyVerification, briefing: await companyBriefing(member),
     // Degrades to an empty list before the migration lands, rather than taking the dashboard
     // down with it. That mistake has already caused two outages.
     simulations: await loadSimulations(member).catch(() => []), evidenceRequests: await loadEvidenceRequests(member), superIntern: { ...(await loadCompanyEnvironments(member)), questions: REVERSE_AUDIT_QUESTIONS, autonomyLevels: AUTONOMY_LEVELS, budgetMinutes: BUDGET_MINUTES, dimensions: DIMENSIONS }, evidenceTypeGuide: Object.fromEntries(Object.entries(EVIDENCE_TYPES).map(([id, t]) => [id, { label: t.label, demonstrates: t.demonstrates, cannotShow: t.cannotShow }])), introductions: await loadIntroductions(member, 'company'), companyReferrals: await loadCompanyReferrals(member), outcomeQuestions: OUTCOME_SURVEY_QUESTIONS, // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
@@ -2689,6 +2690,62 @@ export async function respondToIntroduction(member, input) {
   return checked(member.supabase.from('introductions').update({
     ...patch, responded_at: new Date().toISOString(),
   }).eq('id', intro.id).select('*').single(), null);
+}
+
+// ── R-02: the shortlist a company actually sees ───────────────────────────────────────
+// The operator curates candidates into `matches` and records a rationale for each
+// (api/admin.js enforces it; the database enforces it too). Nothing ever showed that to the
+// company. A founder saw project_applications — students who applied to them — and never the
+// five people we picked and wrote reasons for, which is the entire product.
+//
+// Deliberately withheld: `score` and `score_components`. The repo's own rule is that an employer
+// sees a tier, never a number, because a company comparing 71 against 68 is reading precision
+// that is not there. The operator keeps the number; the company gets the reasoning.
+//
+// Order is by decision time, not by score. Five candidates in score order will be read as a
+// ranking no matter what the page says around them.
+export async function loadCompanyShortlists(member) {
+  const projects = await optional(member.supabase.from('member_projects')
+    .select('id, title').eq('owner_user_id', member.user.id), [], 'member_projects');
+  const ids = (projects || []).map(p => p.id);
+  if (!ids.length) return [];
+
+  const rows = await optional(member.supabase.from('matches')
+    .select('id, opportunity_id, student_user_id, human_decision, human_rationale, explanation, decided_at')
+    .in('opportunity_id', ids)
+    .eq('human_decision', 'proposed')
+    .order('decided_at', { ascending: true }), [], 'matches');
+  if (!rows.length) return [];
+
+  const studentIds = [...new Set(rows.map(r => r.student_user_id))];
+  const profiles = await optional(member.supabase.from('member_profiles')
+    .select('user_id, display_name, headline, school_name, verticals, work_types, skill_signals, referral_verified, club_confirmed')
+    .in('user_id', studentIds), [], 'member_profiles');
+  const byId = new Map((profiles || []).map(p => [p.user_id, p]));
+  const titleById = new Map((projects || []).map(p => [p.id, p.title]));
+
+  const grouped = new Map();
+  for (const row of rows) {
+    const profile = byId.get(row.student_user_id) || {};
+    const list = grouped.get(row.opportunity_id) || [];
+    list.push({
+      matchId: row.id,
+      studentUserId: row.student_user_id,
+      name: profile.display_name || 'Candidate',
+      headline: profile.headline || '',
+      school: profile.school_name || '',
+      // The tier, not the number. presentationBand reads the post-ceiling tier, so this cannot
+      // over-claim what the evidence supports.
+      evidenceBand: presentationBand(claimsFromProfile(profile)),
+      // The operator's reasoning is the product. It leads the card, so it is first here too.
+      rationale: row.human_rationale || '',
+      explanation: row.explanation || '',
+    });
+    grouped.set(row.opportunity_id, list);
+  }
+  return [...grouped.entries()].map(([projectId, candidates]) => ({
+    projectId, title: titleById.get(projectId) || 'Project', candidates,
+  }));
 }
 
 export async function loadIntroductions(member, role) {

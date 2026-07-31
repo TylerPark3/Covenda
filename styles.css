@@ -1550,6 +1550,13 @@ body[data-audience="university"] .hero-university .scroll-cue { display: none; }
    the student is told which question is unanswered rather than that "something" is. */
 .chip-field.is-missing > .chip-label { color: #9b2e22; }
 .chip-field.is-missing .chip { border-color: rgba(155,46,34,.45); }
+/* The industry group is a fieldset of cards rather than a .chip-field, so the missing-answer
+   highlight above did not reach it. It was also the one required group whose check was
+   hard-coded in validateStep instead of declared on the markup: it set a message and neither
+   highlighted nor scrolled, so a student who had filled every visible box was told they had
+   not. Its legend is visually-hidden, which is why the cards themselves have to carry it. */
+.industry-fieldset.is-missing legend { color: #9b2e22; }
+.industry-fieldset.is-missing .industry-card { border-color: rgba(155,46,34,.45); }
 /* renderCompanyBoundaryGuidance marks the chosen chip, not the whole group: production access
    is the one answer the pilot refuses, and it has to be obvious which chip caused that. */
 .chip.is-blocked, .chip.is-blocked:has(input:checked) { border-color: #9b2e22; background: #9b2e22; color: #fff; }
