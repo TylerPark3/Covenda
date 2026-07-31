@@ -488,3 +488,34 @@ tbody tr.is-selected { box-shadow: inset 3px 0 var(--gold); }
 .review-proxies li b { font-weight: var(--weight-bold); }
 .review-proxies li span { color: #6f6b62; }
 .review-proxies p { margin: 0; font-size: var(--text-caption); line-height: var(--lh-caption); color: #6f6b62; }
+
+/* ── Outcome worklist ─────────────────────────────────────────────────────────────────
+   Accepted introductions with no recorded outcome. Deliberately plain: this is the
+   operator's queue for ninety days and then it is replaced, so it should be fast to read
+   and cheap to build, not decorated. */
+.admin-outcomes { padding: 22px 24px; margin-bottom: 18px; border: 1px solid #e2ded3; background: #fff; }
+.people-empty { margin: 0; font-size: var(--text-body); color: #6f6b62; }
+
+.outcome-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(320px, 2fr); gap: 12px 18px; align-items: start; padding: 14px 0; border-top: 1px solid #ece8de; }
+.outcome-row:first-of-type { border-top: 0; }
+/* An introduction accepted a fortnight ago with no outcome is the thing most likely to have
+   been dropped, so it is marked rather than left to blend in. */
+.outcome-row.is-stale { border-left: 3px solid #8a6a1c; padding-left: 12px; }
+.outcome-row strong { display: block; font-size: var(--text-body); }
+.outcome-meta { margin: 3px 0 0; font-size: var(--text-caption); color: #6f6b62; }
+
+.outcome-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.outcome-result { min-height: 34px; padding: 6px 10px; border: 1px solid #d9d4c7; background: #fff; font: inherit; font-size: var(--text-body); }
+.outcome-note { flex: 1 1 200px; min-height: 34px; padding: 6px 10px; border: 1px solid #d9d4c7; background: #fff; font: inherit; font-size: var(--text-body); }
+.outcome-again { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-caption); color: #4a463f; white-space: nowrap; }
+.outcome-save { min-height: 34px; padding: 6px 16px; border: 1px solid #8a6a1c; background: #8a6a1c; color: #fff; font: inherit; font-size: var(--text-body); cursor: pointer; }
+.outcome-save:hover { background: #74580f; }
+.outcome-save:disabled { opacity: .6; cursor: wait; }
+.outcome-status { grid-column: 1 / -1; margin: 0; font-size: var(--text-caption); color: #6f6b62; }
+
+.outcome-result:focus-visible, .outcome-note:focus-visible, .outcome-save:focus-visible,
+.outcome-again input:focus-visible { outline: 2px solid #8a6a1c; outline-offset: 2px; }
+
+@media (max-width: 720px) {
+  .outcome-row { grid-template-columns: 1fr; }
+}

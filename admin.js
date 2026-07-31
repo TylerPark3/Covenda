@@ -86,6 +86,154 @@ function authHeaders() { return { Authorization: `Bearer ${token()}`, 'Content-T
 // design refuses.
 let reviewData = null;
 
+// ── Outcome worklist ──────────────────────────────────────────────────────────────────
+// placement_outcomes has existed since 20260729100000 and api/admin.js has had a
+// `record-outcome` action almost as long. Nothing has ever called it, so the table is empty and
+// every system downstream of it — compatibility calibration, hiring memory, the ML export —
+// reads from a table nothing writes to.
+//
+// An accepted introduction with no recorded outcome is not a neutral gap. It is a student who
+// agreed to be contacted and a company that may have gone quiet, and nobody finds out unless
+// somebody looks. Oldest first: the ones most likely to have been forgotten are the ones most
+// worth chasing.
+const OUTCOME_RESULTS = [
+  ['interviewed', 'They spoke'],
+  ['no_response', 'No response'],
+  ['no_fit', 'Not a fit'],
+  ['project', 'Project started'],
+  ['trial', 'Paid trial started'],
+  ['hired', 'Hired'],
+  ['withdrawn', 'Student withdrew'],
+];
+
+async function renderOutcomeWorklist() {
+  const host = document.getElementById('adminOutcomes');
+  if (!host) return;
+  let data;
+  try {
+    data = await adminRequest({ method: 'POST', body: JSON.stringify({ action: 'outcome-worklist' }) });
+  } catch (error) {
+    host.hidden = false;
+    host.replaceChildren();
+    const box = document.createElement('div');
+    box.className = 'people-error';
+    const cap = document.createElement('strong');
+    cap.textContent = 'The outcome worklist could not load';
+    const why = document.createElement('p');
+    why.textContent = error.message || 'Try refreshing.';
+    box.append(cap, why);
+    host.append(box);
+    return;
+  }
+
+  host.hidden = false;
+  host.replaceChildren();
+
+  const head = document.createElement('div');
+  head.className = 'people-head';
+  const h = document.createElement('h3');
+  h.textContent = 'Outcomes to record';
+  const count = document.createElement('span');
+  const outstanding = data.outstanding || [];
+  // Reported even when it is bad. The ratio only becomes useful once somebody has to look at it.
+  count.textContent = `${data.recorded || 0} of ${data.accepted || 0} accepted introductions closed out`;
+  head.append(h, count);
+  host.append(head);
+
+  if (!outstanding.length) {
+    const p = document.createElement('p');
+    p.className = 'people-empty';
+    p.textContent = data.accepted
+      ? 'Every accepted introduction has an outcome recorded.'
+      : 'No accepted introductions yet.';
+    host.append(p);
+    return;
+  }
+
+  for (const item of outstanding) host.append(outcomeRow(item));
+}
+
+function outcomeRow(item) {
+  const row = document.createElement('article');
+  row.className = 'outcome-row';
+
+  const main = document.createElement('div');
+  const title = document.createElement('strong');
+  title.textContent = item.roleSummary || 'Introduction';
+  const meta = document.createElement('p');
+  meta.className = 'outcome-meta';
+  // Days waiting is the whole point of the queue, so it leads.
+  meta.textContent = `${item.daysWaiting} day${item.daysWaiting === 1 ? '' : 's'} since accepted`;
+  if (item.daysWaiting >= 14) row.classList.add('is-stale');
+  main.append(title, meta);
+
+  const form = document.createElement('div');
+  form.className = 'outcome-form';
+
+  const select = document.createElement('select');
+  select.className = 'outcome-result';
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'What happened?';
+  select.append(placeholder);
+  for (const [value, label] of OUTCOME_RESULTS) {
+    const opt = document.createElement('option');
+    opt.value = value; opt.textContent = label;
+    select.append(opt);
+  }
+
+  const again = document.createElement('label');
+  again.className = 'outcome-again';
+  const box = document.createElement('input');
+  box.type = 'checkbox';
+  const againText = document.createElement('span');
+  againText.textContent = 'Would work together again';
+  again.append(box, againText);
+
+  const note = document.createElement('input');
+  note.type = 'text';
+  note.className = 'outcome-note';
+  note.placeholder = 'Anything worth remembering (optional)';
+  note.maxLength = 2000;
+
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'outcome-save';
+  save.textContent = 'Record';
+
+  const status = document.createElement('p');
+  status.className = 'outcome-status';
+  status.setAttribute('aria-live', 'polite');
+
+  // Only "what happened" is required. Asking a founder for days-to-contribution and senior-hours
+  // they never measured produces invented numbers, which is worse than absent ones for a product
+  // whose whole claim is evidence quality.
+  save.addEventListener('click', async () => {
+    if (!select.value) { status.textContent = 'Pick what happened first.'; select.focus(); return; }
+    save.disabled = true;
+    status.textContent = 'Recording…';
+    try {
+      await adminRequest({ method: 'POST', body: JSON.stringify({
+        action: 'record-outcome',
+        introductionId: item.introductionId,
+        studentUserId: item.studentUserId,
+        companyUserId: item.companyUserId,
+        result: select.value,
+        wouldContinue: box.checked,
+        note: note.value,
+      }) });
+      await renderOutcomeWorklist();
+    } catch (error) {
+      save.disabled = false;
+      status.textContent = error.message || 'Could not record that outcome.';
+    }
+  });
+
+  form.append(select, again, note, save);
+  row.append(main, form, status);
+  return row;
+}
+
 async function renderReviewQueue() {
   const host = document.getElementById('adminReview');
   if (!host) return;
@@ -877,6 +1025,7 @@ async function loadInbox({ announce = false } = {}) {
   renderDeliveryHealth().catch(() => {});
   renderSimulationRuns().catch(() => {});
   renderSchemaHealth().catch(() => {});
+  renderOutcomeWorklist().catch(() => {});
   renderReviewQueue().catch(() => {});
   renderPeopleDirectory().catch(() => {});
   const refresh=$('#adminRefresh'); refresh.disabled=true; refresh.classList.add('is-loading');

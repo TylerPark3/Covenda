@@ -1129,10 +1129,17 @@ export default async function handler(req, res, dependencies = {}) {
           const n = Number(v);
           return Number.isFinite(n) ? Math.max(0, Math.min(max, n)) : null;
         };
+        const RESULTS = ['no_response', 'interviewed', 'no_fit', 'project', 'trial', 'hired', 'withdrawn'];
+        const result = String(input.result || '').trim() || null;
+        if (result && !RESULTS.includes(result)) return res.status(400).json({ ok: false, error: 'Choose one of the listed outcomes.' });
         const row = {
           student_user_id: String(input.studentUserId || '').trim() || null,
           company_user_id: String(input.companyUserId || '').trim() || null,
           plan_id: String(input.planId || '').trim() || null,
+          // What happened, and which introduction it closes. Both optional at the API so every
+          // caller that predates them keeps working; the operator form requires `result`.
+          result,
+          introduction_id: String(input.introductionId || '').trim() || null,
           days_to_contribution: num(input.daysToContribution, 3650),
           senior_hours: num(input.seniorHours, 10000),
           independent_resolution: num(input.independentResolution, 1),
@@ -1150,6 +1157,51 @@ export default async function handler(req, res, dependencies = {}) {
           // Reported back every time, because the honest answer to "does this predict anything"
           // changes only when this number does.
           calibration: calibrationStatus(all || []),
+        });
+      }
+
+      // The operator's daily job: accepted introductions that have produced no outcome yet.
+      //
+      // This is the queue the pilot runs on. An introduction that was accepted and never closed
+      // out is not a neutral gap — it is a student who agreed to be contacted and a company that
+      // may have gone quiet, and nobody finds out unless somebody looks. Oldest first, because
+      // the ones most likely to be forgotten are the ones most worth chasing.
+      if (input.action === 'outcome-worklist') {
+        const { data: accepted, error } = await operator.supabase
+          .from('introductions')
+          .select('id, company_user_id, student_user_id, project_id, role_summary, created_at, responded_at')
+          .eq('status', 'accepted')
+          .order('created_at', { ascending: true })
+          .limit(200);
+        if (error) return res.status(503).json({ ok: false, error: 'The introduction list is unavailable. The outcome_worklist migration may not be applied yet.' });
+
+        const rows = accepted || [];
+        // Anti-join in memory: the pilot is 5-10 companies, so the set is small and a single
+        // round trip beats a per-row existence check.
+        const { data: closed } = await operator.supabase
+          .from('placement_outcomes')
+          .select('introduction_id')
+          .not('introduction_id', 'is', null);
+        const done = new Set((closed || []).map(r => r.introduction_id));
+
+        const outstanding = rows.filter(r => !done.has(r.id));
+        const dayMs = 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        return res.status(200).json({
+          ok: true,
+          outstanding: outstanding.map(r => ({
+            introductionId: r.id,
+            studentUserId: r.student_user_id,
+            companyUserId: r.company_user_id,
+            projectId: r.project_id,
+            roleSummary: r.role_summary,
+            acceptedAt: r.responded_at || r.created_at,
+            daysWaiting: Math.max(0, Math.floor((now - new Date(r.responded_at || r.created_at).getTime()) / dayMs)),
+          })),
+          // Recorded over accepted is the pilot's core operating ratio. Reported even when it is
+          // bad, because the number only becomes useful once somebody has to look at it.
+          accepted: rows.length,
+          recorded: rows.length - outstanding.length,
         });
       }
 
