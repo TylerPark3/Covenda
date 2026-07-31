@@ -75,7 +75,12 @@ console.log(`
   Pages, CSS and client JavaScript all work without this. Signing in, the portal,
   and the admin do not.
 
-  Start anyway with:  npm run local -- --force
+  Start anyway with:  npm run local:force
 `);
 
-process.exit(process.argv.includes('--force') ? 0 : 1);
+// `npm run local -- --force` appends the flag to the END of the whole script string, so it
+// lands on `vercel dev` rather than here and the guard never sees it. That is why the printed
+// escape hatch never worked. `npm run local:force` passes it to this process, and the env var
+// covers a shell that has already decided it is fine running without a database.
+const forced = process.argv.includes('--force') || process.env.COVENDA_FORCE_LOCAL === '1';
+process.exit(forced ? 0 : 1);
