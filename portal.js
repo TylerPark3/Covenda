@@ -107,6 +107,17 @@ function showAuth(message='',error=false) { $('#portalAuth').hidden=false; $('#p
 function showLoading() { $('#portalAuth').hidden=true; $('#portalLoading').hidden=false; $('#memberShell').hidden=true; }
 function showMember() { $('#portalAuth').hidden=true; $('#portalLoading').hidden=true; $('#memberShell').hidden=false; }
 
+// The failing line, lifted out of the stack and put on screen next to the message. Telling
+// someone to open developer tools asks for a step that mostly does not happen; a screenshot of
+// the error is what actually arrives. This same crash came back three times carrying no
+// location, which cost more than printing twelve characters ever would.
+function errorSite(error){
+  const frames=String(error&&error.stack||'').split('\n').map(l=>l.trim()).filter(Boolean);
+  const hit=frames.find(l=>/portal\.js:\d+/.test(l))||frames[1]||'';
+  const at=hit.match(/portal\.js:(\d+):(\d+)/);
+  return at?`portal.js:${at[1]}:${at[2]}`:(hit.slice(0,120)||'no stack available');
+}
+
 async function loadDashboard() {
   showLoading();
   try {
@@ -127,7 +138,7 @@ async function loadDashboard() {
     // reload only helps when the saved progress really was the cause.
     if(error instanceof TypeError||error instanceof RangeError||error instanceof ReferenceError){
       clearOnboard();
-      showAuth(`The portal hit an error while loading: ${error.message}. Saved progress was cleared — reload to retry. If this repeats, the details are in the browser console.`,true);
+      showAuth(`The portal hit an error while loading: ${error.message} — at ${errorSite(error)}. Saved progress was cleared; reload to retry.`,true);
       return;
     }
     showAuth(error.message,true);
