@@ -78,4 +78,35 @@ test('the real fault is never swallowed', () => {
   const fn = src.slice(src.indexOf('async function loadDashboard'), src.indexOf('function profileCompletion'));
   assert.match(fn, /console\.error\(/, 'the underlying error must reach the console');
   assert.match(fn, /\$\{error\.message\}/, 'and must stay visible to whoever is looking at the screen');
+  assert.match(fn, /errorSite\(error\)/, 'and carry the failing line, not a note about where to find it');
+});
+
+// A message that says "check the console" is only as good as the odds someone does. Putting the
+// file and line in the message itself means a screenshot is a complete bug report.
+test('errorSite names the failing line', () => {
+  const errorSite = lift('errorSite');
+  const err = new Error('object is not iterable');
+  err.stack = [
+    'TypeError: object is not iterable',
+    '    at renderCoursework (https://covenda.app/portal.js:2841:19)',
+    '    at renderDashboard (https://covenda.app/portal.js:1204:3)',
+  ].join('\n');
+  assert.equal(errorSite(err), 'portal.js:2841:19', 'the first portal.js frame is the interesting one');
+});
+
+test('errorSite degrades instead of throwing', () => {
+  const errorSite = lift('errorSite');
+  const stackless = new Error('x');
+  stackless.stack = '';
+  assert.equal(errorSite(stackless), 'no stack available', 'a stackless error must not break the handler');
+  assert.doesNotThrow(() => errorSite(null), 'nor a missing error');
+  assert.doesNotThrow(() => errorSite(undefined));
+});
+
+// A stack from somewhere other than portal.js still has to yield something, rather than nothing.
+test('errorSite falls back to the nearest frame when portal.js is absent', () => {
+  const errorSite = lift('errorSite');
+  const err = new Error('boom');
+  err.stack = 'TypeError: boom\n    at somewhereElse (https://covenda.app/other.js:9:1)';
+  assert.match(errorSite(err), /other\.js:9:1/);
 });
