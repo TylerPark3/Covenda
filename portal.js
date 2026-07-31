@@ -4605,6 +4605,25 @@ function renderOpenRoles(root,d){
 // Native <details> rather than a JS accordion: it is keyboard operable, screen-reader
 // announced, and findable by browser find-in-page even while closed, none of which a
 // div-and-click-handler gets for free.
+// One bad field should cost its own section, not the page. The dashboard renders as a single
+// uninterrupted pass, so until now a throw anywhere below the first section aborted every
+// section after it — that is how `for(const sig of (t.unprompted||[]))` on one profile took the
+// whole portal down and surfaced as a sign-in failure.
+//
+// The section is left visibly broken rather than silently dropped. A section that quietly
+// disappears looks like "you have nothing here", which is a lie the student cannot detect and
+// nobody reports. The console keeps the real error.
+function buildSection(body,build,label){
+  try{ build(body); return true; }
+  catch(error){
+    console.error(`[covenda] section "${label}" failed to render`,error);
+    const p=document.createElement('p');p.className='section-error';
+    p.textContent='This section could not be displayed. The rest of the page is unaffected.';
+    body.append(p);
+    return false;
+  }
+}
+
 function portalGroup(root,title,detail,build,{open=false}={}){
   const box=document.createElement('details');box.className='portal-group';box.open=open;
   const head=document.createElement('summary');
@@ -4613,7 +4632,7 @@ function portalGroup(root,title,detail,build,{open=false}={}){
   if(detail){const d=document.createElement('span');d.className='portal-group-note';d.textContent=detail;head.append(d);}
   box.append(head);
   const body=document.createElement('div');box.append(body);
-  build(body);
+  buildSection(body,build,title);
   // A group that produced nothing is not shown at all. An empty accordion is worse than a
   // missing one: it reads as broken rather than as not applicable yet.
   if(!body.childElementCount)return;
@@ -5022,8 +5041,11 @@ function techSection(title, build, emptyText){
   const cap=document.createElement('h4');cap.textContent=title;
   sec.append(cap);
   const body=document.createElement('div');
-  build(body);
-  if(!body.childElementCount){
+  // A failed section must not be mistaken for an empty one: emptyText says "nothing here yet",
+  // which is the opposite of what a crash means. Only fall through to it when the build
+  // actually succeeded and produced nothing.
+  const built=buildSection(body,build,title);
+  if(built&&!body.childElementCount){
     const p=document.createElement('p');p.className='tech-empty';p.textContent=emptyText;
     body.append(p);
   }
