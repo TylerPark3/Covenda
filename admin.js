@@ -1,8 +1,8 @@
 // Truthiness is the wrong test for "is this a list". An object where an array belongs is truthy,
 // so `x||[]` hands it straight to for-of, which throws — and because the render is one
 // uninterrupted pass, that throw takes the whole page with it, not just the one section. This
-// crashed the portal on t.unprompted returning {} instead of []. Shape is what matters, so the
-// check is on shape. Real iterables (Set, Map) pass through untouched; everything else becomes
+// crashed the portal on t.unprompted, which was never a list at all — see agency-section. Shape
+// is what matters, so the check is on shape. Real iterables (Set, Map) pass through untouched; everything else becomes
 // an empty list and the section simply renders nothing.
 function asList(value){
   if(Array.isArray(value))return value;

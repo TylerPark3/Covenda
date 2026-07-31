@@ -124,7 +124,13 @@ export async function recordError(route, kind, message, { detail = {}, userId = 
 }
 
 // Only scalars, only shallow, and nothing that looks like a credential or an address.
-const FORBIDDEN = /token|secret|key|password|authorization|cookie|email|phone/i;
+//
+// `rationale`, `note` and `need` are here for a different reason than the credentials above.
+// They are not secrets, they are prose written about a named person: an operator's candid
+// assessment of a candidate on `matches.human_rationale`, a founder's comment on an outcome, and
+// an accommodation request that can describe a disability. A log is the wrong home for any of
+// them, and once a log has them it keeps them.
+const FORBIDDEN = /token|secret|key|password|authorization|cookie|email|phone|rationale|note|need/i;
 export function safeDetail(detail) {
   const out = {};
   for (const [k, v] of Object.entries(detail || {})) {
