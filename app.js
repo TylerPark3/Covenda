@@ -1,3 +1,15 @@
+// Truthiness is the wrong test for "is this a list". An object where an array belongs is truthy,
+// so `x||[]` hands it straight to for-of, which throws — and because the render is one
+// uninterrupted pass, that throw takes the whole page with it, not just the one section. This
+// crashed the portal on t.unprompted returning {} instead of []. Shape is what matters, so the
+// check is on shape. Real iterables (Set, Map) pass through untouched; everything else becomes
+// an empty list and the section simply renders nothing.
+function asList(value){
+  if(Array.isArray(value))return value;
+  if(value&&typeof value!=='string'&&typeof value[Symbol.iterator]==='function')return value;
+  return [];
+}
+
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
@@ -2643,7 +2655,7 @@ function renderRoles() {
     const company = document.createElement('p'); company.className = 'role-company'; company.textContent = role.company + ' · ' + (role.term === 'short' ? 'Short-term' : 'Longer-term');
     const desc = document.createElement('p'); desc.className = 'role-desc'; desc.textContent = role.description;
     const skills = document.createElement('div'); skills.className = 'role-skills';
-    for (const s of role.skills) { const chip = document.createElement('span'); chip.className = 'role-skill'; chip.textContent = s; skills.append(chip); }
+    for (const s of asList(role.skills)) { const chip = document.createElement('span'); chip.className = 'role-skill'; chip.textContent = s; skills.append(chip); }
     const apply = document.createElement('button'); apply.type = 'button'; apply.className = 'gold-button role-apply'; apply.textContent = 'Apply to this role';
     apply.addEventListener('click', () => openRoleApply(role));
     card.append(fn, title, company, desc, skills, apply);
@@ -5423,7 +5435,7 @@ function initHeroField(target) {
     // pasted on it, not so much that it reads as a neon tube.
     ctx.shadowColor = `rgba(150,105,30,${0.28 * solid})`;
     ctx.shadowBlur = size * 0.012 * solid;
-    for (const cx of MARK_RINGS.centres) {
+    for (const cx of asList(MARK_RINGS.centres)) {
       const x = left + cx * size;
       const y = box.top + MARK_RINGS.y * size;
       // Deep gold rather than pale yellow, so it reads as metal against the black.

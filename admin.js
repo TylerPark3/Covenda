@@ -1,3 +1,15 @@
+// Truthiness is the wrong test for "is this a list". An object where an array belongs is truthy,
+// so `x||[]` hands it straight to for-of, which throws — and because the render is one
+// uninterrupted pass, that throw takes the whole page with it, not just the one section. This
+// crashed the portal on t.unprompted returning {} instead of []. Shape is what matters, so the
+// check is on shape. Real iterables (Set, Map) pass through untouched; everything else becomes
+// an empty list and the section simply renders nothing.
+function asList(value){
+  if(Array.isArray(value))return value;
+  if(value&&typeof value!=='string'&&typeof value[Symbol.iterator]==='function')return value;
+  return [];
+}
+
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const TOKEN_KEY = 'covendaAdminAccessToken';
@@ -115,7 +127,7 @@ async function renderReviewQueue() {
     cap.textContent = 'Signals that can stand in for a protected characteristic';
     warn.append(cap);
     const list = document.createElement('ul');
-    for (const flag of proxies.flagged) {
+    for (const flag of asList(proxies.flagged)) {
       const li = document.createElement('li');
       const name = document.createElement('b');
       name.textContent = flag.signal;
@@ -140,7 +152,7 @@ async function renderReviewQueue() {
     return;
   }
 
-  for (const run of reviewData.queue) {
+  for (const run of asList(reviewData.queue)) {
     host.append(reviewRunCard(run));
   }
 }
@@ -159,7 +171,7 @@ function reviewRunCard(run) {
   top.append(who, state);
   card.append(top);
 
-  for (const component of run.components || []) {
+  for (const component of asList(run.components)) {
     const observation = (run.observations || {})[component.id] || {};
     // Only what the student has actually answered. A component they have not reached is not
     // work for a reviewer.
