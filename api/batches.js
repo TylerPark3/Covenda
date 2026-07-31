@@ -19,6 +19,7 @@
 
 import { CONNECTORS } from './connectors.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
+import { TIERS } from './evidence.js';
 
 export const BATCH_ADMISSION_VERSION = 'batch-admission-1.0.0';
 
@@ -681,7 +682,7 @@ function coreWeights(slug) {
   return weights;
 }
 
-export function batchCompatibility(batch, { skills = [], verticals = [], evidencedSkills = [] } = {}) {
+export function batchCompatibility(batch, { skills = [], verticals = [], evidencedSkills = [], tierBySkill = {}, agency = {} } = {}) {
   const stated = (skills || []).map(s => String(s || '').trim()).filter(Boolean);
   const evidenced = new Set((evidencedSkills || []).map(s => String(s || '').toLowerCase().trim()));
 
@@ -723,10 +724,68 @@ export function batchCompatibility(batch, { skills = [], verticals = [], evidenc
   const gotWeight = [...hit].reduce((a, c) => a + (weights.get(c) || 0), 0);
   const coverage = totalWeight ? gotWeight / totalWeight : 0;
 
-  let score = Math.round(coverage * 65);
-  if (verticalMatch) score += 15;
-  if (adjacent.length) score += Math.min(8, adjacent.length * 4);
-  if (evidencedMatched.length) score += Math.min(12, evidencedMatched.length * 6);
+  // Itemised here rather than recomputed by the caller. A tracker that re-derived these from
+  // the same inputs would be a second implementation of the scoring, and the first time the
+  // weights moved it would start disagreeing with the number printed next to it.
+  //
+  // `backed` is the honest part: three of the four components are bought with typed skills and
+  // one is bought with evidence. A student who cannot see which is which will optimise the
+  // cheap ones, and the cheap ones are exactly the ones a company discounts.
+  // ── Depth of that evidence ──────────────────────────────────────────────────────────
+  // Having evidence and having STRONG evidence were the same thing to this scorer: a matched
+  // skill backed by a self-reported note counted exactly as much as one backed by an accepted
+  // trial. The tier ladder already records the difference, so the score reads it.
+  const TIER_WEIGHT = { claimed: 0, artifact: 1, referral: 2, trial: 3 };
+  const tiers = matched.map(s => TIER_WEIGHT[tierBySkill[canonicalizeSkill(s).canonical]] ?? 0);
+  const bestTier = tiers.length ? Math.max(...tiers) : 0;
+  const depthPoints = Math.round((bestTier / 3) * 12);
+
+  // ── Agency ──────────────────────────────────────────────────────────────────────────
+  // Whether the person builds without being asked. Read from evidence already recorded, not
+  // from a new field: repeated building and outright ownership are both already counted.
+  const agencyBits = [];
+  if (agency.repeatedBuilder) agencyBits.push('built more than once');
+  if ((agency.ownedOutright || 0) > 0) agencyBits.push(`${agency.ownedOutright} owned outright`);
+  const agencyPoints = Math.min(8, agencyBits.length * 4);
+
+  const components = [
+    {
+      id: 'coverage', label: 'Core skills covered', backed: 'stated',
+      points: Math.round(coverage * 50), max: 50,
+      detail: `${hit.size} of ${weights.size} core skills, weighted by how central each is.`,
+    },
+    {
+      id: 'vertical', label: 'Follows this field', backed: 'stated',
+      points: verticalMatch ? 12 : 0, max: 12,
+      detail: verticalMatch ? 'This vertical is on your profile.' : 'This vertical is not on your profile.',
+    },
+    {
+      id: 'adjacent', label: 'Adjacent skills', backed: 'stated',
+      points: Math.min(6, adjacent.length * 3), max: 6,
+      detail: adjacent.length ? `${adjacent.length} skill${adjacent.length === 1 ? '' : 's'} the batch describes itself with.` : 'Nothing adjacent listed.',
+    },
+    {
+      id: 'evidenced', label: 'Backed by evidence', backed: 'evidence',
+      points: Math.min(12, evidencedMatched.length * 6), max: 12,
+      detail: evidencedMatched.length
+        ? `${evidencedMatched.length} matched skill${evidencedMatched.length === 1 ? '' : 's'} with evidence behind ${evidencedMatched.length === 1 ? 'it' : 'them'}.`
+        : 'None of your matched skills has evidence behind it yet.',
+    },
+    {
+      id: 'depth', label: 'How strong that evidence is', backed: 'evidence',
+      points: depthPoints, max: 12,
+      detail: bestTier
+        ? `Your strongest matched skill reaches ${TIERS[bestTier]}.`
+        : 'Nothing matched here rises above self-reported.',
+    },
+    {
+      id: 'agency', label: 'Builds without being asked', backed: 'evidence',
+      points: agencyPoints, max: 8,
+      detail: agencyBits.length ? agencyBits.join(', ') + '.' : 'Nothing recorded yet shows work started unprompted.',
+    },
+  ];
+
+  let score = components.reduce((a, c) => a + c.points, 0);
   score = Math.max(0, Math.min(100, score));
 
   // What is missing is more actionable than what matched: it names the next thing to learn.
@@ -742,7 +801,151 @@ export function batchCompatibility(batch, { skills = [], verticals = [], evidenc
       + (missing.length ? `. Still wants ${missing.slice(0, 2).join(' and ')}.` : '.');
   }
 
-  return { score, matched, adjacent, evidencedMatched, verticalMatch, missing, basis: 'stated-skills', why };
+  return { score, matched, adjacent, evidencedMatched, verticalMatch, missing, components, basis: 'stated-skills', why };
+}
+
+// ── Standing across every batch ───────────────────────────────────────────────────────
+// The student-facing tracker reads this. It is an aggregate of the same per-batch arithmetic,
+// never a second scoring path.
+//
+// There is no history in it, and that is deliberate rather than an omission: nothing stores a
+// score over time, so a trend line would be drawn from data that does not exist. What it
+// tracks instead is the gap between what a student has TYPED and what they have SHOWN, which
+// is the thing that actually moves and the thing this product is about.
+export function compatibilityStanding(batches = []) {
+  const scored = (batches || [])
+    .filter(b => b?.compatibility && b.compatibility.score !== null)
+    .sort((a, b) => b.compatibility.score - a.compatibility.score);
+
+  if (!scored.length) {
+    return {
+      scored: 0,
+      best: null, median: null,
+      statedPoints: 0, evidencedPoints: 0, evidenceCeiling: 0,
+      unbacked: [],
+      note: 'Add skills to your profile and every batch will show how it lines up.',
+    };
+  }
+
+  const scores = scored.map(b => b.compatibility.score);
+  const mid = Math.floor(scores.length / 2);
+  const median = scores.length % 2 ? scores[mid] : Math.round((scores[mid - 1] + scores[mid]) / 2);
+
+  let statedPoints = 0;
+  let evidencedPoints = 0;
+  let evidenceCeiling = 0;
+  // Skills that are earning coverage points on some batch with nothing behind them. Counted
+  // per skill rather than per batch, because the fix is one artifact, not one per batch.
+  const unbacked = new Map();
+
+  for (const batch of scored) {
+    for (const c of batch.compatibility.components || []) {
+      if (c.backed === 'evidence') { evidencedPoints += c.points; evidenceCeiling += c.max; }
+      else statedPoints += c.points;
+    }
+    const evidenced = new Set((batch.compatibility.evidencedMatched || []).map(s => s.toLowerCase()));
+    for (const skill of batch.compatibility.matched || []) {
+      if (evidenced.has(skill.toLowerCase())) continue;
+      const entry = unbacked.get(skill) || { skill, batches: 0 };
+      entry.batches += 1;
+      unbacked.set(skill, entry);
+    }
+  }
+
+  return {
+    scored: scored.length,
+    best: { slug: scored[0].slug, name: scored[0].name, score: scores[0] },
+    median,
+    statedPoints,
+    evidencedPoints,
+    evidenceCeiling,
+    // Most-used first: one artifact covering the skill at the top moves the most cards.
+    unbacked: [...unbacked.values()].sort((a, b) => b.batches - a.batches).slice(0, 6),
+    note: null,
+  };
+}
+
+// ── What to work on, for one batch (§39) ──────────────────────────────────────────────
+// The score says where a student stands. This says what to do about it, for this batch and no
+// other, using evidence they have already recorded.
+//
+// Everything here is a JOIN of things that already exist: the batch's weighted core skills,
+// the `missing` set the scorer already computes, the tier each skill has actually reached, and
+// the artifacts `acceptsFor` already names. Nothing new is asked of the student and no second
+// scorer is introduced, because two of anything here would drift and disagree on screen.
+//
+// ── WHAT THIS IS NOT ──────────────────────────────────────────────────────────────────
+// Not a readiness score, not a percentage complete, not a rank. It reports counts and an
+// ordered list. A composite would be the thing the blueprint forbids outright, and it would be
+// uncalibrated anyway: nothing has been placed, so there is no outcome to fit a number to.
+//
+// Not admission. `evaluateBatchAdmission` remains the only gate. This says what would make an
+// application stronger, never that following it produces one.
+export const READINESS_PLAN_VERSION = 'batch-readiness-1.0.0';
+
+export function batchReadinessPlan(batch, { skills = [], evidencedSkills = [], tierBySkill = {} } = {}) {
+  const core = SPECIALISATION_SKILLS[batch?.slug] || [];
+  const accepts = acceptsFor(batch?.slug) || [];
+  if (!core.length) {
+    return {
+      version: READINESS_PLAN_VERSION, batch: null, standing: null, items: [],
+      note: 'This batch has not published what it reads for yet.',
+    };
+  }
+
+  const weights = coreWeights(batch.slug);
+  const stated = new Set((skills || []).map(x => canonicalizeSkill(String(x || '')).canonical));
+  const shown = new Set((evidencedSkills || []).map(x => canonicalizeSkill(String(x || '')).canonical));
+
+  // Three states, not two. A skill that is typed but unevidenced is a different job from one
+  // that is absent: the first needs proof, the second needs the skill. Collapsing them makes
+  // the plan wrong for the more common case.
+  const state = (skill) => {
+    const tier = tierBySkill[skill];
+    if (shown.has(skill) || (tier && tier !== 'claimed')) return 'evidenced';
+    if (stated.has(skill)) return 'stated';
+    return 'none';
+  };
+
+  const covered = core.filter(s => state(s) !== 'none').length;
+  const evidenced = core.filter(s => state(s) === 'evidenced').length;
+
+  // Ordered by the batch's own weighting, not by what is easiest to get. coreWeights already
+  // ranks a batch's skills by how central each is; a plan sorted by convenience tells a student
+  // to do the cheap thing first, which is how a profile fills up with small artifacts.
+  const gaps = core
+    .filter(s => state(s) !== 'evidenced')
+    .sort((a, b) => (weights.get(b) || 0) - (weights.get(a) || 0));
+
+  const items = gaps.map((skill, i) => {
+    const have = state(skill);
+    return {
+      skill,
+      weight: weights.get(skill) || 0,
+      have,
+      // Artifacts are published per batch, not per skill, so they are matched to gaps by rank:
+      // the most central gap gets the batch's first-listed artifact. One artifact usually
+      // covers several of these, which the note says rather than the list pretending otherwise.
+      build: accepts.length ? accepts[Math.min(i, accepts.length - 1)] : null,
+      why: have === 'stated'
+        ? `You have listed ${skill}. This batch reads it from work, not from a list.`
+        : `${skill} is one of the ${core.length} things this batch reads for.`,
+      // Which scored components this would move, so the plan and the score agree.
+      lifts: have === 'stated' ? ['evidenced', 'depth'] : ['coverage', 'evidenced', 'depth'],
+    };
+  // A gap with no artifact attached is a rejection with extra words, so it is dropped rather
+  // than emitted as advice nobody can act on.
+  }).filter(item => item.build);
+
+  return {
+    version: READINESS_PLAN_VERSION,
+    batch: { slug: batch.slug, name: batch.name || batch.slug },
+    standing: { covered, evidenced, total: core.length },
+    items,
+    note: items.length
+      ? 'One artifact usually covers several of these. Guidance for a stronger application, never a gate.'
+      : 'Everything this batch reads for already has evidence behind it.',
+  };
 }
 
 export function batchBrief(batch) {

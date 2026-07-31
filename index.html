@@ -128,7 +128,6 @@
         <canvas id="heroFieldCanvas" class="hero-field" data-morph="mark" aria-hidden="true"></canvas>
         <div class="hero-copy">
           <h1 id="homeHeroTitle">Beyond the <span class="word-gold">Resume</span></h1>
-
         </div>
         <div class="home-paths" role="group" aria-label="Choose your path">
           <button type="button" class="home-path" data-audience-option="student" data-hero-entry>
@@ -188,13 +187,6 @@
             </section>
           </div>
 
-          <p class="proof-market-summary">Both sides are growing. Applications make it harder for them to find each other.</p>
-
-        </div>
-
-        <div class="proof-lens-actions">
-          <button class="proof-primary-action" type="button" data-audience-option="company">Find the right student</button>
-          <button class="proof-secondary-action" type="button" data-audience-option="student">Build your work profile</button>
         </div>
       </section>
 
@@ -205,6 +197,7 @@
            Notably absent from the matching row: any claim that the score is learned. It is a
            transparent weighted model, and the learned re-ranker stays off until there are
            enough completed outcomes to train it honestly. -->
+
       <section class="compare-section" aria-labelledby="compareTitle">
         <div class="compare-inner">
           <div class="compare-head">
@@ -215,18 +208,18 @@
 
           <div class="compare-scroll">
             <table class="compare-table">
-              <caption class="sr-only">How other application platforms compare with Covenda</caption>
+              <caption class="sr-only">How AI hiring tools and other application platforms compare with Covenda</caption>
               <thead>
                 <tr>
                   <th scope="col"><span class="ct-q">&nbsp;</span></th>
-                  <th scope="col"><span class="ct-them">Everywhere else</span></th>
+                  <th scope="col"><span class="ct-them">AI and everywhere else</span></th>
                   <th scope="col" class="is-us"><span class="ct-us">Covenda</span></th>
                 </tr>
               </thead>
               <tbody>
-                <tr><th scope="row">You receive</th><td>A r&eacute;sum&eacute;</td><td class="is-us">A work profile with projects and availability</td></tr>
+                <tr><th scope="row">You receive</th><td>A r&eacute;sum&eacute;, often AI-written</td><td class="is-us">A work profile with projects and availability</td></tr>
                 <tr><th scope="row">Filtered by</th><td>School and keywords</td><td class="is-us">Skills, work type, stage, and time</td></tr>
-                <tr><th scope="row">Matched by</th><td>A generic job post</td><td class="is-us">The role and problem you describe</td></tr>
+                <tr><th scope="row">Matched by</th><td>A generic job post and a model&rsquo;s guess</td><td class="is-us">The role and problem you describe</td></tr>
                 <tr><th scope="row">Before hiring</th><td>More interviews</td><td class="is-us">A small paid trial with a clear finish</td></tr>
                 <tr><th scope="row">A strong trial</th><td>Another application</td><td class="is-us">Can lead to an internship, project, or role</td></tr>
                 <tr><th scope="row">Who decides</th><td>The algorithm</td><td class="is-us">The company and student</td></tr>
@@ -271,14 +264,11 @@
               <h4>Filter for fit</h4>
                 <svg class="proof-step-geo" viewBox="0 0 140 78" aria-hidden="true" focusable="false">
                   <circle class="g-dim" cx="24" cy="20" r="2"/><circle class="g-dim" cx="112" cy="16" r="2"/>
-                  <circle class="g-dim" cx="18" cy="42" r="2"/><circle class="g-dim" cx="122" cy="40" r="2"/>
-                  <line class="g-link" x1="70" y1="39" x2="36" y2="62"/>
-                  <line class="g-link" x1="70" y1="39" x2="104" y2="58"/>
-                  <line class="g-link" x1="70" y1="39" x2="70" y2="12"/>
-                  <circle class="g-live" cx="36" cy="62" r="3.5"/>
-                  <circle class="g-live" cx="104" cy="58" r="3.5"/>
-                  <circle class="g-live" cx="70" cy="12" r="3.5"/>
-                  <circle class="g-live" cx="70" cy="39" r="4.5"/>
+                  <circle class="g-dim" cx="36" cy="62" r="2"/><circle class="g-dim" cx="104" cy="58" r="2"/>
+                  <circle class="g-dim" cx="70" cy="12" r="2"/><circle class="g-dim" cx="18" cy="42" r="2"/>
+                  <circle class="g-dim" cx="122" cy="40" r="2"/><circle class="g-dim" cx="70" cy="70" r="2"/>
+                  <line class="g-link" x1="52" y1="39" x2="88" y2="39"/>
+                  <circle class="g-live" cx="52" cy="39" r="4.5"/><circle class="g-live" cx="88" cy="39" r="4.5"/>
                 </svg>
               <div class="proof-filter-preview" aria-hidden="true">
                 <span><b>Work</b>Product design</span>
@@ -291,13 +281,14 @@
               <small>3</small>
               <h4>Try one real project</h4>
                 <svg class="proof-step-geo" viewBox="0 0 140 78" aria-hidden="true" focusable="false">
-                  <polygon class="g-face" points="70,12 104,58 36,62"/>
-                  <line class="g-link" x1="70" y1="12" x2="104" y2="58"/>
-                  <line class="g-link" x1="104" y1="58" x2="36" y2="62"/>
-                  <line class="g-link" x1="36" y1="62" x2="70" y2="12"/>
-                  <circle class="g-live" cx="70" cy="12" r="3.5"/>
-                  <circle class="g-live" cx="104" cy="58" r="3.5"/>
-                  <circle class="g-fill" cx="36" cy="62" r="5"/>
+                  <circle class="g-dim" cx="24" cy="20" r="2"/><circle class="g-dim" cx="112" cy="16" r="2"/>
+                  <circle class="g-dim" cx="36" cy="62" r="2"/><circle class="g-dim" cx="104" cy="58" r="2"/>
+                  <circle class="g-dim" cx="70" cy="12" r="2"/><circle class="g-dim" cx="18" cy="42" r="2"/>
+                  <circle class="g-dim" cx="122" cy="40" r="2"/><circle class="g-dim" cx="70" cy="70" r="2"/>
+                  <line class="g-link" x1="70" y1="22" x2="52" y2="53"/>
+                  <line class="g-link" x1="52" y1="53" x2="88" y2="53"/>
+                  <line class="g-link" x1="88" y1="53" x2="70" y2="22"/>
+                  <circle class="g-live" cx="70" cy="22" r="4.5"/><circle class="g-live" cx="52" cy="53" r="4.5"/><circle class="g-live" cx="88" cy="53" r="4.5"/>
                 </svg>
               <div class="proof-trial-preview" aria-hidden="true">
                 <span>Trial project</span>
@@ -310,13 +301,17 @@
               <small><svg aria-hidden="true"><use href="#icon-check"/></svg></small>
               <h4>Trials become roles</h4>
                 <svg class="proof-step-geo" viewBox="0 0 140 78" aria-hidden="true" focusable="false">
-                  <polygon class="g-face is-solid" points="70,10 108,32 94,66 46,66 32,32"/>
-                  <line class="g-link" x1="70" y1="10" x2="94" y2="66"/>
-                  <line class="g-link" x1="70" y1="10" x2="46" y2="66"/>
-                  <line class="g-link" x1="32" y1="32" x2="108" y2="32"/>
-                  <circle class="g-fill" cx="70" cy="10" r="4"/><circle class="g-fill" cx="108" cy="32" r="4"/>
-                  <circle class="g-fill" cx="94" cy="66" r="4"/><circle class="g-fill" cx="46" cy="66" r="4"/>
-                  <circle class="g-fill" cx="32" cy="32" r="4"/>
+                  <circle class="g-dim" cx="24" cy="20" r="2"/><circle class="g-dim" cx="112" cy="16" r="2"/>
+                  <circle class="g-dim" cx="36" cy="62" r="2"/><circle class="g-dim" cx="104" cy="58" r="2"/>
+                  <circle class="g-dim" cx="70" cy="12" r="2"/><circle class="g-dim" cx="18" cy="42" r="2"/>
+                  <circle class="g-dim" cx="122" cy="40" r="2"/><circle class="g-dim" cx="70" cy="70" r="2"/>
+                  <line class="g-link" x1="70" y1="18" x2="46" y2="56"/>
+                  <line class="g-link" x1="46" y1="56" x2="94" y2="56"/>
+                  <line class="g-link" x1="94" y1="56" x2="70" y2="18"/>
+                  <line class="g-link" x1="70" y1="40" x2="70" y2="18"/>
+                  <line class="g-link" x1="70" y1="40" x2="46" y2="56"/>
+                  <line class="g-link" x1="70" y1="40" x2="94" y2="56"/>
+                  <circle class="g-live" cx="70" cy="18" r="4.5"/><circle class="g-live" cx="46" cy="56" r="4.5"/><circle class="g-live" cx="94" cy="56" r="4.5"/><circle class="g-live" cx="70" cy="40" r="4.5"/>
                 </svg>
               <p>Internship · ongoing project · full-time<br>When both sides agree.</p>
             </button>
@@ -367,10 +362,10 @@
                   </div>
                   <svg class="exchange-step-art" viewBox="0 0 260 120" aria-hidden="true">
                     <rect x="14" y="24" width="96" height="72" fill="#fff" stroke="currentColor" stroke-width="2.5"/>
-                    <g stroke="#b47b20" stroke-width="5" stroke-linecap="round"><path d="M30 46h64M30 62h64M30 78h40"/></g>
+                    <g stroke="#c08a22" stroke-width="5" stroke-linecap="round"><path d="M30 46h64M30 62h64M30 78h40"/></g>
                     <path d="M124 60h34" stroke="currentColor" stroke-width="2.5"/>
                     <path d="M152 53l10 7-10 7z" fill="currentColor"/>
-                    <rect x="176" y="34" width="70" height="52" fill="#fbf7ed" stroke="#b47b20" stroke-width="2.5"/>
+                    <rect x="176" y="34" width="70" height="52" fill="#fbf7ed" stroke="#c08a22" stroke-width="2.5"/>
                     <circle cx="211" cy="60" r="13" fill="none" stroke="#8b5709" stroke-width="2.5"/>
                     <path d="M211 52v8l6 4" stroke="#8b5709" stroke-width="2.5" stroke-linecap="round" fill="none"/>
                   </svg>
@@ -386,7 +381,7 @@
                     <rect x="58" y="16" width="144" height="88" fill="#fff" stroke="currentColor" stroke-width="2.5"/>
                     <path d="M74 40h112" stroke="currentColor" stroke-width="2.5"/>
                     <g stroke="#deded9" stroke-width="5" stroke-linecap="round"><path d="M74 56h84M74 72h104"/></g>
-                    <circle cx="180" cy="84" r="13" fill="#fbf7ed" stroke="#b47b20" stroke-width="2.5"/>
+                    <circle cx="180" cy="84" r="13" fill="#fbf7ed" stroke="#c08a22" stroke-width="2.5"/>
                     <path d="M174 84l4.5 5 8.5-9" fill="none" stroke="#8b5709" stroke-width="2.5" stroke-linecap="round"/>
                   </svg>
                 </article>
@@ -398,7 +393,7 @@
                     <p>Only students who cleared the bar.</p>
                   </div>
                   <svg class="exchange-step-art" viewBox="0 0 260 120" aria-hidden="true">
-                    <rect x="10" y="44" width="52" height="32" fill="#fbf7ed" stroke="#b47b20" stroke-width="2.5"/>
+                    <rect x="10" y="44" width="52" height="32" fill="#fbf7ed" stroke="#c08a22" stroke-width="2.5"/>
                     <path d="M70 60h26" stroke="currentColor" stroke-width="2.5"/>
                     <path d="M90 53l10 7-10 7z" fill="currentColor"/>
                     <rect x="112" y="20" width="138" height="80" fill="none" stroke="currentColor" stroke-width="2.5"/>
@@ -406,7 +401,7 @@
                       <circle cx="136" cy="46" r="10"/><circle cx="172" cy="46" r="10"/><circle cx="226" cy="46" r="10"/>
                       <circle cx="136" cy="76" r="10"/><circle cx="190" cy="76" r="10"/><circle cx="226" cy="76" r="10"/>
                     </g>
-                    <circle cx="208" cy="46" r="11" fill="#b47b20"/><circle cx="172" cy="76" r="11" fill="#b47b20"/>
+                    <circle cx="208" cy="46" r="11" fill="#c08a22"/><circle cx="172" cy="76" r="11" fill="#c08a22"/>
                   </svg>
                 </article>
 
@@ -418,10 +413,10 @@
                   </div>
                   <svg class="exchange-step-art" viewBox="0 0 260 120" aria-hidden="true">
                     <path d="M32 60h196" stroke="#deded9" stroke-width="4"/>
-                    <path d="M32 60h98" stroke="#b47b20" stroke-width="4"/>
-                    <circle cx="32" cy="60" r="13" fill="#b47b20"/>
+                    <path d="M32 60h98" stroke="#c08a22" stroke-width="4"/>
+                    <circle cx="32" cy="60" r="13" fill="#c08a22"/>
                     <path d="M26 60l5 5 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
-                    <circle cx="130" cy="60" r="13" fill="#b47b20"/>
+                    <circle cx="130" cy="60" r="13" fill="#c08a22"/>
                     <path d="M124 60l5 5 8-9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>
                     <circle cx="228" cy="60" r="13" fill="#fff" stroke="#deded9" stroke-width="4"/>
                   </svg>
@@ -497,7 +492,7 @@
         <canvas class="hero-field" data-palette="light" data-hero-field aria-hidden="true"></canvas>
         <div class="hero-copy">
           <h1 id="studentHeroTitle">Let the company <span class="word-gold">find you</span></h1>
-          <p>Rather than feeding a profile to AI agents, or spending a minute on an application, put your work and interests somewhere built to last and grow in credibility.</p>
+          <p>Do not feed your resume to an AI agent and dilute your talent. Build a profile that lasts and grows.</p>
         </div>
         <!-- F3: partner-referral landing. Populated + shown by app.js only when the
              visitor arrives via a partner's ?ref= link. Not identity-verified. -->
@@ -524,11 +519,11 @@
           <fieldset class="student-vertical-picker">
             <legend><span>What do you do?</span></legend>
             <div class="student-vertical-rail">
-              <button class="student-vertical" type="button" data-work-type="Software &amp; AI" data-vertical-label="Software &amp; AI" aria-pressed="false"><strong>Software &amp; AI</strong><small>Product, ML, infrastructure</small></button>
-              <button class="student-vertical" type="button" data-work-type="Accounting &amp; finance" data-vertical-label="Accounting &amp; finance" aria-pressed="false"><strong>Accounting &amp; finance</strong><small>Banking, PE, VC, markets</small></button>
-              <button class="student-vertical" type="button" data-work-type="Healthcare operations" data-vertical-label="Healthcare operations" aria-pressed="false"><strong>Healthcare operations</strong><small>Clinical, data, regulatory</small></button>
-              <button class="student-vertical" type="button" data-work-type="Consumer &amp; retail" data-vertical-label="Consumer &amp; retail" aria-pressed="false"><strong>Consumer &amp; retail</strong><small>Growth, brand, supply chain</small></button>
-              <button class="student-vertical" type="button" data-work-type="Professional services" data-vertical-label="Professional services" aria-pressed="false"><strong>Professional services</strong><small>Consulting, research, legal</small></button>
+              <button class="student-vertical" type="button" data-work-type="Software &amp; AI" data-vertical-label="Software &amp; AI" aria-pressed="false"><strong>Software &amp; AI</strong></button>
+              <button class="student-vertical" type="button" data-work-type="Accounting &amp; finance" data-vertical-label="Accounting &amp; finance" aria-pressed="false"><strong>Accounting &amp; finance</strong></button>
+              <button class="student-vertical" type="button" data-work-type="Healthcare operations" data-vertical-label="Healthcare operations" aria-pressed="false"><strong>Healthcare operations</strong></button>
+              <button class="student-vertical" type="button" data-work-type="Consumer &amp; retail" data-vertical-label="Consumer &amp; retail" aria-pressed="false"><strong>Consumer &amp; retail</strong></button>
+              <button class="student-vertical" type="button" data-work-type="Professional services" data-vertical-label="Professional services" aria-pressed="false"><strong>Professional services</strong></button>
             </div>
           </fieldset>
           <p class="student-specialty-empty" id="studentSpecialtyEmpty">Pick a work area to see the exact kinds of work inside it.</p>
@@ -588,7 +583,6 @@
                  words, and this is only the picture of it. -->
             <figure class="sift" id="siftFigure">
               <canvas id="siftCanvas" aria-hidden="true"></canvas>
-              <figcaption><span class="sift-hint">Hover to filter</span><span class="sift-count" id="siftCount"></span></figcaption>
             </figure>
             <ul class="company-job-points">
               <li><svg><use href="#icon-shield"/></svg>Many arrive endorsed by a professor, club, or pro, and that endorsement is attached where you can read it</li>
@@ -894,6 +888,34 @@
         <canvas class="made-by-field" data-hero-field data-palette="ink" aria-hidden="true"></canvas>
       </div>
 
+      <!-- The three pillars. Placed after the proof-lens story and before the product, because
+           each one is the reason for a thing the reader is about to see: evidence for the
+           profile, company-specific fit for the compatibility engine, high-agency talent for
+           the vouching network. A principle stated next to the feature it produced reads as an
+           explanation; stated on its own page it reads as a mission statement. -->
+      <section class="pillars-section home-only" aria-labelledby="pillarsTitle">
+        <canvas class="pillars-field" id="pillarsCanvas" aria-hidden="true"></canvas>
+        <div class="pillars-inner">
+          <p class="feature-kicker">What we build on</p>
+          <h2 id="pillarsTitle">Three <span class="word-gold">pillars</span></h2>
+          <p class="pillars-stance">Everyone else is building <em>AI-powered hiring</em>. We are building <strong>evidence-backed hiring</strong>. One predicts who might be good. The other shows you work they already did.</p>
+          <ol class="pillars">
+            <li class="pillar">
+              <h3><span>Evidence</span> over claims</h3>
+              <p>Demonstrate what you can do. Do not just state it.</p>
+            </li>
+            <li class="pillar">
+              <h3><span>Company-specific fit</span> over generic matching</h3>
+              <p>Learn what makes people succeed at each company, rather than ranking everyone by the same criteria.</p>
+            </li>
+            <li class="pillar">
+              <h3><span>High-agency talent</span> over mass-market recruiting</h3>
+              <p>Build a trusted network of people who consistently learn, create, and take initiative.</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
       <section class="slop-section" id="theProblem" aria-labelledby="slopTitle">
         <div class="slop-head">
           <p class="feature-kicker">The problem</p>
@@ -1197,8 +1219,8 @@
         <div class="feature-band-inner">
           <div class="feature-copy">
             <p class="feature-kicker">What Covenda is</p>
-            <h2>Paid work that <span class="word-gold">leaves a record.</span></h2>
-            <p>You decide on finished work, not a résumé.</p>
+            <h2>Can you decide <span class="word-gold">what to execute?</span></h2>
+            <p>Most hiring asks whether you can execute. Startups care far more about the question above, and Covenda is built to answer it.</p>
           </div>
           <div class="feature-panel" aria-hidden="true">
             <span class="ico-kicker">Vouched, then vetted</span>
@@ -1257,8 +1279,6 @@
               </ol>
             </div>
           </div>
-
-          <p class="cred-note"><svg><use href="#icon-lock"/></svg>An endorsement is a trust head-start, not a placement. The verified rungs are earned through reviewed work, never a black-box score.</p>
         </div>
         <div class="company-why audience-content" data-for-audience="company">
           <div class="why-copy"><h2>Useful <span class="word-gold">without being risky.</span></h2><p>Start where context can be made portable, the finish can be reviewed, and the student does not need access to critical production systems.</p><button class="outline-button" type="button" data-action="company-form">Describe a real problem<svg><use href="#icon-arrow-right"/></svg></button></div>
@@ -1280,7 +1300,7 @@
 
       <section class="batches-section" id="batches">
         <div class="section-heading">
-          <p class="feature-kicker">Trials and batches</p>
+          <p class="feature-kicker">Trials + Batches</p>
           <h2>Trials work.<br><span class="word-gold">Batches shortlist.</span></h2>
           <p>Two different things, and they only make sense together, one earns the evidence, the other is what companies pay to search.</p>
         </div>
@@ -1441,28 +1461,27 @@
       <!-- Who is building this. The nav has always said "About" and pointed at a product
            explainer; this is the thing it was promising. Deliberately narrow: what we have
            seen, and the one conclusion we drew from it. No traction, no outcome claims. -->
-      <section class="about-section" id="about" aria-labelledby="aboutTitle">
+      <section class="about-section home-only" id="about" aria-labelledby="aboutTitle">
         <div class="about-inner">
           <div class="about-lede">
             <p class="feature-kicker">About us</p>
             <h2 id="aboutTitle">For students,<br>built by <span class="word-gold">students</span>.</h2>
-            <p class="about-body">We have both worked at startups. The pattern was the same every time: a team that needed hands, and no way to find the people who would have been good at it.</p>
-            <p class="about-body">Ambitious 17, 18 and 19 year olds are more capable than anyone gives them credit for. What they are missing is not talent. It is domain expertise, and the only way to get that is to work somewhere real.</p>
-            <p class="about-body">So that is what Covenda does. It pairs those people with the startups that need them, and makes the work itself the thing that proves them.</p>
-            <p class="stat-note"><svg aria-hidden="true"><use href="#icon-lock"/></svg>We are early. Covenda has not placed a student yet, and we would rather say that than imply otherwise.</p>
+            <p class="about-thesis">Covenda is building the operating system for startup hiring: evidence-backed talent profiles, combined with an understanding of how innovative companies identify, evaluate, and develop exceptional people.</p>
+            <p class="about-body">We are Tyler and Dylan. We are 19, and we built this because getting a first real internship was harder than the work turned out to be once we had one.</p>
+            <p class="about-body">The process rewarded people who already had a way in. A name on a referral, a parent in the industry, a school on a list. What it did not reward was being good at the work, because there was no way to show that before you were hired.</p>
+            <p class="about-body">So we built the thing we needed. A referral opens the door, and finished work decides the rest.</p>
           </div>
           <aside class="about-side">
-            <p class="about-side-cap">Why it is built this way</p>
-            <!-- Two positions we held, then what follows from holding both. It was a numbered
-                 1/2/3 list, which asserted a sequence: the third item is a conclusion, not a
-                 third step, and numbering it flattened the argument into three equal beats. -->
-            <div class="about-points">
-              <p class="about-premise"><b>We were the student</b><span>Getting in front of a founder was the wall, not the work.</span></p>
-              <p class="about-premise"><b>We were the team</b><span>Hiring an unproven person is a real risk to take on a résumé.</span></p>
-              <p class="about-conclusion">So neither side guesses. A referral opens the door, <em>finished work decides the rest.</em></p>
-            </div>
+            <p class="about-side-cap">The Covenda manifesto</p>
+            <dl class="manifesto-pairs">
+              <dt>Most hiring platforms optimise for credentials.</dt><dd>We optimise for evidence.</dd>
+              <dt>Most reward polished resumes.</dt><dd>We reward initiative.</dd>
+              <dt>Most measure what you have done.</dt><dd>We measure what you are capable of becoming.</dd>
+            </dl>
+            <p class="manifesto-close">Covenda is where ambitious students build <em>reputations</em>, not resumes.</p>
+            <p class="about-motto">Covenda is for people with <em>exceptional potential</em> and the willingness to prove it.</p>
             <a class="about-social" href="https://www.instagram.com/covenda.app/" target="_blank" rel="noopener noreferrer">
-              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.6" y="2.6" width="18.8" height="18.8" rx="5.2"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none"/></svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
               <span>@covenda.app</span>
             </a>
           </aside>
@@ -1669,32 +1688,25 @@
         <p class="form-rail-brand"><svg><use href="#icon-shield"/></svg>Covenda</p>
         <div class="form-rail-promise">
           <h2 id="studentDialogTitle">Show what you can <em>do</em>.</h2>
-          <p>Four steps. Nothing here is a test, and none of it is published.</p>
         </div>
         <div class="form-progress" aria-label="Student form progress">
-          <span class="is-active"><i>1</i><strong>You</strong><small>Name, school, when you graduate</small></span>
-          <span><i>2</i><strong>Your work</strong><small>Fields you want in, and your strongest skill</small></span>
-          <span><i>3</i><strong>How you work</strong><small>Time you have and what you want back</small></span>
-          <span><i>4</i><strong>Review</strong><small>See exactly what gets sent</small></span>
-        </div>
-        <div class="form-rail-trust">
-          <p><svg><use href="#icon-lock"/></svg>Private by default. Not a public profile and not a score.</p>
-          <p><svg><use href="#icon-file"/></svg>Stop and come back any time. Nothing sends until you review it.</p>
+          <span class="is-active"><i>1</i><strong>You</strong></span>
+          <span><i>2</i><strong>Your work</strong></span>
+          <span><i>3</i><strong>How you work</strong></span>
+          <span><i>4</i><strong>Review</strong></span>
         </div>
       </aside>
 
       <div class="form-panel">
-      <header class="dialog-header"><div><small>Step 1 of 4</small><h2 data-step-title>About you</h2></div><div class="dialog-tools"><span data-draft-status>Draft saves on this device</span><button type="button" class="draft-clear" data-clear-draft>Clear draft</button><button type="button" class="icon-button" data-close-dialog aria-label="Close student form"><svg><use href="#icon-close"/></svg></button></div></header>
+      <header class="dialog-header"><div><small>Step 1 of 4</small><h2 data-step-title>About you</h2></div><div class="dialog-tools"><button type="button" class="icon-button" data-close-dialog aria-label="Close student form"><svg><use href="#icon-close"/></svg></button></div></header>
       <section class="form-step is-active" data-student-step="1">
         <div class="field-group">
-          <header><h3>How to reach you</h3><p>Used to contact you about the pilot. Nothing else.</p></header>
-          <div class="field-grid">
+                    <div class="field-grid">
             <label>Full name<input name="studentName" autocomplete="name" required></label>
             <label>Email<input name="studentEmail" type="email" autocomplete="email" required></label>
           </div>
         </div>
         <div class="field-group">
-          <header><h3>Where you study</h3><p>Graduation year sets your education level below. Change it if the guess is wrong.</p></header>
           <div class="field-grid">
             <label>School<input name="studentSchool" autocomplete="organization" required></label>
             <label>Graduation year<input name="studentGraduation" type="number" inputmode="numeric" min="2026" max="2035" placeholder="2029" required></label>
@@ -1715,7 +1727,7 @@
       </section>
       <section class="form-step" data-student-step="2">
         <div class="field-group">
-          <header><h3>Where you want to build proof</h3><p>Pick one or more. This decides which batches you see, not what you are allowed to apply to.</p></header>
+          <header><h3>Where you want to build proof</h3><p>Pick one or more.</p></header>
           <fieldset class="industry-fieldset">
             <legend class="visually-hidden">Which industries do you want to build proof in?</legend>
             <div class="industry-grid" id="studentIndustryGrid">
@@ -1730,9 +1742,9 @@
           </fieldset>
         </div>
         <div class="field-group">
-          <header><h3>Your strongest skill</h3><p>One is enough. An honest level is worth more here than a high one, and it is not a filter.</p></header>
+          <header><h3>Your strongest skill</h3></header>
           <div class="field-grid">
-            <label class="wide">Your strongest relevant skill<input name="studentSkill" placeholder="Research, spreadsheets, QA…" required></label>
+            <label class="wide">Skill<input name="studentSkill" placeholder="Research, spreadsheets, QA…" required></label>
           </div>
           <div class="chip-field wide" data-require-group="Choose your honest current level.">
             <span class="chip-label">Honest current level</span>
@@ -1745,7 +1757,7 @@
           </div>
         </div>
         <div class="field-group">
-          <header><h3>Anything you have already built</h3><p>Optional, and it helps more than everything above. A link, a repo, or a minute of you explaining it.</p></header>
+          <header><h3>Anything you have already built</h3></header>
           <div class="field-grid">
             <label class="wide">Portfolio or work sample URL <span>Optional</span><input name="studentPortfolio" type="url" placeholder="https://"></label>
             <div class="video-record wide">
@@ -1764,7 +1776,7 @@
       </section>
       <section class="form-step" data-student-step="3">
         <div class="field-group">
-          <header><h3>How you like to work</h3><p>There is no right answer. This is used to match you to a brief that fits, not to rank you.</p></header>
+          <header><h3>How you like to work</h3></header>
           <div class="chip-field wide" data-require-group="Choose a preferred work style.">
             <span class="chip-label">Preferred work style</span>
             <div class="chip-row">
@@ -1773,17 +1785,9 @@
               <label class="chip"><input type="radio" name="studentWorkStyle" value="Either, if expectations are clear">Either, if expectations are clear</label>
             </div>
           </div>
-          <div class="chip-field wide" data-require-group="Choose how you handle an incomplete brief.">
-            <span class="chip-label">A brief arrives half-specified. What do you do?</span>
-            <div class="chip-row">
-              <label class="chip"><input type="radio" name="studentAmbiguity" value="I ask focused questions before starting">Ask focused questions first</label>
-              <label class="chip"><input type="radio" name="studentAmbiguity" value="I can propose assumptions for approval">Propose assumptions for approval</label>
-              <label class="chip"><input type="radio" name="studentAmbiguity" value="I prefer fully specified work">Prefer it fully specified</label>
-            </div>
-          </div>
         </div>
         <div class="field-group">
-          <header><h3>Time you actually have</h3><p>Under-promise here. A missed deadline costs you more than a smaller commitment does.</p></header>
+          <header><h3>Time you actually have</h3></header>
           <div class="chip-field wide" data-require-group="Choose when you can start.">
             <span class="chip-label">When can you start?</span>
             <div class="chip-row">
@@ -1799,14 +1803,6 @@
               <label class="chip"><input type="radio" name="studentHours" value="3–5 hours">3–5</label>
               <label class="chip"><input type="radio" name="studentHours" value="6–10 hours">6–10</label>
               <label class="chip"><input type="radio" name="studentHours" value="11–15 hours">11–15</label>
-            </div>
-          </div>
-          <div class="chip-field wide" data-require-group="Choose a preferred project length.">
-            <span class="chip-label">Preferred project length</span>
-            <div class="chip-row">
-              <label class="chip"><input type="radio" name="studentDuration" value="One week">One week</label>
-              <label class="chip"><input type="radio" name="studentDuration" value="Two weeks">Two weeks</label>
-              <label class="chip"><input type="radio" name="studentDuration" value="Three to four weeks">Three to four weeks</label>
             </div>
           </div>
           <div class="field-grid">
@@ -1941,10 +1937,10 @@
           <p>Four steps. You describe one delayed piece of work; a person scopes it with you.</p>
         </div>
         <div class="form-progress" aria-label="Company form progress">
-          <span class="is-active"><i>1</i><strong>Company</strong><small>Who you are and how often this work recurs</small></span>
-          <span><i>2</i><strong>The problem</strong><small>What is not getting done, and what finished looks like</small></span>
-          <span><i>3</i><strong>Boundary</strong><small>What you can safely share, and the review budget</small></span>
-          <span><i>4</i><strong>Review</strong><small>Your working packet before it sends</small></span>
+          <span class="is-active"><i>1</i><strong>Company</strong></span>
+          <span><i>2</i><strong>The problem</strong></span>
+          <span><i>3</i><strong>Boundary</strong></span>
+          <span><i>4</i><strong>Review</strong></span>
         </div>
         <div class="form-rail-trust">
           <p><svg><use href="#icon-shield"/></svg>Nothing is published and no student is assigned from this.</p>
@@ -1953,7 +1949,7 @@
       </aside>
 
       <div class="form-panel">
-      <header class="dialog-header"><div><small>Step 1 of 4</small><h2 data-step-title>Company</h2></div><div class="dialog-tools"><span data-draft-status>Draft saves on this device</span><button type="button" class="draft-clear" data-clear-draft>Clear draft</button><button type="button" class="icon-button" data-close-dialog aria-label="Close company form"><svg><use href="#icon-close"/></svg></button></div></header>
+      <header class="dialog-header"><div><small>Step 1 of 4</small><h2 data-step-title>Company</h2></div><div class="dialog-tools"><button type="button" class="icon-button" data-close-dialog aria-label="Close company form"><svg><use href="#icon-close"/></svg></button></div></header>
       <div class="revision-context" id="companyRevisionContext" hidden><svg><use href="#icon-file"/></svg><div><strong>Revising a received packet</strong><span id="companyRevisionReference">The original submission remains unchanged.</span></div></div>
       <section class="form-step is-active" data-company-step="1">
         <div class="field-group">

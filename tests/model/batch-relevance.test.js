@@ -137,3 +137,66 @@ test('a profile with no skills collapses to a single step rather than a dead rai
   const batchFitSteps = new Function(fn + '; return batchFitSteps;')();
   assert.deepEqual(batchFitSteps(BATCH_CATALOG.map(() => null)), [{ value: 0, label: 'All' }]);
 });
+
+// ── The card face ─────────────────────────────────────────────────────────────────────
+// It grew to eight blocks: name, three meta chips, "Tests:", a description, a skill caption
+// with a pill list, a sentence restating that pill list, "The sitting:", and three buttons.
+// Twenty-five identical-weight cards is a wall, not a grid. These keep the face to the four
+// things a student decides on and stop the removed blocks drifting back onto it.
+test('the batch card face stays scannable', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const ui = await readFile(new URL('../../portal.js', import.meta.url), 'utf8');
+  const start = ui.indexOf('function batchCard(batch,application)');
+  assert.ok(start > 0, 'batchCard moved or was renamed');
+  const fn = ui.slice(start, ui.indexOf('\nlet batchResumeUrl', start));
+
+  // The prose that describes the batch rather than the student's position goes in the panel.
+  for (const cls of ['discover-card-summary', 'batch-sim', 'discover-meta']) {
+    assert.ok(!new RegExp(`card\\.append\\([^)]*${cls}`).test(fn), `${cls} is back on the card face`);
+    assert.match(fn, new RegExp(`detail\\.append\\(|${cls}`), `${cls} vanished entirely rather than moving`);
+  }
+
+  // The sentence that restated the pill list is gone, not merely hidden.
+  assert.ok(!ui.includes('batch-why'), 'the compatibility prose duplicating the skill pills is back');
+
+  // What must stay on the face: where the student stands, and what to do about it.
+  assert.match(fn, /const cover=batchCoverage\(batch\);if\(cover\)card\.append\(cover\)/);
+  assert.match(fn, /card\.append\(top\)/);
+
+  // Two buttons at runtime, not three: Details, plus whichever of applied/apply applies. The
+  // assessment disclosure moved into the panel because it competed with the two that decide
+  // anything. Asserted by where it is appended, since counting source appends would also count
+  // the applied and apply branches, which are mutually exclusive.
+  assert.match(fn, /what\.textContent='What you are assessed on';[\s\S]{0,220}detail\.append\(what\)/,
+    'the assessment disclosure is back on the card face');
+  assert.ok(!/actions\.append\(what\)/.test(fn));
+});
+
+test('the coverage row is styled and readable without the meter', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const css = await readFile(new URL('../../portal.css', import.meta.url), 'utf8');
+  for (const cls of ['batch-cover', 'batch-cover-meter', 'batch-cover-label', 'batch-cover-next']) {
+    assert.match(css, new RegExp(`\\.${cls}[\\s,{]`), `.${cls} is used but never styled`);
+  }
+  const ui = await readFile(new URL('../../portal.js', import.meta.url), 'utf8');
+  const fn = ui.slice(ui.indexOf('function batchCoverage'));
+  // The meter is decoration over the number, so it must not be read out segment by segment.
+  assert.match(fn.slice(0, 1600), /meter\.setAttribute\('aria-hidden','true'\)/);
+  assert.match(fn.slice(0, 2200), /wrap\.setAttribute\('aria-label'/, 'the row has no readable label');
+});
+
+// A token named --gold-pale was #f4f5f7, whose blue channel is its highest: a cool grey. It
+// feeds ~100 places that pair it with gold text and gold borders, so every "gold" wash on the
+// portal rendered muddy, and Elite batch cards read as disabled rather than as a higher bar.
+// Asserted by channel order, because the failure is invisible in a hex and obvious in a pixel.
+test('the gold tint tokens are actually warm', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const css = await readFile(new URL('../../portal.css', import.meta.url), 'utf8');
+  for (const token of ['--gold-pale', '--gold', '--gold-deep']) {
+    for (const hex of [...css.matchAll(new RegExp(`${token}:\\s*#([0-9a-f]{6})`, 'gi'))].map(m => m[1])) {
+      const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16));
+      assert.ok(r > b, `${token}: #${hex} is cool (blue ${b} >= red ${r}), so it will not read as gold`);
+      assert.ok(g >= b, `${token}: #${hex} has more blue than green, which reads violet rather than gold`);
+    }
+  }
+});

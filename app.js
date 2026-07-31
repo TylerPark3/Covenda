@@ -1768,14 +1768,13 @@ function derivedWorkTypes(form) {
   for (const industry of studentIndustries(form)) for (const spec of (INDUSTRY_TREE[industry] || [])) set.add(spec.workType);
   return [...set];
 }
-// Show, derived from the picked industries, the concrete work a student would end up on — the
-// "cascade" without a second required input, so drafts stay simple to restore.
+// The industry picker used to print "We'll surface projects like: ..." underneath itself,
+// listing six specialisations derived from whatever was ticked. It restated the choice the
+// student had just made, in a longer form, on a step that already had three field groups.
+// The element is left in the markup so nothing that queries it breaks, and it stays empty.
 function renderStudentSpecializations(form) {
   const el = $('#studentSpecializations', form) || $('#studentSpecializations');
-  if (!el) return;
-  const specs = [];
-  for (const industry of studentIndustries(form)) for (const spec of (INDUSTRY_TREE[industry] || [])) if (!specs.includes(spec.label)) specs.push(spec.label);
-  el.textContent = specs.length ? `We’ll surface projects like: ${specs.slice(0, 6).join(' · ')}` : '';
+  if (el) el.textContent = '';
 }
 
 function studentPayload(form) {
@@ -3723,8 +3722,8 @@ function syncBatchPickBar() {
   const n = batchPicks.size;
   bar.hidden = n === 0;
   $('#batchPickCount').textContent = n === 1
-    ? '1 batch shortlisted. Applications open again soon.'
-    : n + ' batches shortlisted. Applications open again soon.';
+    ? '1 batch shortlisted. Batches are not open yet.'
+    : n + ' batches shortlisted. Batches are not open yet.';
 }
 
 const HOW_TO_APPLY = [
@@ -4114,7 +4113,7 @@ function initSelectorFx() {
         context.beginPath();
         context.moveTo(particle.x, particle.y);
         context.lineTo(other.x, other.y);
-        context.strokeStyle = `rgba(180,123,32,${(1 - distance / 112) * .12})`;
+        context.strokeStyle = `rgba(192,138,34,${(1 - distance / 112) * .12})`;
         context.lineWidth = .7;
         context.stroke();
       }
@@ -5032,6 +5031,33 @@ function initScrollReveal() {
   // The stagger is applied as a CSS custom property rather than a JS timer, so the whole thing
   // resolves instantly under prefers-reduced-motion via the media query in styles.css, and
   // there is no timer left running if the reader scrolls away mid-sequence.
+  // ── The sourcing flow, revealed as it is read ────────────────────────────────────────
+  // A tall vertical diagram that appeared whole was asking a reader to take in eleven steps at
+  // once. Each row now arrives as it comes into view, so scrolling walks the flow in the order
+  // it happens: request, then the people who vouch, then the pool, then the ranking.
+  //
+  // Per ROW rather than scroll-linked progress. A scroll handler mapping position to a 0..1 and
+  // driving eleven children fires on every frame of every scroll on the page; an observer per row
+  // costs nothing when nothing is moving and reads the same, because the rows are stacked.
+  const mflow = document.querySelector('.mflow');
+  if (mflow) {
+    const rows = [...mflow.children];
+    mflow.classList.add('is-stepped');
+    const flowIO = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        entry.target.classList.add('is-in');
+        flowIO.unobserve(entry.target);
+      }
+    }, {
+      // Fires a little before a row reaches the middle, so it has landed by the time the eye
+      // gets there rather than animating under the reader.
+      rootMargin: '0px 0px -22% 0px',
+      threshold: 0.4,
+    });
+    rows.forEach(row => flowIO.observe(row));
+  }
+
   const funnel = document.getElementById('flowDemo');
   if (funnel) {
     const stages = [...funnel.querySelectorAll('.bf-stage, .bf-arrow')];
@@ -5187,9 +5213,6 @@ function initHeroField(target) {
     figure: (() => {
       const pts = [];
       const CX = 0.5;
-      // Every feature is built from this, so nothing in the figure is a curve. Points are spaced
-      // along the edge rather than at its ends, which keeps the density even where two edges meet
-      // at a sharp angle and would otherwise pile up.
       const edge = (ax, ay, bx, by, n) => {
         for (let i = 0; i < n; i += 1) {
           const t = i / n;
@@ -5201,56 +5224,49 @@ function initHeroField(target) {
           edge(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1], per);
         }
       };
+      const arc = (cx, cy, rx, ry, a0, a1, n) => {
+        for (let i = 0; i <= n; i += 1) {
+          const a = a0 + (a1 - a0) * (i / n);
+          pts.push({ x: CX + cx + Math.cos(a) * rx, y: cy + Math.sin(a) * ry });
+        }
+      };
 
-      // Proportioned off a head unit rather than eyeballed. The first pass gave the head a
-      // quarter of the figure's height; a standing adult is about seven and a half heads, and at
-      // this scale that difference is the whole reason a figure reads as a person rather than as
-      // a doll. HEAD is one unit, everything below is a multiple of it.
       const TOP = 0.048;
       const HEAD = 0.112;
-      const y = u => TOP + HEAD * u;          // u = heads down from the crown
+      const y = u => TOP + HEAD * u;
 
-      // ── Head: a faceted skull, not an oval ────────────────────────────────────────────
-      // Crown, temple, cheekbone, jaw, chin. Five direction changes down each side, which is
-      // what reads as carved rather than drawn.
-      chain([
-        [0, y(0)], [0.026, y(0.18)], [0.039, y(0.46)],
-        [0.041, y(0.72)], [0.032, y(0.88)],
-        [0.017, y(0.96)], [0, y(1)],
-        [-0.017, y(0.96)], [-0.032, y(0.88)],
-        [-0.041, y(0.72)], [-0.039, y(0.46)],
-        [-0.026, y(0.18)], [0, y(0)],
-      ], 2);
-      // No brow or nose facets. They were drawn and they filled the head solid: at this scale the
-      // head is about 42px across, and forty points inside it merge long before any feature
-      // resolves. The angular SILHOUETTE is what carries the reference; interior detail at this
-      // size is just density.
+      // ── Outline only ────────────────────────────────────────────────────────────────
+      // No face and no interior lines. Eyes, nose and mouth were three tiny clusters inside a
+      // head that renders about sixty pixels across, and at that size they merged into a mass
+      // that read as a skull rather than as a face. The shoulders were drawn as wide arcs that
+      // swept up past the ears, which is where the hair came from: they are a slope now, not a
+      // curve. What is left is the silhouette, which is all this needs to be.
 
-      // ── Neck and shoulders: a wedge ──────────────────────────────────────────────────
-      chain([[-0.014, y(1)], [-0.017, y(1.22)], [-0.128, y(1.46)]], 3);
-      chain([[0.014, y(1)], [0.017, y(1.22)], [0.128, y(1.46)]], 3);
+      // Head: one closed outline, cranium round and jaw tapering to a chin.
+      arc(0, y(0.44), 0.040, 0.044, Math.PI, Math.PI * 2, 13);
+      chain([[0.040, y(0.44)], [0.035, y(0.76)], [0.020, y(0.95)], [0, y(1)]], 3);
+      chain([[-0.040, y(0.44)], [-0.035, y(0.76)], [-0.020, y(0.95)], [0, y(1)]], 3);
 
-      // ── Torso: a plated trapezoid, wide at the chest and cut in at the waist ─────────
-      chain([[-0.128, y(1.46)], [-0.116, y(2.30)], [-0.078, y(3.10)], [0, y(3.34)]], 4);
-      chain([[0.128, y(1.46)], [0.116, y(2.30)], [0.078, y(3.10)], [0, y(3.34)]], 4);
-      // Chest plate: the internal facet that gives the torso depth instead of outline.
-      chain([[-0.116, y(2.30)], [0, y(1.90)], [0.116, y(2.30)]], 4);
-      chain([[0, y(1.90)], [0, y(3.34)]], 5);
+      // Neck, then a shoulder that slopes outward and down. No arc above the ear line.
+      chain([[-0.016, y(1)], [-0.018, y(1.18)], [-0.112, y(1.42)]], 3);
+      chain([[0.016, y(1)], [0.018, y(1.18)], [0.112, y(1.42)]], 3);
 
-      // ── Arms: two straight segments meeting at a hard elbow ─────────────────────────
+      // Torso: chest to waist to hip, one line each side.
+      chain([[-0.112, y(1.42)], [-0.108, y(2.10)], [-0.084, y(2.72)], [-0.092, y(3.20)], [-0.070, y(3.52)]], 4);
+      chain([[0.112, y(1.42)], [0.108, y(2.10)], [0.084, y(2.72)], [0.092, y(3.20)], [0.070, y(3.52)]], 4);
+
+      // Arms: outer edge only, shoulder to elbow to wrist.
       for (const s of [-1, 1]) {
-        chain([[s * 0.128, y(1.46)], [s * 0.212, y(2.34)], [s * 0.186, y(3.30)]], 5);
-        edge(s * 0.186, y(3.30), s * 0.196, y(3.62), 2);
+        chain([[s * 0.112, y(1.46)], [s * 0.150, y(2.18)], [s * 0.164, y(2.72)],
+          [s * 0.170, y(3.16)], [s * 0.158, y(3.58)]], 4);
       }
 
-      // ── Legs: hip wedge, then a straight thigh and shin with a knee corner ──────────
+      // Legs: outer and inner edge, knee to ankle.
       for (const s of [-1, 1]) {
-        chain([[s * 0.018, y(3.34)], [s * 0.074, y(3.70)], [s * 0.088, y(5.10)], [s * 0.066, y(6.62)]], 6);
-        edge(s * 0.066, y(6.62), s * 0.098, y(6.80), 2);
-      }
-      // Inner leg edges, so each leg is a shape rather than a line.
-      for (const s of [-1, 1]) {
-        chain([[s * 0.017, y(3.54)], [s * 0.031, y(5.10)], [s * 0.026, y(6.56)]], 5);
+        chain([[s * 0.070, y(3.52)], [s * 0.082, y(4.30)], [s * 0.068, y(5.02)],
+          [s * 0.070, y(5.90)], [s * 0.060, y(6.58)]], 5);
+        chain([[s * 0.014, y(3.66)], [s * 0.024, y(4.30)], [s * 0.022, y(5.02)],
+          [s * 0.028, y(5.90)], [s * 0.024, y(6.58)]], 5);
       }
 
       return pts;
@@ -5275,6 +5291,10 @@ function initHeroField(target) {
     })(),
   };
 
+  // The same two rings the dot targets were generated from, kept as geometry rather than as
+  // points, so the solid form and the dots that resolve into it cannot drift apart.
+  const MARK_RINGS = { centres: [19 / 48, 29 / 48], r: 10 / 48, y: 0.5 };
+
   const FIGURE = MORPH_SHAPES[canvas.dataset.morph] || null;
   const morphing = Boolean(FIGURE);
   // A fraction of a revolution. A whole turn on a 60-point ring just looks like the ring
@@ -5283,16 +5303,19 @@ function initHeroField(target) {
   let morph = 0;        // 0 = crowd, 1 = figure
   let morphTo = 0;
   let assigned = false;
+  // Set the first time the mark finishes assembling. Only the mark latches: the figure on the
+  // company hero is a reaction to the cursor and is meant to disperse when you leave.
+  let markLatched = false;
 
   // The centre the swirl orbits. Same numbers figureScreen uses, factored out so the two cannot
   // drift apart: a swirl around a point that is not the shape's centre reads as a wobble.
   function shapeBox() {
     const isMark = canvas.dataset.morph === 'mark';
     const size = isMark
-      ? Math.min(W * 0.42, H * 0.56)
+      ? Math.min(W * 0.30, H * 0.40)
       : Math.min(W * 0.24, H * 1.18);
     const cx = isMark ? W * 0.5 : W * 0.80;
-    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.47;
+    const top = isMark ? H * 0.35 - size / 2 : H / 2 - size * 0.47;
     return { size, cx, top, cy: top + size * 0.5 };
   }
 
@@ -5311,14 +5334,14 @@ function initHeroField(target) {
     // than the band: sizing it to fit inside made every figure too small to read, and three
     // background people 50px apart at 25px wide merged into one blob.
     const size = isMark
-      ? Math.min(W * 0.42, H * 0.56)
+      ? Math.min(W * 0.30, H * 0.40)
       : Math.min(W * 0.24, H * 1.18);
     const cx = isMark ? W * 0.5 : W * 0.80;
     // The mark is centred on the headline, not on the hero. Dead-centre put the rings behind the
     // three path cards, which carry a tinted backdrop and swallowed the middle of both of them.
     // Framing the words is also the better composition: the thing the page is named after sits
     // around its own name.
-    const top = isMark ? H * 0.36 - size / 2 : H / 2 - size * 0.47;
+    const top = isMark ? H * 0.35 - size / 2 : H / 2 - size * 0.47;
     const p = FIGURE[index];
     return { x: cx + (p.x - 0.5) * size, y: top + p.y * size };
   }
@@ -5344,7 +5367,7 @@ function initHeroField(target) {
         nodes[best].fig = fi;
         // Ordered along the shape rather than randomly, so the mark draws itself around each
         // ring and the figure builds from the head down instead of flickering into place.
-        nodes[best].figDelay = (fi / FIGURE.length) * 0.55;
+        nodes[best].figDelay = (fi / FIGURE.length) * 0.72;
         // Alternating direction and a per-node amount, so the field does not rotate as one rigid
         // body. A uniform spin is a turntable; mixed spins are a galaxy.
         nodes[best].spin = (fi % 2 ? 1 : -1) * (0.6 + (fi % 5) * 0.18);
@@ -5377,11 +5400,52 @@ function initHeroField(target) {
   // mesh already connects near neighbours, and a second system drawing longer lines on top of it
   // was only ever going to fight it.
 
+  // The mark, stroked as real geometry once the points have arrived. Drawn from MARK_RINGS
+  // rather than from the resolved point positions: joining 30 scattered dots would trace a
+  // wobbling polygon, and the whole point of this pass is that the form stops wobbling.
+  function drawSolidMark(solid) {
+    if (solid <= 0.001) return;
+    const box = shapeBox();
+    const size = box.size;
+    const left = box.cx - size * 0.5;
+    const r = MARK_RINGS.r * size;
+    // Weight grows with the fade, so the ring thickens into being rather than appearing at
+    // full weight and simply brightening.
+    ctx.lineWidth = Math.max(1, size * 0.018 * (0.55 + 0.45 * solid));
+    ctx.lineJoin = 'round';
+    ctx.save();
+    // A soft gold bloom under the stroke, so the ring reads as lit rather than drawn on.
+    // A tenth of the bloom it had. Enough that the ring sits in the dark rather than being
+    // pasted on it, not so much that it reads as a neon tube.
+    ctx.shadowColor = `rgba(150,105,30,${0.28 * solid})`;
+    ctx.shadowBlur = size * 0.012 * solid;
+    for (const cx of MARK_RINGS.centres) {
+      const x = left + cx * size;
+      const y = box.top + MARK_RINGS.y * size;
+      // Deep gold rather than pale yellow, so it reads as metal against the black.
+      ctx.strokeStyle = `rgba(201,152,52,${0.96 * solid})`;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function step(now) {
     t += 1;
     // Eased rather than linear, and the same value drives position, colour and alpha so nothing
     // in the figure arrives out of time with the rest of it.
-    if (morphing) morph += (morphTo - morph) * (canvas.dataset.morph === 'mark' ? 0.055 : 0.038);
+    // Rates differ per shape because they are watched differently. The mark is the thing a
+    // visitor hovers deliberately to see happen, so it is slow enough to actually watch the
+    // swirl unwind: at 0.024 it takes roughly two seconds to settle, against under one at the
+    // rate it replaced. The figure stays quicker because it reads as a reaction to the cursor
+    // rather than a sequence.
+    //
+    // Slower is safe here only because the morph does not hold the page: the field canvas is
+    // pointer-events: none and there is no wheel or touch handler on it, so a two-second
+    // assembly can run while the visitor scrolls straight past it.
+    if (morphing) morph += (morphTo - morph) * (canvas.dataset.morph === 'mark' ? 0.05 : 0.038);
+    if (canvas.dataset.morph === 'mark' && morphTo === 1 && morph > 0.985) markLatched = true;
     for (const n of nodes) {
       n.x += n.vx; n.y += n.vy; n.z += n.vz;
       const bx = W * 0.9, by = H * 0.9;
@@ -5401,22 +5465,52 @@ function initHeroField(target) {
     // keeps the perspective the field already has, so the figure holds its depth instead of
     // flattening onto one plane.
     if (morphing && morph > 0.001) {
+      // Hoisted: it was recomputed once per node per frame, and both branches need it.
+      const box = shapeBox();
+      // Far enough that a point starting anywhere on screen is off it by the time the mark
+      // solidifies. Measured off the canvas rather than a constant, or it clears a laptop and
+      // strands points on a wide monitor.
+      const ESCAPE = Math.max(W, H) * 1.15;
+
       for (let i = 0; i < nodes.length; i += 1) {
         const fi = nodes[i].fig;
-        if (fi === undefined) { pts[i].fade = 1 - morph; continue; }
+        // The points that never join the shape. They used to fade out where they stood, which
+        // read as the field being switched off. Now they are pushed radially out of frame, so
+        // the mark looks like it displaced them rather than replaced them. Radially from the
+        // shape centre means they leave by whichever edge they were already nearest, so they
+        // scatter out of all four sides instead of streaming toward one.
+        if (fi === undefined) {
+          let dx = pts[i].x - box.cx;
+          let dy = pts[i].y - box.cy;
+          let d = Math.hypot(dx, dy);
+          // A point sitting exactly on the centre has no direction to leave by. Give it one
+          // off its index so it still goes, and so it does not go the same way as its neighbour.
+          if (d < 1) { const a = (i / nodes.length) * Math.PI * 2; dx = Math.cos(a); dy = Math.sin(a); d = 1; }
+          // Squared, so they hang for a moment and then accelerate away rather than sliding
+          // out at a constant rate.
+          const push = morph * morph * ESCAPE;
+          pts[i].x += (dx / d) * push;
+          pts[i].y += (dy / d) * push;
+          // Gone before the mark finishes solidifying, so the last thing on screen is the mark
+          // alone rather than the mark plus a haze of survivors.
+          pts[i].fade = Math.max(0, 1 - morph * 1.4);
+          continue;
+        }
         const target = figureScreen(fi);
         // Each point runs its own eased progress inside the shared morph, so they arrive in a
         // wave. Clamped, or a late point would still be moving after the morph has settled.
         const delay = nodes[i].figDelay || 0;
         const span = 1 - delay;
         const local = Math.max(0, Math.min(1, (morph - delay) / (span || 1)));
-        const eased = local * local * (3 - 2 * local);
+        // Smootherstep rather than smoothstep. Its first AND second derivatives are zero at both
+        // ends, so a point does not just arrive slowly, it stops accelerating before it arrives.
+        // That is the difference between a point landing and a point settling.
+        const eased = local * local * local * (local * (local * 6 - 15) + 10);
 
         // Polar, not linear. Interpolating x and y draws every point along the shortest line to
         // its slot, which reads as a snap-together. Interpolating the ANGLE and the RADIUS about
         // the shape's centre sends them round as they come in, which is what makes it a galaxy
         // collapsing rather than a diagram assembling.
-        const box = shapeBox();
         const px = pts[i].x - box.cx, py = pts[i].y - box.cy;
         const tx = target.x - box.cx, ty = target.y - box.cy;
         const r0 = Math.hypot(px, py), r1 = Math.hypot(tx, ty);
@@ -5438,6 +5532,21 @@ function initHeroField(target) {
         // the whole point is that they are interchangeable and it is not.
         pts[i].lead = FIGURE[fi].lead !== false;
       }
+    }
+
+    // ── Solidify ──────────────────────────────────────────────────────────────────────
+    // The dots resolve into the mark and then stop being dots. Without this the mark is only
+    // ever a dotted approximation of itself, which reads as the animation getting close rather
+    // than arriving.
+    //
+    // Cross-faded rather than switched: over the last quarter of the morph the ring is stroked
+    // in with rising alpha while the points that form it lose theirs, so for a moment both are
+    // present and the dots look like they are fusing rather than being swapped out.
+    let solid = 0;
+    if (morphing && canvas.dataset.morph === 'mark') {
+      solid = Math.max(0, Math.min(1, (morph - 0.74) / 0.26));
+      // Eased so the last of it is slow, matching the way the points settle.
+      solid = solid * solid * (3 - 2 * solid);
     }
 
     // The ambient mesh makes the crowd legible as a connected field without becoming a web.
@@ -5517,25 +5626,27 @@ function initHeroField(target) {
         // read as smudges rather than as points, and on the resolved figure they merged into one
         // luminous mass. A gold node is brighter and slightly larger than a white one, and that
         // is enough to make it read as gold without painting a halo around it.
-        ctx.fillStyle = `rgba(255,224,151,${(.78 * q.scale + .18) * (q.fade ?? 1)})`;
-        ctx.beginPath(); ctx.arc(q.x, q.y, r + 1 + pulse * .7, 0, Math.PI * 2); ctx.fill();
+        // Colour is a function of how far the shape has formed, not a constant. Unformed, a
+        // gold node is nearly neutral: a clean off-white dot with the saturation taken out, so
+        // the field reads as separate points rather than as a wash. As the shape resolves the
+        // colour walks to a deep, saturated gold rather than the pale luminous yellow it used
+        // to be, which is the difference between light and metal.
+        const form = q.figure ?? 0;
+        const rich = form * form;                    // holds neutral longer, then turns
+        const rr = Math.round(236 + (198 - 236) * rich);
+        const gg = Math.round(234 + (146 - 234) * rich);
+        const bb = Math.round(228 + (42 - 228) * rich);
+        ctx.fillStyle = `rgba(${rr},${gg},${bb},${(.78 * q.scale + .18) * (q.fade ?? 1) * (1 - solid * (form > 0.5 ? 1 : 0))})`;
+        ctx.beginPath(); ctx.arc(q.x, q.y, r + 0.35 + pulse * .5, 0, Math.PI * 2); ctx.fill();
         // No glint cross. It drew a twinkling plus-sign through every gold node, which is the
         // "flashing gold lights" effect: it reads as star clip-art rather than as light.
         //
-        // A glow ONLY on a resolved shape. This is not the ambient aura that was removed: that
-        // one sat on every gold node all the time and turned the whole field into blobs. This
-        // one exists solely while a shape is formed, which is exactly where a glow is wanted.
-        const formed = q.figure ?? 0;
-        if (formed > 0.25) {
-          const lift = (formed - 0.25) / 0.75;
-          const glow = ctx.createRadialGradient(q.x, q.y, r * 0.5, q.x, q.y, r + 9 * lift);
-          glow.addColorStop(0, `rgba(255,232,168,${0.34 * lift})`);
-          glow.addColorStop(1, `rgba(${GOLD},0)`);
-          ctx.fillStyle = glow;
-          ctx.beginPath(); ctx.arc(q.x, q.y, r + 9 * lift, 0, Math.PI * 2); ctx.fill();
-        }
+        // No glow on the nodes at all. A halo around a point makes it a smudge, and once forty
+        // of them overlapped the resolved shape became one luminous mass. The shape now reads
+        // by colour and position only: separate dots that turn gold, then hand off to the
+        // stroked mark. Bloom, where it is wanted, lives on that stroke and nowhere else.
       } else {
-        ctx.fillStyle = `rgba(${WHITE},${(.52 + q.scale * .4) * (q.fade ?? 1)})`;
+        ctx.fillStyle = `rgba(${WHITE},${(.52 + q.scale * .4) * (q.fade ?? 1) * (1 - solid * ((q.figure ?? 0) > 0.5 ? 1 : 0))})`;
         ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI * 2); ctx.fill();
       }
     }
@@ -5563,6 +5674,9 @@ function initHeroField(target) {
     // No dot at the cursor. It painted a gold point exactly under the pointer, which on the dark
     // hero read as a lone stray dot travelling with the mouse rather than as part of the field.
     // The hairlines reaching toward nearby nodes already show where the cursor is.
+
+    // Last, over everything: the dotted mark hardens into the real one.
+    drawSolidMark(solid);
   }
 
   function frame(now) { step(now); draw(now); raf = requestAnimationFrame(frame); }
@@ -5579,6 +5693,14 @@ function initHeroField(target) {
   } else { start(); }
   document.addEventListener('visibilitychange', () => { if (document.hidden) stop(); });
 
+  // Assemble the mark by itself, once, shortly after the field is up. Hover was the wrong
+  // trigger for this one: a visitor who scrolls past never saw it, and one who moved the mouse
+  // across the hero saw it restart. The figure on the company hero keeps its hover, because
+  // that one IS a reaction to the cursor.
+  if (morphing && canvas.dataset.morph === 'mark' && !reduce) {
+    window.setTimeout(() => { assignFigure(); morphTo = 1; start(); }, 420);
+  }
+
   const hero = canvas.closest('.hero') || canvas.closest('.student-vertical') || canvas.parentElement;
   if (hero && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
     hero.addEventListener('pointermove', event => {
@@ -5592,6 +5714,7 @@ function initHeroField(target) {
       // Listeners go on the hero, not the canvas: .hero-field is pointer-events: none, so the
       // canvas never receives a pointer event of its own.
       hero.addEventListener('pointerenter', () => {
+        if (markLatched) return;
         // The field is normally capped to the top band of the hero and masked away before it
         // reaches the copy. A standing figure needs the full height or it loses its legs, so the
         // cap and the mask lift while the figure is up and return with it.
@@ -5601,12 +5724,141 @@ function initHeroField(target) {
         start();
       });
       hero.addEventListener('pointerleave', () => {
+        // The mark, once assembled, stays. Reversing it would mean the thing the page is named
+        // after is only visible while a pointer happens to be over the hero.
+        if (markLatched) return;
         morphTo = 0;
         hero.classList.remove('is-figure');
         start();
       });
     }
   }
+}
+
+// ── The pillars field (§33) ───────────────────────────────────────────────────────────
+// Three gold pillars that rise as the section is scrolled through, with the mathematics that
+// each one stands for drawn behind it.
+//
+// Scroll-LINKED rather than triggered, because the ask was that they come up as you scroll:
+// the pillars are bound to scroll position, so scrolling back down lowers them again. That is
+// the difference between an animation the page plays at you and one you are driving.
+//
+// No figures behind the columns. Three were drawn over the life of this section (a point
+// lattice, a Lissajous pair, a logarithmic spiral) and all three were cut for the same reason:
+// real functions or not, at the size they rendered they read as scribble under the copy they
+// sat behind. The columns and the copy arriving together carry it.
+function initPillarsField() {
+  const canvas = document.getElementById('pillarsCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const section = canvas.closest('.pillars-section');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let W = 0; let H = 0; let dpr = 1;
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const r = canvas.getBoundingClientRect();
+    W = Math.max(1, Math.round(r.width));
+    H = Math.max(1, Math.round(r.height));
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  const GOLD = 'rgba(192,138,34,';
+  const INK = 'rgba(20,22,26,';
+
+  // 0 at the moment the section's top reaches the bottom of the viewport, 1 once it has been
+  // scrolled most of the way through. Clamped, so a short viewport cannot overshoot.
+  function progress() {
+    const r = section.getBoundingClientRect();
+    const vh = window.innerHeight || 1;
+    const span = r.height + vh;
+    const travelled = vh - r.top;
+    return Math.max(0, Math.min(1, travelled / (span * 0.72)));
+  }
+
+  // Each pillar gets its own slice of the scroll, so they rise in sequence left to right
+  // rather than as one block.
+  function localProgress(p, i) {
+    const start = i * 0.2;
+    const t = (p - start) / (1 - start || 1);
+    const c = Math.max(0, Math.min(1, t));
+    // Smootherstep, same curve the hero morph settles on.
+    return c * c * c * (c * (c * 6 - 15) + 10);
+  }
+
+  // No figures behind the columns. Three were drawn and all three read as scribble under the
+  // copy they sat behind: a diagram that has to be explained to be seen is decoration. The
+  // rising columns say the same thing without competing with the words.
+
+  const pillars = [...(section?.querySelectorAll('.pillar') || [])];
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    const p = reduce ? 1 : progress();
+    const base = H * 0.9;
+    const colW = W / 3;
+    for (let i = 0; i < 3; i += 1) {
+      const t = localProgress(p, i);
+      if (t <= 0.001) continue;
+      const cx = colW * (i + 0.5);
+      const h = H * 0.62;
+      // Class flip rather than a per-frame style write: the text transition is CSS, and this
+      // only has to say when to start it. Set once and never unset, so scrolling back up does
+      // not blank the copy.
+      const copy = pillars[i];
+      if (copy && t > 0.3 && !copy.classList.contains('is-in')) copy.classList.add('is-in');
+
+      // The pillar itself: a column of gold that grows from the baseline up.
+      const grad = ctx.createLinearGradient(0, base, 0, base - h * t);
+      grad.addColorStop(0, GOLD + (0.14 * t) + ')');
+      grad.addColorStop(1, GOLD + '0)');
+      ctx.fillStyle = grad;
+      const pw = Math.min(84, colW * 0.28);
+      ctx.fillRect(cx - pw / 2, base - h * t, pw, h * t);
+
+    }
+  }
+
+  let queued = false;
+  function onScroll() {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; draw(); });
+  }
+
+  resize(); draw();
+  if (reduce) return;
+  window.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', () => { resize(); draw(); });
+  if ('ResizeObserver' in window) new ResizeObserver(() => { resize(); draw(); }).observe(canvas);
+}
+
+// The application stack deals itself in with a CSS animation whose forwards fill then owns
+// opacity and translate permanently. That is fine until something else wants to move the
+// sheets: the hover discard could change scale and nothing else. Marking the stack once the
+// last sheet lands lets the stylesheet drop the animation and hand those properties back.
+function initApplicationStack() {
+  const stack = document.querySelector('.proof-application-stack');
+  if (!stack) return;
+  const sheets = [...stack.children];
+  if (!sheets.length) return;
+  let landed = 0;
+  const done = () => {
+    landed += 1;
+    if (landed < sheets.length) return;
+    stack.classList.add('is-dealt');
+  };
+  for (const sheet of sheets) sheet.addEventListener('animationend', done, { once: true });
+  // The discard latches. Clearing the pile is the gesture the section is making, so the state
+  // it leaves behind is the point: one page left, and it stays left.
+  stack.addEventListener('pointerenter', () => stack.classList.add('is-revealed'), { once: true });
+  // The animation only runs once the section is revealed, and never at all under reduced
+  // motion. Either way the sheets are meant to end up dealt, so the class is set regardless
+  // after the longest possible deal, rather than waiting on an event that may not fire.
+  window.setTimeout(() => stack.classList.add('is-dealt'), 2400);
 }
 
 // Covenda tree: arm the grow-from-the-roots animation, fired when the tree enters view.
@@ -5713,6 +5965,8 @@ function initProofSteps() {
 }
 initProofSteps();
 initHeroField();
+initPillarsField();
+initApplicationStack();
 // The student, company and referral pages open on a flat near-white ground with nothing on it.
 // They get the same field, on the light palette, so the top of every page belongs to the same
 // site rather than only the home page having a character.
@@ -6198,7 +6452,7 @@ function initBatchWeb() {
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const a = nodes[i], b = nodes[j];
-        ctx.strokeStyle = 'rgba(180,123,32,' + (0.34 * progress) + ')';
+        ctx.strokeStyle = 'rgba(192,138,34,' + (0.34 * progress) + ')';
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         // Draw only `progress` of the way along, so the web knits itself together.
@@ -6207,7 +6461,7 @@ function initBatchWeb() {
       }
     }
     for (const n of nodes) {
-      ctx.fillStyle = 'rgba(180,123,32,' + (0.55 * progress) + ')';
+      ctx.fillStyle = 'rgba(192,138,34,' + (0.55 * progress) + ')';
       ctx.beginPath();
       ctx.arc(n.x, n.y, 3.5, 0, Math.PI * 2);
       ctx.fill();
@@ -6470,7 +6724,6 @@ function initBatchWeb() {
 (function initSift() {
   const canvas = document.getElementById('siftCanvas');
   const figure = document.getElementById('siftFigure');
-  const count = document.getElementById('siftCount');
   if (!canvas || !figure) return;
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -6489,10 +6742,6 @@ function initBatchWeb() {
       gold: Math.random() < 0.09,
       phase: Math.random() * Math.PI * 2,
     }));
-    if (count) {
-      const gold = dots.filter(d => d.gold).length;
-      count.textContent = `${gold} of ${dots.length} clear the bar`;
-    }
   }
 
   function resize() {

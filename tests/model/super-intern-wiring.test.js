@@ -154,7 +154,7 @@ test('a template is labelled as one rather than passed off as company-specific',
 test('no start button is offered while applications are closed', () => {
   const paint = js.slice(js.indexOf('function paintAssessmentDisclosure'), js.indexOf('// ── The batch builder'));
   assert.match(paint, /state\.dashboard\?\.batchApplicationsOpen===false/);
-  assert.match(paint, /Applications open again soon/);
+  assert.match(paint, /Batches are not open yet/);
   // And the button only exists when there is a real stored plan to run against.
   assert.match(paint, /else if\(plan\.id\)/);
 });

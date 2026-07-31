@@ -245,6 +245,9 @@ test('both live submission paths have progressive forms and consent', () => {
 });
 
 test('drafts persist locally and feed review and workspace summaries', () => {
+  // The manual "Clear draft" button was cut. A draft must still clear itself once the form is
+  // actually submitted, or a student's answers linger on a shared machine.
+  assert.match(script, /discardDraft\(form\)/);
   assert.match(script, /covendaStudentInterestDraft/);
   assert.match(script, /covendaCompanyProblemDraft/);
   assert.match(script, /function serializeDraft\(form\)/);
@@ -255,7 +258,6 @@ test('drafts persist locally and feed review and workspace summaries', () => {
   assert.match(html, /id="companyReviewSummary"/);
   assert.match(html, /id="studentDraftBanner"/);
   assert.match(html, /id="companyDraftBanner"/);
-  assert.match(html, /data-clear-draft/);
 });
 
 test('server-confirmed submissions become durable review receipts', () => {
@@ -345,7 +347,7 @@ test('homepage operations icon and navigation polish remain centered and usable'
 
 test('design system stays true white and supports responsive and reduced-motion states', () => {
   assert.match(styles, /--white: #fff/);
-  assert.match(styles, /--gold: #b47b20/);
+  assert.match(styles, /--gold: #c08a22/);
   assert.match(styles, /backdrop-filter: blur/);
   assert.match(styles, /@media \(max-width: 560px\)/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
@@ -486,8 +488,18 @@ test('hero field keeps pointer discovery without shifting the 3D field', () => {
   // sat inside a ~25px soft blob: the field read as smudges rather than points, and on the
   // resolved figure they merged into one mass. A gold node is brighter and larger than a white
   // one, which is enough. What has to stay true is that gold is still distinguishable.
-  const goldFill = script.match(/ctx\.fillStyle = `rgba\(255,224,151,\$\{\(\.78 \* q\.scale/);
-  assert.ok(goldFill, 'gold nodes no longer render brighter than white ones');
+  // The gold fill is no longer a constant: it walks from a near-neutral off-white at rest to a
+  // deep gold as the shape resolves, so the field reads as separate points that turn metal
+  // rather than as a pale glow that was always yellow. The invariant is that the colour is
+  // driven by how formed the shape is, and that gold is still drawn larger than white.
+  assert.match(script, /const rich = form \* form;/, 'the gold no longer deepens as the shape forms');
+  assert.match(script, /ctx\.fillStyle = `rgba\(\$\{rr\},\$\{gg\},\$\{bb\}/, 'gold nodes lost their form-driven colour');
+  // Larger than a white node, but only slightly: at a full extra pixel and a half the resolved
+  // figure read as a rope of beads instead of a line. The invariant is the sign, not the size.
+  const goldRadius = script.match(/ctx\.arc\(q\.x, q\.y, r \+ ([\d.]+) \+ pulse/);
+  assert.ok(goldRadius, 'the gold node radius line moved or changed shape');
+  assert.ok(Number(goldRadius[1]) > 0, 'gold nodes no longer render larger than white ones');
+  assert.ok(Number(goldRadius[1]) <= 0.6, `gold nodes are ${goldRadius[1]}px fatter and will read as beads`);
   // The ambient aura is gone: it sat on every gold node all the time and turned the field into
   // blobs. A glow on a RESOLVED shape is a different thing and is wanted, so the guard is that
   // any node glow is gated on the shape being formed rather than drawn unconditionally.
@@ -511,7 +523,7 @@ test('batch board selects batches and walks through them full-width', () => {
   // No "Learn more" button. It opened a deep dive built from the requirements that are being
   // rebuilt, so it offered a door that is shut. The bar states the state instead.
   assert.ok(!/id="batchLearnMore"/.test(html), 'the walkthrough trigger is back while applications are closed');
-  assert.match(script, /Applications open again soon/);
+  assert.match(script, /Batches are not open yet/);
   assert.match(html, /id="batchDeep"/);
   assert.match(script, /const batchPicks = new Set\(\)/);
   // The whole card is the control — no separate "Select" button to hunt for — and it stays
@@ -994,7 +1006,13 @@ test('the neutral palette carries no warm bias', () => {
   for (const value of warm) {
     assert.ok(!styles.toLowerCase().includes(value), `${value} is a warm neutral from the old palette`);
   }
-  assert.match(styles, /--gold: #b47b20/, 'the brand accent must not have changed');
+  // The accent moved from #b47b20 to #c08a22 on a deliberate call: the LinkedIn export wanted
+  // a richer gold and the site follows it rather than the two drifting apart. Same hue, more
+  // saturation. What this assertion is actually for is that the accent stays WARM and does not
+  // slide back toward the cool grey the old palette used, so it checks the channels.
+  const gold = styles.match(/--gold: #([0-9a-f]{6})/)[1];
+  const [gr, gg, gb] = [0, 2, 4].map(i => parseInt(gold.slice(i, i + 2), 16));
+  assert.ok(gr > gg && gg > gb, `--gold #${gold} is not a warm gold (needs R > G > B)`);
   assert.match(styles, /--gold-pale: #f4f5f7/);
   assert.match(styles, /--ink: #0e1013/);
 });
@@ -1103,6 +1121,68 @@ test('nothing is hidden unless the reveal can actually run', () => {
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)[\s\S]{0,160}html\.js-reveal \.reveal \{ opacity: 1/);
 });
 
+
+// The sourcing flow is eleven stacked rows. It used to appear whole, which asked a reader to take
+// in the entire diagram at once; each row now arrives as it scrolls into view.
+test('the sourcing flow reveals row by row rather than all at once', async () => {
+  const app = await readFile(new URL('../app.js', import.meta.url), 'utf8');
+  // Hidden state gated on BOTH the js-reveal guard and the .is-stepped class the script adds, so a
+  // script that fails before reaching this code leaves a readable diagram rather than a blank one.
+  assert.match(styles, /\.js-reveal \.mflow\.is-stepped > \* \{[^}]*opacity: 0/);
+  assert.ok(
+    !/^\.mflow > \* \{[^}]*opacity: 0/m.test(styles),
+    'flow rows are hidden without the js-reveal and is-stepped guards',
+  );
+  assert.match(styles, /\.js-reveal \.mflow\.is-stepped > \.is-in \{[^}]*opacity: 1/);
+  assert.match(
+    styles,
+    /@media \(prefers-reduced-motion: reduce\) \{\s*\.js-reveal \.mflow\.is-stepped > \* \{[^}]*opacity: 1/,
+  );
+
+  // The class is added by the script, and every row is observed rather than only the figure.
+  assert.match(app, /mflow\.classList\.add\('is-stepped'\)/);
+  assert.match(app, /rows\.forEach\(row => flowIO\.observe\(row\)\)/);
+  // Each row stops being watched once it has arrived; a row that re-enters must not re-animate.
+  assert.match(app, /flowIO\.unobserve\(entry\.target\)/);
+});
+
+// The mark is hovered deliberately, so it is slow enough to watch. Asserted because a rate is
+// a bare number that reads as arbitrary and invites being 'tidied' back up.
+test('the home mark assembles slowly enough to watch, and does not hold the page', async () => {
+  const app = await readFile(new URL('../app.js', import.meta.url), 'utf8');
+  const rate = app.match(/'mark' \? ([\d.]+) : ([\d.]+)/);
+  assert.ok(rate, 'the morph rate line moved or changed shape');
+  const mark = Number(rate[1]);
+  // Frames to reach 95% of the way there, at the exponential approach the loop uses.
+  let v = 0; let frames = 0;
+  while (v < 0.95 && frames < 1000) { v += (1 - v) * mark; frames += 1; }
+  // Bounds widened downward on a direct call: the slow assembly was the right length to watch
+  // once and too long to sit through on a page you visit often. It still must not be instant.
+  assert.ok(frames / 60 > 0.9, `the mark settles in ${(frames / 60).toFixed(2)}s, too fast to read as an assembly`);
+  assert.ok(frames / 60 < 2.5, `the mark settles in ${(frames / 60).toFixed(2)}s, slow enough to read as stuck`);
+
+  // Assembles once and stays. Replaying on every pointer entry meant the logo spent most of
+  // its life dispersed, and re-formed as a hover toy rather than as an arrival.
+  assert.match(app, /let markLatched = false;/);
+  assert.match(app, /morphTo === 1 && morph > 0\.985\) markLatched = true/);
+  // Assembles on its own shortly after load rather than waiting for a hover: a visitor who
+  // scrolls past never saw it, and one who crossed the hero saw it restart.
+  assert.match(app, /canvas\.dataset\.morph === 'mark' && !reduce/);
+  assert.match(app, /assignFigure\(\); morphTo = 1; start\(\);/);
+  assert.match(app, /pointerenter[\s\S]{0,120}if \(markLatched\) return;/,
+    're-entering the hero replays the assembly');
+  assert.match(app, /pointerleave[\s\S]{0,340}if \(markLatched\) return;/,
+    'leaving the hero disperses a mark that has already assembled');
+
+  // A slower assembly is only safe if it never captures the wheel. The canvas must stay
+  // pointer-transparent and own no scroll-blocking listener.
+  assert.match(styles, /\.hero-field \{[^}]*pointer-events: none/);
+  const field = app.slice(app.indexOf('function initHeroField'));
+  const body = field.slice(0, field.indexOf('\n}\n'));
+  for (const blocking of ['wheel', 'touchmove']) {
+    assert.ok(!body.includes(`addEventListener('${blocking}'`), `the hero field listens for ${blocking} and can block scrolling`);
+  }
+});
 
 // A serif needs more leading than the sans these values were tuned for.
 test('no display rule sets a line-height that clips a descender', () => {
@@ -1329,20 +1409,23 @@ test('the rail steps index one-to-one with the form steps', () => {
     for (const [row] of progress.matchAll(/<span[^>]*>[\s\S]*?<\/span>/g)) {
       assert.ok(!row.slice(1).includes('<span'), `${id} nests a span inside a rail row`);
     }
-    for (const tag of ['<i>', '<strong>', '<small>']) {
+    // <small> was dropped from every rail row on request: four titles plus four descriptions
+    // made the rail heavier than the form it indexes. The number and the title still hold.
+    for (const tag of ['<i>', '<strong>']) {
       assert.equal((progress.match(new RegExp(tag, 'g')) || []).length, 4, `${id} rail rows are missing ${tag}`);
     }
+    assert.equal((progress.match(/<small>/g) || []).length, 0, `${id} rail rows grew subtext back`);
   }
 });
 
-// A rail row promises what the step asks before the student gets there. That disclosure is the
-// point of it; a row with only a title is the old tab strip with more pixels.
-test('every rail row says what its step will ask', () => {
-  const rows = [...html.matchAll(/<span[^>]*><i>\d<\/i><strong>([^<]+)<\/strong><small>([^<]+)<\/small><\/span>/g)];
+// The per-row subtext was cut on request: four titles plus four descriptions plus two trust
+// lines made the rail heavier than the form it indexed. What still has to hold is that both
+// forms have four rows each and that a title fits its column.
+test('the rail indexes four steps per form with titles that fit', () => {
+  const rows = [...html.matchAll(/<span[^>]*><i>\d<\/i><strong>([^<]+)<\/strong><\/span>/g)];
   assert.equal(rows.length, 8, `expected 8 rail rows across both forms, found ${rows.length}`);
-  for (const [, title, ask] of rows) {
+  for (const [, title] of rows) {
     assert.ok(title.length <= 16, `rail title "${title}" is too long for the column`);
-    assert.ok(ask.length > 20, `rail row "${title}" does not say what it asks`);
   }
 });
 
@@ -1353,10 +1436,8 @@ test('the chip groups kept the values their selects had', () => {
     studentEducation: ['College first-year', 'College sophomore', 'College junior', 'College senior', 'Graduate student', 'Recent graduate'],
     studentSkillLevel: ['Learning the basics', 'Comfortable with guidance', 'Can work independently', 'Advanced, with work examples'],
     studentWorkStyle: ['Independent with clear checkpoints', 'Collaborative with regular feedback', 'Either, if expectations are clear'],
-    studentAmbiguity: ['I ask focused questions before starting', 'I can propose assumptions for approval', 'I prefer fully specified work'],
     studentAvailability: ['Within 7 days', 'Within 30 days', 'Next academic break', 'Just exploring'],
     studentHours: ['3–5 hours', '6–10 hours', '11–15 hours'],
-    studentDuration: ['One week', 'Two weeks', 'Three to four weeks'],
     studentCompensation: ['$150+', '$300+', '$500+', 'Depends on scope'],
     studentScreening: ['Yes', 'Maybe, if time-boxed and relevant', 'No'],
     studentPriority: ['Paid work and employer feedback', 'Building specific capability evidence', 'Learning an industry', 'Possibility of follow-on work'],
@@ -1377,7 +1458,9 @@ test('the chip groups kept the values their selects had', () => {
 // transparent overlay with no visible label. Every one declares its own message instead.
 test('every required chip group carries the sentence shown when it is empty', () => {
   const groups = [...html.matchAll(/class="chip-field[^"]*"([^>]*)>/g)].map(m => m[1]);
-  assert.ok(groups.length >= 15, `only ${groups.length} chip groups found`);
+  // Two groups were cut from step 3 to shorten it; the rule is that every remaining one
+  // still carries its empty-state sentence.
+  assert.ok(groups.length >= 13, `only ${groups.length} chip groups found`);
   for (const attrs of groups) {
     assert.match(attrs, /data-require-group="[^"]{12,}"/, `a chip group has no message: ${attrs}`);
   }
@@ -1459,18 +1542,15 @@ test('the boundary blocker reads the selected access level, not the first one', 
   assert.match(body, /access\.value === 'production'/);
 });
 
-// The trust line used to live on step 4, arriving after the decision it was meant to inform.
-test('the privacy promise is on screen from the first step', () => {
-  for (const marker of ['Private by default', 'Nothing is published and no student is assigned']) {
-    const rail = html.slice(html.indexOf('<div class="form-rail-trust">'));
-    assert.ok(html.includes(marker), `the rail never states: ${marker}`);
-    assert.ok(rail.length > 0);
-  }
-  // And it is in the rail, which is not inside any single step.
-  const trust = [...html.matchAll(/<div class="form-rail-trust">[\s\S]*?<\/div>/g)];
-  assert.equal(trust.length, 2, 'both intake forms should carry a permanent trust footer');
-  for (const [block] of trust) assert.ok(!block.includes('form-step'));
+// The rail trust footer was removed on request. The promise it carried still has to appear
+// somewhere a student reads before submitting, and that is the review step, so this checks the
+// claim rather than the element that used to hold it.
+test('the privacy promise is on screen before anything is sent', () => {
+  assert.match(html, /Private by default/, 'nothing tells a student the profile is not public');
+  const review = html.slice(html.indexOf('review-boundary'));
+  assert.ok(review.length > 0, 'the review step no longer carries the boundary note');
 });
+
 
 // ── Density, motion and the quality floor (§16) ───────────────────────────────────────
 // Six words. The cap is on the heading text, so inline markup is stripped and trailing

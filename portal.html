@@ -156,6 +156,7 @@
           <button type="button" class="discover-tab" data-tab="all" role="tab">All open</button>
           <button type="button" class="discover-tab" data-tab="saved" role="tab">Saved <b id="savedCount">0</b></button>
         </div>
+        <div id="openRolesHost"></div>
         <div class="discover-body">
           <aside class="discover-filters" aria-label="Filter projects">
             <label>Search<input id="discoverSearch" type="search" placeholder="Skill, deliverable, company"></label>
@@ -405,6 +406,24 @@
       </div>
       <footer><button type="button" data-close-dialog class="portal-ghost">Cancel</button><button type="submit" class="portal-primary">Add evidence</button></footer>
       <p class="dialog-message" id="financeEvidenceMessage" aria-live="polite"></p>
+    </form>
+  </dialog>
+
+  <dialog class="member-dialog compact-dialog" id="courseworkDialog">
+    <form method="dialog" id="courseworkForm">
+      <header><div><p class="eyebrow">Coursework</p><h2>Add a course you have taken.</h2></div><button type="button" data-close-dialog aria-label="Close"><svg><use href="#p-close"/></svg></button></header>
+      <div class="dialog-body">
+        <label>What was the course?
+          <small>Type the title. A course code in front of it is fine.</small>
+          <input name="title" id="courseTitle" list="courseTitleOptions" maxlength="160" required autocomplete="off" placeholder="Machine Learning, or CS 61A Introduction to Programming">
+        </label>
+        <datalist id="courseTitleOptions"></datalist>
+        <p class="te-explain" id="courseExplain" aria-live="polite"></p>
+        <p class="te-explain te-limit" id="courseLimit" aria-live="polite"></p>
+        <p class="te-note"><svg aria-hidden="true"><use href="#p-shield"/></svg>A course is recorded as self-reported and is not used for matching. It sets what a company can fairly ask you about, and Covenda turns it into a list of work that would actually prove it. No grade is stored, because a transcript line cannot tell a top mark from a pass.</p>
+      </div>
+      <footer><button type="button" data-close-dialog class="portal-ghost">Cancel</button><button type="submit" class="portal-primary">Add course</button></footer>
+      <p class="dialog-message" id="courseworkMessage" aria-live="polite"></p>
     </form>
   </dialog>
 

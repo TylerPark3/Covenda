@@ -411,7 +411,79 @@ export function technicalProfile(claims = []) {
     ownedOutright: ownedEntries.size,
     aiAssisted: aiEntries.size,
     unverified: rows.filter(c => c.verification_tier === 'claimed').length,
+    collaboration: collaborationEvidence(rows),
+    history: builderHistory(rows),
   };
+}
+
+// ── Collaboration ─────────────────────────────────────────────────────────────────────
+// Whether the work was done with or for other people. Derived, not asked for: an upstream
+// contribution, a hackathon, and a community entry each already say it, and adding a
+// "collaboration" checkbox would just be self-report wearing a new label.
+//
+// Reported as the evidence itself rather than a level. "Contributed upstream to two projects"
+// is checkable; "collaboration: high" is not.
+const COLLABORATIVE_TYPES = { open_source: 'Open source', hackathon: 'Hackathon', community: 'Community' };
+
+export function collaborationEvidence(claims = []) {
+  const rows = (claims || []).filter(c => c && c.skill);
+  const kinds = new Map();
+  const entries = new Set();
+  for (const claim of rows) {
+    const meta = claim.evidence_meta || {};
+    const type = meta.evidence_type;
+    const signals = meta.agency_signals || [];
+    const id = meta.entry_id || `${type}:${meta.title || ''}`;
+    if (COLLABORATIVE_TYPES[type]) {
+      kinds.set(type, (kinds.get(type) || 0) + (entries.has(id) ? 0 : 1));
+      entries.add(id);
+    }
+    // Contributing upstream is collaboration whatever the entry was filed as.
+    if (signals.includes('contributed_upstream') && !entries.has(id)) {
+      kinds.set('open_source', (kinds.get('open_source') || 0) + 1);
+      entries.add(id);
+    }
+  }
+  return {
+    kinds: [...kinds.entries()].map(([id, count]) => ({ id, label: COLLABORATIVE_TYPES[id] || id, count })),
+    entries: entries.size,
+    // Stated, because the absence is the more common case and it is not a failing.
+    note: entries.size ? null : 'Nothing here yet shows work done with other people.',
+  };
+}
+
+// ── Builder history ───────────────────────────────────────────────────────────────────
+// The things actually shipped, in the order they happened. A profile is a set; a history is a
+// sequence, and the sequence is what shows whether somebody kept going.
+//
+// Undated entries are kept and sorted last rather than dropped: an artifact with no date is
+// still an artifact, and silently hiding it would understate the person.
+const BUILT_TYPES = ['shipped_product', 'independent_project', 'open_source', 'hackathon', 'research'];
+
+export function builderHistory(claims = []) {
+  const byEntry = new Map();
+  for (const claim of (claims || [])) {
+    const meta = claim?.evidence_meta || {};
+    if (!BUILT_TYPES.includes(meta.evidence_type)) continue;
+    const id = meta.entry_id || `${meta.evidence_type}:${meta.title || ''}`;
+    if (byEntry.has(id)) continue;
+    byEntry.set(id, {
+      id,
+      title: meta.title || EVIDENCE_TYPES[meta.evidence_type]?.label || 'Untitled',
+      type: meta.evidence_type,
+      typeLabel: EVIDENCE_TYPES[meta.evidence_type]?.label || meta.evidence_type,
+      at: meta.occurred_at || meta.shipped_at || null,
+      tier: claim.verification_tier || 'claimed',
+      ownership: meta.ownership || null,
+    });
+  }
+  const items = [...byEntry.values()].sort((a, b) => {
+    if (!a.at && !b.at) return 0;
+    if (!a.at) return 1;
+    if (!b.at) return -1;
+    return Date.parse(b.at) - Date.parse(a.at);
+  });
+  return { items, count: items.length, dated: items.filter(i => i.at).length };
 }
 
 // What has not been shown yet, phrased as the next thing to get. A gap with no route attached

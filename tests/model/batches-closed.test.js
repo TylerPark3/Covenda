@@ -22,11 +22,15 @@ test('the server refuses an application before it touches anything', async () =>
     // Any database call here means the refusal came too late to be a real gate.
     supabase: { from() { throw new Error('the request reached the database while closed'); } },
   };
-  await assert.rejects(() => applyToBatch(member, { batchId: 'b1' }, {}), /Applications open again soon/);
+  await assert.rejects(() => applyToBatch(member, { batchId: 'b1' }, {}), /Batches are not open yet/);
 });
 
 test('the refusal says it is temporary and that prior work is safe', () => {
-  assert.match(BATCHES_CLOSED_MESSAGE, /open again soon/i);
+  // "Open again" said they had been open before. No batch has ever run, so the wording is now
+  // that they have not opened yet, and the assertion follows the claim rather than the phrase.
+  assert.match(BATCHES_CLOSED_MESSAGE, /not open yet/i);
+  assert.match(BATCHES_CLOSED_MESSAGE, /open soon/i);
+  assert.ok(!/again/i.test(BATCHES_CLOSED_MESSAGE), 'the copy implies batches were open before');
   assert.match(BATCHES_CLOSED_MESSAGE, /nothing you have already submitted is affected/i);
 });
 
@@ -38,7 +42,7 @@ test('the dashboard tells the client, so the portal never offers a control that 
 
 test('the button says what is happening rather than being dead', () => {
   const card = js.slice(js.indexOf('function batchCard('), js.indexOf('let batchResumeUrl'));
-  assert.match(card, /Opening soon/);
+  assert.match(card, /Opens soon/);
   assert.match(card, /state\.dashboard\?\.batchApplicationsOpen===false/);
   assert.match(card, /learn\.disabled=closed\|\|batch\.status!=='open'/);
 });
@@ -46,7 +50,7 @@ test('the button says what is happening rather than being dead', () => {
 test('one banner above the list, not the same note on twenty-five cards', () => {
   const render = js.slice(js.indexOf('function renderBatches('), js.indexOf('function renderCompanyBatches'));
   assert.match(render, /batch-closed-notice/);
-  assert.match(render, /Applications open again soon/);
+  assert.match(render, /Batches are not open yet/);
 });
 
 // Browsing stays open on purpose: a student deciding whether Covenda is worth returning to

@@ -96,6 +96,17 @@ export const SOURCES = {
     doesNot: 'Say anything about capability. Membership is context, never evidence of skill.',
   },
 
+  // Coursework. Its own entry rather than folded into self_reported, because the honest
+  // account of what it fails to establish is specific and worth stating: a course is a
+  // syllabus a student sat in front of. Same `claimed` ceiling, so it never counts either.
+  completed_coursework: {
+    id: 'completed_coursework', label: 'Completed coursework', party: 'self',
+    ceiling: 'claimed', ownership: 'none',
+    establishes: 'Exposure to a syllabus, and therefore what it is fair to ask about.',
+    doesNot: 'Establish the student can do any of it unsupervised, and cannot separate '
+      + 'a top mark from a pass. Excluded from matching, exactly like any self-report.',
+  },
+
   // Self-report. Present because students will provide it, capped so it never counts.
   self_reported: {
     id: 'self_reported', label: 'Self-reported', party: 'self',

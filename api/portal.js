@@ -13,7 +13,7 @@ import { notifyMember, notifyOperatorEvent, applicationReceivedEmail, applicatio
 import { parseRepoRef, fetchRepoData, analyzeRepo } from './github.js';
 import { canonicalizeSkill } from './skills-taxonomy.js';
 import { presentScore, normalizeAppeal } from './hardening.js';
-import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility, SPECIALISATION_SKILLS } from './batches.js';
+import { BATCH_CATALOG, batchBrief, evaluateBatchAdmission, demoForVertical, batchesByVertical, batchCompatibility, compatibilityStanding, batchReadinessPlan, SPECIALISATION_SKILLS } from './batches.js';
 import { verticalFor } from './vertical-map.js';
 import { scenarioFor, optionalScenariosFor } from './scenarios.js';
 import {
@@ -25,6 +25,9 @@ import {
 } from './super-intern.js';
 import { allTechnicalClaims, technicalProfile, technicalGaps, recordTechnicalEvidence, recommendedEvidence, EVIDENCE_TYPES, OWNERSHIP_LEVELS } from './technical-evidence.js';
 import { claimsFromStoredFinanceEvidence, financeProfile, financeGaps, emphasisFor, recordFinanceEvidence, ARTIFACT_TYPES as FINANCE_ARTIFACTS, FIRM_TYPES as FINANCE_FIRMS } from './finance-evidence.js';
+import { rankRoles, matchResume, BOARD_DOMAINS } from './roles.js';
+import { syncRoles } from './roles-cron.js';
+import { claimsFromStoredCoursework, courseworkProfile, provingPlan, recordCoursework, matchCourse, COURSE_KINDS, FAMILIES as COURSE_FAMILIES } from './course-ontology.js';
 import { summarise as summariseVetting, processFor } from './vetting.js';
 import { assessmentFor as supplierAssessment } from './assessments.js';
 import { scriptFor } from './session-script.js';
@@ -484,10 +487,39 @@ export async function loadMemberDashboard(member, env = process.env) {
         .map(([id, a]) => [id, { label: a.label, demonstrates: a.demonstrates, cannotShow: a.cannotShow, questions: a.ownershipQuestions }])),
       firmTypes: Object.entries(FINANCE_FIRMS).map(([id, f]) => ({ id, label: f.label, evaluates: f.evaluates })),
     };
+    // Coursework. Loaded here so the panel can render the to-build list without a second
+    // round trip, and so the course guide travels with the payload for the same reason the
+    // artifact guide does: a form describing a course's limit differently from the model is
+    // the student being told two things.
+    const courseworkPayload = await loadCoursework(member);
+    const coursework = {
+      ...courseworkPayload,
+      courseGuide: Object.fromEntries(Object.entries(COURSE_KINDS)
+        .map(([id, k]) => [id, { label: k.label, family: k.family, demonstrates: k.demonstrates, cannotShow: k.cannotShow }])),
+      families: Object.entries(COURSE_FAMILIES).map(([id, f]) => ({ id, label: f.label })),
+    };
+
     // The DB row carries snake_case columns and no verticalSlug or summary, so grafting only
     // `requirements` left the matcher blind to the vertical (its bonus could never fire for
     // anyone) and short of the words it matches against. Merge the whole catalog entry, with
     // the row winning wherever both have a value — status and capacity are live, not static.
+    // The strongest tier reached per skill, and the agency read. Both come from evidence the
+    // student already recorded, so the score gains two dimensions without asking for anything
+    // new. Computed once here rather than per batch.
+    const tierBySkill = {};
+    const TIER_ORDER = ['claimed', 'artifact', 'referral', 'trial'];
+    for (const claim of allTechnicalClaims(profile, technicalEvidence)) {
+      if (!claim?.skill) continue;
+      const key = canonicalizeSkill(claim.skill).canonical;
+      const current = TIER_ORDER.indexOf(tierBySkill[key] || 'claimed');
+      const next = TIER_ORDER.indexOf(claim.verification_tier || 'claimed');
+      if (next > current) tierBySkill[key] = claim.verification_tier;
+    }
+    const agencyRead = {
+      repeatedBuilder: Boolean(technicalBase.repeatedBuilder),
+      ownedOutright: technicalBase.ownedOutright || 0,
+    };
+
     const batchesWithFit = (batches || []).map(b => {
       const spec = BATCH_CATALOG.find(c => c.slug === b.slug) || {};
       const full = { ...spec, ...b, requirements: spec.requirements || [] };
@@ -499,10 +531,44 @@ export async function loadMemberDashboard(member, env = process.env) {
         coreSkills: SPECIALISATION_SKILLS[b.slug] || [],
         compatibility: batchCompatibility(full, {
           skills: profile.skills || [], verticals: profile.verticals || [], evidencedSkills,
+          tierBySkill, agency: agencyRead,
+        }),
+        // What to work on for this batch. Derived on read from evidence already recorded, so
+        // it updates itself the moment a student adds anything, rather than being a stored
+        // artifact that goes stale and becomes a second place the truth lives.
+        readiness: batchReadinessPlan(full, {
+          skills: profile.skills || [], evidencedSkills, tierBySkill,
         }),
       };
     });
-    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, simulations, availableSimulations, finance, batchApplicationsOpen: batchApplicationsOpen(env), batchesClosedMessage: BATCHES_CLOSED_MESSAGE, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
+    // Live open roles, ranked for this student. Read from the table the nightly cron fills,
+    // never fetched from the boards here: a student loading their dashboard should not wait on
+    // seven third-party HTTP calls.
+    const roleRows = await optional(member.supabase.from('open_roles')
+      .select('*')
+      // Anything not seen in the last three syncs has been pulled from its board. Filtering on
+      // the stamp rather than deleting means one bad night at a board does not empty the page.
+      .gte('last_seen_at', new Date(Date.now() - 3 * 86400000).toISOString())
+      .order('posted_at', { ascending: false }).limit(200), [], 'open_roles');
+    const ranked = rankRoles(roleRows, { skills: profile.skills || [], evidencedSkills });
+    const roles = {
+      items: ranked.slice(0, 24),
+      total: roleRows.length,
+      // Sent rather than hardcoded in the UI, for the same reason the artifact guide is: two
+      // copies of a company list is how the one a student sees stops matching the one we pull.
+      domains: BOARD_DOMAINS,
+      // Stated rather than implied. The board list is short and the season is real, so a thin
+      // page should say why it is thin instead of reading as a broken feature.
+      note: roleRows.length
+        ? 'Pulled from company job boards each night. Fit is fixed arithmetic over four components, not a model, and it is yours alone: no company sees it.'
+        : 'No open student roles on the boards we watch right now. Most internship postings land between September and November.',
+    };
+
+    // Where the student stands across every batch, plus the gap between typed and shown. Reads
+    // batchesWithFit so it reports exactly the numbers the cards print, never a second scoring.
+    const compatibility = compatibilityStanding(batchesWithFit);
+
+    return { user, profile, projects, opportunities: rankedOpportunities, applications, studentDirectory: [], intakes, messages, verifiedCount, matchedCount, walletBalance, creditLedger, payoutRequests, batches: batchesWithFit, batchApplications, batchStanding, verification, videos, technical, simulations, availableSimulations, finance, coursework, compatibility, roles, batchApplicationsOpen: batchApplicationsOpen(env), batchesClosedMessage: BATCHES_CLOSED_MESSAGE, introductions: await loadIntroductions(member, 'student'), // `vetting` already exists on a brief and holds the rails. Adding the per-vertical
     // process under a NEW key rather than overwriting it — the first version clobbered
     // brief.vetting.rails and broke every consumer of it.
     batchBriefs: BATCH_CATALOG.map(b => ({ ...batchBrief(b), vettingProcess: summariseVetting(b.discipline), reviewer: reviewerLine(b.discipline), practitionerAsk: commitmentFor(b.discipline), vettingStages: (processFor(b.discipline) || {}).stages || [], assessment: (() => { const a = supplierAssessment(b.discipline, b.slug); return a ? { ...a, script: scriptFor(b.slug, { minutes: a.exercise?.minutes || 25 }) } : null; })() })), identityEnabled , briefMeteringEnabled, briefFee , platformFeeRate: PLATFORM_FEE_RATE };
@@ -1326,7 +1392,7 @@ export function batchApplicationsOpen(env = process.env) {
 }
 
 export const BATCHES_CLOSED_MESSAGE =
-  'Applications open again soon. Nothing you have already submitted is affected.';
+  'Batches are not open yet. The first ones open soon, and nothing you have already submitted is affected.';
 
 export async function applyToBatch(member, input, env = process.env) {
   // Enforced on the server, not only in the UI. A closed door that only exists in the client
@@ -2058,6 +2124,123 @@ export async function saveTargetFirmType(member, input) {
   await checked(member.supabase.from('member_profiles')
     .update({ target_firm_type: id }).eq('user_id', member.user.id), null);
   return { targetFirmType: id };
+}
+
+// Pulling the boards on demand, from a signed-in member's own request.
+//
+// The nightly cron was the only thing that ever filled this table, which meant the panel was
+// empty from the moment it shipped until the next 06:00 UTC, and empty again for a day if a
+// run failed. A feature whose data arrives on somebody else's schedule looks broken.
+//
+// Gated three ways rather than by a secret: the caller must be a signed-in student, and the
+// sync is skipped unless the table is actually stale. So the worst a member can do is cause
+// one board sweep every six hours, which is well inside what a public job board expects.
+export const ROLE_REFRESH_AFTER_MS = 6 * 60 * 60 * 1000;
+
+export async function refreshOpenRoles(member, input = {}, dependencies = {}) {
+  const profile = await loadMemberProfile(member);
+  if (profile?.role !== 'student') throw new Error('Only student accounts can refresh roles.');
+
+  const latest = await optional(member.supabase.from('open_roles')
+    .select('last_seen_at').order('last_seen_at', { ascending: false }).limit(1), [], 'open_roles');
+  const seen = latest[0]?.last_seen_at ? Date.parse(latest[0].last_seen_at) : 0;
+  const age = Date.now() - seen;
+  if (seen && age < ROLE_REFRESH_AFTER_MS && !input.force) {
+    return { skipped: true, reason: 'Roles were refreshed recently.', ageMinutes: Math.round(age / 60000) };
+  }
+
+  // Service role, because the table is readable by members and writable by nobody. The write
+  // happens on the server with credentials the browser never sees.
+  const env = dependencies.env || process.env;
+  const db = serviceClient(env, dependencies.createSupabaseClient || createClient);
+  const report = await syncRoles(db);
+  return { skipped: false, ...report };
+}
+
+// Paste a resume, get the open roles it lines up with. Nothing is written: the text is read,
+// matched, and dropped. A resume is the most personal document a student has and there is no
+// reason to hold one to answer "what am I close to".
+export async function matchResumeToRoles(member, input) {
+  const profile = await loadMemberProfile(member);
+  if (profile?.role !== 'student') throw new Error('Only student accounts can match a resume.');
+
+  const text = String(input.text || '').slice(0, 20000);
+  const rows = await optional(member.supabase.from('open_roles')
+    .select('*')
+    .gte('last_seen_at', new Date(Date.now() - 3 * 86400000).toISOString())
+    .order('posted_at', { ascending: false }).limit(200), [], 'open_roles');
+
+  const evidencedSkills = Object.keys(((profile.skill_signals || {}).github || []));
+  const out = matchResume(text, rows, { evidencedSkills });
+  // A resume we could not read is a 400 with a reason, not a silent empty list.
+  if (!out.ok) throw new Error(out.reason);
+  return out;
+}
+
+// ── Coursework ────────────────────────────────────────────────────────────────────────
+// The write that converts a resume-shaped input into a to-build list. It records the course
+// and nothing about how well it went, because the model has no way to check that and the
+// table has no column to put it in.
+export async function saveCoursework(member, input) {
+  const profile = await loadMemberProfile(member);
+  if (profile?.role !== 'student') throw new Error('Only student accounts carry coursework.');
+
+  const title = cleanText(input.title, 160);
+  if (!title) throw new Error('Enter the course name.');
+
+  const assessed = recordCoursework({ title });
+  // An unmapped course is a real answer, not a failure: the student is told Covenda has no
+  // mapping rather than having their course silently accepted and quietly counting for nothing.
+  if (!assessed.ok) throw new Error(assessed.reason);
+
+  const row = {
+    student_user_id: member.user.id,
+    course_kind: assessed.kind.id,
+    course_title: assessed.title,
+    source: 'completed_coursework',
+    verification_level: 'claimed',
+  };
+  // checked(). A write that silently does nothing is a bug, not a degraded read.
+  await checked(member.supabase.from('coursework').insert(row), null);
+
+  return {
+    course: row,
+    demonstrates: assessed.demonstrates,
+    cannotShow: assessed.cannotShow,
+    claims: assessed.claims.length,
+  };
+}
+
+export async function loadCoursework(member) {
+  // optional(), for the same reason the finance read uses it: a table added after launch must
+  // not be able to take the portal down before its migration is universally applied.
+  const rows = await optional(member.supabase.from('coursework')
+    .select('*').eq('student_user_id', member.user.id)
+    .order('created_at', { ascending: false }).limit(80), [], 'coursework');
+  const claims = claimsFromStoredCoursework(rows);
+  const profile = courseworkProfile(claims);
+  return { courses: rows, profile, proving: provingPlan(profile, { limit: 8 }) };
+}
+
+export async function deleteCoursework(member, input) {
+  const id = cleanText(input.id, 60);
+  if (!id) throw new Error('Choose a course to remove.');
+  await member.supabase.from('coursework').delete()
+    .eq('id', id).eq('student_user_id', member.user.id);
+  return { removed: id };
+}
+
+// Read-only lookup so the form can tell a student what a course maps to before they save it,
+// rather than accepting the entry and failing afterwards.
+export async function previewCourse(member, input) {
+  const found = matchCourse(cleanText(input.title, 160));
+  if (!found.matched) return { matched: false, title: found.title };
+  return {
+    matched: true, title: found.title,
+    kind: found.kind.id, label: found.kind.label,
+    demonstrates: found.kind.demonstrates,
+    cannotShow: found.kind.cannotShow,
+  };
 }
 
 export async function saveMemberVideo(member, input) {
@@ -3379,6 +3562,12 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'delete-technical-evidence') return res.status(200).json({ ok: true, ...(await deleteTechnicalEvidence(member, input)) });
     if (req.method === 'POST' && input.action === 'save-finance-evidence') return res.status(201).json({ ok: true, ...(await saveFinanceEvidence(member, input)) });
     if (req.method === 'POST' && input.action === 'delete-finance-evidence') return res.status(200).json({ ok: true, ...(await deleteFinanceEvidence(member, input)) });
+    if (req.method === 'POST' && input.action === 'refresh-roles') return res.status(200).json({ ok: true, ...(await refreshOpenRoles(member, input, dependencies)) });
+    if (req.method === 'POST' && input.action === 'match-resume') return res.status(200).json({ ok: true, ...(await matchResumeToRoles(member, input)) });
+    if (req.method === 'POST' && input.action === 'save-coursework') return res.status(201).json({ ok: true, ...(await saveCoursework(member, input)) });
+    if (req.method === 'POST' && input.action === 'load-coursework') return res.status(200).json({ ok: true, ...(await loadCoursework(member)) });
+    if (req.method === 'POST' && input.action === 'delete-coursework') return res.status(200).json({ ok: true, ...(await deleteCoursework(member, input)) });
+    if (req.method === 'POST' && input.action === 'preview-course') return res.status(200).json({ ok: true, ...(await previewCourse(member, input)) });
     if (req.method === 'POST' && input.action === 'target-firm-type') return res.status(200).json({ ok: true, ...(await saveTargetFirmType(member, input)) });
     if (req.method === 'POST' && input.action === 'save-video') return res.status(201).json({ ok: true, video: await saveMemberVideo(member, input) });
     if (req.method === 'POST' && input.action === 'delete-video') return res.status(200).json({ ok: true, ...(await deleteMemberVideo(member, input)) });

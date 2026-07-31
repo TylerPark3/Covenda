@@ -132,7 +132,9 @@ test('the finance routes are wired into the portal', () => {
   for (const action of ['save-finance-evidence', 'delete-finance-evidence', 'target-firm-type']) {
     assert.match(api, new RegExp(`input\\.action === '${action}'`), `${action} has no route`);
   }
-  assert.match(api, /finance,\s*batchApplicationsOpen/, 'the finance profile never reaches the dashboard');
+  // Matches the payload key itself rather than its neighbour, so adding another key beside it
+  // does not fail a test about finance.
+  assert.match(api, /availableSimulations,[^;]*\bfinance\b/, 'the finance profile never reaches the dashboard');
 });
 
 // Fourth time this shape has broken production, per the note in loadTechnicalEvidence.
@@ -193,7 +195,8 @@ test('the finance form exists and is reachable from the portal', () => {
   assert.match(html, /id="financeEvidenceDialog"/);
   assert.match(html, /id="financeEvidenceForm"/);
   // Rendered beside the technical profile, or a student never sees it.
-  assert.match(js, /renderFinanceProfile\(root,state\.dashboard\)/, 'the panel is never mounted');
+  const branch = js.slice(js.indexOf("if(profile?.role==='student'){"), js.indexOf('function renderPortfolioEmpty'));
+  assert.match(branch, /renderFinanceProfile\(\w+,\s*state\.dashboard\)/, 'the panel is never mounted');
   assert.match(js, /add\.addEventListener\('click',openFinanceEvidence\)/, 'nothing opens the dialog');
 });
 

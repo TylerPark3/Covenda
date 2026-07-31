@@ -16,7 +16,9 @@ test('the panel adds no module syntax to a classic script', () => {
 });
 
 test('the panel is rendered where a student will see it', () => {
-  assert.match(js, /renderTechnicalProfile\(root,state\.dashboard\)/);
+  const branch = js.slice(js.indexOf("if(profile?.role==='student'){"), js.indexOf('function renderPortfolioEmpty'));
+  assert.match(branch, /renderTechnicalProfile\(\w+,\s*state\.dashboard\)/,
+    'the technical panel is not called from the student portfolio branch');
   assert.match(panel, /d\?\.profile\?\.role!=='student'/, 'the panel must not render for companies');
 });
 

@@ -852,7 +852,17 @@ function renderJourney(){
   count.textContent=`${doneCount} of ${steps.length}`;
   head.append(box,count); host.append(head);
 
+  // Only the next step is shown. Six expanded rows with six buttons is a chore list, and it
+  // was the first thing on the dashboard every single visit, including the five visits after
+  // you had already read it. The rest fold away behind one line.
   const ol=document.createElement('ol'); ol.className='journey-list';
+  const rest=document.createElement('details'); rest.className='journey-rest';
+  const restCap=document.createElement('summary');
+  restCap.textContent=nextIndex<0?'All six steps':`The other ${steps.length-1} steps`;
+  rest.append(restCap);
+  const restList=document.createElement('ol'); restList.className='journey-list';
+  rest.append(restList);
+
   steps.forEach((step,i)=>{
     const li=document.createElement('li');
     li.className=step.done?'is-done':i===nextIndex?'is-next':step.partial?'is-partial':'is-open';
@@ -867,9 +877,12 @@ function renderJourney(){
     const go=document.createElement('span'); go.className='journey-go'; go.textContent=step.cta;
     row.append(mark,div,go);
     row.addEventListener('click',step.go);
-    li.append(row); ol.append(li);
+    li.append(row);
+    // The next step leads; everything else, done or not yet reached, goes in the fold.
+    (i===nextIndex?ol:restList).append(li);
   });
   host.append(ol);
+  if(restList.childElementCount)host.append(rest);
   host.hidden=false;
 }
 
@@ -1515,6 +1528,12 @@ function fitWhyBlock({reasons=[],concerns=[],approach=''}={}){
 function discoverChip(label,value){const c=document.createElement('div');c.className='discover-chip';const s=document.createElement('small');s.textContent=label;const b=document.createElement('span');b.textContent=value;c.append(s,b);return c;}
 function skillsText(project){const s=project.desired_skills;return Array.isArray(s)?s.join(', '):(s||'');}
 function renderDiscover(){
+  // Open roles leads this tab. A student with an empty profile can paste a resume here and get
+  // something back immediately, which is the one path that works before they have built
+  // anything on Covenda at all.
+  const rolesHost=$('#openRolesHost');
+  if(rolesHost){ rolesHost.replaceChildren(); renderOpenRoles(rolesHost,state.dashboard); }
+
   const d=state.dashboard;const root=$('#opportunityList');if(!root)return;
   const f=discoverFilters();const saved=discoverState.saved;
   let items=(d.opportunities||[]).slice();
@@ -1802,12 +1821,22 @@ function renderBatches(){
   const root=$('#batchList');if(!root)return;
   const role=state.dashboard?.profile?.role;
   if(role==='company'){renderCompanyBatches(root);return;}
+  // Simulations render at the foot of this tab rather than in the portfolio. A sitting is what
+  // a batch puts you through, so it belongs next to the batches, not filed under evidence.
+  const afterList=()=>{
+    const host=$('#batchList')?.parentElement; if(!host)return;
+    host.querySelector('.sim-host')?.remove();
+    const box=document.createElement('div');box.className='sim-host';
+    renderSimulations(box,state.dashboard);
+    if(box.childElementCount)host.append(box);
+  };
+  window.setTimeout(afterList,0);
   let batches=(state.dashboard.batches||[]).filter(b=>b.status==='open'||b.status==='reviewing');
   const appByBatch=new Map((state.dashboard.batchApplications||[]).map(a=>[a.batch_id,a]));
   root.replaceChildren();
   if(state.dashboard?.batchApplicationsOpen===false){
     const notice=document.createElement('div');notice.className='batch-closed-notice';
-    const b=document.createElement('b');b.textContent='Applications open again soon';
+    const b=document.createElement('b');b.textContent='Batches are not open yet';
     const p=document.createElement('p');
     p.textContent=state.dashboard?.batchesClosedMessage||'Batch applications are paused while we rebuild how each one is vetted.';
     notice.append(b,p);root.append(notice);
@@ -2055,23 +2084,55 @@ function batchWorkflowBlock(brief){
   wrap.append(ol);return wrap;
 }
 
-// The skill ledger: which of the batch's core skills this student already has, and which it
-// still wants. A bare "31% match" is a verdict nobody can act on; the same number next to the
-// two skills that would move it is a next step.
+// Skill coverage, as one line instead of a block.
+//
+// This replaced a caption, a wrapped list of pills, and a sentence underneath that restated the
+// pills in prose ("Covers 1 of its 4 core skills. Still wants Financial modeling and Writing &
+// documentation."). Three elements saying one thing. Across twenty-five cards that was most of
+// what made the grid unreadable.
+//
+// What survives is the part a student can act on: how many they have, and the single next skill
+// that would move it. The full list still exists, one click away, where someone comparing two
+// batches will actually read it.
+function batchCoverage(batch){
+  const c=batch.compatibility;
+  const core=batch.coreSkills||[];
+  if(!core.length||!c||c.score===null)return null;
+  const missing=new Set((c.missing||[]).map(s=>String(s).toLowerCase()));
+  const held=core.filter(s=>!missing.has(s.toLowerCase()));
+  const next=core.find(s=>missing.has(s.toLowerCase()))||null;
+
+  const wrap=document.createElement('div');wrap.className='batch-cover';
+  // The meter is decoration over the number, so it is hidden from screen readers and the whole
+  // row carries one sentence instead of leaking four empty list items.
+  const meter=document.createElement('span');meter.className='batch-cover-meter';meter.setAttribute('aria-hidden','true');
+  for(let i=0;i<core.length;i+=1){
+    const seg=document.createElement('i');
+    if(i<held.length)seg.className='is-on';
+    meter.append(seg);
+  }
+  const label=document.createElement('span');label.className='batch-cover-label';
+  label.textContent=`${held.length} of ${core.length}`;
+  wrap.append(meter,label);
+  if(next){
+    const add=document.createElement('span');add.className='batch-cover-next';
+    add.textContent='Add '+next;
+    wrap.append(add);
+  }
+  wrap.setAttribute('role','group');
+  wrap.setAttribute('aria-label',`${held.length} of ${core.length} core skills on your profile.`+(next?` Next: ${next}.`:''));
+  return wrap;
+}
+
+// The full skill list. Lives inside the expanded panel now rather than on the card face.
 function batchSkillLedger(batch){
   const c=batch.compatibility;
   const core=batch.coreSkills||[];
   if(!core.length||!c||c.score===null)return null;
   const missing=new Set((c.missing||[]).map(s=>String(s).toLowerCase()));
-  const wrap=document.createElement('div');wrap.className='batch-ledger';
-  const cap=document.createElement('span');cap.className='batch-ledger-cap';
-  cap.textContent=`Reads for ${core.length}`;
-  wrap.append(cap);
   const list=document.createElement('ul');list.className='batch-ledger-list';
   for(const skill of core){
     const li=document.createElement('li');
-    // A skill counts as held when the student's own listing canonicalized onto it, which is
-    // exactly the set the server did NOT put in `missing`.
     const held=!missing.has(skill.toLowerCase());
     li.className='batch-ledger-skill'+(held?' is-have':'');
     const mark=document.createElement('i');mark.setAttribute('aria-hidden','true');
@@ -2081,94 +2142,103 @@ function batchSkillLedger(batch){
     li.title=held?'On your profile':'Not on your profile yet';
     list.append(li);
   }
-  wrap.append(list);
-  return wrap;
+  return list;
 }
 
+// ── The card ──────────────────────────────────────────────────────────────────────────
+// It carried eight blocks: name, three meta chips, "Tests:", a description paragraph, a skill
+// caption with a pill list, a sentence restating the pills, "The sitting:", and three buttons.
+// Every card looked identical in weight, so nothing was scannable and the grid read as a wall.
+//
+// The face is now four things, in the order a student decides in: which batch, what it tests,
+// where they stand, what to do. Three of the four differ per batch or per student; the
+// description and the sitting did not differ enough to earn the space, so they moved one click
+// away rather than being deleted.
 function batchCard(batch,application){
   const card=document.createElement('article');card.className='batch-card batch-card-lg'+(batch.tier==='elite'?' is-elite':'');
   const top=document.createElement('div');top.className='batch-card-top';
   const h=document.createElement('h3');h.textContent=batch.name;top.append(h);
   const marks=document.createElement('div');marks.className='batch-card-marks';
-  // The match was computed, filtered on, and sorted by — but only ever DRAWN on the company
-  // card. Students were filtering by a number they could not see, which is what made the
-  // control read as broken rather than strict.
   marks.append(pill(batch.tier==='elite'?'Elite':'Open',batch.tier==='elite'?'batch-tier is-elite':'batch-tier'));
   top.append(marks);
   card.append(top);
-  const meta=document.createElement('div');meta.className='discover-meta';
-  if(batch.discipline)meta.append(discoverChip('Discipline',batch.discipline));
-  if(batch.partner_org)meta.append(discoverChip('Partner',batch.partner_org));
-  if(batch.season)meta.append(discoverChip('Season',batch.season));
-  if(meta.childElementCount)card.append(meta);
 
-  // What the batch is actually testing, in one line. This is the difference between a card
-  // that describes a subject and a card that tells you what the hour will ask of you.
+  // One sentence, and the only prose on the face. It is what the hour asks of you, which is the
+  // thing a subject name cannot tell you.
   if(batch.evaluates){
     const ev=document.createElement('p');ev.className='batch-evaluates';
     const k=document.createElement('b');k.textContent='Tests: ';
     ev.append(k,document.createTextNode(batch.evaluates));
     card.append(ev);
   }
-  if(batch.description){const p=document.createElement('p');p.className='discover-card-summary';p.textContent=batch.description;card.append(p);}
-  const ledger=batchSkillLedger(batch);if(ledger)card.append(ledger);
-  if(batch.compatibility&&batch.compatibility.why){
-    const why=document.createElement('p');why.className='batch-why';why.textContent=batch.compatibility.why;card.append(why);
-  }
+
+  const cover=batchCoverage(batch);if(cover)card.append(cover);
+
+  // Everything that describes the batch rather than the student's position in it.
+  const detail=document.createElement('div');detail.className='batch-detail';detail.hidden=true;
+
+  const meta=document.createElement('div');meta.className='discover-meta';
+  if(batch.discipline)meta.append(discoverChip('Discipline',batch.discipline));
+  if(batch.partner_org)meta.append(discoverChip('Partner',batch.partner_org));
+  if(batch.season)meta.append(discoverChip('Season',batch.season));
+  if(meta.childElementCount)detail.append(meta);
+
+  if(batch.description){const p=document.createElement('p');p.className='discover-card-summary';p.textContent=batch.description;detail.append(p);}
+  const ledger=batchSkillLedger(batch);
+  if(ledger)detail.append(batchDetailSection('Core skills this batch reads for',ledger));
+  // The number on the face, itemised. Shown where it is, rather than in a tooltip.
+  const breakdown=batchScoreBreakdown(batch);
+  if(breakdown)detail.append(batchDetailSection('How this score is built',breakdown));
+  const readiness=batchReadinessBlock(batch);
+  if(readiness)detail.append(batchDetailSection('What to work on for this batch',readiness));
   if(batch.simulation){
     const sim=document.createElement('p');sim.className='batch-sim';
     const k=document.createElement('b');k.textContent='The sitting: ';
     sim.append(k,document.createTextNode(batch.simulation));
-    card.append(sim);
+    detail.append(sim);
   }
-
-  // Expandable detail panel: who it's for, the kind of teams it feeds, and how the application works.
-  const detail=document.createElement('div');detail.className='batch-detail';detail.hidden=true;
   detail.append(batchDetailSection('Who this cohort is for',batchStudentProfile(batch)));
   const brief=batchBriefFor(batch);
   const role=state.dashboard?.profile?.role;
   if(brief){
     detail.append(batchVettingBlock(brief));
-    // Students get the bar + their standing; companies get the evaluation walkthrough.
     if(role==='student')detail.append(batchRequirementsBlock(brief,batchStandingFor(batch)));
     else detail.append(batchWorkflowBlock(brief));
   }
   detail.append(batchDetailSection('Where admitted students go',batchSampleCompanies(batch)));
   detail.append(batchDetailSection('How the application works',`Two parts, about 10 minutes total: a 90-second video answering a prompt we assign you when you start (so it stays spontaneous), and a few written questions about your interest in ${batchVertical(batch)}. An operator reviews every application by hand.`));
 
-  const actions=document.createElement('div');actions.className='discover-actions batch-actions';
-  const expand=document.createElement('button');expand.type='button';expand.className='portal-ghost compact batch-expand';expand.setAttribute('aria-expanded','false');
-  expand.append(document.createTextNode('Expand'));
-  expand.addEventListener('click',()=>{const open=detail.hidden;detail.hidden=!open;expand.setAttribute('aria-expanded',String(open));expand.firstChild.textContent=open?'Show less':'Expand';});
-  actions.append(expand);
-  // Before the application, not after. A student deciding whether to spend ninety minutes
-  // should be able to see what the ninety minutes contains.
+  // Moved off the face and into the panel. It was a third button competing with the two that
+  // decide anything, and a student reads it once while comparing, not on every card.
   const what=document.createElement('button');
   what.type='button';what.className='portal-ghost compact';
   what.textContent='What you are assessed on';
   what.addEventListener('click',()=>openAssessmentDisclosure(batch));
-  actions.append(what);
+  detail.append(what);
+
+  const actions=document.createElement('div');actions.className='discover-actions batch-actions';
+  const expand=document.createElement('button');expand.type='button';expand.className='portal-ghost compact batch-expand';expand.setAttribute('aria-expanded','false');
+  expand.append(document.createTextNode('Details'));
+  expand.addEventListener('click',()=>{const open=detail.hidden;detail.hidden=!open;expand.setAttribute('aria-expanded',String(open));expand.firstChild.textContent=open?'Hide':'Details';});
+  actions.append(expand);
   if(application){
-    // A status pill reads as a label. A check reads as done, which is what a student wants to
-    // see at a glance across twenty-five cards.
     const done=document.createElement('span');
     done.className='batch-applied is-'+application.status;
     const mark=document.createElement('i');mark.setAttribute('aria-hidden','true');
-    mark.textContent=['accepted','submitted','reviewing'].includes(application.status)?'\u2713':'\u00b7';
+    mark.textContent=['accepted','submitted','reviewing'].includes(application.status)?'✓':'·';
     const text=document.createElement('span');
     text.textContent=BATCH_STATUS_LABELS[application.status]||titleCase(application.status);
     done.append(mark,text);
     actions.append(done);
   }else{
     // While the vetting is being rebuilt nobody can apply, so the button says so instead of
-    // being a live control that fails on submit. A disabled button with no explanation reads
-    // as broken; one that says what is happening reads as deliberate.
+    // being a live control that fails on submit.
     const closed=state.dashboard?.batchApplicationsOpen===false;
     const learn=document.createElement('button');learn.type='button';
     learn.className=closed?'portal-ghost compact':'portal-primary compact';
-    learn.textContent=closed?'Opening soon':'Learn more & apply';
+    learn.textContent=closed?'Opens soon':'Learn more & apply';
     learn.disabled=closed||batch.status!=='open';
-    if(closed)learn.title=state.dashboard?.batchesClosedMessage||'Applications open again soon.';
+    if(closed)learn.title=state.dashboard?.batchesClosedMessage||'Batches are not open yet.';
     else if(batch.status!=='open')learn.title='Applications are closed for this batch.';
     learn.addEventListener('click',()=>openBatchApply(batch));
     actions.append(learn);
@@ -3662,7 +3732,26 @@ function renderPortfolio(){const root=$('#portfolioContent');root.replaceChildre
   bar.append(search,vsel,skl,msel,vchk,count);
   const results=document.createElement('div');results.className='talent-grid';results.id='talentResults';
   root.append(bar,results);renderTalentCards();return;}
-  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){renderCredibility(root,state.dashboard);renderTechnicalProfile(root,state.dashboard);renderFinanceProfile(root,state.dashboard);renderSimulations(root,state.dashboard);renderVideoLibrary(root);renderPayoutSetup(root);renderProofOfWork(root,profile);}
+  $('#portfolioEyebrow').textContent=profile?.role==='student'?'Your evidence':'Partner identity';$('#portfolioTitle').textContent=profile?.role==='student'?'Portfolio':'Organization profile';$('#portfolioIntro').textContent=profile?.role==='student'?'Shape how signed-in company members understand your work.':'Keep the context behind every project accurate.';$('#editProfile').hidden=false;const article=document.createElement('article');article.className='portfolio-profile';const avatarNote=document.createElement('p');avatarNote.className='avatar-note';avatarNote.setAttribute('aria-live','polite');const avatar=portfolioAvatar(profile,avatarNote);const details=document.createElement('div');const h=document.createElement('h2');h.textContent=profile?.display_name||'Complete your profile';if(profile?.identity_verified)h.append(identityBadge());const headline=document.createElement('p');headline.textContent=[profile?.headline,profile?.school_name||profile?.organization_name,profile?.graduation_year&&`Class of ${profile.graduation_year}`].filter(Boolean).join(' · ')||'Add a headline and member details.';const bio=document.createElement('p');bio.textContent=profile?.bio||'Add a short introduction to help the right people understand your work.';const skills=document.createElement('div');skills.className='skills';(profile?.skills||[]).forEach(skill=>skills.append(pill(skill)));details.append(h,headline,bio,skills,avatarNote);article.append(avatar,details);root.append(article);if(profile?.role==='student'){
+    // Where you stand, open and first. It is the one panel that answers "how am I doing",
+    // which is the question the tab gets opened for.
+    renderCompatibility(root,state.dashboard);
+    // Everything that IS the evidence, open by default because it is the work.
+    portalGroup(root,'Your evidence','What you have shown, and what still needs showing',body=>{
+      renderTechnicalProfile(body,state.dashboard);
+      renderTechnicalVertical(body,state.dashboard);
+      renderFinanceProfile(body,state.dashboard);
+      renderCoursework(body,state.dashboard);
+    },{open:true});
+    // Standing and recordings: read occasionally, not on every visit.
+    portalGroup(root,'Standing and recordings','Credibility, proof of work, and your video library',body=>{
+      renderCredibility(body,state.dashboard);
+      renderProofOfWork(body,profile);
+      renderVideoLibrary(body);
+    });
+    // Money. Touched once, then never again until something lands.
+    portalGroup(root,'Getting paid','Where payouts go',body=>{ renderPayoutSetup(body); });
+  }
   if(profile?.role==='company'){renderCompanyVerification(root);renderAtsPanel(root);renderCompanyReferrals(root);renderCompanyProfileForm(root);}}
 
 // Live credibility meter — a checklist of REAL, earned signals (identity, completeness, proven
@@ -3762,7 +3851,7 @@ function paintAssessmentDisclosure(data,batch){
   const foot=$('#assessmentFoot'); foot.replaceChildren();
   if(state.dashboard?.batchApplicationsOpen===false){
     const closed=document.createElement('p');closed.className='asd-closed';
-    closed.textContent='Applications open again soon. Nothing to do yet.';
+    closed.textContent='Batches are not open yet. The first ones open soon.';
     foot.append(closed);
   } else if(plan.id){
     const go=document.createElement('button');go.type='button';go.className='portal-primary';
@@ -4348,6 +4437,475 @@ function renderFinanceEntries(root,d){
   sec.append(list);root.append(sec);
 }
 
+// ── Live open roles (§30) ─────────────────────────────────────────────────────────────
+// The first thing in this portal that is not Covenda's own inventory. Pulled nightly from
+// company job boards, ranked against what the student has listed and shown.
+//
+// The fit number gets the same treatment as everywhere else: it is stated to be arithmetic
+// rather than a model, the components are one click away, and there is no probability of any
+// kind attached to it, because nothing has been placed yet and a probability would be invented.
+// The company's own mark, with initials behind it.
+//
+// Source is Google's favicon service rather than Clearbit: Clearbit's logo API is gone (the
+// endpoint no longer resolves), and a company's own favicon is the one asset that is reliably
+// public, correctly sized, and served by somebody whose job is serving it.
+//
+// referrerpolicy="no-referrer" so the request does not tell Google which page a student is on.
+//
+// ── DECIDED: real marks stay ──────────────────────────────────────────────────────────
+// This was raised twice and settled twice, so it is not an open question. The blueprint's
+// rule 14 says not to imply a company is a partner without a relationship; the founder's call
+// is that real marks stay, and the line under the list ("These are public postings, not
+// Covenda partners") is what keeps that rule satisfied rather than the absence of logos.
+// That sentence is therefore load-bearing, not decoration: it is the reason this is allowed.
+// A test asserts it survives. Do not remove either half without raising it again.
+//
+// The monogram is not a fallback bolted on afterwards; it is what the tile IS, with the logo
+// painted over it. So a blocked request, an ad blocker, or a company with no favicon degrades
+// to the initial rather than to an empty square.
+function companyMark(name, domain){
+  const el=document.createElement('span');el.className='role-mark';
+  const words=String(name||'?').replace(/[^A-Za-z0-9 ]/g,' ').trim().split(/\s+/).filter(Boolean);
+  const initials=(words.length>1?words[0][0]+words[1][0]:(words[0]||'?')[0]||'?').toUpperCase();
+  el.textContent=initials;
+  el.setAttribute('aria-hidden','true');
+  if(!domain)return el;
+  const img=document.createElement('img');
+  img.className='role-logo';
+  img.src=`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+  img.alt='';
+  img.width=22;img.height=22;
+  img.loading='lazy';
+  img.decoding='async';
+  img.referrerPolicy='no-referrer';
+  img.addEventListener('error',()=>img.remove(),{once:true});
+  el.append(img);
+  return el;
+}
+
+// One row builder, used by the default list and by the resume result. Two builders is how the
+// two lists start disagreeing about what a role looks like.
+function roleRow(role,r){
+  const li=document.createElement('li');li.className='role';
+  const a=document.createElement('a');a.className='role-link';
+  a.href=role.url||'#';a.target='_blank';a.rel='noopener noreferrer';
+  a.append(companyMark(role.company,(r.domains||{})[role.board_token]));
+  const body=document.createElement('span');body.className='role-body';
+  const title=document.createElement('span');title.className='role-title';title.textContent=role.title;
+  const meta=document.createElement('small');meta.className='role-meta';
+  const where=String(role.location||'').split(/;|\u2022/)[0].trim();
+  meta.textContent=[role.company,where,role.remote?'Remote':null].filter(Boolean).join(' · ');
+  if(role.location&&role.location!==where)meta.title=role.location;
+  body.append(title,meta);a.append(body);
+  if(role.fit&&role.fit.score!==null&&role.fit.score!==undefined){
+    const fit=document.createElement('span');fit.className='role-fit';
+    const num=document.createElement('b');num.textContent=String(role.fit.score);
+    const cap=document.createElement('small');cap.textContent='fit';
+    fit.append(num,cap);fit.title=role.fit.why||'';
+    a.append(fit);
+  }
+  li.append(a);return li;
+}
+
+function renderOpenRoles(root,d){
+  const r=d?.roles; if(!r)return;
+  const panel=document.createElement('section');panel.className='panel-card tech-panel';
+  const head=document.createElement('div');head.className='tech-head';
+  const h=document.createElement('h3');h.textContent='Open roles';
+  const sub=document.createElement('p');
+  head.append(h,sub);panel.append(head);
+
+  const items=r.items||[];
+  if(!items.length){
+    sub.textContent=r.note||'Nothing on the boards right now.';
+    // An empty list with no way to act on it reads as broken. This pulls the boards now rather
+    // than waiting for the overnight job, which is the difference between "nothing yet" and
+    // "nothing, and no way to find out".
+    const pull=document.createElement('button');
+    pull.type='button';pull.className='portal-ghost compact';pull.textContent='Check the boards now';
+    const note=document.createElement('p');note.className='role-match-msg';note.setAttribute('aria-live','polite');
+    pull.addEventListener('click',async()=>{
+      pull.disabled=true;note.textContent='Reading the boards…';
+      try{
+        const out=await portalRequest({method:'POST',body:JSON.stringify({action:'refresh-roles'})});
+        if(out.skipped){ note.textContent=out.reason; pull.disabled=false; return; }
+        note.textContent=`Found ${out.found}, wrote ${out.written}.`;
+        await loadDashboard();
+      }catch(error){ note.textContent=error.message; pull.disabled=false; }
+    });
+    panel.append(pull,note);
+    root.append(panel);return;
+  }
+  sub.textContent=`${r.total} open student ${r.total===1?'role':'roles'} on the boards we watch.`;
+
+  // Paste a resume and the list re-ranks against it. This is the entry point the panel was
+  // missing: fit was computed from skills a student had already typed into their profile, so a
+  // student who had typed nothing saw nothing, which is exactly the student it should help.
+  const box=document.createElement('div');box.className='role-match';
+  const ta=document.createElement('textarea');
+  ta.className='role-match-input';ta.rows=3;ta.maxLength=20000;
+  ta.placeholder='Paste your resume to see which of these you already line up with.';
+  const go=document.createElement('button');go.type='button';go.className='portal-ghost compact';
+  go.textContent='Find matches';
+  const msg=document.createElement('p');msg.className='role-match-msg';msg.setAttribute('aria-live','polite');
+  box.append(ta,go,msg);
+  panel.append(box);
+
+  const list=document.createElement('ul');list.className='role-list';
+
+  go.addEventListener('click',async()=>{
+    msg.textContent='Reading…';
+    try{
+      const out=await portalRequest({method:'POST',body:JSON.stringify({action:'match-resume',text:ta.value})});
+      // What it read is shown before what it concluded. A student who disagrees with the list
+      // can see the reason in one line rather than guessing at it.
+      msg.textContent=`Read: ${out.skills.join(', ')}. ${out.note}`;
+      list.replaceChildren();
+      const found=out.matches||[];
+      if(!found.length){ msg.textContent+=' Nothing on the boards lines up with that yet.'; return; }
+      for(const role of found) list.append(roleRow(role,r));
+    }catch(error){ msg.textContent=error.message; }
+  });
+
+  for(const role of items) list.append(roleRow(role,r));
+
+  panel.append(list);
+
+  const note=document.createElement('p');note.className='tech-note-line';
+  // Stated plainly, because a row of real company marks on a Covenda page reads as a roster of
+  // partners and none of these companies has agreed to anything.
+  note.textContent=(r.note||'')+' These are public postings, not Covenda partners.';
+  panel.append(note);
+  root.append(panel);
+}
+
+
+// ── Grouping the student portfolio (§27) ──────────────────────────────────────────────
+// It rendered nine panels in a flat stack: credibility, technical evidence, finance evidence,
+// compatibility, coursework, simulations, video library, payouts, proof of work. Every one of
+// them the same weight, so the tab opened as an undifferentiated column and the thing a
+// student actually came for was somewhere down it.
+//
+// Native <details> rather than a JS accordion: it is keyboard operable, screen-reader
+// announced, and findable by browser find-in-page even while closed, none of which a
+// div-and-click-handler gets for free.
+function portalGroup(root,title,detail,build,{open=false}={}){
+  const box=document.createElement('details');box.className='portal-group';box.open=open;
+  const head=document.createElement('summary');
+  const label=document.createElement('span');label.className='portal-group-title';label.textContent=title;
+  head.append(label);
+  if(detail){const d=document.createElement('span');d.className='portal-group-note';d.textContent=detail;head.append(d);}
+  box.append(head);
+  const body=document.createElement('div');box.append(body);
+  build(body);
+  // A group that produced nothing is not shown at all. An empty accordion is worse than a
+  // missing one: it reads as broken rather than as not applicable yet.
+  if(!body.childElementCount)return;
+  root.append(box);
+}
+
+// ── Compatibility standing (§26) ──────────────────────────────────────────────────────
+// The score was computed, filtered on, and sorted by, and a student could see it only as a
+// number on a card with a sentence under it. This is the panel that explains it.
+//
+// It shows the arithmetic because the arithmetic is the honest part: four components, fixed
+// weights, no model. `api/compatibility.js` says in its own header that it is "deterministic
+// arithmetic over hand-calibrated constants", so there is nothing to hide behind.
+//
+// ── WHY THERE IS NO TREND LINE ────────────────────────────────────────────────────────
+// Nothing stores a score over time. A chart of the last six weeks would be drawn from data
+// that does not exist, so there isn't one. What moves instead, and what this tracks, is the
+// split between points bought with typed skills and points bought with evidence.
+//
+// That split is the whole point. Three of the four components are earned by typing, and a
+// tracker that just said "raise your score" would be coaching students to type more skills.
+// The evidenced component is the one a company weights, so the panel surfaces the skills
+// earning points with nothing behind them, and routes to the evidence forms.
+function renderCompatibility(root,d){
+  const c=d?.compatibility; if(!c)return;
+  const panel=document.createElement('section');panel.className='panel-card tech-panel';
+  const head=document.createElement('div');head.className='tech-head';
+  const h=document.createElement('h3');h.textContent='How you line up';
+  const sub=document.createElement('p');
+  head.append(h,sub);panel.append(head);
+
+  if(!c.scored){
+    sub.textContent=c.note||'Add skills to your profile and every batch will show how it lines up.';
+    root.append(panel);return;
+  }
+
+  sub.textContent=`Scored against ${c.scored} ${c.scored===1?'batch':'batches'}. Best is ${c.best.name} at ${c.best.score}, median ${c.median}.`;
+
+  // The split. This is the headline, not the score: a student with 80 points of typed skills
+  // and 0 of evidence is in a much weaker position than the number suggests.
+  const split=document.createElement('div');split.className='compat-split';
+  const bar=document.createElement('div');bar.className='compat-bar';bar.setAttribute('aria-hidden','true');
+  const total=c.statedPoints+c.evidencedPoints;
+  const shown=document.createElement('i');shown.className='is-evidence';
+  const typed=document.createElement('i');typed.className='is-stated';
+  shown.style.flexGrow=String(c.evidencedPoints||0);
+  typed.style.flexGrow=String(c.statedPoints||0);
+  bar.append(shown,typed);
+  const legend=document.createElement('p');legend.className='compat-legend';
+  legend.textContent=total
+    ? `${c.evidencedPoints} of your ${total} points are backed by evidence. The rest come from skills you typed.`
+    : 'No points yet.';
+  split.append(bar,legend);
+  panel.append(split);
+
+  // The ceiling, stated plainly. A student should know the evidence component is capped and
+  // where they sit against that cap, rather than assuming more evidence always adds more score.
+  const ceiling=document.createElement('p');ceiling.className='tech-note-line';
+  ceiling.textContent=`Evidence can contribute at most ${c.evidenceCeiling} points across these batches, and you are at ${c.evidencedPoints}. The score is fixed arithmetic over four components, not a model, and no company sees it.`;
+
+  // The route. Each skill here is already earning coverage points on batches with nothing
+  // behind it, so one artifact moves several cards at once.
+  if(c.unbacked.length){
+    const sec=document.createElement('div');sec.className='tech-section';
+    const cap=document.createElement('h4');cap.textContent='Matched, but nothing behind it';
+    const list=document.createElement('ul');list.className='tech-entries';
+    for(const item of c.unbacked){
+      const li=document.createElement('li');
+      const top=document.createElement('div');top.className='tech-entry-top';
+      const b=document.createElement('b');b.textContent=item.skill;
+      top.append(b,techTierChip('claimed'));
+      const meta=document.createElement('small');
+      meta.textContent=`Earning points on ${item.batches} ${item.batches===1?'batch':'batches'}. One artifact covers all of them.`;
+      li.append(top,meta);list.append(li);
+    }
+    sec.append(cap,list);panel.append(sec);
+  }
+
+  panel.append(ceiling);
+  root.append(panel);
+}
+
+// ── What to work on, per batch (§39) ──────────────────────────────────────────────────
+// Sits directly under "How this score is built", because the score is the claim and this is
+// what to do about it. Separating them would mean reading a number on one screen and its
+// remedy on another.
+//
+// Top three expanded, the rest folded. The list is ordered by the batch's own weighting, so
+// the first three are the ones that move the number most; twelve rows would be a wall.
+function batchReadinessBlock(batch){
+  const plan=batch?.readiness;
+  if(!plan||!plan.items||!plan.items.length)return null;
+  const wrap=document.createElement('div');wrap.className='readiness';
+
+  const head=document.createElement('p');head.className='readiness-standing';
+  head.textContent=`${plan.standing.evidenced} of ${plan.standing.total} shown with evidence, ${plan.standing.covered} listed.`;
+  wrap.append(head);
+
+  const row=item=>{
+    const li=document.createElement('li');li.className='readiness-item is-'+item.have;
+    const top=document.createElement('div');top.className='tech-entry-top';
+    const b=document.createElement('b');b.textContent=item.skill;
+    // "Listed, not shown" is a different job from "not yet", so the chip says which.
+    top.append(b,pill(item.have==='stated'?'Listed, not shown':'Not yet','artifact-pill'));
+    const build=document.createElement('small');build.className='readiness-build';
+    build.textContent=item.build;
+    const why=document.createElement('small');why.className='readiness-why';why.textContent=item.why;
+    li.append(top,build,why);
+    return li;
+  };
+
+  const lead=document.createElement('ul');lead.className='tech-entries';
+  for(const item of plan.items.slice(0,3)) lead.append(row(item));
+  wrap.append(lead);
+
+  const rest=plan.items.slice(3);
+  if(rest.length){
+    const more=document.createElement('details');more.className='readiness-more';
+    const cap=document.createElement('summary');cap.textContent=`${rest.length} more`;
+    const list=document.createElement('ul');list.className='tech-entries';
+    for(const item of rest) list.append(row(item));
+    more.append(cap,list);wrap.append(more);
+  }
+
+  const note=document.createElement('p');note.className='readiness-note';
+  note.textContent=plan.note;
+  wrap.append(note);
+  return wrap;
+}
+
+// The per-batch breakdown, shown inside a batch's Details panel where the number it explains
+// is on screen. Four rows, each with its points, its ceiling, and whether it was bought with
+// a typed skill or with evidence.
+function batchScoreBreakdown(batch){
+  const parts=batch?.compatibility?.components||[];
+  if(!parts.length)return null;
+  const list=document.createElement('ul');list.className='compat-parts';
+  for(const part of parts){
+    const li=document.createElement('li');li.className='compat-part is-'+part.backed;
+    const top=document.createElement('div');top.className='compat-part-top';
+    const name=document.createElement('b');name.textContent=part.label;
+    const pts=document.createElement('span');pts.className='compat-part-pts';
+    pts.textContent=`${part.points} / ${part.max}`;
+    top.append(name,pts);
+    const track=document.createElement('span');track.className='compat-part-track';track.setAttribute('aria-hidden','true');
+    const fill=document.createElement('i');
+    fill.style.width=(part.max?Math.round((part.points/part.max)*100):0)+'%';
+    track.append(fill);
+    const detail=document.createElement('small');detail.textContent=part.detail;
+    li.append(top,track,detail);list.append(li);
+  }
+  return list;
+}
+
+// ── Coursework (§25) ──────────────────────────────────────────────────────────────────
+// The panel a student sees for the thing they already have. It leads with the to-build list
+// rather than the course list, because the courses are the input and the build list is the
+// product. A panel that led with "6 courses" would be a transcript with a nicer font.
+//
+// No grade field anywhere in here, and none is asked for. The model has no way to check one
+// and the table has no column to hold it, so a field for it would be collecting something
+// that could only ever be decoration or a lie.
+function courseGuide(){ return state.dashboard?.coursework?.courseGuide||{}; }
+
+// Populates the datalist from the payload rather than a second copy of the course list here.
+// Thirty-two course names in two files is how the list a student picks from stops matching
+// the one the server accepts.
+function paintCourseOptions(){
+  const list=$('#courseTitleOptions'); if(!list)return;
+  list.replaceChildren();
+  for(const entry of Object.values(courseGuide())){
+    const o=document.createElement('option');o.value=entry.label;list.append(o);
+  }
+}
+
+// Fires on change rather than on input: one request when an entry is finished, not one per
+// keystroke. The student learns what the course cannot show BEFORE they save it, which is the
+// whole point of showing it at all.
+async function previewCourseTitle(){
+  const input=$('#courseTitle');
+  const explain=$('#courseExplain');
+  const limit=$('#courseLimit');
+  if(!input||!explain||!limit)return;
+  const title=input.value.trim();
+  explain.textContent='';limit.textContent='';
+  if(!title)return;
+  try{
+    const out=await portalRequest({method:'POST',body:JSON.stringify({action:'preview-course',title})});
+    if(!out.matched){
+      explain.textContent='Covenda has no mapping for that one yet, so it cannot be added.';
+      return;
+    }
+    explain.textContent=out.demonstrates||'';
+    limit.textContent=out.cannotShow?('What it cannot show: '+out.cannotShow):'';
+  }catch(error){ explain.textContent=error.message; }
+}
+
+function openCoursework(){
+  const dlg=$('#courseworkDialog'); if(!dlg)return;
+  paintCourseOptions();
+  const input=$('#courseTitle'); if(input) input.value='';
+  $('#courseExplain').textContent='';
+  $('#courseLimit').textContent='';
+  setDialogMessage('#courseworkMessage','');
+  dlg.showModal();
+}
+
+$('#courseTitle')?.addEventListener('change',previewCourseTitle);
+
+$('#courseworkForm')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const data=Object.fromEntries(new FormData(event.target).entries());
+  setDialogMessage('#courseworkMessage','');
+  try{
+    const out=await portalRequest({method:'POST',body:JSON.stringify({action:'save-coursework',title:data.title})});
+    // The limit is repeated on the way out, not only on the way in. It is the sentence a
+    // student needs when a company asks about the course, so it is worth reading twice.
+    if(out.cannotShow){
+      setDialogMessage('#courseworkMessage','Added. What it cannot show: '+out.cannotShow);
+      window.setTimeout(()=>$('#courseworkDialog').close(),3200);
+    } else { $('#courseworkDialog').close(); }
+    await loadDashboard();
+  }catch(error){ setDialogMessage('#courseworkMessage',error.message,true); }
+});
+
+function renderCoursework(root,d){
+  const c=d?.coursework; if(!c)return;
+  const courses=c.courses||[];
+  const panel=document.createElement('section');panel.className='panel-card tech-panel';
+  const head=document.createElement('div');head.className='tech-head';
+  const h=document.createElement('h3');h.textContent='Coursework';
+  const sub=document.createElement('p');
+  head.append(h,sub);panel.append(head);
+
+  if(!courses.length){
+    sub.textContent='Add the courses you have taken and Covenda turns each one into the work that would prove it.';
+    const add=document.createElement('button');
+    add.type='button';add.className='portal-primary compact tech-add';
+    add.textContent='Add your first course';
+    add.addEventListener('click',openCoursework);
+    panel.append(add);root.append(panel);return;
+  }
+
+  const plan=c.proving?.plan||[];
+  const total=c.proving?.total||0;
+  sub.textContent=`${courses.length} ${courses.length===1?'course':'courses'}, none of which counts as evidence yet. That is what the list below is for.`;
+
+  // The to-build list first. This is the output the ontology exists to produce: every
+  // competency a course exposed, and the specific work that would move it off self-reported.
+  if(plan.length){
+    const sec=document.createElement('div');sec.className='tech-section';
+    const cap=document.createElement('h4');cap.textContent='What would prove it';
+    const list=document.createElement('ul');list.className='tech-entries';
+    for(const item of plan){
+      const li=document.createElement('li');
+      const top=document.createElement('div');top.className='tech-entry-top';
+      const b=document.createElement('b');b.textContent=item.label;
+      top.append(b,techTierChip('claimed'));
+      const build=document.createElement('small');build.textContent=item.build;
+      li.append(top,build);list.append(li);
+    }
+    sec.append(cap,list);
+    if(total>plan.length){
+      // Never a silent truncation. A list that quietly stopped at eight would read as the
+      // whole gap when it is not.
+      const more=document.createElement('small');more.className='tech-more';
+      more.textContent=`Showing ${plan.length} of ${total}.`;
+      sec.append(more);
+    }
+    panel.append(sec);
+  }
+
+  // The courses themselves, second and plainer. They are the input, not the achievement.
+  const guide=courseGuide();
+  const sec=document.createElement('div');sec.className='tech-section';
+  const cap=document.createElement('h4');cap.textContent='Courses you listed';
+  const list=document.createElement('ul');list.className='tech-entries';
+  for(const course of courses){
+    const li=document.createElement('li');
+    const top=document.createElement('div');top.className='tech-entry-top';
+    const name=document.createElement('b');name.textContent=course.course_title;
+    top.append(name,techTierChip('claimed'));
+    const meta=document.createElement('small');
+    meta.textContent=guide[course.course_kind]?.cannotShow?('Cannot show: '+guide[course.course_kind].cannotShow):'';
+    const remove=document.createElement('button');
+    remove.type='button';remove.className='tech-entry-remove';remove.textContent='Remove';
+    remove.addEventListener('click',async()=>{
+      try{
+        await portalRequest({method:'POST',body:JSON.stringify({action:'delete-coursework',id:course.id})});
+        await loadDashboard();
+      }catch(error){ remove.textContent=error.message||'Could not remove'; remove.disabled=true; }
+    });
+    li.append(top,meta,remove);list.append(li);
+  }
+  sec.append(cap,list);panel.append(sec);
+
+  const note=document.createElement('p');note.className='tech-note-line';
+  note.textContent=c.profile?.note||'';
+  panel.append(note);
+
+  const add=document.createElement('button');
+  add.type='button';add.className='portal-ghost compact tech-add';
+  add.textContent='Add another course';
+  add.addEventListener('click',openCoursework);
+  panel.append(add);
+  root.append(panel);
+}
+
 // The same artifacts read differently depending on who is reading. This is the one place a
 // student can see that: pick a firm type and the profile reorders, with nothing hidden.
 function renderFinanceProfile(root,d){
@@ -4430,6 +4988,135 @@ function renderFinanceProfile(root,d){
   add.textContent='Add another artifact';
   add.addEventListener('click',openFinanceEvidence);
   panel.append(add);
+  root.append(panel);
+}
+
+// ── Software & AI vertical dashboard (§36) ────────────────────────────────────────────
+// The reference implementation the blueprint asks for: breadth, depth, agency, builder
+// history, AI engineering, collaboration, verification, gaps, and the next thing to build.
+//
+// There is deliberately no engineering quality score. Nine dimensions reported separately is
+// the whole point: a single number would be the thing the document forbids, and it would also
+// be unearned, because nothing has been placed and there is no outcome to calibrate against.
+//
+// Every section states its own absence rather than disappearing when empty. A dashboard that
+// hides what you have not done yet reads as complete when it is not.
+function techSection(title, build, emptyText){
+  const sec=document.createElement('div');sec.className='tech-section';
+  const cap=document.createElement('h4');cap.textContent=title;
+  sec.append(cap);
+  const body=document.createElement('div');
+  build(body);
+  if(!body.childElementCount){
+    const p=document.createElement('p');p.className='tech-empty';p.textContent=emptyText;
+    body.append(p);
+  }
+  sec.append(body);
+  return sec;
+}
+
+function renderTechnicalVertical(root,d){
+  const t=d?.technical;
+  if(!t||d?.profile?.role!=='student')return;
+  const panel=document.createElement('section');panel.className='panel-card tech-panel';
+  const head=document.createElement('div');head.className='tech-head';
+  const h=document.createElement('h3');h.textContent='Technical profile';
+  const sub=document.createElement('p');
+  sub.textContent='Nine readings, reported separately. There is no single engineering score, and there will not be one.';
+  head.append(h,sub);panel.append(head);
+
+  // Breadth: surface area, not a rank. Covenda has no population to rank against.
+  panel.append(techSection('Technical breadth',body=>{
+    if(!(t.breadth||[]).length)return;
+    const chips=document.createElement('div');chips.className='skills';
+    for(const dom of t.breadth) chips.append(pill(`${dom.label} · ${dom.evidencedCount||dom.count||0}`,'artifact-pill'));
+    body.append(chips);
+    const n=document.createElement('small');n.className='tech-sub';
+    n.textContent=`${t.domainsTouched} of ${t.domainsAvailable} domains touched.`;
+    body.append(n);
+  },'No domains evidenced yet.'));
+
+  // Depth: the strongest verified capabilities, with the tier that backs each one.
+  panel.append(techSection('Technical depth',body=>{
+    const list=document.createElement('ul');list.className='tech-entries';
+    for(const item of (t.depth||[]).slice(0,6)){
+      const li=document.createElement('li');
+      const top=document.createElement('div');top.className='tech-entry-top';
+      const b=document.createElement('b');b.textContent=item.skill||item.label;
+      top.append(b,techTierChip(item.tier||'claimed'));
+      li.append(top);
+      if(item.why){const s2=document.createElement('small');s2.textContent=item.why;li.append(s2);}
+      list.append(li);
+    }
+    if(list.childElementCount)body.append(list);
+  },'Nothing has risen above self-reported yet.'));
+
+  // Agency: what was started without being asked.
+  panel.append(techSection('Agency',body=>{
+    const bits=[];
+    if(t.repeatedBuilder)bits.push('Built more than once');
+    if(t.ownedOutright)bits.push(`${t.ownedOutright} owned outright`);
+    for(const sig of (t.unprompted||[])) bits.push(sig.label||sig);
+    if(!bits.length)return;
+    const chips=document.createElement('div');chips.className='skills';
+    for(const b of bits) chips.append(pill(b,'artifact-pill'));
+    body.append(chips);
+  },'Nothing yet shows work started without being asked.'));
+
+  // Builder history: the sequence, which is what shows whether somebody kept going.
+  panel.append(techSection('Builder history',body=>{
+    const items=t.history?.items||[];
+    if(!items.length)return;
+    const list=document.createElement('ul');list.className='tech-entries';
+    for(const item of items.slice(0,10)){
+      const li=document.createElement('li');
+      const top=document.createElement('div');top.className='tech-entry-top';
+      const b=document.createElement('b');b.textContent=item.title;
+      top.append(b,techTierChip(item.tier));
+      const meta=document.createElement('small');
+      meta.textContent=[item.typeLabel,item.at?new Date(item.at).toLocaleDateString(undefined,{month:'short',year:'numeric'}):'No date given'].join(' · ');
+      li.append(top,meta);list.append(li);
+    }
+    body.append(list);
+  },'Nothing shipped has been recorded yet.'));
+
+  // AI engineering: what was AI-assisted and whether the student can account for it.
+  panel.append(techSection('AI engineering',body=>{
+    if(!t.aiAssisted)return;
+    const p=document.createElement('p');p.className='tech-sub';
+    p.textContent=`${t.aiAssisted} ${t.aiAssisted===1?'entry discloses':'entries disclose'} AI assistance. What counts is the account of what you changed and why, not whether a tool was used.`;
+    body.append(p);
+  },'No AI-assisted work disclosed. Disclosing it is not a penalty.'));
+
+  // Collaboration: derived from the evidence, not asked for as a checkbox.
+  panel.append(techSection('Collaboration',body=>{
+    const kinds=t.collaboration?.kinds||[];
+    if(!kinds.length)return;
+    const chips=document.createElement('div');chips.className='skills';
+    for(const k of kinds) chips.append(pill(`${k.label} · ${k.count}`,'artifact-pill'));
+    body.append(chips);
+  },(t.collaboration&&t.collaboration.note)||'Nothing here yet shows work done with other people.'));
+
+  // Verification: the honest split.
+  panel.append(techSection('Verification',body=>{
+    const p=document.createElement('p');p.className='tech-sub';
+    const total=(t.entries||[]).length||t.history?.count||0;
+    p.textContent=`${t.unverified||0} of your claims are still self-reported. Self-reported is excluded from matching.`;
+    body.append(p);
+  },'Nothing recorded yet.'));
+
+  // Gaps: every one carries a route, or it is a rejection with extra words.
+  panel.append(techSection('Current gaps',body=>{
+    const gaps=t.gaps||[];
+    if(!gaps.length)return;
+    const list=document.createElement('ul');list.className='tech-gaps';
+    for(const g of gaps){const li=document.createElement('li');li.textContent=g.ask||g;list.append(li);}
+    body.append(list);
+  },'No gaps identified yet, which usually means there is not enough here to read.'));
+
+  const note=document.createElement('p');note.className='tech-note-line';
+  note.textContent='Reported as nine separate readings on purpose. A single score would hide which part of it you would need to argue with.';
+  panel.append(note);
   root.append(panel);
 }
 
@@ -5744,7 +6431,7 @@ const videoStudio=(function(){
     if(!running)return;
     ctx.clearRect(0,0,w,h);
     const night=document.documentElement.dataset.theme==='night';
-    const dot=night?'217,169,78':'180,123,32';
+    const dot=night?'217,169,78':'192,138,34';
     for(const p of points){
       p.x+=p.vx;p.y+=p.vy;
       if(p.x<-20)p.x=w+20; else if(p.x>w+20)p.x=-20;

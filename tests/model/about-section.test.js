@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 
 const html = readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
-const about = html.slice(html.indexOf('class="about-section"'), html.indexOf('class="final-cta"'));
+const about = html.slice(html.indexOf('id="about"'), html.indexOf('class="final-cta"'));
 
 // The nav said "About" and scrolled to a product explainer. A link that does not go where it
 // says is the cheapest kind of broken.
@@ -17,8 +17,10 @@ test('the About nav link lands on the About section', () => {
 test('it says who built it and who it is for', () => {
   assert.match(about, /built by/i);
   assert.match(about, /students/i);
-  assert.match(about, /domain expertise/i);
-  assert.match(about, /17, 18 and 19/);
+  // The founders are named. "We have both worked at startups" was a story about nobody; the
+  // section is About Us, so the us has to be in it.
+  assert.match(about, /Tyler and Dylan/);
+  assert.match(about, /\b19\b/, 'their age is what makes the story land');
 });
 
 // The standing rule across this site: no traction we do not have.
@@ -34,8 +36,11 @@ test('the About section claims nothing Covenda has not done', () => {
   for (const pattern of forbidden) {
     assert.ok(!pattern.test(about), `About section makes an unfounded claim: ${pattern}`);
   }
-  // And it states the limitation rather than leaving it to be inferred.
-  assert.match(about, /has not placed a student yet/i);
+  // The volunteered "we have not placed anyone yet" line was removed on request. The rule that
+  // remains is the stronger one: nothing here may CLAIM traction that does not exist. Declining
+  // to state a limitation is not the same as asserting a falsehood, and the list above catches
+  // the second. The equivalent disclosure still appears where placements could be inferred,
+  // which is the recruiter band, and there is a separate test for it.
 });
 
 test('the Instagram link is real, external, and safe to open', () => {
@@ -63,20 +68,29 @@ test('every style the markup asks for exists', () => {
 });
 
 // The numbering is gone. It asserted a sequence the content does not have: the third line is
-// what follows from the first two, not a third step, and three boxed digits over three identical
-// bold-title-plus-grey-body rows is the shape that reads as generated.
-//
-// Removing the counter also removes the fragility the old version of this test guarded, since a
-// CSS counter skips display:none and was only correct while all three items rendered.
-test('the argument is two premises and a conclusion, not three numbered steps', () => {
-  assert.equal((about.match(/class="about-premise"/g) || []).length, 2);
-  assert.equal((about.match(/class="about-conclusion"/g) || []).length, 1);
-  assert.ok(!/counter-reset/.test(css.match(/\.about-points\s*\{[^}]*\}/)[0]), 'the counter is back');
-  assert.ok(!/\.about-points li::before/.test(css), 'the decorative digit is back');
-  // The conclusion is separated and set in the display face, so it does not read as a third peer.
-  const conclusion = css.match(/\.about-conclusion\s*\{[^}]*\}/)[0];
-  assert.match(conclusion, /border-top/);
-  assert.match(conclusion, /font-family: var\(--font-display\)/);
+// The premise/conclusion block was cut: with the founder story now doing that work in the left
+// column, keeping it meant saying the same thing twice in two different type treatments. What
+// remains in the aside is the manifesto, and its structure is the thing worth guarding.
+test('the manifesto is paired opposites, in one typeface', () => {
+  const pairs = about.match(/<dt>/g) || [];
+  assert.equal(pairs.length, 3, 'the manifesto is three oppositions');
+  assert.equal((about.match(/<dd>/g) || []).length, 3, 'every position needs its answer');
+  assert.ok(!/class="about-premise"/.test(about), 'the premise block is back alongside the story');
+
+  // One serif in this section, and it is the thesis. Five font switches in a single column is
+  // what read as busy: the close was in the display face purely for emphasis.
+  const close = css.match(/\.manifesto-close\s*\{[^}]*\}/)[0];
+  assert.match(close, /font-family: var\(--font-sans\)/, 'the manifesto close is a second serif again');
+  // One serif in this section and it is the heading. type.css is explicit that the display
+  // face is for display sizes only and the sans carries h3 downward; four font switches in two
+  // columns was the section disagreeing with its own type system.
+  for (const cls of ['about-thesis', 'about-motto', 'manifesto-close']) {
+    const rule = css.match(new RegExp(`\\.${cls}\\s*\\{[^}]*\\}`))[0];
+    assert.match(rule, /font-family: var\(--font-sans\)/, `.${cls} reintroduces a second typeface`);
+  }
+  const heading = css.match(/\.about-lede h2\s*\{[^}]*\}/);
+  assert.ok(!heading || !/font-family: var\(--font-sans\)/.test(heading[0]),
+    'the heading lost the one serif the section is meant to have');
 });
 
 // The point of these: "consistent" has to be checkable, or it drifts the moment someone edits
@@ -102,7 +116,9 @@ test('the heading reuses the shared rule rather than restating it', () => {
 
 test('shared components are used by name, not reimplemented', () => {
   assert.match(about, /class="feature-kicker"/, 'the eyebrow should be the site eyebrow');
-  assert.match(about, /class="stat-note"/, 'the caveat line should be the site caveat component');
+  // The caveat line was removed on request, so there is no longer a .stat-note here to check.
+  // The guard that outlives it is the one below: if a caveat ever returns to this section it
+  // must be the shared component rather than a second style that drifts from it.
   assert.ok(!/class="about-kicker"/.test(about) && !/\.about-kicker/.test(css), 'a duplicate eyebrow style survives');
   assert.ok(!/class="about-note"/.test(about) && !/\.about-note/.test(css), 'a duplicate caveat style survives');
 });

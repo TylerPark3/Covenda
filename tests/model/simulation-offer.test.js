@@ -81,7 +81,11 @@ test('the offer cards do not collide with the runner dialog styles', () => {
 });
 
 test('the simulations panel is rendered for students only', () => {
-  assert.match(js, /renderSimulations\(root,state\.dashboard\)/);
+  // Moved out of the portfolio and onto the batches tab: a sitting is what a batch puts you
+  // through, so it belongs beside the batches rather than filed under evidence.
+  const batches = js.slice(js.indexOf('function renderBatches()'), js.indexOf('function renderCompanyBatches'));
+  assert.match(batches, /renderSimulations\(\w+,\s*state\.dashboard\)/,
+    'simulations are no longer rendered on the batches tab');
   const panel = js.slice(js.indexOf('function renderSimulations'), js.indexOf('function renderTechnicalProfile'));
   assert.match(panel, /role!=='student'/);
 });

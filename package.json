@@ -13,7 +13,8 @@
     "compat:calibrate": "node scripts/calibrate-thresholds.js",
     "compat:test": "node scripts/test-compatibility.js",
     "ship": "node scripts/ship.mjs",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.110.7",
