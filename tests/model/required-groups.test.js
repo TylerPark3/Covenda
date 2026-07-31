@@ -47,3 +47,25 @@ test('no other form hard-codes a group check', () => {
   const hardCoded = validateStep.match(/input\[name="[a-zA-Z]+"\]:checked/g) || [];
   assert.deepEqual(hardCoded, [], `these bypass the declared mechanism: ${hardCoded.join(', ')}`);
 });
+
+// Design review, live: 19 of 23 controls on the public student form are required and not one of
+// them said so. Badging every field would be noise; badging none is what let a student fill in
+// everything he could see and still be told he had missed something. The default is stated once,
+// on the rail, and the exceptions carry their own mark.
+test('the form says that answers are required by default', () => {
+  assert.match(html, /Everything is required unless marked optional\./);
+  assert.match(css, /\.form-rail-required/);
+});
+
+test('every genuinely optional field is marked, and the honeypot is not', () => {
+  const form = html.slice(html.indexOf('id="studentForm"'), html.indexOf('</form>', html.indexOf('id="studentForm"')));
+  for (const label of ['Portfolio or work sample URL', 'Record a 1-minute intro', 'Video transcript or captions']) {
+    const at = form.indexOf(label);
+    assert.notEqual(at, -1, `${label} exists`);
+    assert.match(form.slice(at, at + 260), /Optional/i, `${label} is marked optional`);
+  }
+  // The honeypot must stay unmarked and unlabelled — it is a spam trap, not a question.
+  const honey = form.slice(form.indexOf('class="honeypot"'), form.indexOf('class="honeypot"') + 200);
+  assert.doesNotMatch(honey, /field-optional/, 'the honeypot is never dressed up as a real field');
+});
+
