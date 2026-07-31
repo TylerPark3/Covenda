@@ -103,17 +103,50 @@ async function portalRequest(options={}, retry=true) {
   return result;
 }
 
-function showAuth(message='',error=false) { $('#portalAuth').hidden=false; $('#portalLoading').hidden=true; $('#memberShell').hidden=true; if(message)setLoginMessage(message,error); }
+// The onboarding overlay is hidden alongside the shell. It sits above everything, so leaving
+// it up while showing the sign-in screen puts an empty modal over the login form.
+function showAuth(message='',error=false) { $('#portalAuth').hidden=false; $('#portalLoading').hidden=true; $('#memberShell').hidden=true; $('#onboardFlow').hidden=true; if(message)setLoginMessage(message,error); }
 function showLoading() { $('#portalAuth').hidden=true; $('#portalLoading').hidden=false; $('#memberShell').hidden=true; }
 function showMember() { $('#portalAuth').hidden=true; $('#portalLoading').hidden=true; $('#memberShell').hidden=false; }
 
+// A rendering bug is not an authentication failure, and must never be reported as one. The
+// fetch and the render are caught separately: only the fetch can tell us anything about the
+// session, and portalRequest already handles the one case that can (401) by clearing the
+// session itself. Everything after the fetch is our own code running against a payload we
+// already have — if it throws, the member is signed in and stays signed in.
 async function loadDashboard() {
   showLoading();
+  let dashboard;
   try {
-    const dashboard=await portalRequest(); state.dashboard=dashboard; showMember(); renderDashboard(); startMessagePolling(); consumeProjectSeed();
+    dashboard = await portalRequest();
+  } catch(error) {
+    if(session().accessToken) showAuth(error.message,true);
+    return;
+  }
+  state.dashboard = dashboard;
+  try {
+    showMember(); renderDashboard(); startMessagePolling(); consumeProjectSeed();
     if (shouldOnboard(dashboard.profile)) startOnboarding();
     else handleCheckoutReturn();
-  } catch(error) { if(session().accessToken) showAuth(error.message,true); }
+  } catch(error) {
+    // Whatever half-rendered, the workspace is still the right place to be. Say so where the
+    // member can see it, and leave the raw message in the console for us.
+    console.error('Portal render failed',error);
+    $('#onboardFlow').hidden=true; showMember();
+    setShellMessage('Part of your workspace could not be displayed. Reload to try again — you are still signed in.');
+  }
+}
+
+// A banner across the top of the member shell, created on demand so the markup does not
+// carry an element that is empty in the normal case.
+function setShellMessage(message) {
+  const shell=$('#memberShell'); if(!shell) return;
+  let banner=$('#shellMessage');
+  if(!banner){
+    banner=document.createElement('p');banner.id='shellMessage';banner.className='shell-message';
+    banner.setAttribute('role','status');shell.prepend(banner);
+  }
+  banner.textContent=message;banner.hidden=!message;
 }
 
 function profileCompletion(profile) {
@@ -5544,6 +5577,19 @@ const ONBOARD_SCREENS=[
   {id:'handoff',kind:'handoff',headline:"Let's find your first project.",sub:"Takes about 3 minutes. We'll guide you through it."},
 ];
 let onboardState={step:0,values:{role:'student',verticals:[],workTypes:[]},saving:false};
+// The multi screens feed their stored value straight to `new Set(...)`, which throws on any
+// non-iterable — and that throw happens while the workspace is opening. Every value is
+// coerced to the shape its screen expects before it gets near a renderer.
+const ONBOARD_LIST_FIELDS=new Set(['verticals','workTypes']);
+const ONBOARD_TEXT_FIELDS=['role','displayName','schoolName','graduationYear','headline','bio','skills','avatarUrl'];
+function toList(value){return Array.isArray(value)?value.filter(v=>typeof v==='string'):[];}
+function onboardValues(raw){
+  if(!raw||typeof raw!=='object'||Array.isArray(raw)) return {};
+  const out={};
+  for(const field of ONBOARD_LIST_FIELDS) if(field in raw) out[field]=toList(raw[field]);
+  for(const field of ONBOARD_TEXT_FIELDS) if(field in raw&&['string','number'].includes(typeof raw[field])) out[field]=String(raw[field]);
+  return out;
+}
 function onboardKey(){const d=state.dashboard;return 'covendaOnboard:'+(d?.user?.id||d?.user?.email||'anon');}
 function persistOnboard(){try{localStorage.setItem(onboardKey(),JSON.stringify({step:onboardState.step,values:onboardState.values}));}catch{}}
 function clearOnboard(){try{localStorage.removeItem(onboardKey());}catch{}}
@@ -5569,7 +5615,12 @@ function startOnboarding(){
     skills:Array.isArray(profile?.skills)?profile.skills.join(', '):'',
     avatarUrl:profile?.avatar_url||'',
   },saving:false};
-  try{const raw=localStorage.getItem(onboardKey());if(raw){const saved=JSON.parse(raw);onboardState.values={...onboardState.values,...saved.values};onboardState.step=Math.min(Math.max(saved.step||0,0),ONBOARD_SCREENS.length-1);}}catch{}
+  // localStorage is not trusted input. It survives every deploy, so a value written by an
+  // older build — or by anything else on the origin — is still here on the next sign-in, and
+  // a resumed step points straight at the screen that reads it. Restore through the same
+  // shape check the fresh state was built with, so a bad blob loses its contents rather than
+  // taking the workspace down with it.
+  try{const raw=localStorage.getItem(onboardKey());if(raw){const saved=JSON.parse(raw);onboardState.values={...onboardState.values,...onboardValues(saved?.values)};onboardState.step=Math.min(Math.max(Number(saved?.step)||0,0),ONBOARD_SCREENS.length-1);}}catch{}
   $('#portalAuth').hidden=true;$('#portalLoading').hidden=true;$('#memberShell').hidden=true;$('#onboardFlow').hidden=false;
   renderOnboard();
 }
@@ -5642,7 +5693,7 @@ function renderOnboardProfileScreen({values,controls,body,msg}){
   controls.append(avatarWrap,upload,caption,label);body.append(msg,cta);return input;
 }
 function renderOnboardMultiScreen({screen,values,controls,body,msg}){
-  const selected=new Set(values[screen.field]||[]);
+  const selected=new Set(toList(values[screen.field]));
   const grid=document.createElement('div');grid.className='onboard-cards onboard-cards-multi';let first=null;
   const cta=onboardCta('Continue',()=>{if(selected.size)onboardNext();},{disabled:!selected.size});
   screen.options.forEach((opt,idx)=>{const card=document.createElement('button');card.type='button';card.className='onboard-card onboard-chip'+(selected.has(opt)?' is-selected':'');card.setAttribute('aria-pressed',selected.has(opt)?'true':'false');const ic=ONBOARD_ICONS[opt];if(ic)card.append(icon(ic));const b=document.createElement('strong');b.textContent=opt;card.append(b);card.addEventListener('click',()=>{if(selected.has(opt))selected.delete(opt);else selected.add(opt);card.classList.toggle('is-selected');card.setAttribute('aria-pressed',selected.has(opt)?'true':'false');onboardState.values[screen.field]=[...selected];persistOnboard();cta.disabled=!selected.size;});grid.append(card);if(idx===0)first=card;});

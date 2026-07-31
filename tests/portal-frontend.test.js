@@ -121,3 +121,47 @@ test('gold fills stay reserved while gold lines carry structure', () => {
   // And night mode gets its own ring value, because the day glow disappears on black.
   assert.match(styles, /\[data-theme="night"\][\s\S]{0,300}rgba\(217,169,78,\.5\)/);
 });
+
+// ── Regression: a render failure must not read as a failure to sign in ────────────────
+// A corrupt `covendaOnboard:*` blob in localStorage made `new Set(values[field])` throw while
+// the workspace was opening. loadDashboard caught it, and its one catch treated every error as
+// an auth failure — so the raw "object is not iterable (cannot read property
+// Symbol(Symbol.iterator))" was printed under the sign-in button of a member who was already
+// signed in, and stayed there across reloads because localStorage kept the bad value.
+test('a render failure never reports itself as an authentication failure', () => {
+  // The fetch and the render are caught separately. Only the fetch can say anything about the
+  // session, so only the fetch may fall back to the sign-in screen.
+  assert.match(script, /let dashboard;\s*try \{\s*dashboard = await portalRequest\(\);\s*\} catch\(error\) \{\s*if\(session\(\)\.accessToken\) showAuth\(error\.message,true\);\s*return;/);
+  // The render's own catch keeps the member in the workspace.
+  assert.match(script, /console\.error\('Portal render failed',error\)/);
+  assert.match(script, /you are still signed in/);
+  assert.match(script, /A rendering bug is not an authentication failure/);
+  // The onboarding overlay sits above everything, so the sign-in screen must dismiss it.
+  assert.match(script, /function showAuth[^\n]*\$\('#onboardFlow'\)\.hidden=true/);
+});
+
+test('onboarding state from localStorage is coerced before it reaches a renderer', () => {
+  // The multi screens hand their stored value to `new Set(...)`, which throws on a non-iterable.
+  assert.match(script, /const selected=new Set\(toList\(values\[screen\.field\]\)\)/);
+  assert.doesNotMatch(script, /new Set\(values\[screen\.field\]\|\|\[\]\)/);
+
+  // Exercise the sanitiser itself rather than trusting the shape of the source.
+  const source = script.match(/const ONBOARD_LIST_FIELDS=[\s\S]*?\n\}\n/);
+  assert.ok(source, 'onboardValues helpers should be present');
+  const { toList, onboardValues } = new Function(`${source[0]}\nreturn {toList,onboardValues};`)();
+
+  // The exact shape that locked a member out: a field stored as a plain object.
+  assert.deepEqual(toList({ 0: 'Research' }), []);
+  assert.doesNotThrow(() => new Set(toList({ 0: 'Research' })));
+  assert.deepEqual(onboardValues({ verticals: { a: 1 } }).verticals, []);
+  // Anything else that cannot be spread into a Set is neutralised too.
+  for (const bad of [null, 'Research', 42, true, undefined]) assert.deepEqual(toList(bad), []);
+  // Good values still survive, or resuming onboarding would silently lose work.
+  assert.deepEqual(onboardValues({ verticals: ['Software & AI'], workTypes: ['Research'] }),
+    { verticals: ['Software & AI'], workTypes: ['Research'] });
+  assert.deepEqual(onboardValues({ displayName: 'Tyler', graduationYear: 2027 }),
+    { displayName: 'Tyler', graduationYear: '2027' });
+  // Unknown keys are dropped, and a non-object blob yields nothing rather than throwing.
+  assert.deepEqual(onboardValues({ isAdmin: true }), {});
+  for (const bad of [null, undefined, 'x', 7, []]) assert.deepEqual(onboardValues(bad), {});
+});
