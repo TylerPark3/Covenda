@@ -1894,7 +1894,11 @@ for (const form of [studentForm, companyForm]) {
   if (form === studentForm) renderStudentSpecializations(form);
   form.addEventListener('input', () => saveDraft(form));
   form.addEventListener('change', () => saveDraft(form));
-  $('[data-clear-draft]', form).addEventListener('click', () => {
+  // Optional: the markup dropped [data-clear-draft], and this line assumed it was still there.
+  // Top-level wiring runs as one uninterrupted block, so the null deref did not just cost the
+  // clear-draft button — it aborted app.js and left every listener below unattached, which is
+  // every nav control, dialog and CTA on the page.
+  $('[data-clear-draft]', form)?.addEventListener('click', () => {
     discardDraft(form);
     showToast('Local draft cleared.');
   });
