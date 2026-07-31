@@ -74,3 +74,23 @@ test('tier is carried by text, not only colour', () => {
   assert.match(card, /titleCase\(c\.evidenceBand\|\|'self_reported'\)\+' evidence'/, 'the band is spelled out');
   assert.match(css, /\.shortlist-band\.is-self_reported/, 'and styled distinctly');
 });
+
+// Found by reviewing this feature after it shipped. The security review had already named this
+// as S-07 — "a student appearing on a founder's shortlist without having consented to visibility
+// is the single worst failure this product can have" — and the first version of the loader did
+// exactly that. An operator proposing someone is not the same as that person agreeing to be
+// shown, and the student directory has always gated on this column.
+test('a student who has not made their profile visible is never shown', () => {
+  assert.match(loader, /\.eq\('portfolio_visibility', 'members'\)/,
+    'the same gate the student directory uses');
+  assert.match(loader, /if \(!profile\) continue;/,
+    'and a non-visible candidate is omitted, not rendered without a name');
+});
+
+// Rendering a card with the name blanked would still disclose that a specific person was
+// shortlisted, which is the fact being withheld.
+test('the omission is total, not cosmetic', () => {
+  const card = loader.slice(loader.indexOf('for (const row of rows)'), loader.indexOf('return [...grouped'));
+  assert.ok(card.indexOf('if (!profile) continue;') < card.indexOf('list.push('),
+    'the candidate is dropped before any field is assembled');
+});

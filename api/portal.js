@@ -2718,15 +2718,27 @@ export async function loadCompanyShortlists(member) {
   if (!rows.length) return [];
 
   const studentIds = [...new Set(rows.map(r => r.student_user_id))];
+  // Ch. 29.5 visibility, enforced here and not merely in the operator's UI. A student who has
+  // not set their portfolio visible has not agreed to be shown to a company, and an operator
+  // proposing them does not substitute for that. The student directory already gates on exactly
+  // this column; a shortlist showing someone the directory would hide is the same leak by
+  // another route.
+  //
+  // Filtering after the match query rather than inside it is deliberate: the operator's decision
+  // still exists and is still auditable, it simply does not reach the company.
   const profiles = await optional(member.supabase.from('member_profiles')
-    .select('user_id, display_name, headline, school_name, verticals, work_types, skill_signals, referral_verified, club_confirmed')
+    .select('user_id, display_name, headline, school_name, verticals, work_types, skill_signals, referral_verified, club_confirmed, portfolio_visibility')
+    .eq('portfolio_visibility', 'members')
     .in('user_id', studentIds), [], 'member_profiles');
   const byId = new Map((profiles || []).map(p => [p.user_id, p]));
   const titleById = new Map((projects || []).map(p => [p.id, p.title]));
 
   const grouped = new Map();
   for (const row of rows) {
-    const profile = byId.get(row.student_user_id) || {};
+    const profile = byId.get(row.student_user_id);
+    // Not visible, or no profile row: omit entirely. Rendering a nameless card would still tell
+    // the company that a specific person was shortlisted, which is the thing being withheld.
+    if (!profile) continue;
     const list = grouped.get(row.opportunity_id) || [];
     list.push({
       matchId: row.id,
