@@ -1688,6 +1688,10 @@
         <p class="form-rail-brand"><svg><use href="#icon-shield"/></svg>Covenda</p>
         <div class="form-rail-promise">
           <h2 id="studentDialogTitle">Show what you can <em>do</em>.</h2>
+            <!-- 19 of 23 controls on this form are required. Badging every one of them is noise,
+                 and badging none of them is what let a student fill in everything he could see and
+                 still be told he had missed a field. Said once, here, where the eye starts. -->
+            <p class="form-rail-required">Everything is required unless marked optional.</p>
         </div>
         <div class="form-progress" aria-label="Student form progress">
           <span class="is-active"><i>1</i><strong>You</strong></span>
@@ -1762,7 +1766,7 @@
             <label class="wide">Portfolio or work sample URL <span>Optional</span><input name="studentPortfolio" type="url" placeholder="https://"></label>
             <div class="video-record wide">
               <p class="video-intro-label">One-minute video intro <span>Optional</span></p>
-              <button type="button" class="outline-button video-record-primary" data-video-record-toggle><svg><use href="#icon-user"/></svg>Record a 1-minute intro</button>
+              <button type="button" class="outline-button video-record-primary" data-video-record-toggle><svg><use href="#icon-user"/></svg>Record a 1-minute intro <small class="field-optional">Optional</small></button>
               <div class="video-recorder" data-video-recorder hidden></div>
               <details class="video-link-fallback">
                 <summary>Prefer to paste a link?</summary>

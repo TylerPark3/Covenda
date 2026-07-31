@@ -6693,3 +6693,8 @@ textarea:focus-visible {
   .js-reveal .pillar { opacity: 1; translate: none; transition: none; border-top-color: var(--ink); }
   .js-reveal .pillar::after { display: none; }
 }
+
+/* Said once on the rail instead of badging nineteen fields. A form where almost everything is
+   required should tell you that, not make you discover it one refusal at a time. */
+.form-rail-required { margin: 10px 0 0; color: rgba(255,255,255,.62); font-size: var(--text-caption); line-height: var(--lh-caption); }
+.field-optional { margin-left: 6px; color: var(--soft); font-size: var(--text-caption); font-weight: var(--weight-regular); }
