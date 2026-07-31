@@ -90,9 +90,12 @@ Everything here **already exists in the repository**. V1 requires almost no new 
 - Outcome/completion recording → Work Record
 
 **Build (small)**
-1. **Shortlist object** — company + 5 students + written reasoning per candidate. The one genuinely missing primitive. Today's model has applications (student→company); V1 needs the reverse.
-2. **Outcome form** — what happened, who was interviewed, who was hired, was the shortlist relevant. Ch. 32's north star cannot be measured without it.
-3. **Gap analysis view** — reuse existing readiness/evidence-tier logic, reframed as *"what evidence is missing for this kind of role."*
+
+> **Superseded by the schema audit in `03_V1_SPEC.md` §0.** All three items below already exist as tables: `matches` (shortlist, with `human_decision` and a DB constraint requiring `human_rationale`), `placement_outcomes` (outcome), and the existing readiness/evidence-tier logic (gap analysis). V1 is a **wiring** problem, not a construction problem. `placement_outcomes` in particular has no UI in either portal or admin, which is the single most important gap. D6 is amended accordingly; the spec governs.
+
+1. ~~**Shortlist object**~~ → exists as `matches`
+2. ~~**Outcome form**~~ → exists as `placement_outcomes`, unwired
+3. ~~**Gap analysis view**~~ → exists as readiness/evidence-tier logic, needs reframing
 
 **Collapse (debt that will bite)**
 4. **One evidence ladder.** `api/evidence.js` and `portal.js`'s `studentEvidenceTier` are two competing definitions of the same concept. Fix before any new evidence UI. Two ladders means two truths about what "verified" means.
