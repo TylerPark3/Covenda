@@ -115,14 +115,19 @@ async function loadDashboard() {
     else handleCheckoutReturn();
   } catch(error) {
     if(!session().accessToken) return;
+    // Always leave the real fault somewhere a person can read it. An earlier version of this
+    // catch replaced the message with friendlier wording and swallowed the only evidence of
+    // what actually broke, which made the next failure undiagnosable from the outside — the
+    // exact situation this line exists to prevent.
+    console.error('[covenda] portal failed to load', error);
     // A crash while rendering is not an authentication failure. Sending a signed-in member to
-    // the sign-in screen with a raw JavaScript message asks them to fix, by signing in again,
-    // the one thing signing in again cannot touch. Saved onboarding progress is both the state
-    // most likely to be bad and the only part safe to drop, so clear it and say what to do —
-    // otherwise a reload replays the same crash forever.
+    // the sign-in screen asks them to fix, by signing in again, the one thing signing in again
+    // cannot touch. Saved onboarding progress is the state most likely to be bad and the only
+    // part safe to drop, so clear it — but say what actually went wrong alongside, because a
+    // reload only helps when the saved progress really was the cause.
     if(error instanceof TypeError||error instanceof RangeError||error instanceof ReferenceError){
       clearOnboard();
-      showAuth('The portal could not finish loading, so the saved progress behind it was cleared. Reload the page to continue.',true);
+      showAuth(`The portal hit an error while loading: ${error.message}. Saved progress was cleared — reload to retry. If this repeats, the details are in the browser console.`,true);
       return;
     }
     showAuth(error.message,true);

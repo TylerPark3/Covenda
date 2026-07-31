@@ -70,3 +70,12 @@ test('a render crash does not present as a sign-in failure', () => {
   assert.match(fn, /error instanceof TypeError/, 'a client-side crash is distinguished from an auth failure');
   assert.match(fn, /clearOnboard\(\)/, 'and the state that caused it is dropped so a reload can recover');
 });
+
+// Friendlier wording that drops the cause is a downgrade, not an improvement. The first version
+// of the catch above did exactly that: it replaced the message with reassurance, and the next
+// failure arrived with no evidence attached and nothing to debug from a screenshot.
+test('the real fault is never swallowed', () => {
+  const fn = src.slice(src.indexOf('async function loadDashboard'), src.indexOf('function profileCompletion'));
+  assert.match(fn, /console\.error\(/, 'the underlying error must reach the console');
+  assert.match(fn, /\$\{error\.message\}/, 'and must stay visible to whoever is looking at the screen');
+});
