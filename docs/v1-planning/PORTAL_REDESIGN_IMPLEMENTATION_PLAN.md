@@ -264,3 +264,189 @@ Reply **A**, **B**, or **C**.
 **Status: DONE_WITH_CONCERNS.** Plan complete, nothing implemented.
 
 **Concerns:** single-voice review (no Codex); no authenticated session, so every acceptance test involving a signed-in student is unverified by me; and the design direction this implements was itself built from markup rather than a running portal, since no screenshot arrived.
+
+---
+
+# Addendum — outputs the first pass owed and did not produce
+
+The first run of this plan compressed. Checked against the skill's own Pre-Gate Verification list it failed on: Phase 2 skipped despite UI scope, no architecture diagram, no test-plan artifact, no error/rescue or failure-modes registries, no dream-state delta, no consensus tables, no TODOS. Produced below.
+
+**Voices, restated:** `[codex-unavailable]` — binary not installed. Every consensus table is therefore **single-voice**. A single voice agreeing with itself is not consensus, so the tables record one column and say so rather than implying agreement that was never tested.
+
+---
+
+## Phase 1 — outputs that were missing
+
+### Dream state delta
+
+```
+CURRENT        13 blocks at one weight · 4 progress systems · main column 724px of 1440
+               8 nav destinations · 4 non-actionable badges · rail 360px
+
+THIS PLAN      1 next action · 1 progress model · main column ~1150px
+               6 destinations · 1 badge · no rail
+               STILL: no authenticated verification, no analytics events
+
+12-MONTH       dashboard is a queue driven by real shortlists and outcomes;
+IDEAL          "next action" comes from the pilot's data, not a static checklist
+```
+
+**Delta:** this plan closes the crowding gap and leaves the *intelligence* gap open. The NEXT card is a rules-based checklist. In the ideal it is driven by what companies actually did with this student. That requires the pilot, not more UI.
+
+### Error & rescue registry
+
+| Failure | Student sees | Rescue | Exists? |
+|---|---|---|---|
+| Dashboard fetch fails | Sign-in screen + real message + `portal.js:LINE:COL` | Reload; `clearOnboard()` self-heal | ✅ shipped today |
+| One section throws | That section shows `.section-error`; page survives | `buildSection` isolation | ✅ shipped today |
+| `setupModel` throws | NEXT card is the section that fails; rest renders | `buildSection` | ✅ inherited |
+| Focus target missing after `setView` | Panel switches, no scroll | Fall back to panel top, never throw | ⬜ **new, must build** |
+| Skills write fails | Inline error, input preserved | Existing `portalRequest` catch pattern | ⬜ **new** |
+| Nav alias missing | Click goes nowhere — **worst case** | T1 covers every legacy value | ⬜ **new, T1** |
+| Offline | Generic failure | No retry layer today | ⬜ **deferred, flagged** |
+
+### Failure modes registry
+
+| Mode | Severity | Detection | Gap |
+|---|---|---|---|
+| Nav alias dropped → dead click | **Critical** | T1 | none once T1 lands |
+| Setup claims completion data does not support | **Critical** | T6 | none once T6 lands |
+| Rail removal hides a panel a student needed | High | manual | **no automated detection** — accepted |
+| Skills view shows a number | High | T10 | none |
+| Mobile overflow | Medium | T12 | none |
+| Contextual panel never appears (condition wrong) | Medium | T15 | partial — T15 checks absence, not correct appearance |
+
+**Critical gap:** nothing detects "a panel that should have appeared did not." Contextual visibility is only tested negatively. Accepted for V1 because the panels are additive and their absence is the pre-existing behaviour.
+
+---
+
+## Phase 2 — Design review *(skipped in the first pass; run here)*
+
+**Design scope completeness: 8/10.** The direction document specifies hierarchy, states, wireframes and a classification for every element. It does not specify motion, exact spacing tokens, or the collapsed/expanded animation of the setup disclosure.
+
+**`DESIGN.md`: absent.** The visual system exists only in `portal.css`. Noted in the consultation; still true.
+
+### Seven dimensions
+
+| # | Dimension | Score | Finding |
+|---|---|---|---|
+| 1 | Information hierarchy | **9/10** | One tier-1 element, explicit 5-tier priority model. The strongest part of the plan. |
+| 2 | Interaction states | **7/10** | Loading/empty/error/partial specified. **Offline and completed-project underspecified** → auto-decided: cover completed-project (fixture exists), defer offline (no retry layer). |
+| 3 | Visual consistency | **9/10** | Reuses type scale, gold accent, existing chips. Nothing new invented. |
+| 4 | Responsive strategy | **8/10** | Three widths defined; reuses the existing 82px collapse. Tab bar is new and unspecified in detail (icons, labels, active treatment). |
+| 5 | Accessibility | **7/10** | Disclosure semantics, `aria-current`, focus order and reduced motion all named. **Gap:** no skip link specified; tap-target audit assumed rather than measured. |
+| 6 | Specificity | **9/10** | Names real IDs (`#profileRing`, `#introPanel`), real widths, real files. Not generic patterns. |
+| 7 | Emotional arc | **6/10** | Weakest dimension. The plan makes the dashboard *calmer* but nothing makes it *rewarding*. Completing a setup step produces no acknowledgement. |
+
+**Auto-decided (P1 completeness):** add a success state to setup-step completion — the step marks done in place with a brief non-animated confirmation. Reduced-motion safe by construction. Small, and it is the difference between a checklist and a sense of progress.
+
+### Design consensus table
+
+```
+DESIGN VOICES — SINGLE VOICE (codex-unavailable)
+════════════════════════════════════════════════════════════
+  Dimension                      Claude   Codex   Consensus
+  ────────────────────────────── ──────── ─────── ──────────
+  1. Hierarchy serves the user?  YES      N/A     UNTESTED
+  2. States specified?           PARTIAL  N/A     UNTESTED
+  3. Responsive intentional?     YES      N/A     UNTESTED
+  4. A11y specified not aspirational? PARTIAL N/A UNTESTED
+  5. Specific not generic?       YES      N/A     UNTESTED
+  6. Ambiguity left for implementer? LOW  N/A     UNTESTED
+  7. Emotional arc?              WEAK     N/A     UNTESTED
+════════════════════════════════════════════════════════════
+UNTESTED, not CONFIRMED. One voice cannot corroborate itself.
+```
+
+---
+
+## Phase 3 — architecture diagram
+
+```
+                    ┌─────────────────┐
+                    │  portal.html    │  1 page, no routes
+                    └────────┬────────┘
+                             │
+                    ┌────────▼────────┐
+                    │   setView()     │ ← CHANGED: +alias map, +focus opt
+                    │  8→6 views      │
+                    └────────┬────────┘
+                             │
+        ┌────────────────────┼────────────────────┐
+        │                    │                    │
+   ┌────▼─────┐      ┌───────▼───────┐    ┌──────▼──────┐
+   │ member-  │      │  Home panel   │    │ Profile     │
+   │ nav      │      │               │    │ panel       │
+   │ CHANGED  │      │  ┌─────────┐  │    │  ┌────────┐ │
+   └──────────┘      │  │NEXT card│◄─┼────┼──│ skills │ │ NEW
+                     │  │  NEW    │  │    │  │ view   │ │ (branch 2)
+                     │  └────┬────┘  │    │  └────┬───┘ │
+                     │       │       │    │       │     │
+                     │  ┌────▼─────┐ │    │       │     │
+                     │  │ActiveWork│ │    │       │     │
+                     │  └──────────┘ │    │       │     │
+                     │  ┌──────────┐ │    │       │     │
+                     │  │Recommend │ │    │       │     │
+                     │  └──────────┘ │    │       │     │
+                     └───────┬───────┘    └───────┼─────┘
+                             │                    │
+              ┌──────────────▼──────────┐  ┌──────▼──────────┐
+              │  setupModel(dashboard)  │  │ presentationBand│
+              │  NEW · pure · read-only │  │ EXISTING        │
+              └──────────────┬──────────┘  └─────────────────┘
+                             │
+              ┌──────────────▼──────────────────────┐
+              │ EXISTING, unchanged:                │
+              │ buildSection · portalGroup ·        │
+              │ techSection · armedButton ·         │
+              │ emptyList · asList · TIERS          │
+              └─────────────────────────────────────┘
+```
+
+**Coupling:** `setupModel` is pure and reads the dashboard payload. It has no writes and no API calls, which is why it is testable in isolation and why T5/T6 are cheap. Nothing new depends on anything new except the NEXT card depending on `setupModel`.
+
+**Security:** no new surface. No new endpoints, no new tables, no auth change. `setupModel` reads fields the client already receives.
+
+### Eng consensus table
+
+```
+ENG VOICES — SINGLE VOICE (codex-unavailable)
+════════════════════════════════════════════════════════════
+  Dimension                      Claude   Codex   Consensus
+  ────────────────────────────── ──────── ─────── ──────────
+  1. Architecture sound?         YES      N/A     UNTESTED
+  2. Test coverage sufficient?   YES      N/A     UNTESTED
+  3. Performance risks?          NONE     N/A     UNTESTED
+  4. Security threats?           NONE NEW N/A     UNTESTED
+  5. Error paths handled?        PARTIAL  N/A     UNTESTED
+  6. Deployment risk?            LOW      N/A     UNTESTED
+════════════════════════════════════════════════════════════
+```
+
+**Performance:** examined for N+1 and render cost. `setupModel` is O(1) over a payload already in memory. Removing the rail *reduces* DOM nodes. No new network calls. Nothing flagged.
+
+---
+
+## Cross-phase themes
+
+**Theme: accessibility is specified but never measured.** Flagged in Phase 2 (dimension 5, 7/10) and Phase 3 (error registry). Both note tap targets and focus order are *asserted* rather than verified. The public form already has a 42px target against the 44px guidance, so the assumption is known to fail elsewhere. **High-confidence signal** even from one voice, because it is corroborated by a measurement taken earlier today rather than by a second opinion.
+
+**Theme: nothing here is verified while signed in.** Present in every phase. Not a plan defect; a standing limitation of this whole session.
+
+---
+
+## Deferred (TODOS)
+
+Written to `TODOS.md` (created — the repo had none).
+
+---
+
+## Decision audit trail — addendum
+
+| # | Phase | Decision | Class | Principle | Rationale |
+|---|---|---|---|---|---|
+| 10 | Design | Cover completed-project state | Mechanical | P1 | `verifiedCard` exists; a fixture is cheap |
+| 11 | Design | Defer offline/retry | Mechanical | P3 | No retry layer exists; building one is separate scope |
+| 12 | Design | Add success feedback on step completion | **Taste** | P1 | Dimension 7 scored 6/10; a checklist with no acknowledgement is the weakest part of the design |
+| 13 | Eng | Accept no detection for "panel should have appeared" | **Taste** | P3 | Only negative coverage; panels are additive so absence equals today's behaviour |
+| 14 | Eng | Defer multi-tab and screen-reader coverage | Mechanical | P3 | No shared tab state; no AT harness — cannot automate honestly |
