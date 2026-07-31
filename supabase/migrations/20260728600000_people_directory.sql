@@ -17,9 +17,14 @@
 -- identities on a name match would eventually merge two real people who happen to share one,
 -- and that is not a mistake you can find after the fact.
 --
+-- ── WHY security_invoker ──────────────────────────────────────────────────────────────
+-- A view runs as its owner unless told otherwise, and the owner can read submissions — which
+-- anon and authenticated are explicitly revoked from. Without this, the view quietly returns
+-- the whole contact list to roles the table refuses. See 20260730300000_secure_people_views.
+--
 -- Idempotent: safe to re-run.
 
-create or replace view public.people_directory as
+create or replace view public.people_directory with (security_invoker = on) as
 with normalised as (
   select
     lower(trim(submitter_email)) as email,
@@ -66,7 +71,7 @@ comment on view public.people_directory is
   'One row per email over the submissions event log. Never merges two emails, however similar.';
 
 -- Likely-duplicate people, surfaced rather than merged. A human decides.
-create or replace view public.people_possible_duplicates as
+create or replace view public.people_possible_duplicates with (security_invoker = on) as
 select
   lower(trim(submitter_name)) as name_key,
   (array_agg(distinct submitter_name))[1] as name,
