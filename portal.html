@@ -80,17 +80,30 @@
     <aside class="member-nav">
       <a class="portal-brand" href="/"><img class="brand-mark-img" src="/assets/covenda-mark.svg" alt="" width="29" height="29">Covenda</a>
       <nav aria-label="Member workspace">
-        <button class="is-active" type="button" data-view="overview" data-roles="student company university"><svg><use href="#p-home"/></svg><span>Overview</span></button>
-        <button type="button" data-view="projects" data-roles="student company university"><svg><use href="#p-project"/></svg><span>My projects</span><b id="projectCount">0</b></button>
-        <button type="button" data-view="activity" data-roles="company university"><svg><use href="#p-inbox"/></svg><span>Submissions</span><b id="intakeCount">0</b></button>
-        <button type="button" data-view="discover" data-roles="student"><svg><use href="#p-compass"/></svg><span>Discover</span><b id="opportunityCount">0</b></button>
-        <button type="button" data-view="batches" id="batchesNav" data-roles="student company"><svg><use href="#p-spark"/></svg><span>Batches</span><b id="batchCount">0</b></button>
-        <button type="button" data-view="portfolio" data-roles="student company"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Portfolio</span></button>
+        <!-- Counts were removed from every item except Messages. A badge should mean something is
+             waiting for you; 25 batches is a catalogue, not an inbox. The counts still exist in
+             the payload and are shown inside the pages where there is room to say what they mean. -->
+        <button class="is-active" type="button" data-view="overview" data-roles="student company university"><svg><use href="#p-home"/></svg><span>Home</span></button>
+        <button type="button" data-view="projects" data-roles="student company university"><svg><use href="#p-project"/></svg><span id="projectsNavLabel">My work</span></button>
+        <button type="button" data-view="activity" data-roles="company university"><svg><use href="#p-inbox"/></svg><span>Submissions</span></button>
+        <button type="button" data-view="discover" data-roles="student"><svg><use href="#p-compass"/></svg><span>Opportunities</span></button>
+        <!-- Batches is a tab inside Opportunities for students; companies keep it as its own
+             destination, because their batch flow is unrelated to student discovery. -->
+        <button type="button" data-view="batches" id="batchesNav" data-roles="company"><svg><use href="#p-spark"/></svg><span>Batches</span></button>
+        <button type="button" data-view="portfolio" data-roles="student company"><svg><use href="#p-user"/></svg><span id="portfolioNavLabel">Profile</span></button>
         <button type="button" data-view="messages" data-roles="student company university"><svg><use href="#p-message"/></svg><span>Messages</span><b id="messageCount">0</b></button>
-        <button type="button" data-view="wallet" data-roles="student company university"><svg><use href="#p-wallet"/></svg><span>Wallet</span><b id="walletNavBalance">0</b></button>
+        <button type="button" data-view="wallet" data-roles="student company university"><svg><use href="#p-wallet"/></svg><span id="walletNavLabel">Earnings</span></button>
       </nav>
-      <button class="member-identity" type="button" data-view="portfolio" id="memberIdentity"><span id="memberInitial">C</span><div><strong id="memberNavName">Member</strong><small id="memberNavRole">Covenda</small></div></button>
-      <button class="member-signout" id="memberSignout" type="button"><svg><use href="#p-exit"/></svg>Sign out</button>
+      <!-- Account menu. Sign-out used to sit in primary navigation, competing with the six
+           destinations a student actually uses. It is now one disclosure away, which is where a
+           thing you press once every few weeks belongs. -->
+      <div class="member-account">
+        <button class="member-identity" type="button" id="memberIdentity" aria-expanded="false" aria-controls="memberAccountMenu"><span id="memberInitial">C</span><div><strong id="memberNavName">Member</strong><small id="memberNavRole">Covenda</small></div><svg class="member-account-caret" aria-hidden="true"><use href="#p-arrow"/></svg></button>
+        <div class="member-account-menu" id="memberAccountMenu" hidden>
+          <button type="button" data-view="portfolio"><svg><use href="#p-user"/></svg>Profile settings</button>
+          <button class="member-signout" id="memberSignout" type="button"><svg><use href="#p-exit"/></svg>Sign out</button>
+        </div>
+      </div>
     </aside>
 
     <header class="member-header">
@@ -109,24 +122,25 @@
         <div class="overview-grid">
           <div class="overview-main">
             <div class="welcome-row"><div><p class="eyebrow" id="welcomeDate">Your workspace</p><h1 id="welcomeTitle">Good afternoon.</h1><p id="welcomeCopy">Here is what is moving across your Covenda work.</p></div><button class="portal-primary" id="primaryAction" type="button"><svg><use href="#p-plus"/></svg><span>Complete profile</span></button></div>
+            <!-- Tier 1. The only primary CTA on the page. -->
+            <div id="nextActionMount"></div>
             <div class="company-segments" id="companySegments" hidden></div>
             <!-- companyBriefing() has answered these four questions since it was written; the
                  dashboard just never asked. Sits above the project list because "what is
                  waiting on me" outranks "what exists". -->
             <section class="briefing" id="briefingPanel" hidden></section>
-            <section class="focus-section"><div class="section-heading"><div><p class="eyebrow">Current work</p><h2 id="focusTitle">Where each project stands</h2></div><button type="button" data-view="projects">View all</button></div><div id="focusProject"></div></section>
-            <section class="plain-section"><div class="section-heading"><div><p class="eyebrow">At a glance</p><h2>What's moved recently</h2></div></div><div class="metrics-row" id="memberMetrics"></div></section>
-          </div>
-          <aside class="overview-rail">
-            <section class="profile-progress"><div class="progress-ring" id="profileRing"><strong>0%</strong></div><div><p class="eyebrow">Profile strength</p><h2 id="profileProgressTitle">Make a strong first impression</h2><p id="profileProgressCopy">A complete profile helps Covenda route the right work.</p><button type="button" data-view="portfolio">Edit profile <svg><use href="#p-arrow"/></svg></button></div></section>
+            <!-- Panels that were in the rail. Ordered by what they ask of you: these three are
+                 waiting on the member, so they sit above the tracker. -->
             <section class="panel-card intro-panel" id="introPanel" hidden></section>
             <section class="panel-card pipeline-panel" id="pipelinePanel" hidden></section>
             <section class="panel-card trial-start-panel" id="trialStartPanel" hidden></section>
+            <section class="focus-section"><div class="section-heading"><div><p class="eyebrow">Current work</p><h2 id="focusTitle">Where each project stands</h2></div><button type="button" data-view="projects">View all</button></div><div id="focusProject"></div></section>
+            <!-- Standing and history: context, not a request. Below the tracker. -->
             <section class="panel-card journey-panel" id="journeyPanel" hidden></section>
-            <section class="panel-card" id="milestonePanel" hidden></section>
             <section class="panel-card" id="verificationPanel" hidden></section>
-            <section class="rail-list"><div class="section-heading"><div><p class="eyebrow">Next up</p><h2>What you can do next</h2></div></div><ul id="nextActions"></ul></section>
-          </aside>
+            <section class="panel-card" id="milestonePanel" hidden></section>
+            <section class="plain-section"><div class="section-heading"><div><p class="eyebrow">At a glance</p><h2>What's moved recently</h2></div></div><div class="metrics-row" id="memberMetrics"></div></section>
+          </div>
         </div>
       </section>
 
@@ -150,6 +164,13 @@
       </section>
 
       <section class="portal-view" data-portal-view="discover">
+        <!-- Opportunities is one destination with two tabs for students. Batches used to be a
+             separate nav item carrying a badge of 25, which read as an inbox and was a
+             catalogue. Companies still reach Batches from their own nav. -->
+        <div class="opp-tabs" role="tablist" aria-label="Opportunities" data-student-only>
+          <button type="button" role="tab" aria-selected="true" class="is-active" data-opp-tab="discover">Open projects</button>
+          <button type="button" role="tab" aria-selected="false" data-opp-tab="batches">Batches</button>
+        </div>
         <div class="page-heading"><div><p class="eyebrow">Reviewed opportunities</p><h1>Open work that fits you</h1><p id="discoverCount">Projects appear here only after a company or university makes them available to members.</p></div></div>
         <div class="discover-tabs" id="discoverTabs" role="tablist">
           <button type="button" class="discover-tab is-active" data-tab="best" role="tab">Best match</button>
@@ -175,6 +196,10 @@
       </section>
 
       <section class="portal-view" data-portal-view="batches">
+        <div class="opp-tabs" role="tablist" aria-label="Opportunities" data-student-only>
+          <button type="button" role="tab" aria-selected="false" data-opp-tab="discover">Open projects</button>
+          <button type="button" role="tab" aria-selected="true" class="is-active" data-opp-tab="batches">Batches</button>
+        </div>
         <div class="page-heading"><div><p class="eyebrow">Curated cohorts</p><h1>Apply to a vetted batch today</h1><p id="batchIntro">Vetted, reviewed cohorts in a discipline. Apply once, an operator reviews every application, and admitted students are surfaced to partner companies.</p></div></div>
         <div class="batch-list" id="batchList"></div>
       </section>

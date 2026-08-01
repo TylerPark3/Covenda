@@ -89,7 +89,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .portal-view { display:none; padding:clamp(30px,4vw,58px); }
 .portal-view.is-active { display:block; animation:view-in .32s ease both; }
 @keyframes view-in { from { opacity:0; transform:translateY(7px); } }
-.overview-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(310px,360px); gap:clamp(35px,5vw,80px); max-width:none; margin:0 auto 0 0; }
+.overview-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:clamp(35px,5vw,80px); max-width:78ch; margin:0 auto 0 0; }
 .welcome-row,.page-heading,.section-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:22px; }
 .welcome-row h1,.page-heading h1 { margin:0; font-family:var(--font-display); font-weight: var(--weight-regular); font-size: var(--text-display); line-height: var(--lh-display); letter-spacing: var(--ls-display); }
 .welcome-row > div > p:last-child,.page-heading > div > p:last-child { max-width:96ch; margin:14px 0 0; color:var(--muted); font-size: var(--text-body); line-height: var(--lh-body); }
@@ -131,7 +131,6 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .is-highlighted { animation:highlightPulse 1.5s ease; }
 @keyframes highlightPulse { 0%,100%{ background:transparent; } 30%{ background:var(--gold-pale); } }
 @media (prefers-reduced-motion:reduce){ .is-highlighted { animation:none; } }
-.overview-rail { padding-top:9px; }
 .profile-progress { display:grid; gap:20px; padding:0 0 32px; border-bottom:1px solid var(--line); grid-template-columns:92px 1fr; }
 .progress-ring { --progress:0deg; display:grid; width:92px; height:92px; place-items:center; border-radius:50%; background:conic-gradient(var(--gold) var(--progress),#eeeae2 0); }
 .progress-ring::before { content:""; width:74px; height:74px; border-radius:50%; background:var(--surface-1); grid-area:1/1; }
@@ -638,10 +637,8 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
   .member-nav nav button { justify-content:center; padding:10px; }
   .member-nav nav button span,.member-nav nav b,.member-nav nav i,.member-identity div,.member-signout { display:none; }
   .member-identity { justify-content:center; padding:14px 0; }
-  .overview-grid { grid-template-columns:1fr; }
   .activity-grid { grid-template-columns:1fr; }
   .message-workspace { grid-template-columns:230px minmax(0,1fr); }
-  .overview-rail { display:grid; grid-template-columns:1fr 1fr; gap:35px; padding-top:0; }
   .rail-list { margin-top:0; }
   .portal-auth { grid-template-columns:1fr; }
   .auth-story { display:none; }
@@ -665,7 +662,6 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
   .portal-view { padding:31px 19px; }
   .welcome-row,.page-heading { display:grid; }
   .welcome-row .portal-primary { justify-self:start; }
-  .overview-rail { grid-template-columns:1fr; }
   .metrics-row { grid-template-columns:1fr; }
   .metric,.metric + .metric { padding:18px 0; border-right:0; border-bottom:1px solid var(--line); }
   .project-focus { grid-template-columns:1fr; }
@@ -2798,3 +2794,72 @@ body { background: var(--surface); }
 .shortlist-detail summary { color: var(--muted); font-size: var(--text-caption); cursor: pointer; }
 .shortlist-detail summary:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 2px; }
 .shortlist-detail p { margin: 8px 0 0; color: var(--muted); font-size: var(--text-caption); line-height: var(--lh-caption); white-space: pre-wrap; }
+
+/* ── NEXT card ─────────────────────────────────────────────────────────────────────── */
+/* Tier 1 and alone at that tier: the single largest thing on the overview, and the only
+   primary button. Its authority comes from position and whitespace, not from colour — the
+   surface is the same paper as everything else so it reads as the page's subject rather
+   than as an alert. */
+.next-card { padding:clamp(22px,3vw,34px); border:1px solid var(--line); border-left:2px solid var(--gold);
+  background:var(--surface-1); display:grid; gap:14px; justify-items:start; }
+.next-kicker { margin:0; color:var(--gold-deep); font-size:var(--text-caption);
+  font-weight:var(--weight-bold); letter-spacing:var(--ls-caption-caps); text-transform:uppercase; }
+.next-card h2 { margin:0; font-family:var(--font-display); font-weight:var(--weight-regular);
+  font-size:var(--text-subhead); line-height:var(--lh-subhead); letter-spacing:var(--ls-subhead); }
+
+/* Progress collapsed to one line. Expanded it is the full checklist — the same information
+   the ring, journey and verification panels used to hold, at tier 3 where it belongs. */
+.setup-progress { width:100%; border-top:1px solid var(--line); padding-top:12px; }
+.setup-progress summary { cursor:pointer; color:var(--muted); font-size:var(--text-body); list-style:none; }
+.setup-progress summary::-webkit-details-marker { display:none; }
+.setup-progress summary::after { content:" \2039"; display:inline-block; margin-left:6px;
+  transform:rotate(-90deg); transition:transform .18s ease; }
+.setup-progress[open] summary::after { transform:rotate(90deg); }
+.setup-progress summary:focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
+.setup-progress ul { margin:12px 0 0; padding:0; list-style:none; display:grid; gap:7px; }
+.setup-progress li { color:var(--text-2); font-size:var(--text-body); }
+/* Done state carries a tick in the text as well as the colour. Colour never alone. */
+.setup-progress li.is-done { color:var(--soft); }
+@media (prefers-reduced-motion: reduce) { .setup-progress summary::after { transition:none; } }
+
+/* ── Account disclosure ────────────────────────────────────────────────────────────── */
+/* Sign out left the nav rail, where it sat beside six destinations as if it were one. */
+.member-account { position:relative; margin-top:auto; }
+.member-account > summary { cursor:pointer; list-style:none; }
+.member-account > summary::-webkit-details-marker { display:none; }
+.member-account > summary:focus-visible { outline:2px solid var(--gold); outline-offset:2px; }
+.member-account-menu { position:absolute; bottom:calc(100% + 8px); left:0; z-index:6;
+  min-width:200px; padding:6px; border:1px solid var(--line); background:var(--surface-1);
+  box-shadow:0 18px 40px rgba(20,17,11,.14); display:grid; gap:2px; }
+.member-account-menu button { display:flex; width:100%; min-height:40px; align-items:center;
+  gap:10px; padding:8px 11px; border:0; background:transparent; color:var(--text-2);
+  font-size:var(--text-body); text-align:left; cursor:pointer; }
+.member-account-menu button:hover { background:var(--gold-pale); color:var(--gold-deep); }
+.member-account-menu button:focus-visible { outline:2px solid var(--gold); outline-offset:-2px; }
+
+/* ── Opportunity tabs ──────────────────────────────────────────────────────────────── */
+/* Batches used to be a seventh nav destination competing with Opportunities. It is a kind of
+   opportunity, so it lives here as a tab rather than in the rail. */
+.opp-tabs { display:flex; gap:4px; margin:0 0 22px; border-bottom:1px solid var(--line); }
+.opp-tabs button { padding:10px 15px; border:0; border-bottom:2px solid transparent;
+  background:transparent; color:var(--muted); font-size:var(--text-body); cursor:pointer; }
+.opp-tabs button[aria-selected="true"] { border-bottom-color:var(--gold); color:var(--gold-deep);
+  font-weight:var(--weight-bold); }
+.opp-tabs button:focus-visible { outline:2px solid var(--gold); outline-offset:-2px; }
+
+/* ── Empty state ───────────────────────────────────────────────────────────────────── */
+/* "No active work" is a true statement and a dead end. It now names the two things a student
+   can actually do from here. */
+.work-empty { padding:clamp(24px,3vw,36px); border:1px dashed var(--line-strong);
+  display:grid; gap:12px; justify-items:start; }
+.work-empty p { margin:0; color:var(--muted); font-size:var(--text-body); line-height:var(--lh-body); }
+.work-empty-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:4px; }
+
+/* ── Greeting demotion (overview only) ─────────────────────────────────────────────── */
+/* "Good afternoon, Veer." was set at display size, which made the salutation the largest
+   thing on the page and the next action the second. Scoped to the overview so every other
+   panel heading keeps its size. */
+[data-portal-view="overview"] .welcome-row h1 { font-size:var(--text-body);
+  line-height:var(--lh-body); letter-spacing:var(--ls-body); color:var(--muted);
+  font-family:var(--font-body); }
+[data-portal-view="overview"] #welcomeCopy[hidden] { display:none; }

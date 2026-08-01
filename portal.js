@@ -130,6 +130,70 @@ function errorSite(error){
   return at?`portal.js:${at[1]}:${at[2]}`:(hit.slice(0,120)||'no stack available');
 }
 
+// ── Consolidated profile setup ────────────────────────────────────────────────────────
+// Four systems used to answer one question: profileRing reported strength, journeyPanel
+// reported proof, verificationPanel reported verification, nextActions reported what to do
+// next. A student had to learn four progress models to work out one action.
+//
+// One model, derived from data the dashboard already carries. Nothing is stored and no flag is
+// set by us, so a step can only read complete when the underlying field actually is. "4 of 6"
+// rather than "67%": a count tells you two remain and names the next one; a percentage tells
+// you neither.
+function setupModel(d){
+  const p = d?.profile || {};
+  const steps = [
+    { id:'identity',    label:'Add your name and school',    done:Boolean((p.display_name||'').trim() && (p.school_name||'').trim()),
+      view:'portfolio', focus:'#profileForm' },
+    { id:'skills',      label:'Add three relevant skills',   done:asList(p.skills).length >= 3,
+      view:'portfolio', focus:'#profileForm' },
+    { id:'preferences', label:'Set opportunity preferences', done:asList(p.verticals).length > 0 || asList(p.work_types).length > 0,
+      view:'portfolio', focus:'#profileForm' },
+    { id:'evidence',    label:'Add one project or repository', done:asList(d?.projects).length > 0 || asList(p.skill_signals?.github).length > 0,
+      view:'portfolio', focus:'#techEvidenceForm' },
+    { id:'verify',      label:'Verify your school email',    done:Boolean(p.identity_verified || d?.verification?.school?.verified),
+      view:'portfolio', focus:'#profileForm' },
+    { id:'endorsement', label:'Request an endorsement',      done:Boolean(p.referral_verified || p.club_confirmed),
+      view:'portfolio', focus:'#profileForm' },
+  ];
+  const complete = steps.filter(x=>x.done).length;
+  return { steps, complete, total: steps.length, next: steps.find(x=>!x.done) || null };
+}
+
+// The one thing on the page at tier 1. If setup is finished it steps aside for active work
+// rather than inventing something to nag about.
+function nextActionCard(d){
+  const m = setupModel(d);
+  if(!m.next) return null;
+  const card=document.createElement('section'); card.className='next-card';
+  const kicker=document.createElement('p'); kicker.className='next-kicker'; kicker.textContent='Next';
+  const h=document.createElement('h2'); h.textContent=m.next.label;
+  card.append(kicker,h);
+
+  const cta=document.createElement('button'); cta.type='button'; cta.className='portal-primary';
+  cta.textContent='Continue setup';
+  // Deep-link: switch panel, then put the cursor where the work happens. The portal has no
+  // routes, so this is the focus option on setView rather than a URL.
+  cta.addEventListener('click',()=>setView(m.next.view,{focus:m.next.focus}));
+  card.append(cta);
+
+  // Progress as a disclosure, not a permanent panel. Collapsed it is one line; expanded it is
+  // the whole checklist. aria-expanded is on the summary by virtue of <details>.
+  const det=document.createElement('details'); det.className='setup-progress';
+  const sum=document.createElement('summary');
+  sum.textContent=`Setup ${m.complete} of ${m.total} complete`;
+  det.append(sum);
+  const ul=document.createElement('ul');
+  for(const step of asList(m.steps)){
+    const li=document.createElement('li');
+    li.className = step.done ? 'is-done' : '';
+    // Tick plus text. Colour never carries the state on its own.
+    li.textContent = (step.done ? '\u2713 ' : '\u25cb ') + step.label;
+    ul.append(li);
+  }
+  det.append(ul); card.append(det);
+  return card;
+}
+
 async function loadDashboard() {
   showLoading();
   try {
@@ -165,17 +229,34 @@ function profileCompletion(profile) {
   return Math.round(values.filter(Boolean).length/values.length*100);
 }
 
-function setView(view) {
+function setView(view, opts) {
   const allowed=['overview','projects','activity','discover','batches','portfolio','messages','wallet'];
-  state.view=allowed.includes(view)?view:'overview';
+  // Aliases for the renamed destinations. The labels changed; the view keys did not, so nothing
+  // that already calls setView('discover') breaks. 'opportunities' is accepted because the nav
+  // now says Opportunities and somebody will reasonably type it.
+  const alias={ home:'overview', opportunities:'discover', profile:'portfolio', earnings:'wallet', work:'projects' };
+  const wanted=alias[view]||view;
+  state.view=allowed.includes(wanted)?wanted:'overview';
   $$('[data-portal-view]').forEach(section=>section.classList.toggle('is-active',section.dataset.portalView===state.view));
   $$('[data-view]').forEach(button=>button.classList.toggle('is-active',button.closest('.member-nav')&&button.dataset.view===state.view));
   $('#memberBreadcrumb').textContent=`Workspace / ${titleCase(state.view)}`;
   $('.member-nav').classList.remove('is-open');
   // Opening Messages clears the unread indicator and pulls the latest immediately.
   if(state.view==='messages'){state.unreadMessages=0;paintUnread();pollMessages();}
+  // Keep the tab strip honest however the panel was reached — nav item, deep link or tab.
+  if(state.view==='discover'||state.view==='batches')paintOppTabs(state.view);
   window.scrollTo({top:0,behavior:'smooth'});
   revealify();
+  // Deep-link target. Never throws when the selector is absent: a missing focus target should
+  // land the student on the right panel, not break the navigation that got them there.
+  if(opts&&opts.focus){
+    const el=$(opts.focus);
+    if(el){
+      const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      el.scrollIntoView({block:'center',behavior:reduce?'instant':'smooth'});
+      if(typeof el.focus==='function')el.focus({preventScroll:true});
+    }
+  }
 }
 
 // ---- Scroll-reveal: portal modules rise in as they enter the viewport, on every view. ----
@@ -238,21 +319,32 @@ function renderDashboard() {
   const active = $('nav [data-view].is-active');
   if (active && active.hidden) setView('overview');
   $$('[data-org-only]').forEach(el=>el.hidden=!['company','university'].includes(role));
-  $('#portfolioNavLabel').textContent=role==='company'?'Talent':'Portfolio';
-  $('#projectCount').textContent=projects.length;
-  $('#intakeCount').textContent=intakes.length;
-  $('#messageCount').textContent=messages.length;
-  $('#opportunityCount').textContent=opportunities.length;
-  const openBatches=(state.dashboard.batches||[]).filter(b=>b.status==='open').length;
-  const bc=$('#batchCount'); if(bc)bc.textContent=openBatches;
-  const batchesNav=$('#batchesNav'); if(batchesNav)batchesNav.hidden=!['student','company'].includes(role);
+  // Every one of these is optional now. The count badges were removed from the nav, and an
+  // unguarded $('#gone').textContent is exactly the null deref that aborted app.js and took the
+  // whole homepage down this morning. Optional chaining, not assumption.
+  const pl=$('#portfolioNavLabel'); if(pl)pl.textContent=role==='company'?'Talent':'Profile';
+  const wl=$('#walletNavLabel'); if(wl)wl.textContent=role==='student'?'Earnings':'Wallet';
+  const jl=$('#projectsNavLabel'); if(jl)jl.textContent=role==='student'?'My work':'My projects';
+  // Messages keeps its badge: unread is the one count a student can act on. Zero reads as
+  // clutter, so it hides itself rather than showing a nought.
+  const mc=$('#messageCount');
+  if(mc){ mc.textContent=messages.length; mc.hidden=!messages.length; }
+  // Batches is a tab inside Opportunities for students; only companies get it as a destination.
+  const batchesNav=$('#batchesNav'); if(batchesNav)batchesNav.hidden=role!=='company';
   $('#newProject').hidden=!['company','university'].includes(role);
   const now=new Date(); $('#welcomeDate').textContent=now.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
   const first=profile?.display_name?.split(/\s+/)[0]; $('#welcomeTitle').textContent=first?`Good ${dayPart()}, ${first}.`:`Good ${dayPart()}.`;
-  $('#welcomeCopy').textContent=role==='student'?'Track your current work and find the next project that fits you.':role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':'Complete your member profile to open your private workspace.';
+  // The student line said "Track your current work and find the next project that fits you" —
+  // a description of the nav, next to a nav. Dropped so the NEXT card is the first thing with
+  // something to say. Other roles keep theirs; their dashboards have no NEXT card.
+  const copyEl=$('#welcomeCopy');
+  if(copyEl){
+    const copy=role==='company'?'Keep projects moving and discover students through real evidence.':role==='university'?'See the projects and opportunities connected to your partner account.':role==='student'?'':'Complete your member profile to open your private workspace.';
+    copyEl.textContent=copy; copyEl.hidden=!copy;
+  }
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderCompanySegments(role); renderBriefing(); renderFocus(); renderMetrics(); renderProgress(); renderActions();renderPipeline();renderIntroductions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
+  renderCompanySegments(role); renderNextAction(); renderBriefing(); renderFocus(); renderMetrics(); renderPipeline();renderIntroductions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -382,7 +474,32 @@ function renderFocus(){
   const project=state.dashboard.projects.find(item=>!['complete','archived'].includes(item.status))||state.dashboard.projects[0];
   $('#focusTitle').textContent=role==='student'?'Your project tracker':'Project operations';
   if(role==='student')root.append(rungBadge());
-  if(!project){const empty=document.createElement('div');empty.className='empty-line';const h=document.createElement('h3');h.textContent=role==='student'?'No assigned project yet.':'No project posted yet.';const p=document.createElement('p');p.textContent=role==='student'?'Browse open work, or finish your profile while we route a fit.':'Create a private draft first, then make it visible when the scope is ready.';const button=document.createElement('button');button.type='button';button.textContent=role==='student'?'Browse open projects →':'Start a project →';button.addEventListener('click',()=>role==='student'?setView('discover'):openIntake());empty.append(h,p,button);root.append(empty);return;}
+  if(!project){
+    const empty=document.createElement('div');empty.className='empty-line work-empty';
+    const h=document.createElement('h3');h.textContent=role==='student'?'No assigned project yet.':'No project posted yet.';
+    const p=document.createElement('p');
+    p.textContent=role==='student'
+      ?'Two things move this forward: browsing work that is open now, and finishing the profile a founder reads before they shortlist you.'
+      :'Create a private draft first, then make it visible when the scope is ready.';
+    empty.append(h,p);
+    const actions=document.createElement('div');actions.className='work-empty-actions';
+    const button=document.createElement('button');button.type='button';button.className='portal-primary';
+    button.textContent=role==='student'?'Browse open work':'Start a project';
+    button.addEventListener('click',()=>role==='student'?setView('discover'):openIntake());
+    actions.append(button);
+    // Second exit, and only when it is true: no dead end, but no invented task either. If setup
+    // is finished this stays a single-CTA empty state rather than inventing something to nag about.
+    if(role==='student'){
+      const m=setupModel(state.dashboard);
+      if(m.next){
+        const second=document.createElement('button');second.type='button';second.className='portal-secondary';
+        second.textContent=`Finish your profile (${m.complete} of ${m.total})`;
+        second.addEventListener('click',()=>setView(m.next.view,{focus:m.next.focus}));
+        actions.append(second);
+      }
+    }
+    empty.append(actions);root.append(empty);return;
+  }
   if(role==='company'){
     renderBriefReview(root,project);
     // Describing the person shapes what the trial tests, so it sits with the brief.
@@ -582,8 +699,24 @@ function renderRequests(){
 }
 function openRequest(){const form=$('#requestForm');if(form)form.reset();setDialogMessage('#requestMessage','');$('#requestDialog').showModal();}
 
-function renderProgress(){const profile=state.dashboard.profile;const score=profileCompletion(profile);$('#profileRing').style.setProperty('--progress',`${score*3.6}deg`);$('strong',$('#profileRing')).textContent=`${score}%`;$('#profileProgressTitle').textContent=score===100?'Your profile is ready':score>=60?'Add the finishing details':'Make a strong first impression';$('#profileProgressCopy').textContent=profile?.role==='student'?'Only portfolios you share are visible.':'A complete organization profile adds context to every project.';}
-
+function renderNextAction(){
+  const mount=$('#nextActionMount'); if(!mount)return;
+  mount.replaceChildren();
+  // Students only. A founder has no profile setup to finish, and the card would be a
+  // student-shaped nag on a company dashboard.
+  if(state.dashboard?.profile?.role!=='student')return;
+  // buildSection takes the container: a throw inside costs this card, not the dashboard.
+  let rendered=false;
+  buildSection(mount,host=>{
+    const card=nextActionCard(state.dashboard);
+    if(card){ host.append(card); rendered=true; }
+  },'next action');
+  // Exactly one primary CTA on the page. The welcome row's button says "Discover projects",
+  // which is a reasonable next step only when there is no more urgent one — so it stands down
+  // while the NEXT card is up, and returns once setup is genuinely finished.
+  const primary=$('#primaryAction');
+  if(primary)primary.hidden=rendered;
+}
 
 // ---- Student: verification standing and live milestones -----------------------------
 // Both are computed server-side and were invisible in the portal — a student had no way to
@@ -1008,7 +1141,7 @@ function renderIntroductions(){
 }
 
 function renderVerification(){
-  const host=$('#verificationPanel');
+  const host=$('#verificationPanel'); if(!host)return;
   const v=state.dashboard?.verification;
   if(!host) return;
   if(state.dashboard?.profile?.role!=='student'||!v){ host.hidden=true; return; }
@@ -1084,8 +1217,6 @@ function renderMilestones(){
   host.append(note);
   host.hidden=false;
 }
-
-function renderActions(){const root=$('#nextActions');root.replaceChildren();const d=state.dashboard;const actions=[];if(profileCompletion(d.profile)<100)actions.push(['p-user','Complete your member profile','Add a headline, context, and skills.']);if(d.profile?.role==='student'&&!d.applications.length)actions.push(['p-compass','Explore your first opportunity','Open projects are ready to review.']);if(['company','university'].includes(d.profile?.role)&&!d.projects.length)actions.push(['p-plus','Create a private project draft','Start with the outcome and useful deliverable.']);if(!actions.length)actions.push(['p-check','You are caught up','New project activity will appear here.']);for(const [iconId,title,copy] of actions){const li=document.createElement('li');const mark=document.createElement('span');mark.append(icon(iconId));const div=document.createElement('div');const strong=document.createElement('strong');strong.textContent=title;const small=document.createElement('small');small.textContent=copy;div.append(strong,small);li.append(mark,div);root.append(li);}}
 
 function emptyList(root,iconId,title,copy,action){root.replaceChildren();const box=document.createElement('div');box.className='list-empty';const mark=document.createElement('span');mark.append(icon(iconId));const h=document.createElement('h2');h.textContent=title;const p=document.createElement('p');p.textContent=copy;box.append(mark,h,p);if(action&&action.label&&typeof action.run==='function'){const b=document.createElement('button');b.type='button';b.className='empty-cta';b.textContent=action.label;b.addEventListener('click',action.run);box.append(b);}root.append(box);}
 
@@ -6064,7 +6195,39 @@ $('#discoverSearch')?.addEventListener('input',renderDiscover);
 ['#filterVertical','#filterWorkType','#filterMinCredits','#filterWithin','#filterMatched'].forEach(sel=>$(sel)?.addEventListener('input',renderDiscover));
 $('#filterReset')?.addEventListener('click',()=>{const ids=['#discoverSearch','#filterVertical','#filterWorkType','#filterMinCredits','#filterWithin'];ids.forEach(id=>{const el=$(id);if(el)el.value='';});const m=$('#filterMatched');if(m)m.checked=false;renderDiscover();});
 $$('#discoverTabs .discover-tab').forEach(tab=>tab.addEventListener('click',()=>{discoverState.tab=tab.dataset.tab;$$('#discoverTabs .discover-tab').forEach(t=>t.classList.toggle('is-active',t===tab));renderDiscover();}));
-$('#memberSignout').addEventListener('click',()=>{clearSession();state.dashboard=null;showAuth('Signed out of this browser.');});
+$('#memberSignout')?.addEventListener('click',()=>{clearSession();state.dashboard=null;showAuth('Signed out of this browser.');});
+
+// Opportunities tabs. Students reach Batches from inside Opportunities rather than from a
+// seventh nav destination. Uses setView, so every existing batch render path is untouched.
+// The strip is duplicated into both panels because setView swaps the whole panel: a strip that
+// lived only in Discover would vanish the moment it was used. Selection is painted by target,
+// not by which button was pressed, so both copies always agree.
+function paintOppTabs(target){
+  $$('[data-opp-tab]').forEach(t=>{
+    const on=t.dataset.oppTab===target;
+    t.classList.toggle('is-active',on); t.setAttribute('aria-selected',String(on));
+  });
+}
+$$('[data-opp-tab]').forEach(tab=>tab.addEventListener('click',()=>{
+  const target=tab.dataset.oppTab;
+  paintOppTabs(target);
+  setView(target==='batches'?'batches':'discover');
+}));
+
+// Account menu. A real disclosure with aria-expanded, not a div that hides content, so a screen
+// reader is told the state rather than left to infer it from what vanished.
+(function accountMenu(){
+  const btn=$('#memberIdentity'), menu=$('#memberAccountMenu');
+  if(!btn||!menu)return;
+  const close=()=>{ menu.hidden=true; btn.setAttribute('aria-expanded','false'); };
+  const open=()=>{ menu.hidden=false; btn.setAttribute('aria-expanded','true'); $('button',menu)?.focus(); };
+  btn.addEventListener('click',()=>{ menu.hidden?open():close(); });
+  // Escape returns focus to the trigger; clicking away just closes. Both are the behaviours a
+  // keyboard user expects and neither exists by default.
+  menu.addEventListener('keydown',e=>{ if(e.key==='Escape'){ close(); btn.focus(); } });
+  document.addEventListener('click',e=>{ if(!menu.hidden&&!menu.contains(e.target)&&e.target!==btn&&!btn.contains(e.target))close(); });
+  $$('button',menu).forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.view)close(); }));
+})();
 $('#mobileMenu').addEventListener('click',()=>$('.member-nav').classList.toggle('is-open'));
 
 const authError=captureAuthRedirect();
