@@ -2755,6 +2755,16 @@ export async function loadCompanyShortlists(member) {
     });
     grouped.set(row.opportunity_id, list);
   }
+  // Every opportunity with proposed matches gets a group, even when the visibility gate emptied
+  // it. Otherwise "the operator has not started" and "every pick was withheld" are the same
+  // void, and a company staring at nothing cannot tell whether to wait or to ask.
+  //
+  // The count is deliberately NOT carried. Saying "2 candidates withheld" would tell the company
+  // that two specific people were shortlisted, which is exactly what the gate exists to withhold.
+  // An empty group renders the same sentence whether the operator picked nobody or picked three
+  // private students, and that identity is the privacy property.
+  for (const id of ids) if (!grouped.has(id) && rows.some(r => r.opportunity_id === id)) grouped.set(id, []);
+
   return [...grouped.entries()].map(([projectId, candidates]) => ({
     projectId, title: titleById.get(projectId) || 'Project', candidates,
   }));

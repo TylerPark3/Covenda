@@ -782,7 +782,30 @@ export async function decideMatch(supabase, input) {
     .update({ human_decision: decision, human_rationale: rationale, decided_at: new Date().toISOString() })
     .eq('id', matchId).select('*').single();
   if (error) throw new Error(`Please try again — recording the decision failed: ${String(error?.message || error).slice(0, 200)}`);
-  return data;
+
+  // Tell the operator when the person they just proposed will not actually reach the company.
+  //
+  // loadCompanyShortlists enforces Ch. 29.5 by dropping any candidate whose portfolio is not
+  // visible to members. That is correct and stays. But it happens silently and on the far side
+  // of the system, so an operator could hand-pick five students, write five rationales, and
+  // deliver an empty shortlist without ever being told. The decision is still recorded and still
+  // auditable — it simply does not travel.
+  //
+  // This reads the student's own visibility setting, which the operator is already entitled to
+  // see, and says so at the moment the decision is made rather than never.
+  let withheld = false;
+  if (decision === 'proposed' && data?.student_user_id) {
+    const { data: p } = await supabase.from('member_profiles')
+      .select('portfolio_visibility').eq('user_id', data.student_user_id).maybeSingle();
+    withheld = (p?.portfolio_visibility || 'private') !== 'members';
+  }
+  return {
+    ...data,
+    withheldFromCompany: withheld,
+    withheldReason: withheld
+      ? 'This student has not made their profile visible to members, so they will not appear on the company\u2019s shortlist. Your decision is recorded either way.'
+      : null,
+  };
 }
 
 // Operator project management: list every member project, and permanently delete one.

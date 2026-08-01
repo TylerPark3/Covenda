@@ -1159,9 +1159,19 @@ function shortlistSection(list){
   const head=document.createElement('div');head.className='shortlist-head';
   const h=document.createElement('h3');h.textContent=`Shortlist · ${list.title}`;
   const note=document.createElement('p');note.className='shortlist-note';
-  note.textContent=`${list.candidates.length} ${list.candidates.length===1?'candidate':'candidates'}, chosen by hand. Listed in no particular order — nothing here is ranked.`;
+  const candidates=asList(list.candidates);
+  // An empty shortlist is not the same as no shortlist, and until now both rendered as nothing
+  // at all. A company sat in front of a void, unable to tell whether to wait or to chase.
+  //
+  // The sentence is identical whether the operator has picked nobody yet or picked only students
+  // whose portfolios are private. That is deliberate: any wording that distinguished the two
+  // would tell the company that a specific person had been shortlisted, which is precisely what
+  // the Ch. 29.5 visibility gate withholds.
+  note.textContent=candidates.length
+    ? `${candidates.length} ${candidates.length===1?'candidate':'candidates'}, chosen by hand. Listed in no particular order — nothing here is ranked.`
+    : 'Being prepared. Every candidate is read and chosen by a person, so this takes a little time.';
   head.append(h,note);box.append(head);
-  for(const c of asList(list.candidates)) box.append(shortlistCard(c));
+  for(const c of candidates) box.append(shortlistCard(c));
   return box;
 }
 
