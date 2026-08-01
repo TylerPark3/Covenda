@@ -58,8 +58,19 @@ test('submissions itself stays revoked from the browser roles', () => {
 // Every SECURITY DEFINER function must pin search_path, or a caller can shadow the objects it
 // resolves and run their own code with the definer's rights (Supabase lint 0011).
 test('security definer functions pin their search_path', () => {
+  // Scan SQL, not prose. A migration that only revokes a definer function, or explains one in a
+  // comment, names the phrase without declaring anything — and flagging it sends the next person
+  // to add a meaningless `set search_path` to a file with no function in it.
+  const stripComments = body => body.replace(/--[^\n]*/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
   const missing = Object.entries(sql)
-    .filter(([, body]) => /security\s+definer/i.test(body) && !/set\s+search_path/i.test(body))
+    .filter(([, raw]) => {
+      const body = stripComments(raw);
+      // Only a CREATE that declares SECURITY DEFINER needs the pin.
+      for (const m of body.matchAll(/create\s+(or\s+replace\s+)?function[\s\S]*?(?=create\s|$)/gi)) {
+        if (/security\s+definer/i.test(m[0]) && !/set\s+search_path/i.test(m[0])) return true;
+      }
+      return false;
+    })
     .map(([file]) => file);
   assert.deepEqual(missing, [], `SECURITY DEFINER without a pinned search_path: ${missing.join(', ')}`);
 });

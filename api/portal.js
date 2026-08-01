@@ -2370,7 +2370,21 @@ export async function confirmCompanyVerification(member, input) {
     .order('created_at', { ascending: false }).limit(1).maybeSingle(), null);
 
   const verdict = checkCode(record, input.code, new Date());
-  if (!verdict.ok) throw new Error(verdict.reason);
+  // Count the failure, or the cap checkCode applies can never be reached. Until 20260801300000
+  // this table had no attempts column and nothing wrote one, so `Number(undefined) >= 5` was
+  // NaN >= 5, which is false, and the lockout branch was unreachable from the day it was
+  // written. The student path (school_email_codes) has always done this; the company path never
+  // did. Mirrors that code deliberately, rather than inventing a second scheme.
+  if (!verdict.ok) {
+    if (record && !verdict.expired) {
+      // Best-effort: a failure to count must not convert a wrong code into a 500, and it must
+      // not leak which of the two happened.
+      await member.supabase.from('company_email_codes')
+        .update({ attempts: Number(record.attempts || 0) + 1 }).eq('id', record.id)
+        .then(() => {}, () => {});
+    }
+    throw new Error(verdict.reason);
+  }
 
   const now = new Date().toISOString();
   await member.supabase.from('company_email_codes').update({ consumed_at: now }).eq('id', record.id);

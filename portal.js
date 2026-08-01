@@ -722,7 +722,7 @@ function openVerificationStep(key){
 }
 
 function openSchoolEmailStep(){
-  const held=Boolean(state.dashboard?.verification?.signals?.find(s=>s.key==='school_email')?.held);
+  const held=Boolean(asList(state.dashboard?.verification?.signals).find(s=>s.key==='school_email')?.held);
   const d=verifDialog('Verify your school email',
     held?'This is already confirmed. Verifying a different address replaces the one on file.'
         :'We send a six-digit code to your university address. This proves you control the address, it is the floor, not the proof.');
@@ -1102,7 +1102,7 @@ function renderVerification(){
 
   // Every row is a door. A checklist you cannot act on is just a list of things you lack.
   const list=document.createElement('ul'); list.className='verif-list';
-  v.signals.forEach(sig=>{
+  asList(v.signals).forEach(sig=>{
     const step=VERIF_STEPS[sig.key]||{};
     const li=document.createElement('li'); li.className=sig.held?'is-held':'';
     const row=document.createElement('button'); row.type='button'; row.className='verif-row';
@@ -3471,7 +3471,7 @@ function renderCompanyVerification(root){
   head.append(h,sum);sec.append(head);
 
   const list=document.createElement('ul');list.className='verif-list';
-  v.signals.forEach(sig=>{
+  asList(v.signals).forEach(sig=>{
     const li=document.createElement('li');li.className=sig.held?'is-held':'';
     const row=document.createElement('button');row.type='button';row.className='verif-row';
     const mark=document.createElement('span');mark.className='verif-mark';
@@ -5447,7 +5447,7 @@ function renderCredibility(root,d){
   const completed=(d.projects||[]).filter(x=>x.status==='complete').length;
   const ghSkills=githubSkills(p).length;
   const v=d.verification||{};
-  const held=key=>Boolean((v.signals||[]).find(x=>x.key===key)?.held);
+  const held=key=>Boolean(asList(v.signals).find(x=>x.key===key)?.held);
   const vouched=held('club')||held('referral');
 
   // Ordered by what a company weighs, not by what is easy to get. `weight` is that ordering
