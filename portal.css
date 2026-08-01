@@ -1306,9 +1306,8 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
    clickable to the place that advances it. One step is marked "do this next" so there is
    always exactly one obvious move. */
 .journey-panel { display:grid; gap:14px; }
-.journey-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
-.journey-head h3 { margin:0 0 5px; font-family:var(--font-sans); font-weight: var(--weight-medium); font-size: var(--text-subhead); letter-spacing: var(--ls-subhead); }
-.journey-head p { margin:0; max-width:52ch; color:var(--muted); font-size: var(--text-body); line-height: var(--lh-body); }
+.journey-head { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.journey-head .eyebrow { margin:0; }
 .journey-count { flex:none; padding:5px 10px; border:1px solid var(--line-strong); font-size: var(--text-body); font-weight: var(--weight-bold); color:var(--gold-deep); font-variant-numeric:tabular-nums; }
 .journey-list { display:grid; gap:2px; margin:0; padding:0; list-style:none; counter-reset:none; }
 .journey-row { display:grid; grid-template-columns:26px minmax(0,1fr); gap:5px 12px; width:100%; padding:12px 10px; border:0; border-radius:0; background:none; text-align:left; font:inherit; color:inherit; cursor:pointer; transition:background .14s ease; }
@@ -1322,7 +1321,6 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .journey-mark svg { width:13px; height:13px; }
 .journey-go { grid-column:2; grid-row:2; justify-self:start; margin-top:2px; padding:5px 12px; border:1px solid var(--line-strong); font-size: var(--text-body); font-weight: var(--weight-medium); color:var(--gold-deep); white-space:nowrap; }
 .journey-row:hover .journey-go { border-color:var(--line-strong); background:var(--surface-1); }
-.journey-tag { display:none; }
 .journey-list li.is-done .journey-mark { border-color:rgba(36,117,58,.35); background:#f4faf5; color:var(--success); }
 .journey-list li.is-done strong { color:var(--muted); }
 .journey-list li.is-done .journey-go { color:var(--soft); }

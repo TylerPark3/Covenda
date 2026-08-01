@@ -913,16 +913,17 @@ function renderJourney(){
   // obvious move at any moment.
   const nextIndex=steps.findIndex(s=>!s.done);
 
+  // One line of chrome, not three. This panel used to open with an h3 ("How this works for
+  // you") and an explainer ("Six steps, in order. Each opens where it gets done.") sitting
+  // above the only thing a student came to read. Both described mechanics the list already
+  // demonstrates. Now that the panel is the first thing on the overview rather than a rail
+  // card, it needs no label at all beyond what it is showing.
   const head=document.createElement('div'); head.className='journey-head';
-  const box=document.createElement('div');
-  const h=document.createElement('h3'); h.textContent='How this works for you';
-  const p=document.createElement('p');
-  p.textContent=nextIndex<0?'All done. Keep the evidence current.'
-    :'Six steps, in order. Each opens where it gets done.';
-  box.append(h,p);
+  const label=document.createElement('p'); label.className='eyebrow';
+  label.textContent=nextIndex<0?'All six done. Keep the evidence current.':'Next step';
   const count=document.createElement('span'); count.className='journey-count';
   count.textContent=`${doneCount} of ${steps.length}`;
-  head.append(box,count); host.append(head);
+  head.append(label,count); host.append(head);
 
   // Only the next step is shown. Six expanded rows with six buttons is a chore list, and it
   // was the first thing on the dashboard every single visit, including the five visits after
@@ -945,7 +946,6 @@ function renderJourney(){
     const strong=document.createElement('strong'); strong.textContent=step.title;
     const small=document.createElement('small'); small.textContent=step.now;
     div.append(strong,small);
-    if(i===nextIndex){ const tag=document.createElement('em'); tag.className='journey-tag'; tag.textContent='Do this next'; div.append(tag); }
     const go=document.createElement('span'); go.className='journey-go'; go.textContent=step.cta;
     row.append(mark,div,go);
     row.addEventListener('click',step.go);
