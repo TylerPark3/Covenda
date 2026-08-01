@@ -2795,33 +2795,6 @@ body { background: var(--surface); }
 .shortlist-detail summary:focus-visible { outline: 2px solid var(--gold-deep); outline-offset: 2px; }
 .shortlist-detail p { margin: 8px 0 0; color: var(--muted); font-size: var(--text-caption); line-height: var(--lh-caption); white-space: pre-wrap; }
 
-/* ── NEXT card ─────────────────────────────────────────────────────────────────────── */
-/* Tier 1 and alone at that tier: the single largest thing on the overview, and the only
-   primary button. Its authority comes from position and whitespace, not from colour — the
-   surface is the same paper as everything else so it reads as the page's subject rather
-   than as an alert. */
-.next-card { padding:clamp(22px,3vw,34px); border:1px solid var(--line); border-left:2px solid var(--gold);
-  background:var(--surface-1); display:grid; gap:14px; justify-items:start; }
-.next-kicker { margin:0; color:var(--gold-deep); font-size:var(--text-caption);
-  font-weight:var(--weight-bold); letter-spacing:var(--ls-caption-caps); text-transform:uppercase; }
-.next-card h2 { margin:0; font-family:var(--font-display); font-weight:var(--weight-regular);
-  font-size:var(--text-subhead); line-height:var(--lh-subhead); letter-spacing:var(--ls-subhead); }
-
-/* Progress collapsed to one line. Expanded it is the full checklist — the same information
-   the ring, journey and verification panels used to hold, at tier 3 where it belongs. */
-.setup-progress { width:100%; border-top:1px solid var(--line); padding-top:12px; }
-.setup-progress summary { cursor:pointer; color:var(--muted); font-size:var(--text-body); list-style:none; }
-.setup-progress summary::-webkit-details-marker { display:none; }
-.setup-progress summary::after { content:" \2039"; display:inline-block; margin-left:6px;
-  transform:rotate(-90deg); transition:transform .18s ease; }
-.setup-progress[open] summary::after { transform:rotate(90deg); }
-.setup-progress summary:focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
-.setup-progress ul { margin:12px 0 0; padding:0; list-style:none; display:grid; gap:7px; }
-.setup-progress li { color:var(--text-2); font-size:var(--text-body); }
-/* Done state carries a tick in the text as well as the colour. Colour never alone. */
-.setup-progress li.is-done { color:var(--soft); }
-@media (prefers-reduced-motion: reduce) { .setup-progress summary::after { transition:none; } }
-
 /* ── Account disclosure ────────────────────────────────────────────────────────────── */
 /* Sign out left the nav rail, where it sat beside six destinations as if it were one. */
 .member-account { position:relative; margin-top:auto; }

@@ -122,8 +122,10 @@
         <div class="overview-grid">
           <div class="overview-main">
             <div class="welcome-row"><div><p class="eyebrow" id="welcomeDate">Your workspace</p><h1 id="welcomeTitle">Good afternoon.</h1><p id="welcomeCopy">Here is what is moving across your Covenda work.</p></div><button class="portal-primary" id="primaryAction" type="button"><svg><use href="#p-plus"/></svg><span>Complete profile</span></button></div>
-            <!-- Tier 1. The only primary CTA on the page. -->
-            <div id="nextActionMount"></div>
+            <!-- Tier 1. studentJourney already showed only the next step, folded the rest
+                 away and counted "N of 6" — it was simply buried in a rail beneath three
+                 other progress widgets. It is promoted, not replaced. -->
+            <section class="panel-card journey-panel" id="journeyPanel" hidden></section>
             <div class="company-segments" id="companySegments" hidden></div>
             <!-- companyBriefing() has answered these four questions since it was written; the
                  dashboard just never asked. Sits above the project list because "what is
@@ -136,7 +138,6 @@
             <section class="panel-card trial-start-panel" id="trialStartPanel" hidden></section>
             <section class="focus-section"><div class="section-heading"><div><p class="eyebrow">Current work</p><h2 id="focusTitle">Where each project stands</h2></div><button type="button" data-view="projects">View all</button></div><div id="focusProject"></div></section>
             <!-- Standing and history: context, not a request. Below the tracker. -->
-            <section class="panel-card journey-panel" id="journeyPanel" hidden></section>
             <section class="panel-card" id="verificationPanel" hidden></section>
             <section class="panel-card" id="milestonePanel" hidden></section>
             <section class="plain-section"><div class="section-heading"><div><p class="eyebrow">At a glance</p><h2>What's moved recently</h2></div></div><div class="metrics-row" id="memberMetrics"></div></section>

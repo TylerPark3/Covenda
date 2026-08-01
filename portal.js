@@ -130,70 +130,6 @@ function errorSite(error){
   return at?`portal.js:${at[1]}:${at[2]}`:(hit.slice(0,120)||'no stack available');
 }
 
-// ── Consolidated profile setup ────────────────────────────────────────────────────────
-// Four systems used to answer one question: profileRing reported strength, journeyPanel
-// reported proof, verificationPanel reported verification, nextActions reported what to do
-// next. A student had to learn four progress models to work out one action.
-//
-// One model, derived from data the dashboard already carries. Nothing is stored and no flag is
-// set by us, so a step can only read complete when the underlying field actually is. "4 of 6"
-// rather than "67%": a count tells you two remain and names the next one; a percentage tells
-// you neither.
-function setupModel(d){
-  const p = d?.profile || {};
-  const steps = [
-    { id:'identity',    label:'Add your name and school',    done:Boolean((p.display_name||'').trim() && (p.school_name||'').trim()),
-      view:'portfolio', focus:'#profileForm' },
-    { id:'skills',      label:'Add three relevant skills',   done:asList(p.skills).length >= 3,
-      view:'portfolio', focus:'#profileForm' },
-    { id:'preferences', label:'Set opportunity preferences', done:asList(p.verticals).length > 0 || asList(p.work_types).length > 0,
-      view:'portfolio', focus:'#profileForm' },
-    { id:'evidence',    label:'Add one project or repository', done:asList(d?.projects).length > 0 || asList(p.skill_signals?.github).length > 0,
-      view:'portfolio', focus:'#techEvidenceForm' },
-    { id:'verify',      label:'Verify your school email',    done:Boolean(p.identity_verified || d?.verification?.school?.verified),
-      view:'portfolio', focus:'#profileForm' },
-    { id:'endorsement', label:'Request an endorsement',      done:Boolean(p.referral_verified || p.club_confirmed),
-      view:'portfolio', focus:'#profileForm' },
-  ];
-  const complete = steps.filter(x=>x.done).length;
-  return { steps, complete, total: steps.length, next: steps.find(x=>!x.done) || null };
-}
-
-// The one thing on the page at tier 1. If setup is finished it steps aside for active work
-// rather than inventing something to nag about.
-function nextActionCard(d){
-  const m = setupModel(d);
-  if(!m.next) return null;
-  const card=document.createElement('section'); card.className='next-card';
-  const kicker=document.createElement('p'); kicker.className='next-kicker'; kicker.textContent='Next';
-  const h=document.createElement('h2'); h.textContent=m.next.label;
-  card.append(kicker,h);
-
-  const cta=document.createElement('button'); cta.type='button'; cta.className='portal-primary';
-  cta.textContent='Continue setup';
-  // Deep-link: switch panel, then put the cursor where the work happens. The portal has no
-  // routes, so this is the focus option on setView rather than a URL.
-  cta.addEventListener('click',()=>setView(m.next.view,{focus:m.next.focus}));
-  card.append(cta);
-
-  // Progress as a disclosure, not a permanent panel. Collapsed it is one line; expanded it is
-  // the whole checklist. aria-expanded is on the summary by virtue of <details>.
-  const det=document.createElement('details'); det.className='setup-progress';
-  const sum=document.createElement('summary');
-  sum.textContent=`Setup ${m.complete} of ${m.total} complete`;
-  det.append(sum);
-  const ul=document.createElement('ul');
-  for(const step of asList(m.steps)){
-    const li=document.createElement('li');
-    li.className = step.done ? 'is-done' : '';
-    // Tick plus text. Colour never carries the state on its own.
-    li.textContent = (step.done ? '\u2713 ' : '\u25cb ') + step.label;
-    ul.append(li);
-  }
-  det.append(ul); card.append(det);
-  return card;
-}
-
 async function loadDashboard() {
   showLoading();
   try {
@@ -344,7 +280,7 @@ function renderDashboard() {
   }
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderCompanySegments(role); renderNextAction(); renderBriefing(); renderFocus(); renderMetrics(); renderPipeline();renderIntroductions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
+  renderCompanySegments(role); renderBriefing(); renderFocus(); renderMetrics(); renderPipeline();renderIntroductions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -490,11 +426,14 @@ function renderFocus(){
     // Second exit, and only when it is true: no dead end, but no invented task either. If setup
     // is finished this stays a single-CTA empty state rather than inventing something to nag about.
     if(role==='student'){
-      const m=setupModel(state.dashboard);
-      if(m.next){
+      // studentJourney is the single model of "what is left" — the same one the journey panel
+      // renders. A second definition here is how a dashboard ends up disagreeing with itself.
+      const steps=asList(studentJourney(state.dashboard));
+      const next=steps.find(x=>!x.done);
+      if(next){
         const second=document.createElement('button');second.type='button';second.className='portal-secondary';
-        second.textContent=`Finish your profile (${m.complete} of ${m.total})`;
-        second.addEventListener('click',()=>setView(m.next.view,{focus:m.next.focus}));
+        second.textContent=`${next.title} (${steps.filter(x=>x.done).length} of ${steps.length} done)`;
+        second.addEventListener('click',next.go);
         actions.append(second);
       }
     }
@@ -699,25 +638,6 @@ function renderRequests(){
 }
 function openRequest(){const form=$('#requestForm');if(form)form.reset();setDialogMessage('#requestMessage','');$('#requestDialog').showModal();}
 
-function renderNextAction(){
-  const mount=$('#nextActionMount'); if(!mount)return;
-  mount.replaceChildren();
-  // Students only. A founder has no profile setup to finish, and the card would be a
-  // student-shaped nag on a company dashboard.
-  if(state.dashboard?.profile?.role!=='student')return;
-  // buildSection takes the container: a throw inside costs this card, not the dashboard.
-  let rendered=false;
-  buildSection(mount,host=>{
-    const card=nextActionCard(state.dashboard);
-    if(card){ host.append(card); rendered=true; }
-  },'next action');
-  // Exactly one primary CTA on the page. The welcome row's button says "Discover projects",
-  // which is a reasonable next step only when there is no more urgent one — so it stands down
-  // while the NEXT card is up, and returns once setup is genuinely finished.
-  const primary=$('#primaryAction');
-  if(primary)primary.hidden=rendered;
-}
-
 // ---- Student: verification standing and live milestones -----------------------------
 // Both are computed server-side and were invisible in the portal — a student had no way to
 // see how verified they were, or where their current work stood against its schedule.
@@ -920,17 +840,20 @@ function openReferralStep(){
 // clickable to the exact place that advances it. The point is that a student can always
 // answer "what now?" without guessing which tab holds the answer.
 function studentJourney(d){
-  const profile=d.profile||{};
-  const v=d.verification||{};
-  const signals=v.signals||[];
+  // asList, not `||[]`: a truthiness guard passes any non-empty object straight through to
+  // .filter and throws. This ladder is now the first thing on the overview, so a malformed
+  // payload would take the whole page rather than one buried rail panel.
+  const profile=(d&&d.profile)||{};
+  const v=(d&&d.verification)||{};
+  const signals=asList(v.signals);
   const held=key=>Boolean(signals.find(s=>s.key===key)?.held);
-  const apps=d.applications||[];
-  const batchApps=d.batchApplications||[];
-  const projects=d.projects||[];
+  const apps=asList(d.applications);
+  const batchApps=asList(d.batchApplications);
+  const projects=asList(d.projects);
   const assigned=projects.filter(p=>['assigned','in_progress','review','complete'].includes(p.status));
   const submitted=projects.filter(p=>['review','complete'].includes(p.status));
   const complete=projects.filter(p=>p.status==='complete');
-  const messages=d.messages||[];
+  const messages=asList(d.messages);
 
   return [
     { key:'verify', title:'Get verified',
@@ -1033,6 +956,10 @@ function renderJourney(){
   host.append(ol);
   if(restList.childElementCount)host.append(rest);
   host.hidden=false;
+  // Exactly one primary CTA on the page. The welcome row's button is a reasonable next
+  // step only when the ladder has none left to name.
+  const primary=$('#primaryAction');
+  if(primary)primary.hidden=nextIndex>=0;
 }
 
 // Approved, but not started. The company has committed and the payment is held; nothing is
