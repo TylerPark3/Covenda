@@ -3629,9 +3629,15 @@ export default async function handler(req, res, dependencies = {}) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (!sameOrigin(req)) return res.status(403).json({ ok: false, error: 'Origin not allowed.' });
 
+  // Hoisted so the catch can attribute a failure to a member. `member` itself is scoped to
+  // the try, and reading it from the catch is a ReferenceError that the logging try/catch would
+  // swallow, silently disabling the logging.
+  let memberId = null;
+  let attemptedAction = null;
   try {
     if (req.method === 'POST') {
       const input = parseBody(req);
+    attemptedAction = typeof input?.action === 'string' ? input.action.slice(0, 60) : null;
       if (input.action === 'request-link') {
         await requestMemberLink(input.email, req, dependencies);
         return res.status(200).json({ ok: true, message: 'Check your inbox for a secure Covenda sign-in link.' });
@@ -3679,6 +3685,7 @@ export default async function handler(req, res, dependencies = {}) {
       return res.status(405).json({ ok: false, error: 'Method not allowed.' });
     }
     const member = await authorizeMember(req, dependencies);
+    memberId = member?.user?.id || null;
     if (!member) return res.status(401).json({ ok: false, error: 'Member authentication is required.' });
     if (req.method === 'GET') return res.status(200).json({ ok: true, ...(await loadMemberDashboard(member, dependencies.env || process.env)) });
 
@@ -3763,7 +3770,27 @@ export default async function handler(req, res, dependencies = {}) {
     const expected = error instanceof SyntaxError || /^(Enter|Choose|Only|Account|This|Please|Add|Describe|A refresh)/.test(error?.message || '');
     if (expected) return res.status(400).json({ ok: false, code: 'PORTAL_INPUT_INVALID', error: error.message });
     const failure = portalFailure(error);
-    console.error(JSON.stringify({ level: 'error', message: 'Portal API failed', route: '/api/portal', method: req.method, requestId: cleanText(req.headers['x-vercel-id'], 200) || null, code: failure.code, error: cleanText(error?.cause?.message || error?.message || error, 2_000), durationMs: Date.now() - startedAt }));
+    // Which action failed. Without this the log says "Portal API failed" for any of 28 actions,
+    // which is the difference between a diagnosis and a starting point. It cost a round trip
+    // the first time a student hit it.
+    const failedAction = attemptedAction;
+    const detail = cleanText(error?.cause?.message || error?.message, 500);
+    console.error(JSON.stringify({
+      level: 'error', message: 'Portal API failed', route: '/api/portal', method: req.method,
+      action: failedAction,
+      requestId: cleanText(req.headers['x-vercel-id'], 200) || null,
+      code: failure.code, error: detail,
+    }));
+    // And to error_events, which is queryable. Platform logs are ephemeral and only reachable
+    // by whoever owns the hosting account, which is precisely the wrong place for the one
+    // record of why a member's request failed. Best-effort: a failure to log must not replace
+    // the failure being logged.
+    try {
+      await recordError('portal', 'error', detail, {
+        detail: { action: failedAction, code: failure.code, method: req.method },
+        userId: memberId,
+      });
+    } catch { /* logging is not allowed to fail the response */ }
     return res.status(failure.status).json({ ok: false, code: failure.code, error: failure.message });
   }
 }

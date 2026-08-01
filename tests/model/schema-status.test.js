@@ -62,3 +62,33 @@ test('the probe sits behind operator authentication', () => {
   assert.notEqual(auth, -1, 'an authorized operator is resolved first');
   assert.ok(guard > auth, 'and the request is rejected when there is not one');
 });
+
+// ── The portal error path names what failed ────────────────────────────────────────────
+// A student hit a 503 whose entire content was "temporarily unavailable, check Vercel Runtime
+// Logs". The log line said "Portal API failed" and named the HTTP method — for any of 28
+// actions. That is a starting point, not a diagnosis, and it cost a round trip.
+test('a portal failure records which action failed', () => {
+  const portal = readFileSync(new URL('../../api/portal.js', import.meta.url), 'utf8');
+  const at = portal.lastIndexOf('} catch (error) {');
+  const block = portal.slice(at, at + 1800);
+  assert.match(block, /action: failedAction/, 'the log names the action');
+  assert.match(block, /recordError\('portal', 'error', detail/,
+    'and it goes to error_events, which is queryable, not only to ephemeral platform logs');
+});
+
+// Both `input` and `member` are const-scoped to the try. Reading either from the catch is a
+// ReferenceError. For `member` it would have been swallowed by the logging try/catch, silently
+// disabling the logging; for `input` it sat OUTSIDE that guard and would have turned every
+// handled portal error into an unhandled crash.
+test('the catch never reads a variable scoped to the try', () => {
+  const portal = readFileSync(new URL('../../api/portal.js', import.meta.url), 'utf8');
+  const at = portal.lastIndexOf('} catch (error) {');
+  const block = portal.slice(at).replace(/\/\/[^\n]*/g, '');
+  assert.doesNotMatch(block, /\binput[?.]/, '`input` is declared inside the try');
+  assert.doesNotMatch(block, /\bmember\?\.user/, '`member` is declared inside the try');
+  // Hoisted before the try, so they survive into the catch.
+  const tryAt = portal.lastIndexOf('  try {', at);
+  const head = portal.slice(tryAt - 700, tryAt);
+  assert.match(head, /let attemptedAction = null;/);
+  assert.match(head, /let memberId = null;/);
+});
