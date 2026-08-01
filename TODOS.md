@@ -2,6 +2,20 @@
 
 Deferred during `/autoplan` on the portal redesign. Each has a reason, not just a name.
 
+## Pilot: Brief-First Concierge (approved 2026-07-31)
+
+- **Deal 000, the retrospective run.** Re-run the already-closed deal's scoping through
+  `project-intake.js`, playing the company, using their literal first message. Log every
+  question you asked in real life that the engine never asked. One hour, no code.
+  Instrument: `docs/pilot/BRIEF_GAP_LOG.md`.
+- **Falsification watch on P1.** If minutes-to-scoped-brief drops more than 4x between deal
+  000 and deal 005, scoping was a learning tax rather than a structural bottleneck and the
+  pilot's premise is wrong. Let it die if it earns it.
+- **Unanswered, and needed before deal 001.** Which company paid, how much, for what, and
+  have they come back? The V1 bar is a *second* engagement, and that is unknown today.
+- **Open risk.** If the founder's scoping is judgment rather than a question set, the engine
+  cannot capture it and Approach C (sell the brief standalone) becomes the real business.
+
 ## Deferred from the portal redesign
 
 - **Offline / retry handling.** `portalRequest` has no retry layer. Adding one is its own

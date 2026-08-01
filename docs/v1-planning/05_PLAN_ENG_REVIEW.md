@@ -59,7 +59,7 @@ Two were real and are fixed. Two claimed instances were not instances at all: th
 | Data model | **8/10** | `matches`, `introductions`, `placement_outcomes` well-shaped; DB-level rationale constraint is excellent |
 | Migrations | **8/10** | Idempotent, commented, re-runnable |
 | RLS posture | **7/10** | `submissions` correctly locked; two views bypassed it until today |
-| API structure | **6/10** | 83 endpoints for a product with 0 transactions |
+| API structure | **6/10** | 83 endpoints, none of which has carried a transaction (revenue exists; it closed manually, outside the product) |
 | Front-end structure | **4/10** | 6,500-line single-scope scripts; one throw kills all |
 | Test coverage | **7/10** | 1,323 tests, but structural — few behavioural |
 | Error visibility | **5/10** | `error_events` exists; unapplied until today, so failing open |

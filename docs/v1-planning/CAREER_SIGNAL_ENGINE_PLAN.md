@@ -1,5 +1,12 @@
 # Career Signal Engine — /autoplan review
 
+> **Correction (2026-07-31, `/office-hours`).** The "zero transactions" claim below was
+> derived from a schema audit and is wrong about the business. A company has paid —
+> money actually moved. The transaction closed over DMs, email and manual matching, so it
+> left no row in `placement_outcomes` and no `member_projects` row at `status='complete'`.
+> The database is empty; the business is not. Read every transaction-count claim in this
+> document as "transactions the product carried," not "transactions that happened."
+
 Plan under review. Feature spec as supplied by Tyler, reviewed against `docs/COVENDA_MASTER_SPEC.md`, `docs/COVENDA_GSTACK_CONTEXT.md`, the approved V1 decision log (`02_CEO_REVIEW.md` D1–D15), and the repository.
 
 **Voices:** `[codex-unavailable]` — the Codex CLI is not installed on this machine. All dual-voice sections run Claude-only and are tagged accordingly. This is a real reduction in review independence and is noted rather than papered over.
@@ -110,10 +117,11 @@ Feature sub-problem                    →  Existing code                       
 ### 0C. Dream state
 
 ```
-CURRENT          0 transactions · 83 endpoints · shortlist just wired · outcomes never recorded
+CURRENT          1+ paid deal (closed manually, outside the product) · 0 carried by the product
+                 83 endpoints · shortlist just wired · outcomes never recorded
 THIS PLAN (as
  specified)      + 7 tables · + public content pipeline · + second recommendation engine
-                 still 0 transactions · founder attention split across two products
+                 still 0 product-carried transactions · founder attention split across two products
 12-MONTH IDEAL   Career Signals grounded in Covenda's OWN hiring data — a moat nobody can copy,
                  because it comes from outcomes only Covenda observed
 ```

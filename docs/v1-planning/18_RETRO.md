@@ -1,5 +1,12 @@
 # Retrospective
 
+> **Correction (2026-07-31, `/office-hours`).** The "zero transactions" claim below was
+> derived from a schema audit and is wrong about the business. A company has paid —
+> money actually moved. The transaction closed over DMs, email and manual matching, so it
+> left no row in `placement_outcomes` and no `member_projects` row at `status='complete'`.
+> The database is empty; the business is not. Read every transaction-count claim in this
+> document as "transactions the product carried," not "transactions that happened."
+
 Output of `18_RETRO.md`. Covers the session that produced `2f6ae5e..HEAD` — 20 commits, 8 production deploys.
 
 ---
@@ -41,7 +48,7 @@ That is the sharpest lesson of the session and it has a number attached: **6 for
 
 ## Where the blueprint created unnecessary scope
 
-- **The 400-page spec makes everything look like V1.** 83 API endpoints and 63 migrations exist against zero completed transactions. The document says not to do this — and it was done anyway, because a specification that describes everything is read as a backlog.
+- **The 400-page spec makes everything look like V1.** 83 API endpoints and 63 migrations exist and not one has carried a transaction. (Revenue does exist: a company has paid. That deal closed manually, outside the product, which is the actual finding.) The document says not to do this — and it was done anyway, because a specification that describes everything is read as a backlog.
 - **25 specialisations, batch scoring, simulations, the coursework ontology** are all built and all optimise a funnel with no demand behind it.
 
 ---
