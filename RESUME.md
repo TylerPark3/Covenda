@@ -38,9 +38,16 @@ unapplied, including `infrastructure` (rate limits, the error log). Both fail op
 nothing broke and nothing was protected either — the limiter enforced nothing for days while
 appearing to. A stale note is worse than no note, so the note is gone. Check Supabase.
 
-**Not yet applied: `20260731100000_outcome_worklist`** — adds `result` and `introduction_id` to
-`placement_outcomes` and powers the operator worklist. The admin surface reports it as missing
-until the bundle runs.
+**Applied 2026-08-01:** the full bundle was pasted and run, which brought the schema up to
+`20260731100000_outcome_worklist`. That included `20260730300000_secure_people_views`, the
+`security_invoker` fix for the two people views that Supabase's advisor flagged as
+`SECURITY DEFINER`. Both were verified present in the pasted bundle before the run; neither
+was verified in the database afterwards, because no Supabase credentials exist on the machine
+that generated it. Treat "applied" as reported, not observed.
+
+`20260731100000_outcome_worklist` adds `result` and `introduction_id` to `placement_outcomes`
+and powers the operator worklist. It went in with the 2026-08-01 bundle. If the admin surface
+still reports it missing, the paste did not take and the bundle needs re-running.
 
 ## Built and NOT wired
 
