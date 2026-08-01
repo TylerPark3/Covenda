@@ -35,8 +35,9 @@ Deferred during `/autoplan` on the portal redesign. Each has a reason, not just 
   click target, but that needs a human to confirm.
 - ~~**Skip link.**~~ Added 2026-08-01: off-screen until focused, targets `#memberMain`, which is
   `tabindex="-1"` so focus actually moves rather than only the viewport.
-- **`DESIGN.md`.** The visual system exists only in `portal.css`. "Preserve the editorial
-  identity" currently has no written definition to preserve against.
+- ~~**`DESIGN.md`.**~~ Written 2026-08-01. Every token value in it was verified against
+  `type.css` and `styles.css` rather than recalled. It names which rules are enforced by
+  `tests/frontend-structure.test.js` and which are conventions, so a reader knows what bites.
 
 ## Deferred from earlier today
 
