@@ -2564,7 +2564,13 @@ function renderFlowStep() {
   const line = document.createElement('p');
   line.textContent = data.flow[flowStep];
   frame.replaceChildren(tag, line);
-  $('#workDetailStep').textContent = 'Step ' + (flowStep + 1) + ' of ' + count;
+  // #workDetail* is in no markup, here or anywhere. This block is unreachable only because
+  // .work-option is absent from index.html, so classList.contains('work-option') at line ~2606
+  // never fires. Add that class to a [data-work-type] button and this throws on first click,
+  // which is precisely how app.js:1897 took the homepage down. Guarded, not deleted: the
+  // feature may be staged for markup that has not landed.
+  const stepEl = $('#workDetailStep');
+  if (stepEl) stepEl.textContent = 'Step ' + (flowStep + 1) + ' of ' + count;
   const dots = $('#workFlowDots');
   dots.replaceChildren();
   for (let i = 0; i < count; i++) {
@@ -2582,7 +2588,7 @@ function openWorkDetail(niche) {
   const strong = document.createElement('b');
   strong.textContent = niche;
   tag.replaceChildren(createIcon(data.icon), strong);
-  $('#workDetailDesc').textContent = data.desc;
+  const descEl = $('#workDetailDesc'); if (descEl) descEl.textContent = data.desc;
   const roles = $('#workDetailRoles');
   roles.replaceChildren();
   data.roles.forEach(role => {
@@ -2592,12 +2598,12 @@ function openWorkDetail(niche) {
   });
   flowStep = 0;
   renderFlowStep();
-  $('#workDetail').hidden = false;
+  const panel = $('#workDetail'); if (panel) panel.hidden = false;
   $('.selector-orbit')?.classList.add('is-exploring');
 }
 
 function closeWorkDetail() {
-  $('#workDetail').hidden = true;
+  const panel = $('#workDetail'); if (panel) panel.hidden = true;
   $('.selector-orbit')?.classList.remove('is-exploring');
 }
 
