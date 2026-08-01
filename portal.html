@@ -77,6 +77,9 @@
   <div class="portal-loading" id="portalLoading" hidden><span class="portal-spinner"></span><p>Opening your workspace…</p></div>
 
   <div class="member-shell" id="memberShell" hidden>
+    <!-- First tabbable element on the page. A keyboard user should not have to walk six
+         nav items to reach the content every single time they load the portal. -->
+    <a class="skip-link" href="#memberMain">Skip to content</a>
     <aside class="member-nav">
       <a class="portal-brand" href="/"><img class="brand-mark-img" src="/assets/covenda-mark.svg" alt="" width="29" height="29">Covenda</a>
       <nav aria-label="Member workspace">
@@ -117,7 +120,7 @@
       <button class="header-profile" type="button" data-view="portfolio"><span id="headerInitial">C</span><span id="headerName">Member</span></button>
     </header>
 
-    <main class="member-main">
+    <main class="member-main" id="memberMain" tabindex="-1">
       <section class="portal-view is-active" data-portal-view="overview">
         <div class="overview-grid">
           <div class="overview-main">

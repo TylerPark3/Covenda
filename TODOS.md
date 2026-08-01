@@ -23,9 +23,18 @@ Deferred during `/autoplan` on the portal redesign. Each has a reason, not just 
 - **Multi-tab behaviour.** No state is shared between tabs today. Not a redesign concern.
 - **Screen-reader pass.** No assistive-technology harness exists, so this cannot be
   automated honestly. Needs a human with a screen reader.
-- **Tap-target audit.** The public student form has a control at 42px against the 44px
-  guidance. Whether the portal has the same issue is unmeasured.
-- **Skip link.** Not specified in the design direction and not present today.
+- **Tap-target audit — measured 2026-08-01, partially fixed.** The portal has 12 interactive
+  rules under the 44px guidance. Two were introduced by the redesign and are fixed
+  (`.member-account-menu button` 40->44, `.skip-link` 44). The rest are pre-existing and were
+  left alone deliberately: raising them changes layouts that cannot be verified without a
+  browser, and no browser driver is available here. Recorded rather than silently changed:
+  `.message-attach-btn` 34, `.list-row button` 36, `.cred-next-go` 40, `.conversion-label select`
+  40, `.discover-filters input/select` 42, `.axis-grid select` 42, `.closeout-answers button` 42.
+  The four checkbox rules (`.chip-check input` 15, `.visibility-row input` 16,
+  `.intake-consent input` 24, `.filter-line input` 34) are likely fine, since the label is the
+  click target, but that needs a human to confirm.
+- ~~**Skip link.**~~ Added 2026-08-01: off-screen until focused, targets `#memberMain`, which is
+  `tabindex="-1"` so focus actually moves rather than only the viewport.
 - **`DESIGN.md`.** The visual system exists only in `portal.css`. "Preserve the editorial
   identity" currently has no written definition to preserve against.
 
