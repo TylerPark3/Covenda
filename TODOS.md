@@ -2,6 +2,55 @@
 
 Deferred during `/autoplan` on the portal redesign. Each has a reason, not just a name.
 
+## Live on production, found by the 2026-08-01 pre-merge audit
+
+These were refuted as findings *against portal-redesign-v1* — correctly, since the branch does
+not touch them. That scoping is not the same as "not a problem": each one is shipped and live on
+covenda.app right now. Ordered by how much they would cost.
+
+- **`bump_rate_limit` is a SECURITY DEFINER function with no REVOKE.**
+  `supabase/migrations/20260728200000_infrastructure.sql:34-51`. Every other definer function in
+  the repo revokes from `anon`/`authenticated`; this one does not, so it is callable by any
+  browser role. Same class as the two people views closed in `20260730300000`, which the Supabase
+  advisor did flag. This one it did not.
+
+- **The work-email verification attempt cap never fires.**
+  `api/verification.js:106` gates on `Number(record.attempts) >= MAX_ATTEMPTS`, but
+  `company_email_codes` (`20260727200000_company_verification.sql:11-19`) has no `attempts`
+  column and nothing increments one. So the check reads `undefined >= 5`, which is false, forever.
+  A code can be brute-forced without limit. This is the "fails open while appearing to work"
+  pattern the rate limiter already taught us once.
+
+- **`renderVerification` iterates `verification.signals` with no shape guard** (`portal.js`,
+  the `v.signals.forEach` line). Identical to the crash that killed the portal on `t.unprompted`.
+  Live today; `studentJourney` was hardened for the same field, this was not.
+
+- **`renderCredibility` uses `(x||[]).find` on the same field.** Truthiness where shape is meant.
+
+- **`requestIntroduction` does not apply the `portfolio_visibility` gate** (`api/portal.js`).
+  The shortlist and the directory both withhold invisible students; this path does not. The
+  auditor argued it is a different direction of disclosure, which is worth deciding deliberately
+  rather than by omission.
+
+- **`loadBatchRoster` returns full profiles and user_ids of admitted students** with no
+  visibility gate.
+
+- **`registerClub` overwrites any existing club by slug with no ownership check** — a club can be
+  hijacked by registering its slug.
+
+- **Verification codes are placed in the email subject line** (`api/portal.js`). Subjects appear
+  in notification previews on a lock screen.
+
+- **`recordDelivery` writes raw provider error text into `error_events`**, bypassing the
+  `safeDetail` redaction every other error path uses.
+
+- **The mobile nav drawer is not positioned.** `.member-nav` computes to `position:relative`
+  (`portal.css`, pre-existing since 9803d72), so the 680px slide-in transform does not produce a
+  drawer. Worth confirming in a real browser before acting.
+
+- **At the 1000px breakpoint every nav button loses its accessible name** — labels are hidden and
+  no `aria-label` replaces them, leaving eight unlabelled buttons for a screen reader.
+
 ## Pilot: Brief-First Concierge (approved 2026-07-31)
 
 - **Deal 000, the retrospective run.** Re-run the already-closed deal's scoping through
