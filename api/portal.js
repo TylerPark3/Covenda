@@ -37,6 +37,7 @@ import { checkSchoolEmail, checkCode, generateCode, verificationStanding, normal
 import { classifyCompanyEmail, domainMatchesCompany, companyVerificationStanding } from './company-verification.js';
 import { readinessFor, categoriseOpportunity } from './readiness.js';
 import { recordRevision, briefVersion, evaluateBrief } from './brief-engine.js';
+import { recordAuditEvent } from './audit.js';
 import { checkIntroduction, applyResponse, normaliseOutcome, referralStatus, OUTCOME_QUESTIONS } from './introductions.js';
 import { checkPayout, creditsToCents, transferIdempotencyKey, payoutsMode } from './payouts.js';
 import { buildMilestoneSchedule, evaluateMilestones, reassignmentDecision, founderTimeVariance } from './milestones.js';
@@ -2677,6 +2678,13 @@ export async function requestIntroduction(member, input) {
     env: process.env,
   });
   await recordDelivery(member.supabase, { event: 'intro', result: sent_intro, toUserId: studentUserId });
+  // V1 spec section 7. `message` is on the row and stays off the event: it is free text a
+  // company wrote about a named student.
+  await recordAuditEvent(member.supabase, 'introduction.requested', {
+    actorUserId: member.user.id,
+    subject: { kind: 'introduction', id: intro?.id || null },
+    detail: { studentUserId, projectId: row.project_id || null, emailDelivered: Boolean(sent_intro) },
+  });
   return intro;
 }
 
@@ -2687,9 +2695,20 @@ export async function respondToIntroduction(member, input) {
   if (!intro || intro.student_user_id !== member.user.id) throw new Error('This introduction is not yours to answer.');
 
   const patch = applyResponse(intro, cleanText(input.response, 20), cleanText(input.note, 2000));
-  return checked(member.supabase.from('introductions').update({
+  const saved = await checked(member.supabase.from('introductions').update({
     ...patch, responded_at: new Date().toISOString(),
   }).eq('id', intro.id).select('*').single(), null);
+  // V1 spec section 7. The student's note is why they declined and is exactly the kind of free
+  // text the taxonomy forbids in an event, so only the decision travels.
+  const status = String(saved?.status || patch?.status || '').toLowerCase();
+  if (status === 'accepted' || status === 'declined') {
+    await recordAuditEvent(member.supabase, `introduction.${status}`, {
+      actorUserId: member.user.id,
+      subject: { kind: 'introduction', id: intro.id },
+      detail: { projectId: intro.project_id || null, companyUserId: intro.company_user_id || null },
+    });
+  }
+  return saved;
 }
 
 // ── R-02: the shortlist a company actually sees ───────────────────────────────────────

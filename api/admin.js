@@ -5,6 +5,7 @@ import {
 } from './super-intern.js';
 import { scenarioById } from './simulation-run.js';
 import { createClient } from '@supabase/supabase-js';
+import { recordAuditEvent } from './audit.js';
 
 import { supabaseConfiguration } from './submissions.js';
 import { sendPartnerDigests } from './digest.js';
@@ -793,6 +794,17 @@ export async function decideMatch(supabase, input) {
   //
   // This reads the student's own visibility setting, which the operator is already entitled to
   // see, and says so at the moment the decision is made rather than never.
+  // V1 spec section 7. The rationale is mandatory on the decision and deliberately absent from
+  // the event: it is the operator's written judgment about a named student, and it stays in
+  // matches.human_rationale where access control applies.
+  if (decision === 'proposed') {
+    await recordAuditEvent(supabase, 'shortlist.candidate_added', {
+      actorUserId: data?.decided_by || null,
+      subject: { kind: 'student', id: data?.student_user_id },
+      detail: { matchId, opportunityId: data?.opportunity_id || null },
+    });
+  }
+
   let withheld = false;
   if (decision === 'proposed' && data?.student_user_id) {
     const { data: p } = await supabase.from('member_profiles')
@@ -1186,6 +1198,14 @@ export default async function handler(req, res, dependencies = {}) {
               .upsert(row, { onConflict: 'introduction_id', ignoreDuplicates: false })
           : await operator.supabase.from('placement_outcomes').insert(row);
         if (error) return res.status(503).json({ ok: false, error: 'That outcome could not be saved. The super_intern migration may not be applied yet.' });
+
+        // V1 spec section 7. Structured facts only: which introduction closed and with what
+        // result. `note` is on the row and must not be on the event.
+        await recordAuditEvent(operator.supabase, 'outcome.recorded', {
+          actorUserId: operator.user?.id || null,
+          subject: { kind: 'student', id: row.student_user_id },
+          detail: { result: row.result, introductionId: row.introduction_id, hasIntroduction: Boolean(row.introduction_id) },
+        });
 
         const { data: all } = await operator.supabase.from('placement_outcomes').select('days_to_contribution');
         return res.status(200).json({ ok: true,
