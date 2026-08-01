@@ -137,12 +137,16 @@ test('no selector is dereferenced without existing in the markup', () => {
   assert.deepEqual(offenders, [], `these deref an element absent from portal.html: ${offenders.join(', ')}`);
 });
 
-test('every nav label paint is null-guarded', () => {
-  const at = portal.indexOf("const pl=$('#portfolioNavLabel')");
+test('every nav element paint is null-guarded', () => {
+  // The three label ids this used to check are gone: they were a second naming system running
+  // beside NAV_LABELS, both painting every render and disagreeing about the result. What is
+  // left is the one badge and the one role-gated button, and both are still role-hidden, so
+  // both still need a guard before they are touched.
+  const at = portal.indexOf("const mc=$('#messageCount')");
   assert.notEqual(at, -1, 'the badge paint block exists');
-  const block = portal.slice(at, at + 1200);
-  for (const id of ['portfolioNavLabel', 'walletNavLabel', 'projectsNavLabel', 'messageCount', 'batchesNav']) {
-    assert.match(block, new RegExp(`\\$\\('#${id}'\\);?\\s*if\\(`), `#${id} is checked before it is written`);
+  const block = portal.slice(at, at + 800);
+  for (const id of ['messageCount', 'batchesNav']) {
+    assert.match(block, new RegExp(`\\$\\('#${id}'\\);?\\s*\\n?\\s*if\\(`), `#${id} is checked before it is written`);
   }
 });
 

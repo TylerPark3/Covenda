@@ -980,8 +980,11 @@ test('the portal nav is role-gated and named for the reader', async () => {
   assert.match(portalJs, /roles\.includes\(role\)/);
   assert.match(portalJs, /const NAV_LABELS = \{/);
   assert.match(portalJs, /student: \{ projects: 'My work'/);
-  // A view that vanishes under the current role must not leave an empty pane behind.
-  assert.match(portalJs, /if \(active && active\.hidden\) setView\('overview'\)/);
+  // A view that vanishes under the current role must not leave an empty pane behind. The check
+  // now distinguishes "hidden" from "unreachable": the redesign gave students routes to Batches
+  // and Activity that are not nav items, and inferring reachability from the nav ejected them.
+  assert.match(portalJs, /if \(strandedView\) setView\('overview'\)/);
+  assert.match(portalJs, /navButton && navButton\.hidden && !reachable\.has\(state\.view\)/);
 });
 
 test('students can see their verification standing and where work stands', async () => {

@@ -174,7 +174,11 @@ function setView(view, opts) {
   const wanted=alias[view]||view;
   state.view=allowed.includes(wanted)?wanted:'overview';
   $$('[data-portal-view]').forEach(section=>section.classList.toggle('is-active',section.dataset.portalView===state.view));
-  $$('[data-view]').forEach(button=>button.classList.toggle('is-active',button.closest('.member-nav')&&button.dataset.view===state.view));
+  // A hidden button must never carry .is-active. renderDashboard reads the active nav item to
+  // decide whether the current view is still available, so a hidden-but-active button reads
+  // as "this view is gone" and ejects the member.
+  $$('[data-view]').forEach(button=>button.classList.toggle('is-active',
+    button.closest('.member-nav')&&!button.hidden&&button.dataset.view===state.view));
   $('#memberBreadcrumb').textContent=`Workspace / ${titleCase(state.view)}`;
   $('.member-nav').classList.remove('is-open');
   // Opening Messages clears the unread indicator and pulls the latest immediately.
@@ -239,10 +243,15 @@ function renderDashboard() {
   });
   // The same view means different things to different people, so it is named for the reader
   // rather than for the data model.
+  // One naming system. The redesign briefly had two: this map, plus a second block below that
+  // painted #portfolioNavLabel / #walletNavLabel / #projectsNavLabel directly. Both ran every
+  // render and disagreed, and order decided the winner — so a student saw "Explore" and "Chats"
+  // from here (no id to overwrite) but "Profile" and "Earnings" from there. Exactly the mistake
+  // that produced a duplicate progress ladder earlier on this branch, made twice.
   const NAV_LABELS = {
-    student: { projects: 'My work', batches: 'Batches', portfolio: 'My profile', messages: 'Chats', wallet: 'Earnings', discover: 'Explore' },
-    company: { projects: 'Projects', batches: 'Talent batches', portfolio: 'Talent', messages: 'Messages', wallet: 'Wallet' },
-    university: { projects: 'Projects', messages: 'Messages', wallet: 'Wallet' },
+    student: { projects: 'My work', batches: 'Batches', portfolio: 'Profile', messages: 'Messages', wallet: 'Earnings', discover: 'Opportunities' },
+    company: { projects: 'My projects', batches: 'Batches', portfolio: 'Talent', messages: 'Messages', wallet: 'Wallet' },
+    university: { projects: 'My projects', messages: 'Messages', wallet: 'Wallet' },
   };
   const labels = NAV_LABELS[role] || {};
   $$('nav [data-view]').forEach(el=>{
@@ -252,15 +261,28 @@ function renderDashboard() {
   });
   // If the current view is no longer available to this role, fall back rather than showing
   // an empty pane.
-  const active = $('nav [data-view].is-active');
-  if (active && active.hidden) setView('overview');
+  // Reachability is not the same as having a nav item. This fallback exists so a role that
+  // loses a view does not stare at an empty pane — but the redesign gave students routes to
+  // views with no nav button of their own, and inferring reachability from the nav ejected them.
+  //
+  // A student reaches Batches through the Opportunities tab strip, and Activity through the
+  // "Applications" metric on the overview. Both were bounced to Home by the next dashboard
+  // reload: open a batch simulation, close it, and you are on Home with no explanation and a
+  // stale tab. The ladder's own "Apply to a batch" step is the main route into it, which made
+  // the most prominent CTA on the redesigned overview a trap.
+  const REACHABLE_WITHOUT_NAV = {
+    student: ['batches', 'activity'],
+    company: [],
+    university: [],
+  };
+  const reachable = new Set(REACHABLE_WITHOUT_NAV[role] || []);
+  const navButton = $(`nav [data-view="${state.view}"]`);
+  const strandedView = navButton && navButton.hidden && !reachable.has(state.view);
+  if (strandedView) setView('overview');
   $$('[data-org-only]').forEach(el=>el.hidden=!['company','university'].includes(role));
   // Every one of these is optional now. The count badges were removed from the nav, and an
   // unguarded $('#gone').textContent is exactly the null deref that aborted app.js and took the
   // whole homepage down this morning. Optional chaining, not assumption.
-  const pl=$('#portfolioNavLabel'); if(pl)pl.textContent=role==='company'?'Talent':'Profile';
-  const wl=$('#walletNavLabel'); if(wl)wl.textContent=role==='student'?'Earnings':'Wallet';
-  const jl=$('#projectsNavLabel'); if(jl)jl.textContent=role==='student'?'My work':'My projects';
   // Messages keeps its badge: unread is the one count a student can act on. Zero reads as
   // clutter, so it hides itself rather than showing a nought.
   const mc=$('#messageCount');
