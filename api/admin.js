@@ -1192,11 +1192,33 @@ export default async function handler(req, res, dependencies = {}) {
         //
         // Outcomes with no introduction_id fall back to a plain insert, because the constraint
         // is partial and there is nothing to conflict on.
-        const { error } = row.introduction_id
-          ? await operator.supabase
-              .from('placement_outcomes')
-              .upsert(row, { onConflict: 'introduction_id', ignoreDuplicates: false })
-          : await operator.supabase.from('placement_outcomes').insert(row);
+        // Degrades to a plain insert when the unique index is not there yet.
+        //
+        // Code deploys automatically here; migrations wait for a human to paste SQL. So there is
+        // always a window where this handler is live and 20260801100000 is not applied. Postgres
+        // rejects ON CONFLICT against a column with no matching unique constraint (42P10), so an
+        // unguarded upsert would take record-outcome down completely during that window — trading
+        // a rare duplicate for a total outage, which is the worse deal.
+        //
+        // Falling back means duplicates remain possible until the migration lands. That is the
+        // pre-existing behaviour, not a regression, and the migration deletes any that appear.
+        let error = null;
+        if (row.introduction_id) {
+          const up = await operator.supabase
+            .from('placement_outcomes')
+            .upsert(row, { onConflict: 'introduction_id', ignoreDuplicates: false });
+          const code = String(up.error?.code || '');
+          const message = String(up.error?.message || '');
+          if (up.error && (code === '42P10' || /no unique|constraint matching|on conflict/i.test(message))) {
+            const ins = await operator.supabase.from('placement_outcomes').insert(row);
+            error = ins.error;
+          } else {
+            error = up.error;
+          }
+        } else {
+          const ins = await operator.supabase.from('placement_outcomes').insert(row);
+          error = ins.error;
+        }
         if (error) return res.status(503).json({ ok: false, error: 'That outcome could not be saved. The super_intern migration may not be applied yet.' });
 
         // V1 spec section 7. Structured facts only: which introduction closed and with what

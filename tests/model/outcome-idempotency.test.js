@@ -31,9 +31,10 @@ test('a retry succeeds rather than erroring', () => {
   assert.match(handler, /\.upsert\(row, \{ onConflict: 'introduction_id', ignoreDuplicates: false \}\)/,
     'the second submission overwrites the first and reports success');
   // Null introduction_id has nothing to conflict on, so it must still take the plain path.
-  assert.match(handler, /row\.introduction_id\s*\n?\s*\?/,
+  assert.match(handler, /if \(row\.introduction_id\) \{/,
+    'the upsert path is gated on there being something to conflict on');
+  assert.match(handler, /\} else \{\s*\n\s*const ins = await operator\.supabase\.from\('placement_outcomes'\)\.insert\(row\);/,
     'outcomes with no introduction still insert normally');
-  assert.match(handler, /: await operator\.supabase\.from\('placement_outcomes'\)\.insert\(row\)/);
 });
 
 // Building a unique index over a table that already has duplicates fails, and the bundle is
@@ -62,4 +63,21 @@ test('the migration is safe to run twice', () => {
 // on every insert and an extra index in cache for no benefit.
 test('the redundant non-unique index is dropped', () => {
   assert.match(migration, /drop index if exists public\.placement_outcomes_introduction_idx/);
+});
+
+// Code deploys automatically here; migrations wait for a human to paste SQL. There is always a
+// window where this handler is live and 20260801100000 is not yet applied.
+//
+// Postgres rejects ON CONFLICT against a column with no matching unique constraint (SQLSTATE
+// 42P10). An unguarded upsert would therefore take record-outcome down completely during that
+// window — trading a rare duplicate for a total outage, which is the worse deal. This is the
+// same deploy-ahead-of-schema gap that once left the client eleven migrations ahead.
+test('the upsert degrades to an insert when the index is not applied yet', () => {
+  const handler = admin.slice(admin.indexOf("'record-outcome'"), admin.indexOf('calibrationStatus(all'));
+  assert.match(handler, /code === '42P10'/,
+    'the specific Postgres error for a missing ON CONFLICT target is handled');
+  assert.match(handler, /no unique\|constraint matching\|on conflict/i,
+    'and matched by message too, since PostgREST does not always surface the code');
+  const fallback = handler.indexOf("const ins = await operator.supabase.from('placement_outcomes').insert(row)");
+  assert.notEqual(fallback, -1, 'it falls back to a plain insert rather than failing the request');
 });
