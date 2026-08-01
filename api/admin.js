@@ -1062,7 +1062,39 @@ export default async function handler(req, res, dependencies = {}) {
       //
       // "Did the migration land" was previously unanswerable without opening the Supabase
       // console, which meant a missing table showed up as a broken feature rather than as a
-      // missing table.
+      // missing table. This comment described the probe for a while before the probe existed,
+      // which is its own small version of the same problem.
+      //
+      // Code deploys automatically here and migrations wait for a human to paste SQL, so the
+      // schema is routinely behind the code. That gap once left the client eleven migrations
+      // ahead, with rate limiting inert but appearing active for days.
+      if (input.action === 'schema-status') {
+        // One cheap probe per recent migration: select a column the migration introduced, with
+        // limit 0 so nothing is read. A missing table or column comes back as an error, which is
+        // the answer. Ordered newest first, because that is where the gap always is.
+        const PROBES = [
+          { migration: '20260801200000_audit_events', table: 'audit_events', column: 'event_type', breaks: 'Audit events are silently not recorded.' },
+          { migration: '20260801100000_outcome_idempotency', table: 'placement_outcomes', column: 'introduction_id', breaks: 'Outcome recording falls back to plain insert, so a retry can duplicate a row.' },
+          { migration: '20260731100000_outcome_worklist', table: 'placement_outcomes', column: 'result', breaks: 'The operator worklist cannot report what happened.' },
+          { migration: '20260730200000_open_roles', table: 'open_roles', column: 'id', breaks: 'Live role listings are unavailable.' },
+          { migration: '20260728200000_infrastructure', table: 'rate_limits', column: 'id', breaks: 'Rate limiting fails open: it enforces nothing while appearing to.' },
+        ];
+        const checked = await Promise.all(PROBES.map(async probe => {
+          const { error } = await operator.supabase.from(probe.table).select(probe.column).limit(0);
+          return { ...probe, applied: !error, detail: error ? String(error.message || error).slice(0, 160) : null };
+        }));
+        const missing = checked.filter(c => !c.applied);
+        return res.status(200).json({
+          ok: true,
+          // The honest headline. `npm run sql` is the fix and it is safe to run at any time,
+          // because every migration in this repo is idempotent.
+          upToDate: missing.length === 0,
+          summary: missing.length === 0
+            ? 'Every probed migration has landed.'
+            : `${missing.length} migration${missing.length === 1 ? '' : 's'} not applied. Run \`npm run sql\` and paste the bundle into the Supabase SQL editor.`,
+          migrations: checked,
+        });
+      }
       // ── The reviewer side ─────────────────────────────────────────────────────────────
       // Everything above produces evidence; this is where a human decides what it is worth. It
       // is deliberately the only place that happens: no route anywhere scores a student
