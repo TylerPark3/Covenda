@@ -2895,8 +2895,27 @@ export async function registerClub(member, input) {
   };
   // A re-registration updates the existing club rather than creating a duplicate; officers
   // turn over every year and the second one should not fork the record.
-  const existing = await checked(member.supabase.from('clubs').select('id').eq('slug', row.slug).maybeSingle(), null);
+  //
+  // But only the person who registered it may update it. This used to overwrite the whole row
+  // for any caller, `created_by` included, so anyone signed in could re-register a club by name
+  // and school, land on the same slug, and take the record over — replacing the contact email
+  // the confirmation flow writes to.
+  //
+  // That is not merely a data-integrity problem. A club confirmation is a verification signal:
+  // studentJourney reads held('club') as evidence somebody stands behind a student. Owning a
+  // club record is the power to vouch, so silent transfer of that record is silent transfer of
+  // the ability to vouch.
+  //
+  // Officer turnover is real and still needs solving, but it needs a human in the loop rather
+  // than a slug collision. Until that exists, the honest answer is to refuse and say why.
+  const existing = await checked(member.supabase.from('clubs').select('id, created_by').eq('slug', row.slug).maybeSingle(), null);
+  if (existing && existing.created_by && existing.created_by !== member.user.id) {
+    throw new Error('This club is already registered. Ask whoever registered it to update the details, or contact us if you have taken over as an officer.');
+  }
   if (existing) {
+    // Ownership is never rewritten, even for the legitimate owner: if created_by is somehow
+    // null on an old row, it is set once here and fixed thereafter.
+    row.created_by = existing.created_by || member.user.id;
     return checked(member.supabase.from('clubs').update({ ...row, updated_at: new Date().toISOString() }).eq('id', existing.id).select('*').single(), null);
   }
   return checked(member.supabase.from('clubs').insert(row).select('*').single(), null);

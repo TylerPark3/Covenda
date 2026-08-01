@@ -88,3 +88,36 @@ test('every read of verification.signals is shape-guarded', () => {
   assert.ok((portal.match(/asList\((v\.signals|state\.dashboard\?\.verification\?\.signals)\)/g) || []).length >= 4,
     'all four readers go through asList');
 });
+
+// ── 4. A club record could be taken over by anyone ─────────────────────────────────────
+// registerClub derives a slug from name + school, looks for an existing club with that slug,
+// and updated the whole row for any caller — created_by included. So anyone signed in could
+// re-register a club by name and school and own the record.
+//
+// A club confirmation is a verification signal: studentJourney reads held('club') as evidence
+// that somebody stands behind a student. Owning the record is the power to vouch, so a silent
+// takeover is a silent transfer of that power.
+test('a club cannot be taken over by re-registering its name', () => {
+  const fn = apiPortal.slice(apiPortal.indexOf('export async function registerClub'),
+                             apiPortal.indexOf('// ── Club officer confirmation'));
+  assert.match(fn, /existing && existing\.created_by && existing\.created_by !== member\.user\.id/,
+    'a different caller is refused, not silently allowed to overwrite');
+  assert.match(fn, /throw new Error\('This club is already registered\./,
+    'and told why, rather than getting a silent no-op');
+  assert.match(fn, /\.select\('id, created_by'\)/, 'ownership is actually read');
+});
+
+test('club ownership is never rewritten by an update', () => {
+  const fn = apiPortal.slice(apiPortal.indexOf('export async function registerClub'),
+                             apiPortal.indexOf('// ── Club officer confirmation'));
+  assert.match(fn, /row\.created_by = existing\.created_by \|\| member\.user\.id/,
+    'the original registrant survives the update');
+  // The insert path still stamps the creator.
+  assert.match(fn, /created_by: member\.user\.id/);
+});
+
+// club_confirmed feeds verification, which is why the above matters.
+test('club confirmation really is a verification signal', () => {
+  assert.match(portal, /held\('club'\)/,
+    'studentJourney reads it as evidence, so the record bears on who can vouch');
+});
