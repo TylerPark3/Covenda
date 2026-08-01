@@ -22,7 +22,7 @@ Output of `18_RETRO.md`. Covers the session that produced `2f6ae5e..HEAD` — 20
 | **Outcome loop closed** | `placement_outcomes` existed with no UI. Chapter 32's north star had nothing writing to it. |
 | **Company shortlist** | The operator's curated shortlist finally reaches the company. |
 | **Accommodation promise honoured** | Panel and server both said "applying is not blocked while you wait"; the client blocked anyway. |
-| **Student form fixed** | Reported by a real user, Veer, mid-session. |
+| **Student form fixed** | Reported by a real user mid-session. |
 | **Render fault isolation** | One bad field now costs its section, not the page. |
 | **Seven planning documents** | Office hours → CEO → spec → design → eng → security → QA. |
 
@@ -32,7 +32,7 @@ Output of `18_RETRO.md`. Covers the session that produced `2f6ae5e..HEAD` — 20
 
 **Everything that came from running the product. Almost nothing that came from reading about it.**
 
-The homepage crash, the portal crash, the dead mail path, the RLS bypass, the unwired outcome loop and Veer's form bug were all found by loading pages, clicking buttons, querying DNS and reading schemas. Each was real and each is fixed.
+The homepage crash, the portal crash, the dead mail path, the RLS bypass, the unwired outcome loop and the user-reported form bug were all found by loading pages, clicking buttons, querying DNS and reading schemas. Each was real and each is fixed.
 
 The findings that came from reading documentation — D-01, Q-07, Q-10 — were **all three wrong**. They looked like defects because a note said so, or because a pattern had been genuine three times before.
 
@@ -57,7 +57,7 @@ That is the sharpest lesson of the session and it has a number attached: **6 for
 
 | Source | Found |
 |---|---|
-| Driving a real browser | Homepage dead, Veer's form bug, portal render |
+| Driving a real browser | Homepage dead, the user-reported form bug, portal render |
 | Querying live infrastructure | Resend never verified, DNS at Porkbun, `www` broken |
 | Reading schema | Outcome loop unwired, shortlist already existed |
 | Supabase advisor | RLS bypass (independently confirmed) |
@@ -114,7 +114,7 @@ The gap is not the errors — it is that both were written as decisions when the
 - Reproducing before diagnosing. It was right every time it was done and wrong every time it was skipped.
 - Verifying a test fails against the defect before committing it.
 - `Array.isArray(x) ? x : []` over `x || []`. Shape, never truthiness.
-- Writing *why* in comments. The `fitTier` comment is the only reason D-01 got a second look, and the `validateStep` comment had already diagnosed Veer's bug before it was reported.
+- Writing *why* in comments. The `fitTier` comment is the only reason D-01 got a second look, and the `validateStep` comment had already diagnosed the student form bug before it was reported.
 
 ## 2. Change
 

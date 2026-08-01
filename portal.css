@@ -2845,7 +2845,7 @@ body { background: var(--surface); }
 .work-empty-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:4px; }
 
 /* ── Greeting demotion (overview only) ─────────────────────────────────────────────── */
-/* "Good afternoon, Veer." was set at display size, which made the salutation the largest
+/* "Good afternoon, Sam." was set at display size, which made the salutation the largest
    thing on the page and the next action the second. Scoped to the overview so every other
    panel heading keeps its size. */
 [data-portal-view="overview"] .welcome-row h1 { font-size:var(--text-body);

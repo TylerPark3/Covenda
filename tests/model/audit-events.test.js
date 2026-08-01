@@ -45,7 +45,7 @@ test('free text never reaches an audit row, whatever the caller passes', async (
       notes: 'second thoughts',
       comment: 'nice person',
       reason: 'because',
-      email: 'veer@example.com',
+      email: 'student@example.com',
       phone: '+1 555 0100',
       token: 'sk_live_abc',
       secret: 'hunter2',
@@ -56,7 +56,7 @@ test('free text never reaches an audit row, whatever the caller passes', async (
   const detail = db.rows[0].detail;
   assert.deepEqual(Object.keys(detail), ['briefId'], 'only the structured fact survives');
   const serialised = JSON.stringify(db.rows[0]);
-  for (const leak of ['Strong systems thinker', 'call her first', 'veer@example.com', '555 0100', 'sk_live_abc', 'hunter2']) {
+  for (const leak of ['Strong systems thinker', 'call her first', 'student@example.com', '555 0100', 'sk_live_abc', 'hunter2']) {
     assert.ok(!serialised.includes(leak), `"${leak}" must not appear anywhere in the row`);
   }
 });
