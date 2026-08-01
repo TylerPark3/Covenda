@@ -1619,7 +1619,10 @@ export async function requestSchoolVerification(member, input, { env = process.e
   const { error } = await new Resend(apiKey).emails.send({
     from,
     to: email,
-    subject: `Covenda verification code: ${code}`,
+    // The code is deliberately NOT in the subject: subjects render in lock-screen and
+    // inbox previews, which are readable without opening the mail and usually without
+    // unlocking the phone. Anyone who can see the screen could use the code.
+    subject: 'Your Covenda verification code',
     text: `Your Covenda school-email verification code is ${code}. It expires in 20 minutes.\n\nThis confirms you control this address. It is not a sign-in link.`,
   });
   if (error) {
@@ -2354,7 +2357,10 @@ export async function requestCompanyVerification(member, input, { env = process.
   const { error } = await new Resend(apiKey).emails.send({
     from,
     to: email,
-    subject: `Covenda verification code: ${code}`,
+    // The code is deliberately NOT in the subject: subjects render in lock-screen and
+    // inbox previews, which are readable without opening the mail and usually without
+    // unlocking the phone. Anyone who can see the screen could use the code.
+    subject: 'Your Covenda verification code',
     text: `Your Covenda work-email verification code is ${code}. It expires in 20 minutes.\n\nThis confirms you read mail at this domain. It is not a sign-in link.`,
   });
   if (error) throw new PortalOperationalError('VERIFY_EMAIL_FAILED', 'Could not send the code. Try again shortly.');

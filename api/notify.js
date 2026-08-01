@@ -7,6 +7,7 @@
 // idempotent per event. Every call site treats this as best-effort — a failed/*unconfigured*
 // email must never break the underlying action.
 import { Resend } from 'resend';
+import { safeDetail } from './limits.js';
 
 function escapeHtml(value) {
   return String(value == null ? '' : value)
@@ -245,8 +246,12 @@ export async function recordDelivery(supabase, { event, result, toUserId = null 
     await supabase.from('error_events').insert({
       route: 'notify',
       kind: 'degraded',
-      message: `${event} not delivered: ${result?.reason || 'unknown'}`,
-      detail: { event, reason: String(result?.reason || 'unknown').slice(0, 120) },
+      // Provider failure text is not ours and routinely echoes the recipient address back
+      // ("550 5.1.1 <someone@example.com> does not exist"). Everything else in this codebase
+      // puts detail through safeDetail; this path inserted raw, so an address could land in
+      // error_events unredacted. The message is generalised and the detail is scrubbed.
+      message: `${event} not delivered`,
+      detail: safeDetail({ event, reason: String(result?.reason || 'unknown').slice(0, 120) }),
       user_id: toUserId,
     });
     return { logged: true };

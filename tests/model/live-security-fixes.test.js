@@ -121,3 +121,24 @@ test('club confirmation really is a verification signal', () => {
   assert.match(portal, /held\('club'\)/,
     'studentJourney reads it as evidence, so the record bears on who can vouch');
 });
+
+// ── 5. A live code should not be readable from a lock screen ───────────────────────────
+test('verification codes are never in the email subject', () => {
+  assert.doesNotMatch(apiPortal, /subject: `[^`]*\$\{code\}/,
+    'subjects render in lock-screen and inbox previews, readable without unlocking the phone');
+  assert.equal((apiPortal.match(/subject: 'Your Covenda verification code'/g) || []).length, 2,
+    'both the student and company paths are fixed');
+  // The code still has to reach the person.
+  assert.match(apiPortal, /\$\{code\}/, 'it is still in the body');
+});
+
+// ── 6. Provider errors are not ours to store raw ───────────────────────────────────────
+// Bounce text routinely echoes the recipient back ("550 5.1.1 <x@y.com> does not exist").
+// Everything else in this codebase runs detail through safeDetail; this path inserted raw.
+test('delivery failures are redacted like every other error path', () => {
+  const notify = readFileSync(new URL('../../api/notify.js', import.meta.url), 'utf8');
+  assert.match(notify, /import \{ safeDetail \} from '\.\/limits\.js'/);
+  assert.match(notify, /detail: safeDetail\(\{ event, reason:/);
+  assert.match(notify, /message: `\$\{event\} not delivered`/,
+    'the message no longer interpolates provider text either');
+});
