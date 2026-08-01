@@ -58,3 +58,26 @@ test('the account menu is a real disclosure', () => {
   assert.match(html, /id="memberIdentity"[^>]*aria-expanded="false"/);
   assert.match(html, /aria-controls="memberAccountMenu"/);
 });
+
+// Between 681px and 1000px the nav collapses to icons. It used to do that with display:none on
+// the label, which removes the element from the accessibility tree — so a screen reader met
+// eight buttons called "button". Clipping keeps the name and looks identical.
+test('collapsing the nav to icons does not strip the accessible names', () => {
+  const at = css.indexOf('@media (max-width: 1000px)');
+  const block = css.slice(at, css.indexOf('@media', at + 10));
+  assert.doesNotMatch(block, /\.member-nav nav button span[^{]*\{[^}]*display:\s*none/,
+    'the label must not be display:none — that removes it from the a11y tree');
+  assert.match(block, /\.member-nav nav button span \{ position:absolute; width:1px; height:1px/,
+    'it is clipped instead, so the name survives');
+  assert.match(block, /clip-path:inset\(50%\)/);
+});
+
+// A drawer that is off-screen but focusable puts eleven invisible controls in the tab order.
+test('the closed mobile drawer is not focusable', () => {
+  const at = css.indexOf('@media (max-width: 680px)');
+  const block = css.slice(at, css.indexOf('@media', at + 10));
+  assert.match(block, /\.member-nav:not\(\.is-open\) \{ visibility:hidden; \}/);
+  assert.match(block, /\.member-nav\.is-open \{ visibility:visible; \}/);
+  // And it has to actually leave the flow, or translating it leaves a hole above the header.
+  assert.match(block, /\.member-nav \{ position:fixed;/);
+});
