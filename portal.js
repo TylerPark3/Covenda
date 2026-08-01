@@ -4689,9 +4689,14 @@ function renderOpenRoles(root,d){
     // An empty list with no way to act on it reads as broken. This pulls the boards now rather
     // than waiting for the overnight job, which is the difference between "nothing yet" and
     // "nothing, and no way to find out".
+    // The empty state was a large blank card with a lone centred button and an error line
+    // floating under it, which read as breakage rather than as "nothing yet". Grouped into one
+    // block so the sentence, the action and any result sit together and the card sizes to them.
+    const empty=document.createElement('div');empty.className='role-empty';
     const pull=document.createElement('button');
-    pull.type='button';pull.className='portal-ghost compact';pull.textContent='Check the boards now';
+    pull.type='button';pull.className='portal-secondary compact';pull.textContent='Check the boards now';
     const note=document.createElement('p');note.className='role-match-msg';note.setAttribute('aria-live','polite');
+    empty.append(pull,note);
     pull.addEventListener('click',async()=>{
       pull.disabled=true;note.textContent='Reading the boards…';
       try{
@@ -4701,7 +4706,7 @@ function renderOpenRoles(root,d){
         await loadDashboard();
       }catch(error){ note.textContent=error.message; pull.disabled=false; }
     });
-    panel.append(pull,note);
+    panel.append(empty);
     root.append(panel);return;
   }
   sub.textContent=`${r.total} open student ${r.total===1?'role':'roles'} on the boards we watch.`;

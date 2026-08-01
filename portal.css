@@ -2861,3 +2861,11 @@ body { background: var(--surface); }
   background:var(--ink); color:var(--surface-1); font-size:var(--text-body);
   font-weight:var(--weight-bold); text-decoration:none; }
 .skip-link:focus { left:8px; top:8px; outline:2px solid var(--gold); outline-offset:2px; }
+
+/* ── Open-roles empty state ─────────────────────────────────────────────────────────── */
+/* Was a tall blank card with a centred button adrift in it and any error text floating below.
+   Left-aligned with the heading it belongs to, sized to its content, so "nothing yet" reads as
+   a state rather than as a failure. */
+.role-empty { display:grid; gap:10px; justify-items:start; margin-top:14px;
+  padding:16px 18px; border:1px dashed var(--line-strong); }
+.role-empty .role-match-msg:empty { display:none; }
