@@ -1149,7 +1149,19 @@ export default async function handler(req, res, dependencies = {}) {
         };
         if (!row.student_user_id) return res.status(400).json({ ok: false, error: 'An outcome has to belong to a student.' });
 
-        const { error } = await operator.supabase.from('placement_outcomes').insert(row);
+        // Idempotent on introduction_id. The unique index added in 20260801100000 stops the
+        // duplicate; without this upsert it would only convert a duplicate into a 503, which is
+        // worse for the operator — they retry, see a failure, and cannot tell whether the first
+        // submission landed. Re-submitting now overwrites the row it already wrote and reports
+        // success, which is the truth: that introduction has exactly one recorded outcome.
+        //
+        // Outcomes with no introduction_id fall back to a plain insert, because the constraint
+        // is partial and there is nothing to conflict on.
+        const { error } = row.introduction_id
+          ? await operator.supabase
+              .from('placement_outcomes')
+              .upsert(row, { onConflict: 'introduction_id', ignoreDuplicates: false })
+          : await operator.supabase.from('placement_outcomes').insert(row);
         if (error) return res.status(503).json({ ok: false, error: 'That outcome could not be saved. The super_intern migration may not be applied yet.' });
 
         const { data: all } = await operator.supabase.from('placement_outcomes').select('days_to_contribution');
