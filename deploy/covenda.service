@@ -1,0 +1,29 @@
+[Unit]
+Description=Covenda
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=covenda
+WorkingDirectory=/srv/covenda
+# Secrets live here, root-owned, 0600. Never in the repo, never in the unit file.
+EnvironmentFile=/etc/covenda/env
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=3
+# server.js drains in-flight requests on SIGTERM, so give it room before SIGKILL.
+TimeoutStopSec=15
+
+# The process needs to read its own directory and nothing else on the box.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/covenda
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Covenda batch-review-cron schedule
+
+[Timer]
+# Was "0 5 1,15 * *" in vercel.json.
+OnCalendar=*-*-01,15 05:00:00
+# A missed run (reboot, host down) fires on next boot rather than being skipped silently.
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

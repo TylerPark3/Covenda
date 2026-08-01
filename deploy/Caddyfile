@@ -1,0 +1,27 @@
+# Caddy obtains and renews the TLS certificate itself. That is the single biggest reason to
+# use it here: no cron job to forget, no expiry at 3am.
+
+covenda.app, www.covenda.app {
+	encode zstd gzip
+
+	# Node holds the app. Caddy terminates TLS and passes the real client address through, which
+	# rate limiting needs — it keys on the caller, and without this every request looks local.
+	reverse_proxy 127.0.0.1:3000 {
+		header_up X-Real-IP {remote_host}
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/covenda.log {
+			roll_size 20mb
+			roll_keep 5
+		}
+	}
+}

@@ -1,0 +1,10 @@
+[Unit]
+Description=Covenda labels-cron
+After=network-online.target covenda.service
+
+[Service]
+Type=oneshot
+# Calls the same HTTP endpoint the platform cron called, so the handler is unchanged and can
+# still be triggered by hand with the same curl. CRON_SECRET is checked by the handler.
+ExecStart=/usr/bin/curl -fsS --max-time 300 -H "Authorization: Bearer ${CRON_SECRET}" http://127.0.0.1:3000/api/labels-cron
+EnvironmentFile=/etc/covenda/env
