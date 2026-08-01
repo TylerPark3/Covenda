@@ -15,7 +15,7 @@
 // pathname the client cannot choose, expires in ten minutes, carries its own size ceiling
 // enforced by the storage layer rather than by us, and permits nothing but `put`.
 
-import { issueSignedToken, presignUrl } from '@vercel/blob';
+import { signedUploadUrl } from './storage.js';
 
 import { checkLimit, limitResponse, recordError } from './limits.js';
 import { authorizeMember } from './portal.js';
@@ -71,15 +71,16 @@ export default async function handler(req, res, dependencies = {}) {
   const pathname = `${KINDS[kind].prefix}/${member.user.id}/${stamp}.${extFor(contentType)}`;
 
   try {
-    const token = await issueSignedToken({
-      pathname,
-      operations: ['put'],
-      validUntil: Date.now() + TTL_SECONDS * 1000,
-      maximumSizeInBytes: MAX_BYTES,
-      allowedContentTypes: [contentType],
-    });
-    const { presignedUrl } = await presignUrl(token, { operation: 'put', pathname, access: 'private' });
-    return res.status(200).json({ ok: true, uploadUrl: presignedUrl, pathname, expiresIn: TTL_SECONDS });
+    // One call now instead of delegate-then-sign. Worth stating what changed: the previous
+    // provider let the token itself carry maximumSizeInBytes and allowedContentTypes, so the
+    // storage service refused an oversized or wrong-typed upload. Supabase signed upload URLs
+    // carry neither, so those two limits are no longer enforced at the storage boundary.
+    //
+    // They are still enforced here — the handler validates contentType against KINDS and the
+    // client is told MAX_BYTES — but a caller who ignores the response could push a larger
+    // object. Tracked in TODOS rather than left as a silent downgrade.
+    const { uploadUrl, key } = await signedUploadUrl(pathname);
+    return res.status(200).json({ ok: true, uploadUrl, pathname: key, expiresIn: TTL_SECONDS });
   } catch (error) {
     await recordError('upload-token', 'error', error?.message || 'unknown', { userId: member.user.id, detail: { kind } });
     return res.status(500).json({ ok: false, error: 'Could not start the upload. Try again, or paste a link.' });

@@ -24,7 +24,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 import { checkLimit, limitResponse, recordError } from './limits.js';
-import { issueSignedToken, presignUrl } from '@vercel/blob';
+import { signedReadUrl } from './storage.js';
 
 // Short. A signed URL that outlives the session it was minted for is a public URL with extra
 // steps, and these end up pasted into chat windows.
@@ -118,21 +118,16 @@ async function maybe(query, fallback = null) {
   }
 }
 
-// Two steps, per the Blob SDK: delegate narrowly, then sign. The delegation is scoped to this
-// one pathname and to reads only, so a leaked token cannot write or delete.
+// One signed read URL, scoped to this object and expiring on its own. A leaked URL cannot
+// write or delete: Supabase signs reads separately from uploads, so the read grant carries no
+// write capability at all, which is stricter than the delegate-then-sign token it replaces.
+//
+// `parsed.access === 'public'` still short-circuits, because recordings uploaded before the
+// provider swap live on a public Vercel URL and rebuild() is the only way to reach them.
 export async function signPlayback(parsed, { now = Date.now(), ttl = TTL_SECONDS } = {}) {
   if (parsed.access === 'public') return { url: rebuild(parsed), signed: false, expiresIn: null };
-  const token = await issueSignedToken({
-    pathname: parsed.pathname,
-    operations: ['get', 'head'],
-    validUntil: now + ttl * 1000,
-  });
-  const { presignedUrl } = await presignUrl(token, {
-    operation: 'get',
-    pathname: parsed.pathname,
-    access: 'private',
-  });
-  return { url: presignedUrl, signed: true, expiresIn: ttl };
+  const { url, legacy } = await signedReadUrl(parsed.pathname, { ttl });
+  return { url, signed: !legacy, expiresIn: legacy ? null : ttl };
 }
 
 function rebuild(parsed) {

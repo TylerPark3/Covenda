@@ -8,7 +8,7 @@
 // come in, caps them, and returns an unguessable URL. Anything else is refused rather than
 // silently accepted and then unopenable.
 
-import { put } from '@vercel/blob';
+import { putObject, storageConfigured } from './storage.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -47,27 +47,18 @@ function safeName(raw, ext) {
   return `${stem}.${ext}`;
 }
 
-// The Blob store's access mode is a deployment setting, not something this code should
-// assume. Asking for `public` on a private store throws outright — which is exactly how the
-// video recorder broke — so try the configured default and fall back rather than hardcoding.
-//
-// Consequence worth knowing: on a private store the returned URL is not publicly fetchable,
-// so a reviewer needs a signed URL to watch a recording. That is stricter than the previous
-// public-but-unguessable posture and better for student privacy, but it means playback has
-// to go through a signing step.
+// Private, always. The old code asked for `public` and fell back to `private` only when the
+// store refused, which made the privacy posture a deployment setting rather than a decision.
+// A recording of a student is not public-but-unguessable. Playback goes through a signed URL,
+// which api/media.js already mints.
 async function putEither(key, body, contentType) {
-  try {
-    return await put(key, body, { access: 'public', contentType });
-  } catch (error) {
-    if (!/private access|public access/i.test(String(error?.message || ''))) throw error;
-    return put(key, body, { access: 'private', contentType });
-  }
+  return putObject(key, body, { contentType });
 }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed.' });
   if (!sameOrigin(req)) return res.status(403).json({ ok: false, error: 'Cross-origin uploads are not allowed.' });
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!storageConfigured()) {
     return res.status(503).json({ ok: false, error: 'File storage is not configured yet. Paste a link instead.' });
   }
 

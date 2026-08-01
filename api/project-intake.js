@@ -1,4 +1,4 @@
-import { get } from '@vercel/blob';
+import { getObject } from './storage.js';
 import { normaliseDiagnosis, diagnosisGaps, evaluateBrief, BRIEF_ENGINE_VERSION } from './brief-engine.js';
 import { decompositionGuide, trialEnvelope, checkAgainstEnvelope } from './frameworks.js';
 
@@ -146,21 +146,18 @@ export function normalizeBrief(input) {
 // never fetches a URL, so private storage works and the company's files stay private.
 const AI_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 async function defaultLoadBlob(attachment, env) {
-  const token = env.BLOB_READ_WRITE_TOKEN;
-  if (!token || !attachment?.blobUrl) return null;
-  const result = await get(attachment.blobUrl, { access: 'private', token });
-  if (!result || result.statusCode !== 200 || !result.stream) return null;
-  const chunks = [];
-  const reader = result.stream.getReader();
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.length;
-    if (total > 16 * 1024 * 1024) return null; // guard against an unexpectedly huge file
-    chunks.push(Buffer.from(value));
+  // Reads through api/storage.js, which resolves a storage key OR an absolute URL. Attachments
+  // uploaded before the provider swap hold a Vercel Blob URL and are fetched directly, so no
+  // brief loses its document.
+  if (!attachment?.blobUrl) return null;
+  try {
+    const { body } = await getObject(attachment.blobUrl, { env });
+    return body;
+  } catch {
+    // A document we cannot read is a brief without an attachment, not a failed request. The
+    // caller already degrades to asking the company for more detail.
+    return null;
   }
-  return Buffer.concat(chunks).toString('base64');
 }
 
 export async function generateProjectBrief({ problemText, attachments = [], env = process.env, fetchImpl = fetch, loadBlob = defaultLoadBlob }) {

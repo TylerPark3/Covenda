@@ -80,8 +80,12 @@ test('query strings never let a URL slip past the row check', () => {
 test('signing is short-lived, read-only, and the failure is named rather than swallowed', () => {
   assert.equal(TTL_SECONDS, 900);
   const src = readFileSync(new URL('../../api/media.js', import.meta.url), 'utf8');
-  assert.match(src, /operations: \['get', 'head'\]/, 'the delegation cannot write or delete');
-  assert.match(src, /pathname: parsed\.pathname/, 'the delegation is scoped to one blob');
+  // Storage moved to api/storage.js. The read-only guarantee is now structural rather than
+  // declared: signedReadUrl calls createSignedUrl, which mints a read grant and has no way to
+  // express a write. That is stricter than the old two-step token, which asked for
+  // operations:['get','head'] and would have permitted more had it asked.
+  assert.match(src, /signedReadUrl\(parsed\.pathname, \{ ttl \}\)/, 'scoped to one object, read only');
+  assert.doesNotMatch(src, /issueSignedToken|presignUrl/, 'no vendor token API remains');
   assert.match(src, /'Cache-Control', 'no-store'/, 'a per-caller URL must not be cached at the edge');
   // Recorded rather than swallowed. It now goes to error_events via recordError, which is
   // queryable, instead of a console line that dies in the platform logs.

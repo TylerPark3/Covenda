@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob';
+import { putObject } from './storage.js';
 
 // Optional student video-intro upload. Receives a recorded clip (webm/mp4) as the
 // raw request body and stores it in Vercel Blob, returning an unguessable URL that
@@ -35,7 +35,7 @@ function sameOrigin(req) {
 // to go through a signing step.
 async function putEither(key, body, contentType) {
   try {
-    return await put(key, body, { access: 'public', contentType });
+    return await putObject(key, body, { contentType });
   } catch (error) {
     if (!/private access|public access/i.test(String(error?.message || ''))) throw error;
     return put(key, body, { access: 'private', contentType });
@@ -85,7 +85,7 @@ export default async function handler(req, res) {
   const ext = contentType === 'video/mp4' ? 'mp4' : contentType === 'video/quicktime' ? 'mov' : 'webm';
   try {
     // Unique key built here rather than relying on addRandomSuffix, whose behaviour has
-    // changed across @vercel/blob majors.
+    // changed across storage providers.
     const key = `video-intros/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
     const blob = await putEither(key, Buffer.concat(chunks), contentType);
     res.status(200).json({ url: blob.url });

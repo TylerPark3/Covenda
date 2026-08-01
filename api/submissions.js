@@ -1,4 +1,3 @@
-import { put } from '@vercel/blob';
 import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import { Resend } from 'resend';

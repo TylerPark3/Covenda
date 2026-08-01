@@ -2,6 +2,28 @@
 
 Deferred during `/autoplan` on the portal redesign. Each has a reason, not just a name.
 
+## Leaving Vercel — step 1 done, steps 2-6 open
+
+Step 1 (remove `@vercel/blob`) is complete: `api/storage.js` is the seam, backed by Supabase
+Storage, and zero `@vercel/*` packages remain. Hosting is now a deployment decision rather than
+a rewrite. Remaining, in order:
+
+- **Create the `uploads` bucket in Supabase, private.** Nothing works until it exists. Set a
+  bucket-level file-size limit while you are there (see the downgrade below).
+- **Two guarantees weakened by the provider swap.** The old signed upload token carried
+  `maximumSizeInBytes` and `allowedContentTypes`, so the *storage service* refused an oversized
+  or wrong-typed upload. A Supabase signed upload URL carries neither. Both limits still exist
+  in `api/upload-token.js` but are now enforced before minting the URL, not by storage after.
+  A caller who obtains a URL legitimately could PUT something larger than `MAX_BYTES` to their
+  own path — bounded (no cross-member reach, no read, no delete) but real. A bucket-level file
+  size limit closes it.
+- **Old files stay on Vercel Blob.** Reads handle both, so nothing breaks, but the Vercel Blob
+  store cannot be deleted until those objects are copied across or aged out. No data migration
+  was attempted: copying files is a riskier change than ceasing to write new ones.
+- **Express/Fastify shim** so the 84 `(req, res)` handlers run off-platform.
+- **Replace the 3 `vercel.json` crons** with systemd timers or `node-cron`.
+- **Move DNS**, TTL dropped to 300s a day beforehand so a rollback takes five minutes.
+
 ## Live on production, found by the 2026-08-01 pre-merge audit
 
 These were refuted as findings *against portal-redesign-v1* — correctly, since the branch does

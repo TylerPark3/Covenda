@@ -38,17 +38,35 @@ test('only recording formats are accepted', async () => {
 });
 
 // The URL is a bearer credential: whoever holds it can write.
-test('the grant is narrow — one path, put only, short-lived, size-capped', () => {
+test('the grant is narrow — one path, upload only, and the client never picks the path', () => {
   const src = readFileSync(new URL('../../api/upload-token.js', import.meta.url), 'utf8');
-  assert.match(src, /operations: \['put'\]/, 'must not permit reads or deletes');
-  assert.match(src, /maximumSizeInBytes: MAX_BYTES/, 'the storage layer enforces size, not us');
-  assert.match(src, /allowedContentTypes: \[contentType\]/);
+  assert.match(src, /signedUploadUrl\(pathname\)/, 'scoped to the one path this handler derived');
+  assert.doesNotMatch(src, /issueSignedToken|presignUrl/, 'no vendor token API remains');
   assert.ok(TTL_SECONDS <= 900, 'a long-lived write URL is a write URL somebody else can use');
-  // Derived from the caller's own id, so a token cannot be aimed at another member's key.
+  // Derived from the caller's own id, so a URL cannot be aimed at another member's key.
   assert.match(src, /\$\{member\.user\.id\}/);
   assert.doesNotMatch(src, /body\.pathname/, 'the client must never choose the path');
 });
 
 test('the ceiling fits a long screen share, which is why this route exists', () => {
   assert.ok(MAX_BYTES > 100 * 1024 * 1024, 'the 30 MB function limit is what broke uploads');
+});
+
+// Two guarantees genuinely weakened by moving off the previous provider, recorded here rather
+// than quietly dropped.
+//
+// The old signed token carried maximumSizeInBytes and allowedContentTypes, so the STORAGE
+// SERVICE refused an oversized or wrong-typed upload even if the client ignored every limit we
+// stated. A Supabase signed upload URL carries neither. Both limits still exist in this
+// handler, but they are now enforced by us before minting the URL, not by storage after.
+//
+// The practical exposure: a caller who obtains a URL legitimately could PUT something larger
+// than MAX_BYTES to their own path. They cannot aim it at another member, and they cannot read
+// or delete. Bounded, real, and worth a bucket-level file-size limit in Supabase.
+test('the size and type limits still exist, and are ours to enforce now', () => {
+  const src = readFileSync(new URL('../../api/upload-token.js', import.meta.url), 'utf8');
+  assert.match(src, /MAX_BYTES/, 'a ceiling is still stated to the client');
+  assert.match(src, /KINDS\[kind\]/, 'and content type is still validated before signing');
+  assert.match(src, /no longer enforced at the storage boundary/,
+    'the downgrade is written down next to the code, not only in a commit message');
 });

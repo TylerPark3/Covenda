@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob';
+import { putObject } from './storage.js';
 
 import { authorizeMember } from './portal.js';
 
@@ -116,7 +116,7 @@ export default async function handler(req, res, dependencies = {}) {
 
   try {
     const ext = EXTENSIONS[contentType] || 'bin';
-    const blob = await put(`${policy.prefix}/${member.user.id}/${policy.basename}.${ext}`, body, {
+    const blob = await putObject(`${policy.prefix}/${member.user.id}/${policy.basename}.${ext}`, body, {
       access: policy.access,
       contentType,
       addRandomSuffix: true,
