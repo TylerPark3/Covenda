@@ -8,13 +8,51 @@
 // So it is one command. A deploy that cannot be aliased is a failed ship, not a partial one.
 
 import { execFileSync, spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 const run = (command, args, opts = {}) =>
   execFileSync(command, args, { encoding: 'utf8', stdio: ['inherit', 'pipe', 'inherit'], ...opts });
 
 const DOMAIN = process.env.COVENDA_DOMAIN || 'covenda.app';
 
+// The project this directory is linked to. Getting this wrong is not a small mistake:
+// `vercel` auto-creates a project named after the CURRENT DIRECTORY when none is linked,
+// and a fresh project has NO environment variables. Ship from a git worktree and you get a
+// project called e.g. "portal-onboard-lockout", a build with no Supabase URL, no admin
+// allowlist and no mail key — and then the alias step points covenda.app at it. Everything
+// reports success. Member sign-in is down. That happened on 2026-08-01.
+//
+// So: the linked project is checked BEFORE the deploy, and an unexpected one stops the ship.
+const EXPECTED_PROJECT = process.env.COVENDA_VERCEL_PROJECT || 'covenda';
+
+function linkedProject() {
+  try {
+    const raw = readFileSync(new URL('../.vercel/project.json', import.meta.url), 'utf8');
+    return JSON.parse(raw).projectName || null;
+  } catch { return null; }
+}
+
+function assertCorrectProject() {
+  const linked = linkedProject();
+  if (!linked) {
+    console.error('\n  This directory is not linked to a Vercel project.');
+    console.error(`  Run \`npx vercel link\` and pick "${EXPECTED_PROJECT}" — do NOT let it create a new one,`);
+    console.error('  because a new project has none of the environment variables the site needs.\n');
+    process.exit(1);
+  }
+  if (linked !== EXPECTED_PROJECT) {
+    console.error(`\n  Refusing to ship: this directory is linked to "${linked}", not "${EXPECTED_PROJECT}".`);
+    console.error('  A deploy to the wrong project builds without any environment variables, and the');
+    console.error('  alias step would then point covenda.app at that broken build.\n');
+    console.error(`  Fix it:  cp <main-checkout>/.vercel/project.json .vercel/project.json`);
+    console.error(`  Or set:  COVENDA_VERCEL_PROJECT=${linked} npm run ship   (only if that is truly intended)\n`);
+    process.exit(1);
+  }
+  console.log(`\n  Vercel project: ${linked}`);
+}
+
 function main() {
+  assertCorrectProject();
   console.log('\n  Running the test suite.\n');
   // Inherits stdio so a failure shows which test broke rather than a bare exit code.
   execFileSync('npm', ['run', 'check'], { stdio: 'inherit' });
