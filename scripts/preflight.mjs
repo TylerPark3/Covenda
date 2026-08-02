@@ -18,7 +18,6 @@ const REQUIRED = [
   ['SUPABASE_SECRET_KEY', 'server-side database access', ['SUPABASE_SERVICE_ROLE_KEY']],
 ];
 const OPTIONAL = [
-  ['BLOB_READ_WRITE_TOKEN', 'video upload and playback'],
   ['RESEND_API_KEY', 'sign-in emails and notifications'],
   ['COVENDA_ADMIN_EMAILS', 'operator access to /admin.html'],
 ];
@@ -29,7 +28,7 @@ function readEnv() {
   for (const line of readFileSync(ENV_FILE, 'utf8').split('\n')) {
     const match = line.match(/^\s*([A-Za-z_][A-Za-z_0-9]*)\s*=\s*(.*)\s*$/);
     if (!match) continue;
-    // Values arrive quoted from `vercel env pull` and unquoted when hand-edited.
+// Values may arrive quoted from a host CLI and unquoted when hand-edited.
     out[match[1]] = match[2].replace(/^["']|["']$/g, '');
   }
   return out;

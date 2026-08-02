@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { putObject, getObject, signedReadUrl, isAbsoluteUrl, isLegacyBlobUrl, BUCKET } from '../../api/storage.js';
+import { putObject, getObject, signedReadUrl, isAbsoluteUrl, isLegacyBlobUrl, BUCKET, PUBLIC_BUCKET } from '../../api/storage.js';
 
 // A fake Supabase storage client that records what it was asked to do.
 function fakeDb(behaviour = {}) {
@@ -24,6 +24,7 @@ function fakeDb(behaviour = {}) {
             calls.push({ op: 'sign', bucket, path, ttl });
             return { data: { signedUrl: `https://sb.example/${path}?token=x` }, error: null };
           },
+          getPublicUrl: path => ({ data: { publicUrl: `https://sb.example/storage/v1/object/public/${bucket}/${path}` } }),
         };
       },
     },
@@ -84,6 +85,16 @@ test('a write returns the key, not an absolute URL', async () => {
   assert.equal(db.calls[0].bucket, BUCKET);
   assert.equal(db.calls[0].opts.contentType, 'application/pdf');
   assert.equal(db.calls[0].opts.upsert, true, 'a retry after a dropped response must not 409');
+});
+
+test('an intentional public avatar uses the separate public bucket', async () => {
+  const db = fakeDb();
+  const out = await putObject('avatars/u1/avatar.png', Buffer.from('x'), {
+    access: 'public', contentType: 'image/png', client: db,
+  });
+  assert.equal(db.calls[0].bucket, PUBLIC_BUCKET);
+  assert.match(out.url, /\/object\/public\/avatars\/avatars\/u1\/avatar\.png$/);
+  assert.equal(out.public, true);
 });
 
 // project-upload relied on addRandomSuffix: two students uploading "resume.pdf" must not

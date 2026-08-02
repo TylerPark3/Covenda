@@ -40,7 +40,7 @@ function dateLabel(value, full = false) { const date = new Date(value); if (Numb
 function localDateTimeValue(value) { const date = new Date(value); if (!value || Number.isNaN(date.getTime())) return ''; return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0,16); }
 // Private-store media. A blob URL on the private store 403s if opened directly, so a reviewer
 // link has to exchange it for a short-lived signed URL at click time.
-function isPrivateMedia(url){ return /\.private\.blob\.vercel-storage\.com\//.test(String(url||'')); }
+function isPrivateMedia(url){ return /\.private\.blob\.vercel-storage\.com\//.test(String(url||''))||/^(video-intros|exercise-recordings|project-files)\//.test(String(url||'')); }
 function bindPrivateLink(anchor, url) {
   if (!isPrivateMedia(url)) return anchor;
   anchor.href = '#';

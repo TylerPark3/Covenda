@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 
+import { isPublicAssetPath, PUBLIC_ROOT_FILES } from '../../deploy/public-assets.js';
+
 const server = readFileSync(new URL('../../server.js', import.meta.url), 'utf8');
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
 const apiDir = new URL('../../api/', import.meta.url);
@@ -59,6 +61,31 @@ test('the real client address survives the proxy', () => {
   assert.match(server, /app\.set\('trust proxy', 1\)/);
   const caddy = readFileSync(new URL('Caddyfile', deployDir), 'utf8');
   assert.match(caddy, /header_up X-Real-IP \{remote_host\}/);
+});
+
+test('the server publishes an allowlist, never the repository root', () => {
+  assert.match(server, /isPublicAssetPath\(req\.path\)/);
+  assert.doesNotMatch(server, /app\.use\(express\.static\(root/,
+    'an unguarded repository root exposes source, migrations and operational files');
+  for (const path of ['/', '/index.html', '/portal', '/portal.js', '/assets/covenda-mark.svg']) {
+    assert.equal(isPublicAssetPath(path), true, `${path} remains public`);
+  }
+  for (const path of [
+    '/package.json',
+    '/server.js',
+    '/vercel.json',
+    '/data/calibration_dataset.csv',
+    '/supabase/migrations/20260721051450_create_submission_inbox.sql',
+    '/api/portal.js',
+    '/deploy/README.md',
+    '/docs/COVENDA_MVP_SPEC.md',
+    '/tests/model/self-host.test.js',
+    '/assets/../package.json',
+    '/assets/%2e%2e/package.json',
+  ]) {
+    assert.equal(isPublicAssetPath(path), false, `${path} must not be public`);
+  }
+  assert.ok(PUBLIC_ROOT_FILES.length >= 20, 'the actual browser entrypoints are explicit');
 });
 
 // ── The crons ──────────────────────────────────────────────────────────────────────────

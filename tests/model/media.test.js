@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { mayView, parseBlobUrl, materialUrls, TTL_SECONDS } from '../../api/media.js';
+import { mayView, parseBlobUrl, materialUrls, attachmentUrls, TTL_SECONDS } from '../../api/media.js';
 
 const PRIVATE = 'https://str1.private.blob.vercel-storage.com/video-intros/abc-take-1.webm';
 const PUBLIC = 'https://str1.public.blob.vercel-storage.com/logos/x.png';
@@ -23,9 +23,40 @@ function db(tables = {}) {
 }
 
 test('the access level is read from the hostname, not guessed', () => {
-  assert.deepEqual(parseBlobUrl(PRIVATE), { storeId: 'str1', access: 'private', pathname: 'video-intros/abc-take-1.webm' });
+  assert.deepEqual(parseBlobUrl(PRIVATE), { storeId: 'str1', access: 'private', pathname: 'video-intros/abc-take-1.webm', legacy: true });
   assert.equal(parseBlobUrl(PUBLIC).access, 'public');
   assert.equal(parseBlobUrl('https://evil.example.com/x.webm'), null);
+});
+
+test('new private storage keys are accepted, but traversal and unrelated keys are not', () => {
+  assert.deepEqual(parseBlobUrl('video-intros/u1/take.webm'), {
+    storeId: null, access: 'private', pathname: 'video-intros/u1/take.webm', legacy: false,
+  });
+  assert.equal(parseBlobUrl('video-intros/u1/../other.webm'), null);
+  assert.equal(parseBlobUrl('project-files/u1/private.pdf').pathname, 'project-files/u1/private.pdf');
+  assert.equal(parseBlobUrl('avatars/u1/avatar.png'), null);
+});
+
+test('project files are limited to the owner or assigned student project rows', async () => {
+  const key = 'project-files/company-1/brief.pdf';
+  const project = { id: 'p1', attachments: [{ blobUrl: key }] };
+  const allowed = await mayView(db({ member_projects: [project] }), { id: 'company-1' }, key);
+  assert.equal(allowed.ok, true);
+  assert.equal(allowed.as, 'project-member');
+
+  const refused = await mayView(db(), { id: 'unrelated' }, key);
+  assert.equal(refused.ok, false);
+});
+
+test('attachment URL extraction ignores names and metadata', () => {
+  assert.deepEqual(attachmentUrls([{ name: 'Brief', blobUrl: 'project-files/u1/a.pdf?x=1' }, { name: 'empty' }]), ['project-files/u1/a.pdf']);
+});
+
+test('a student can watch a newly stored recording referenced by key', async () => {
+  const key = 'video-intros/u1/take.webm';
+  const r = await mayView(db({ member_videos: [{ id: 'v2' }] }), { id: 'u1' }, key);
+  assert.equal(r.ok, true);
+  assert.equal(r.parsed.pathname, key);
 });
 
 test('a non-Covenda URL is refused before any lookup happens', async () => {

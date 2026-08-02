@@ -36,7 +36,6 @@ Optional, each only needed for the feature named:
 
 | Variable | Needed for |
 |---|---|
-| `BLOB_READ_WRITE_TOKEN` | video upload and playback |
 | `RESEND_API_KEY` | sign-in emails and notifications |
 | `COVENDA_ADMIN_EMAILS` | operator access to `/admin.html` |
 

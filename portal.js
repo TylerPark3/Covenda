@@ -1609,6 +1609,7 @@ function messageFileLink(file){
   const a=document.createElement('a');a.className='message-file';a.href=file.blobUrl||'#';a.target='_blank';a.rel='noopener noreferrer';
   a.append(icon('p-inbox'));const name=document.createElement('span');name.textContent=file.name||'Attachment';a.append(name);
   if(Number(file.sizeBytes)>0){const size=document.createElement('small');size.textContent=formatBytes(Number(file.sizeBytes));a.append(size);}
+  if(isPrivateMedia(file.blobUrl)){a.href='#';a.addEventListener('click',async event=>{event.preventDefault();const url=await playableUrl(file.blobUrl);if(url)window.open(url,'_blank','noopener');else name.textContent='Could not open attachment';});}
   return a;
 }
 function formatBytes(n){if(n<1024)return `${n} B`;if(n<1048576)return `${(n/1024).toFixed(0)} KB`;return `${(n/1048576).toFixed(1)} MB`;}
@@ -3343,7 +3344,7 @@ function renderTalentCards(){
 // Private-store playback. A stored blob URL is not directly viewable, so anything pointing at
 // one has to swap in a short-lived signed URL first. Signed on demand rather than at page load,
 // because minting a URL nobody watches leaves a live URL sitting in a log for no reason.
-function isPrivateMedia(url){ return /\.private\.blob\.vercel-storage\.com\//.test(String(url||'')); }
+function isPrivateMedia(url){ return /\.private\.blob\.vercel-storage\.com\//.test(String(url||''))||/^(video-intros|exercise-recordings|project-files)\//.test(String(url||'')); }
 async function playableUrl(url){
   if(!url)return null;
   if(!isPrivateMedia(url))return url;
@@ -6431,15 +6432,17 @@ const videoStudio=(function(){
       });
       const grant=await token.json().catch(()=>({}));
       if(!token.ok||!grant.uploadUrl)throw new Error(grant.error||'No upload URL.');
+      if(grant.maxBytes&&blob.size>grant.maxBytes)throw new Error('TOO_LARGE');
 
       const put=await fetch(grant.uploadUrl,{method:'PUT',headers:{'Content-Type':contentType},body:blob});
       if(!put.ok){
         if(put.status===413)throw new Error('TOO_LARGE');
         throw new Error(`Direct upload rejected (${put.status}).`);
       }
-      const stored=await put.json().catch(()=>({}));
-      if(stored.url)return stored.url;
-      throw new Error('Direct upload returned no URL.');
+      // The signed-upload endpoint returns provider-specific JSON. The key came from our own
+      // server and is the stable value to persist; never depend on a vendor response shape.
+      if(grant.pathname)return grant.pathname;
+      throw new Error('Direct upload returned no storage key.');
     }catch(directError){
       if(String(directError.message)==='TOO_LARGE'){
         throw new Error('That recording is too large to upload. Record a shorter take.');

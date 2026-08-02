@@ -1,0 +1,61 @@
+name: Covenda scheduled operations
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+    - cron: '0 5 1,15 * *'
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      endpoint:
+        description: Scheduled operation to run
+        required: true
+        type: choice
+        options:
+          - labels-cron
+          - batch-review-cron
+          - roles-cron
+
+permissions:
+  contents: read
+
+concurrency:
+  group: covenda-scheduled-operations
+  cancel-in-progress: false
+
+jobs:
+  call-api:
+    if: github.event_name == 'workflow_dispatch' || vars.COVENDA_CRON_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Choose operation
+        id: route
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_ENDPOINT: ${{ inputs.endpoint }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            endpoint="$MANUAL_ENDPOINT"
+          elif [[ "$SCHEDULE" == "0 4 * * *" ]]; then
+            endpoint="labels-cron"
+          elif [[ "$SCHEDULE" == "0 5 1,15 * *" ]]; then
+            endpoint="batch-review-cron"
+          else
+            endpoint="roles-cron"
+          fi
+          echo "endpoint=$endpoint" >> "$GITHUB_OUTPUT"
+      - name: Run operation
+        env:
+          API_ORIGIN: ${{ vars.COVENDA_API_ORIGIN }}
+          CRON_SECRET: ${{ secrets.COVENDA_CRON_SECRET }}
+          ENDPOINT: ${{ steps.route.outputs.endpoint }}
+        run: |
+          test -n "$API_ORIGIN"
+          test -n "$CRON_SECRET"
+          curl --fail-with-body --silent --show-error --retry 2 --retry-all-errors \
+            --max-time 180 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${API_ORIGIN%/}/api/$ENDPOINT"

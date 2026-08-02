@@ -27,8 +27,17 @@ import { createClient } from '@supabase/supabase-js';
 export const STORAGE_VERSION = 'storage-1.0.0';
 
 // One bucket, prefixed paths. Separate buckets per kind would multiply the policy surface for
-// no benefit, since access is decided per request by the handler that mints the signed URL.
+// no benefit for protected files, since access is decided per request by the handler that
+// mints the signed URL. Profile avatars are the one exception: they are intentionally public
+// and live in a separate, narrowly MIME-restricted bucket.
 export const BUCKET = process.env.SUPABASE_STORAGE_BUCKET || 'uploads';
+export const PUBLIC_BUCKET = process.env.SUPABASE_PUBLIC_STORAGE_BUCKET || 'avatars';
+
+function bucketFor(env, access) {
+  return access === 'public'
+    ? (env.SUPABASE_PUBLIC_STORAGE_BUCKET || PUBLIC_BUCKET)
+    : (env.SUPABASE_STORAGE_BUCKET || BUCKET);
+}
 
 // Signed URLs are deliberately short. One that outlives the session it was minted for is a
 // public URL with extra steps, and these get pasted into chat windows.
@@ -60,7 +69,7 @@ export function isLegacyBlobUrl(value) {
  * URL would not be fetchable anyway, and storing a key keeps the row valid if the project or
  * region ever moves. signedReadUrl() turns it back into something a browser can open.
  */
-export async function putObject(key, body, { contentType, addRandomSuffix = false, client = null, env = process.env } = {}) {
+export async function putObject(key, body, { contentType, access = 'private', addRandomSuffix = false, client = null, env = process.env } = {}) {
   const db = client || serviceClient(env);
   if (!db) throw new Error('Storage is not configured on this deployment.');
   let path = String(key || '').replace(/^\/+/, '');
@@ -75,14 +84,21 @@ export async function putObject(key, body, { contentType, addRandomSuffix = fals
     path = dot > 0 ? `${path.slice(0, dot)}-${suffix}${path.slice(dot)}` : `${path}-${suffix}`;
   }
 
-  const { error } = await db.storage.from(BUCKET).upload(path, body, {
+  const bucket = bucketFor(env, access);
+  const store = db.storage.from(bucket);
+  const { error } = await store.upload(path, body, {
     contentType: contentType || 'application/octet-stream',
     // Re-uploading the same key replaces rather than 409s. Handlers derive keys from a user id
     // plus a filename, so a retry after a dropped response must not fail.
     upsert: true,
   });
   if (error) throw new Error(`Upload failed: ${String(error.message || error).slice(0, 200)}`);
-  return { url: path, key: path, pathname: path };
+  if (access === 'public') {
+    const { data } = store.getPublicUrl(path);
+    if (!data?.publicUrl) throw new Error('Upload succeeded but no public URL was returned.');
+    return { url: data.publicUrl, key: path, pathname: path, public: true };
+  }
+  return { url: path, key: path, pathname: path, public: false };
 }
 
 /**
@@ -106,7 +122,7 @@ export async function getObject(keyOrUrl, { client = null, env = process.env } =
 
   const db = client || serviceClient(env);
   if (!db) throw new Error('Storage is not configured on this deployment.');
-  const { data, error } = await db.storage.from(BUCKET).download(ref.replace(/^\/+/, ''));
+  const { data, error } = await db.storage.from(bucketFor(env, 'private')).download(ref.replace(/^\/+/, ''));
   if (error || !data) throw new Error(`Could not read the stored file: ${String(error?.message || 'missing').slice(0, 160)}`);
   return {
     body: Buffer.from(await data.arrayBuffer()),
@@ -125,7 +141,7 @@ export async function signedUploadUrl(key, { client = null, env = process.env } 
   const path = String(key || '').replace(/^\/+/, '');
   if (!path) throw new Error('An upload needs a key.');
 
-  const { data, error } = await db.storage.from(BUCKET).createSignedUploadUrl(path, { upsert: true });
+  const { data, error } = await db.storage.from(bucketFor(env, 'private')).createSignedUploadUrl(path, { upsert: true });
   if (error || !data?.signedUrl) {
     throw new Error(`Could not start the upload: ${String(error?.message || 'unknown').slice(0, 160)}`);
   }
@@ -146,7 +162,7 @@ export async function signedReadUrl(keyOrUrl, { ttl = READ_TTL_SECONDS, client =
 
   const db = client || serviceClient(env);
   if (!db) throw new Error('Storage is not configured on this deployment.');
-  const { data, error } = await db.storage.from(BUCKET)
+  const { data, error } = await db.storage.from(bucketFor(env, 'private'))
     .createSignedUrl(ref.replace(/^\/+/, ''), Math.max(30, Math.min(3600, Number(ttl) || READ_TTL_SECONDS)));
   if (error || !data?.signedUrl) {
     throw new Error(`Could not open the file: ${String(error?.message || 'unknown').slice(0, 160)}`);

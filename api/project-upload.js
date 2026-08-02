@@ -1,14 +1,12 @@
-import { putObject } from './storage.js';
+import { putObject, storageConfigured } from './storage.js';
 
 import { authorizeMember } from './portal.js';
 
 // Authenticated project-file upload for company/university intake. Receives one file as
-// the raw request body and stores it in Vercel Blob, returning { name, blobUrl,
+// the raw request body and stores it in object storage, returning { name, blobUrl,
 // contentType, sizeBytes } which the portal writes into member_projects.attachments.
-// NOTE: like the video-intro upload, Vercel Blob URLs are public-but-unguessable rather
-// than access-controlled; the portal API is what keeps them private, only ever returning
-// an attachment URL to the project owner or the assigned student. Revisit before a broad
-// launch (signed URLs / true private storage).
+// Project files are private and use signed reads. Avatars use a separate public bucket because
+// they are intentionally rendered as profile images.
 
 export const config = { api: { bodyParser: false } };
 
@@ -75,6 +73,7 @@ function safeName(value) {
 }
 
 export default async function handler(req, res, dependencies = {}) {
+  const env = dependencies.env || process.env;
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ error: 'Method not allowed.' }); }
@@ -82,7 +81,7 @@ export default async function handler(req, res, dependencies = {}) {
 
   const member = await authorizeMember(req, dependencies);
   if (!member) return res.status(401).json({ error: 'Member authentication is required.' });
-  if (!process.env.BLOB_READ_WRITE_TOKEN) return res.status(503).json({ error: 'File storage is not configured yet. Add BLOB_READ_WRITE_TOKEN in Vercel.' });
+  if (!storageConfigured(env)) return res.status(503).json({ error: 'File storage is not configured on this deployment.' });
 
   const kind = req.headers['x-upload-kind'] === 'avatar' ? 'avatar' : 'project';
   const policy = uploadPolicy(kind);
@@ -120,18 +119,19 @@ export default async function handler(req, res, dependencies = {}) {
       access: policy.access,
       contentType,
       addRandomSuffix: true,
+      env,
     });
     return res.status(200).json({ name: declaredName, blobUrl: blob.url, contentType, sizeBytes: size });
   } catch (error) {
     // Swallowing this made "Upload failed" undiagnosable. Log the real cause for the
-    // Vercel runtime log, and tell the caller which class of failure it was.
+    // deployment log, and tell the caller which class of failure it was.
     const message = String(error?.message || error);
-    console.error(JSON.stringify({ level: 'error', message: 'Blob upload failed', route: '/api/project-upload', kind, contentType, sizeBytes: size, error: message.slice(0, 500) }));
+    console.error(JSON.stringify({ level: 'error', message: 'Object upload failed', route: '/api/project-upload', kind, contentType, sizeBytes: size, error: message.slice(0, 500) }));
     if (/token|unauthorized|forbidden|invalid/i.test(message)) {
-      return res.status(503).json({ error: 'File storage rejected the upload — the Blob token looks invalid or has no store attached. Check BLOB_READ_WRITE_TOKEN in Vercel.' });
+      return res.status(503).json({ error: 'File storage rejected the upload. Check the server-side Supabase storage credentials.' });
     }
     if (/store|not found|no such/i.test(message)) {
-      return res.status(503).json({ error: 'No Blob store is connected to this project yet. Create one in Vercel → Storage, then redeploy.' });
+      return res.status(503).json({ error: 'The configured storage bucket does not exist. Create the Covenda storage buckets, then retry.' });
     }
     return res.status(500).json({ error: `Upload failed: ${message.slice(0, 140)}` });
   }

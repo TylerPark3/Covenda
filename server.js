@@ -24,6 +24,8 @@ import { readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isPublicAssetPath } from './deploy/public-assets.js';
+
 const root = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3000);
 
@@ -75,9 +77,10 @@ app.all('/api/:name', async (req, res) => {
 });
 
 // ── Static site ───────────────────────────────────────────────────────────────────────
-// index.html is served for "/", and .html is reachable without the extension so existing links
-// like /portal.html and /portal both work.
-app.use(express.static(root, {
+// The site still lives at the repository root, but the repository is not a public directory.
+// Only the reviewed browser assets are eligible for static delivery; migrations, source files,
+// tests, data and operational documents must remain unreachable even when somebody knows a path.
+const servePublicAsset = express.static(root, {
   extensions: ['html'],
   dotfiles: 'ignore',
   setHeaders(res, path) {
@@ -86,7 +89,11 @@ app.use(express.static(root, {
     if (path.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
     else res.setHeader('Cache-Control', 'public, max-age=600');
   },
-}));
+});
+app.use((req, res, next) => {
+  if (!['GET', 'HEAD'].includes(req.method) || !isPublicAssetPath(req.path)) return next();
+  return servePublicAsset(req, res, next);
+});
 
 // Health check for the process supervisor and for uptime monitoring. Deliberately does not
 // touch the database: this answers "is the process up", and a health check that fails when
