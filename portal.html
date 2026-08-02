@@ -90,6 +90,7 @@
         <button type="button" data-view="projects" data-roles="student company university"><svg><use href="#p-project"/></svg><span id="projectsNavLabel">My work</span></button>
         <button type="button" data-view="activity" data-roles="company university"><svg><use href="#p-inbox"/></svg><span>Submissions</span></button>
         <button type="button" data-view="discover" data-roles="student"><svg><use href="#p-compass"/></svg><span>Opportunities</span></button>
+        <button type="button" data-view="skills" data-roles="student"><svg><use href="#p-spark"/></svg><span id="skillsNavLabel">Skills</span></button>
         <!-- Batches is a tab inside Opportunities for students; companies keep it as its own
              destination, because their batch flow is unrelated to student discovery. -->
         <button type="button" data-view="batches" id="batchesNav" data-roles="company"><svg><use href="#p-spark"/></svg><span>Batches</span></button>
@@ -199,6 +200,23 @@
         </div>
       </section>
 
+      <section class="portal-view" data-portal-view="skills">
+        <!-- M-6. What this view is FOR: a student can see which of their skills carry evidence
+             and which are still only claimed. Covenda's whole argument is the evidence ladder,
+             and until now a student could not see where they stood on it without reading a
+             company-facing card. There is deliberately no total, no rank and no overall level
+             here — D10 is permanent, and a page called "Skills" is exactly where a universal
+             score would sneak in. Every strength shown is one skill with one tier. -->
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">Your evidence</p>
+            <h1>Skills, and what backs them</h1>
+            <p id="skillsIntro">Each skill shows the strongest evidence on record for it. Nothing here is a rating of you.</p>
+          </div>
+        </div>
+        <section class="panel-card" id="skillsEvidencePanel"></section>
+        <section class="panel-card" id="skillsVerifyPanel" hidden></section>
+      </section>
       <section class="portal-view" data-portal-view="batches">
         <div class="opp-tabs" role="tablist" aria-label="Opportunities" data-student-only>
           <button type="button" role="tab" aria-selected="false" data-opp-tab="discover">Open projects</button>

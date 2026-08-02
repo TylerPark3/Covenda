@@ -166,11 +166,11 @@ function profileCompletion(profile) {
 }
 
 function setView(view, opts) {
-  const allowed=['overview','projects','activity','discover','batches','portfolio','messages','wallet'];
+  const allowed=['overview','projects','activity','discover','skills','batches','portfolio','messages','wallet'];
   // Aliases for the renamed destinations. The labels changed; the view keys did not, so nothing
   // that already calls setView('discover') breaks. 'opportunities' is accepted because the nav
   // now says Opportunities and somebody will reasonably type it.
-  const alias={ home:'overview', opportunities:'discover', profile:'portfolio', earnings:'wallet', work:'projects' };
+  const alias={ home:'overview', opportunities:'discover', profile:'portfolio', earnings:'wallet', work:'projects', evidence:'skills' };
   const wanted=alias[view]||view;
   state.view=allowed.includes(wanted)?wanted:'overview';
   $$('[data-portal-view]').forEach(section=>section.classList.toggle('is-active',section.dataset.portalView===state.view));
@@ -249,7 +249,7 @@ function renderDashboard() {
   // from here (no id to overwrite) but "Profile" and "Earnings" from there. Exactly the mistake
   // that produced a duplicate progress ladder earlier on this branch, made twice.
   const NAV_LABELS = {
-    student: { projects: 'My work', batches: 'Batches', portfolio: 'Profile', messages: 'Messages', wallet: 'Earnings', discover: 'Opportunities' },
+    student: { projects: 'My work', batches: 'Batches', portfolio: 'Profile', messages: 'Messages', wallet: 'Earnings', discover: 'Opportunities', skills: 'Skills' },
     company: { projects: 'My projects', batches: 'Batches', portfolio: 'Talent', messages: 'Messages', wallet: 'Wallet' },
     university: { projects: 'My projects', messages: 'Messages', wallet: 'Wallet' },
   };
@@ -302,7 +302,7 @@ function renderDashboard() {
   }
   const primary=$('#primaryAction'); $('span',primary).textContent=role==='student'?'Discover projects':role==='company'||role==='university'?'Post a project':'Complete profile';
   primary.dataset.target=role==='student'?'discover':role==='company'||role==='university'?'new-project':'profile';
-  renderCompanySegments(role); renderBriefing(); renderFocus(); renderMetrics(); renderPipeline();renderIntroductions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
+  renderCompanySegments(role); renderBriefing(); renderFocus(); renderMetrics(); renderPipeline();renderIntroductions();renderTrialStart();renderJourney();renderVerification();renderMilestones(); renderProjects(); renderRequests(); renderActivity(); renderDiscover(); renderSkills(); renderBatches(); renderPortfolio(); renderMessages(); renderWallet(); revealify();
 }
 
 function dayPart(){const hour=new Date().getHours();return hour<12?'morning':hour<17?'afternoon':'evening';}
@@ -1685,6 +1685,94 @@ function fitWhyBlock({reasons=[],concerns=[],approach=''}={}){
 }
 function discoverChip(label,value){const c=document.createElement('div');c.className='discover-chip';const s=document.createElement('small');s.textContent=label;const b=document.createElement('span');b.textContent=value;c.append(s,b);return c;}
 function skillsText(project){const s=project.desired_skills;return Array.isArray(s)?s.join(', '):(s||'');}
+// M-6 — the Skills view. What a student can see about their own standing on the evidence
+// ladder, which until now was only legible from a company-facing card.
+//
+// D10 is permanent, and a page called "Skills" is precisely where a universal score would
+// sneak in. So: no total, no rank, no overall level, no percentage. Every row is ONE skill
+// with the strongest evidence on record for it, and the honest default is "claimed".
+//
+// The tiers mirror api/match.js so the student sees the same ladder the engine uses:
+//   trial     a completed Covenda project naming this skill — hardest to fake
+//   artifact  analyzed technical evidence naming it
+//   claimed   you told us, and nobody has checked
+const SKILL_TIERS={trial:{label:'Completed work',rank:3,note:'A finished project on Covenda names this.'},
+  artifact:{label:'Artifact',rank:2,note:'Analyzed evidence names this.'},
+  claimed:{label:'Claimed',rank:1,note:'You listed this. Nothing has checked it yet.'}};
+
+function skillEvidenceRows(d){
+  const norm=s=>String(s||'').trim().toLowerCase();
+  const best=new Map();
+  const put=(raw,tier)=>{
+    const name=String(raw||'').trim(); if(!name)return;
+    const key=norm(name); const prev=best.get(key);
+    if(!prev||SKILL_TIERS[tier].rank>SKILL_TIERS[prev.tier].rank)best.set(key,{skill:prev?prev.skill:name,tier});
+  };
+  // Claimed first, so a listed skill always appears even with nothing behind it.
+  asList(d&&d.profile&&d.profile.skills).forEach(s=>put(s,'claimed'));
+  // Artifact tier — analyzed technical evidence.
+  const tech=(d&&d.technical)||{};
+  asList(tech.skills).forEach(s=>put(s,'artifact'));
+  asList(tech.languages).forEach(s=>put(s,'artifact'));
+  // Trial tier — a completed project that named the skill.
+  asList(d&&d.projects).filter(pr=>pr&&pr.status==='complete').forEach(pr=>{
+    asList(pr.desired_skills).forEach(s=>put(s,'trial'));
+    asList(pr.required_skills).forEach(s=>put(s,'trial'));
+  });
+  return [...best.values()].sort((a,b)=>
+    SKILL_TIERS[b.tier].rank-SKILL_TIERS[a.tier].rank||a.skill.localeCompare(b.skill));
+}
+
+function renderSkills(){
+  const panel=$('#skillsEvidencePanel'); if(!panel)return;
+  panel.replaceChildren();
+  const verify=$('#skillsVerifyPanel'); if(verify){verify.replaceChildren();verify.hidden=true;}
+  const d=state.dashboard||{};
+  if((d.profile&&d.profile.role)!=='student')return;
+
+  buildSection(panel,body=>{
+    const rows=skillEvidenceRows(d);
+    if(!rows.length){
+      const empty=document.createElement('p'); empty.className='muted';
+      empty.textContent='No skills listed yet. Add them from your profile — listing one is the start, showing it is the point.';
+      body.append(empty); return;
+    }
+    for(const tier of ['trial','artifact','claimed']){
+      const group=rows.filter(r=>r.tier===tier); if(!group.length)continue;
+      const meta=SKILL_TIERS[tier];
+      const head=document.createElement('div'); head.className='section-heading';
+      const h=document.createElement('h3'); h.textContent=meta.label;
+      const note=document.createElement('p'); note.className='muted'; note.textContent=meta.note;
+      head.append(h,note); body.append(head);
+      const wrap=document.createElement('div'); wrap.className='skills';
+      group.forEach(r=>wrap.append(pill(r.skill,'skill-pill',tier)));
+      body.append(wrap);
+    }
+  },'skills-evidence');
+
+  // The gap list, only when the résumé reader has actually produced one. No placeholder.
+  const fit=d.roleFit;
+  const worth=asList(fit&&fit.worth_verifying);
+  if(verify&&worth.length){
+    verify.hidden=false;
+    buildSection(verify,body=>{
+      const head=document.createElement('div'); head.className='section-heading';
+      const h=document.createElement('h3'); h.textContent='Worth showing first';
+      const note=document.createElement('p'); note.className='muted';
+      note.textContent='Read from your résumé against the roles currently open. Not verified, and no company sees it.';
+      head.append(h,note); body.append(head);
+      const list=document.createElement('ul'); list.className='verify-list';
+      worth.slice(0,5).forEach(w=>{
+        const li=document.createElement('li');
+        const n=Number(w&&w.roles_wanting)||0;
+        li.textContent=`${w.skill} — named by ${n} open role${n===1?'':'s'} your résumé does not mention it for.`;
+        list.append(li);
+      });
+      body.append(list);
+    },'skills-verify');
+  }
+}
+
 function renderDiscover(){
   // Open roles leads this tab. A student with an empty profile can paste a resume here and get
   // something back immediately, which is the one path that works before they have built
