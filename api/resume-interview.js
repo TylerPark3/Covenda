@@ -14,6 +14,8 @@
 import { checkLimit, limitResponse, recordError } from './limits.js';
 import { authorizeMember } from './portal.js';
 import { questionsFromResume } from './resume-questions.js';
+import { extractDocumentText } from './doc-parse.js';
+import { roleFitFromResume } from './resume-fit.js';
 
 export const config = { api: { bodyParser: false } };
 
@@ -44,6 +46,29 @@ async function readBody(req, limit) {
   return Buffer.concat(chunks);
 }
 
+// Read the résumé against the open roles. This is student-facing only: claimed-tier,
+// per-role, never a person score (D10), and never shown to a company. A failure here must
+// not cost the student their interview questions, so every path returns null instead of
+// throwing — the engine being unwired is what this route was written to fix, and a fragile
+// wire would just re-create the problem in a new place.
+async function readRolesFromResume(buffer, filename, member) {
+  try {
+    const doc = extractDocumentText(buffer, filename);
+    if (!doc.ok || !doc.text) return null;
+    // authorizeMember already handed us a client; there is no second way to get one.
+    const supabase = member?.supabase;
+    if (!supabase) return null;
+    const { data } = await supabase.from('member_projects').select('*')
+      .eq('status', 'open').in('visibility', ['members', 'open'])
+      .order('created_at', { ascending: false }).limit(50);
+    const opportunities = Array.isArray(data) ? data : [];
+    if (!opportunities.length) return null;
+    return roleFitFromResume(doc.text, opportunities);
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(req, res, dependencies = {}) {
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -70,10 +95,13 @@ export default async function handler(req, res, dependencies = {}) {
 
   try {
     const result = await questionsFromResume({ buffer: body, filename, vertical });
+    // Read the same upload against the open roles. Independent of the questions path: if the
+    // model call fails the student still gets their role reading, and vice versa.
+    const roleFit = await readRolesFromResume(body, filename, member);
     // A failure here is never fatal to the application. The published technical questions
     // still apply, so the student is told that rather than shown an error they cannot act on.
-    if (!result.ok) return res.status(200).json({ ok: false, fallback: true, reason: result.reason });
-    return res.status(200).json({ ok: true, questions: result.questions, note: result.note, droppedCount: (result.dropped || []).length });
+    if (!result.ok) return res.status(200).json({ ok: false, fallback: true, reason: result.reason, roleFit });
+    return res.status(200).json({ ok: true, questions: result.questions, note: result.note, droppedCount: (result.dropped || []).length, roleFit });
   } catch (error) {
     await recordError('resume-interview', 'error', error?.message || 'unknown', { userId: member.user.id, detail: { vertical } });
     return res.status(200).json({ ok: false, fallback: true, reason: 'Could not read that résumé. The published questions still apply.' });
