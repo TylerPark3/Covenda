@@ -84,6 +84,38 @@ export class PortalOperationalError extends Error {
   }
 }
 
+// Input the member can fix: a 400, and the message is shown to them verbatim.
+//
+// Until now this was inferred by matching the message against a list of nine opening words —
+// /^(Enter|Choose|Only|Account|This|Please|Add|Describe|A refresh)/. That works only while
+// every validation message a developer ever writes happens to begin with one of them. Write
+// "You must pick a project first" and it falls through to portalFailure(), which answers 503
+// PORTAL_UNAVAILABLE: "temporarily unavailable, try again shortly." The member retries
+// forever, the log records an outage that never happened, and the actual problem — a field
+// they could have corrected in five seconds — is never shown to them.
+//
+// The prefix list stays as a fallback so existing throws keep their 400. New code should
+// throw this instead.
+export class PortalInputError extends Error {
+  constructor(publicMessage, field = null) {
+    super(publicMessage);
+    this.name = 'PortalInputError';
+    this.publicMessage = publicMessage;
+    this.field = field;
+  }
+}
+
+// The request is understood and refused: wrong role, not the owner, not permitted. A 403.
+// Answering 503 here tells a member the server is broken when the truth is that they are not
+// allowed — so they retry, and it fails identically every time.
+export class PortalForbiddenError extends Error {
+  constructor(publicMessage) {
+    super(publicMessage);
+    this.name = 'PortalForbiddenError';
+    this.publicMessage = publicMessage;
+  }
+}
+
 function cleanText(value, maxLength) {
   return typeof value === 'string' ? value.replace(/\0/g, '').trim().slice(0, maxLength) : '';
 }
@@ -2177,7 +2209,34 @@ export async function refreshOpenRoles(member, input = {}, dependencies = {}) {
   const env = dependencies.env || process.env;
   const db = serviceClient(env, dependencies.createSupabaseClient || createClient);
   const report = await syncRoles(db);
-  return { skipped: false, ...report };
+
+  // syncRoles never throws — seven external job boards means seven chances for somebody
+  // else's outage to become our 500, so it reports per-board and returns. That is right for
+  // the cron. It is wrong to pass straight through to a member who pressed Refresh: the
+  // handler wraps this in {ok: true}, so a run that reached zero boards and wrote nothing
+  // rendered as success, and the student saw the same stale list with no explanation.
+  //
+  // So the caller gets a verdict, not just a report.
+  const reachable = (report.boards || []).filter(b => b.ok).length;
+  const total = (report.boards || []).length;
+  const wrote = Number(report.written) || 0;
+
+  if (report.error) {
+    // The write itself failed. That is ours, and a member refreshing again will not fix it.
+    throw new PortalOperationalError('ROLES_WRITE_FAILED',
+      'Roles could not be saved just now. This has been recorded.', new Error(report.error));
+  }
+  return {
+    skipped: false,
+    ...report,
+    // Stated plainly so the UI does not have to infer it from counts.
+    outcome: wrote > 0 ? 'updated' : (reachable === 0 ? 'no_boards_reachable' : 'nothing_new'),
+    summary: wrote > 0
+      ? `${wrote} role${wrote === 1 ? '' : 's'} refreshed from ${reachable} of ${total} boards.`
+      : reachable === 0
+        ? 'No job board could be reached just now. Your list is unchanged.'
+        : `Checked ${reachable} of ${total} boards — nothing new since the last refresh.`,
+  };
 }
 
 // Paste a resume, get the open roles it lines up with. Nothing is written: the text is read,
@@ -3555,6 +3614,13 @@ function portalFailure(error) {
   if (/member_profiles|member_projects|project_applications|project_messages|submissions|schema cache|relation .* does not exist/i.test(message)) {
     return { status: 503, code: 'PORTAL_SCHEMA_MISSING', message: 'Member sign-in worked, but the portal tables are not available. Apply the newest Supabase migration to the same project used by Vercel.' };
   }
+  // A programming fault is not a 503. 503 means "the server is fine, a dependency is not —
+  // try again shortly", and a client that believes it will retry a TypeError until it gives
+  // up. These are the shapes Node throws when the bug is ours: they will fail identically on
+  // every retry, so say 500 and stop inviting one.
+  if (error instanceof TypeError || error instanceof ReferenceError || error instanceof RangeError) {
+    return { status: 500, code: 'PORTAL_BUG', message: 'Something in the portal failed on our side. This has been recorded — retrying will not help.' };
+  }
   return { status: 503, code: 'PORTAL_UNAVAILABLE', message: 'The member portal is temporarily unavailable. Check the newest /api/portal entry in Vercel Runtime Logs.' };
 }
 
@@ -3767,6 +3833,14 @@ export default async function handler(req, res, dependencies = {}) {
     if (req.method === 'POST' && input.action === 'fulfil-payout') return res.status(200).json({ ok: true, payout: await fulfilPayout(member, input, dependencies.env || process.env) });
     return res.status(400).json({ ok: false, error: 'Unknown portal action.' });
   } catch (error) {
+    // Typed first. The prefix list below is the legacy fallback, kept so existing throws keep
+    // their 400 — but it is a guess about English, and a guess is not a classification.
+    if (error instanceof PortalForbiddenError) {
+      return res.status(403).json({ ok: false, code: 'PORTAL_FORBIDDEN', error: error.publicMessage });
+    }
+    if (error instanceof PortalInputError) {
+      return res.status(400).json({ ok: false, code: 'PORTAL_INPUT_INVALID', error: error.publicMessage, field: error.field || undefined });
+    }
     const expected = error instanceof SyntaxError || /^(Enter|Choose|Only|Account|This|Please|Add|Describe|A refresh)/.test(error?.message || '');
     if (expected) return res.status(400).json({ ok: false, code: 'PORTAL_INPUT_INVALID', error: error.message });
     const failure = portalFailure(error);

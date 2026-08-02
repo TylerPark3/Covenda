@@ -142,6 +142,38 @@ export function extractSkills(text = '') {
   return [...found];
 }
 
+// Same detection as extractSkills, but it also reports WHERE each skill was read from.
+//
+// A student being told "your résumé claims Python" deserves to see the sentence that claim
+// came from — otherwise the product is asserting things about their own document and asking
+// them to take it on faith. Sharing PROBES and the regex with extractSkills is the point:
+// two extractors that drift apart would tell a student two different stories about one file.
+export function locateSkills(text = '') {
+  const source = String(text || '');
+  const found = new Map();
+  for (const probe of PROBES) {
+    const safe = probe.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp(`(?<![a-z0-9+#.])${safe}(?![a-z0-9+#])`, 'i');
+    const m = re.exec(source);
+    if (!m) continue;
+    const { canonical, matched } = canonicalizeSkill(probe);
+    const skill = matched ? canonical : canonical.replace(/\b[a-z]/g, c => c.toUpperCase());
+    const prev = found.get(skill);
+    if (prev && prev.index <= m.index) continue;
+    // One short quote around the hit, whitespace collapsed so a PDF's line breaks do not
+    // turn the evidence into a column of fragments.
+    const start = Math.max(0, m.index - 45);
+    const raw = source.slice(start, start + 90).replace(/\s+/g, ' ').trim();
+    found.set(skill, {
+      skill,
+      matched_phrase: m[0],
+      index: m.index,
+      context: (start > 0 ? '\u2026' : '') + raw + (start + 90 < source.length ? '\u2026' : ''),
+    });
+  }
+  return [...found.values()].sort((a, b) => a.index - b.index);
+}
+
 export function roleSkills(role = {}) {
   return extractSkills(`${role.title || ''} ${role.description || ''}`);
 }
