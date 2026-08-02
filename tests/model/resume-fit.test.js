@@ -2,6 +2,7 @@
 // thing D10 permanently forbids: a number about a person.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   skillsFromResumeText, coverageForRole, roleFitFromResume,
   RESUME_EVIDENCE_TIER, RESUME_FIT_VERSION,
@@ -145,4 +146,31 @@ test('output is versioned so a change in reading is traceable', () => {
 test('handles a missing opportunity list without throwing', () => {
   assert.equal(roleFitFromResume(RESUME, null).roles.length, 0);
   assert.equal(roleFitFromResume(RESUME, undefined).refused, false);
+});
+
+test('extraction is not reimplemented here — roles.js owns it', () => {
+  const src = readFileSync(new URL('../../api/resume-fit.js', import.meta.url), 'utf8');
+  const code = src.split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+  assert.match(code, /import \{ locateSkills \} from '\.\/roles\.js'/,
+    'must delegate to the one extractor');
+  // The first version shipped its own probe list and its own regex matcher. Both would
+  // reintroduce a bug roles.js had already fixed, and would let two extractors disagree
+  // about the same document.
+  assert.equal(/const DEFAULT_PROBES/.test(code), false, 'no second probe list');
+  assert.equal(/new RegExp\(/.test(code), false, 'no second matcher');
+});
+
+test('locateSkills and extractSkills never disagree — same probes, same regex', async () => {
+  const { locateSkills, extractSkills } = await import('../../api/roles.js');
+  for (const sample of [
+    RESUME,
+    'comfortable in Python and SQL.',              // the end-of-sentence bug roles.js fixed
+    'Shipped with next.js and Docker; wrote C++.',
+    'nothing technical here at all',
+  ]) {
+    assert.deepEqual(
+      locateSkills(sample).map(s => s.skill).sort(),
+      extractSkills(sample).sort(),
+      `disagreed on: ${sample}`);
+  }
 });

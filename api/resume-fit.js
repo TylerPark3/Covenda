@@ -29,6 +29,14 @@
 //
 // Pure functions, no I/O.
 
+// EXTRACTION LIVES IN api/roles.js, NOT HERE.
+// The first version of this file reimplemented skill extraction with its own probe list and
+// its own matcher. api/roles.js already had one — a better one. Its regex uses lookarounds
+// and its comments record a real bug that version had already fixed: a probe at the END of a
+// sentence never matched, so "comfortable in Python and SQL." found neither. The duplicate
+// would have shipped that bug again, and two extractors would tell a student two different
+// stories about the same document. locateSkills() is extractSkills() plus the quote.
+import { locateSkills } from './roles.js';
 import { canonicalizeSkill, TAXONOMY_VERSION } from './skills-taxonomy.js';
 
 export const RESUME_FIT_VERSION = 'resume-fit-1.0.0';
@@ -40,79 +48,11 @@ export const RESUME_EVIDENCE_TIER = 'claimed';
 const asList = v => (Array.isArray(v) ? v : String(v || '').split(/[,\n]/))
   .map(s => String(s || '').trim()).filter(Boolean);
 
-const normalize = s => String(s || '').toLowerCase().replace(/\s+/g, ' ');
-
-// A skill counts as "mentioned" only on a word-boundary hit, so "R" does not match every
-// word containing r, and "Go" does not match "going". Short tokens require exact-word hits.
-function mentions(haystack, needle) {
-  const n = normalize(needle);
-  if (!n) return null;
-  const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  // C++ / C# end in punctuation, so a trailing \b would never fire.
-  const tail = /[a-z0-9]$/.test(n) ? '\\b' : '';
-  const re = new RegExp(`\\b${escaped}${tail}`, 'i');
-  const m = re.exec(haystack);
-  return m ? { phrase: m[0], index: m.index } : null;
+// Skills a résumé MENTIONS, each with the quote it was read from. Never a level, a rating or
+// a score — a résumé cannot establish proficiency, only that a word appears in a document.
+export function skillsFromResumeText(text) {
+  return locateSkills(text).map(({ index, ...rest }) => ({ ...rest, tier: RESUME_EVIDENCE_TIER }));
 }
-
-// Pull one short quote around the hit, so the student can see WHERE we read it from.
-// Without this the feature is a black box asserting things about their own document.
-function contextAround(text, index, span = 90) {
-  const start = Math.max(0, index - span / 2);
-  const raw = text.slice(start, start + span).replace(/\s+/g, ' ').trim();
-  return (start > 0 ? '…' : '') + raw + (start + span < text.length ? '…' : '');
-}
-
-// Extract canonical skills a résumé MENTIONS. Never returns a level, a rating or a score —
-// a résumé cannot establish proficiency, only that a word appears.
-export function skillsFromResumeText(text, { vocabulary = null } = {}) {
-  const source = String(text || '');
-  if (!source.trim()) return [];
-  const hay = normalize(source);
-  // Probe the taxonomy through its own public entry point so this stays correct when the
-  // seed vocabulary is replaced by the derived Lightcast/O*NET fixtures.
-  const probes = vocabulary || DEFAULT_PROBES;
-  const found = new Map();
-  for (const probe of probes) {
-    const hit = mentions(hay, probe);
-    if (!hit) continue;
-    const { canonical, matched } = canonicalizeSkill(probe);
-    if (!matched) continue;
-    const existing = found.get(canonical);
-    if (existing && existing.index <= hit.index) continue;
-    found.set(canonical, {
-      skill: canonical,
-      matched_phrase: hit.phrase,
-      index: hit.index,
-      context: contextAround(source, hit.index),
-      tier: RESUME_EVIDENCE_TIER,
-    });
-  }
-  return [...found.values()].sort((a, b) => a.index - b.index)
-    .map(({ index, ...rest }) => rest);
-}
-
-// The probe list: every alias the taxonomy knows, longest first so "machine learning" wins
-// over "learning" and "node.js" over "node". Derived from the taxonomy at import time.
-const DEFAULT_PROBES = (() => {
-  const probes = new Set();
-  const seeds = [
-    'js', 'javascript', 'typescript', 'python', 'java', 'c++', 'c#', 'go', 'golang', 'rust',
-    'sql', 'postgres', 'postgresql', 'mysql', 'html', 'css', 'react', 'next.js', 'node.js',
-    'machine learning', 'deep learning', 'pytorch', 'tensorflow', 'llm', 'prompt engineering',
-    'data analysis', 'data science', 'pandas', 'jupyter', 'analytics', 'tableau', 'power bi',
-    'excel', 'google sheets', 'financial modeling', 'valuation', 'dcf', 'bookkeeping',
-    'reconciliation', 'accounting', 'equity research', 'market research', 'user research',
-    'technical writing', 'documentation', 'operations', 'process mapping', 'qa', 'testing',
-    'quality assurance', 'ros', 'robotics', 'computer vision', 'opencv', 'bash', 'shell',
-    'git', 'github', 'version control', 'rest api', 'api design', 'aws', 'gcp', 'azure',
-    'docker', 'kubernetes', 'ci/cd', 'devops', 'figma', 'ui/ux', 'product design',
-    'marketing', 'seo', 'growth', 'sales', 'outreach', 'lead generation', 'crm',
-    'project management', 'scrum', 'agile', 'statistics', 'regression',
-  ];
-  for (const s of seeds) probes.add(s);
-  return [...probes].sort((a, b) => b.length - a.length);
-})();
 
 // One role, read against one résumé. Returns coverage of the role's NAMED skills plus the
 // gap list — and states its own limits in the payload, so a UI cannot render the number

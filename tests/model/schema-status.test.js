@@ -69,8 +69,13 @@ test('the probe sits behind operator authentication', () => {
 // actions. That is a starting point, not a diagnosis, and it cost a round trip.
 test('a portal failure records which action failed', () => {
   const portal = readFileSync(new URL('../../api/portal.js', import.meta.url), 'utf8');
+  // Bound the block by where it actually ends, not by a character count. The magic 1800
+  // silently excluded the recordError call the moment the catch grew, turning a real
+  // assertion into a false failure about code that had not changed.
   const at = portal.lastIndexOf('} catch (error) {');
-  const block = portal.slice(at, at + 1800);
+  const end = portal.indexOf('return res.status(failure.status)', at);
+  assert.ok(end > at, 'the catch must still end by returning the mapped failure');
+  const block = portal.slice(at, end);
   assert.match(block, /action: failedAction/, 'the log names the action');
   assert.match(block, /recordError\('portal', 'error', detail/,
     'and it goes to error_events, which is queryable, not only to ephemeral platform logs');
