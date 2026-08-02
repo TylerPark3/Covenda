@@ -1,11 +1,8 @@
-import { putObject } from './storage.js';
+import { putObject, storageConfigured } from './storage.js';
 
 // Optional student video-intro upload. Receives a recorded clip (webm/mp4) as the
-// raw request body and stores it in Vercel Blob, returning an unguessable URL that
-// is saved as links.videoIntro. Requires BLOB_READ_WRITE_TOKEN; if it is not set the
-// endpoint reports "not configured" and the client keeps the paste-a-link path.
-// NOTE: Vercel Blob URLs are public-but-unguessable, not access-controlled. That is
-// acceptable for a founder-led pilot intro; revisit before any broad launch.
+// raw request body and stores it in the private object store. The returned storage key is
+// saved as links.videoIntro and is only turned into a short-lived URL after authorization.
 
 export const config = { api: { bodyParser: false } };
 
@@ -25,24 +22,8 @@ function sameOrigin(req) {
   }
 }
 
-// The Blob store's access mode is a deployment setting, not something this code should
-// assume. Asking for `public` on a private store throws outright — which is exactly how the
-// video recorder broke — so try the configured default and fall back rather than hardcoding.
-//
-// Consequence worth knowing: on a private store the returned URL is not publicly fetchable,
-// so a reviewer needs a signed URL to watch a recording. That is stricter than the previous
-// public-but-unguessable posture and better for student privacy, but it means playback has
-// to go through a signing step.
-async function putEither(key, body, contentType) {
-  try {
-    return await putObject(key, body, { contentType });
-  } catch (error) {
-    if (!/private access|public access/i.test(String(error?.message || ''))) throw error;
-    return put(key, body, { access: 'private', contentType });
-  }
-}
-
-export default async function handler(req, res) {
+export default async function handler(req, res, dependencies = {}) {
+  const env = dependencies.env || process.env;
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed.' });
     return;
@@ -51,7 +32,7 @@ export default async function handler(req, res) {
     res.status(403).json({ error: 'Cross-origin uploads are not allowed.' });
     return;
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!storageConfigured(env)) {
     res.status(503).json({ error: 'Video recording storage is not configured yet. Paste a video link instead.' });
     return;
   }
@@ -87,7 +68,7 @@ export default async function handler(req, res) {
     // Unique key built here rather than relying on addRandomSuffix, whose behaviour has
     // changed across storage providers.
     const key = `video-intros/${Date.now()}-${Math.random().toString(36).slice(2, 10)}.${ext}`;
-    const blob = await putEither(key, Buffer.concat(chunks), contentType);
+    const blob = await putObject(key, Buffer.concat(chunks), { contentType, env });
     res.status(200).json({ url: blob.url });
   } catch (error) {
     // A bare catch made every failure identical and undebuggable. The real reason goes to

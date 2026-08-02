@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import handler, { MAX_BYTES, TTL_SECONDS } from '../../api/upload-token.js';
+import handler, { MAX_BYTES, TTL_SECONDS, uploadLimit } from '../../api/upload-token.js';
 
 function res() {
   const out = { code: 0, body: null };
@@ -40,7 +40,7 @@ test('only recording formats are accepted', async () => {
 // The URL is a bearer credential: whoever holds it can write.
 test('the grant is narrow — one path, upload only, and the client never picks the path', () => {
   const src = readFileSync(new URL('../../api/upload-token.js', import.meta.url), 'utf8');
-  assert.match(src, /signedUploadUrl\(pathname\)/, 'scoped to the one path this handler derived');
+  assert.match(src, /signedUploadUrl\(pathname, \{ env \}\)/, 'scoped to the one path this handler derived');
   assert.doesNotMatch(src, /issueSignedToken|presignUrl/, 'no vendor token API remains');
   assert.ok(TTL_SECONDS <= 900, 'a long-lived write URL is a write URL somebody else can use');
   // Derived from the caller's own id, so a URL cannot be aimed at another member's key.
@@ -50,6 +50,11 @@ test('the grant is narrow — one path, upload only, and the client never picks 
 
 test('the ceiling fits a long screen share, which is why this route exists', () => {
   assert.ok(MAX_BYTES > 100 * 1024 * 1024, 'the 30 MB function limit is what broke uploads');
+});
+
+test('a deployment can lower the limit to match its Supabase plan', () => {
+  assert.equal(uploadLimit({ COVENDA_UPLOAD_MAX_BYTES: String(50 * 1024 * 1024) }), 50 * 1024 * 1024);
+  assert.equal(uploadLimit({ COVENDA_UPLOAD_MAX_BYTES: String(999 * 1024 * 1024) }), MAX_BYTES);
 });
 
 // Two guarantees genuinely weakened by moving off the previous provider, recorded here rather

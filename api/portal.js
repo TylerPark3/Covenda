@@ -877,7 +877,15 @@ export async function fulfilPayout(member, input, env = process.env) {
 function cleanAttachments(value) {
   return (Array.isArray(value) ? value : []).slice(0, 6).map(item => ({
     name: cleanText(item?.name, 120),
-    blobUrl: /^https:\/\//i.test(item?.blobUrl || '') ? cleanText(item.blobUrl, 600) : '',
+    // Existing rows hold legacy HTTPS URLs; new private uploads hold provider-neutral keys.
+    // Restrict keys to the two attachment namespaces so this cannot be used to smuggle an
+    // arbitrary object reference into a project or message.
+    blobUrl: /^https:\/\//i.test(item?.blobUrl || '')
+      ? cleanText(item.blobUrl, 600)
+      : /^(project-files|deliverables)\/[A-Za-z0-9._/-]+$/.test(item?.blobUrl || '')
+        && !String(item.blobUrl).includes('..') && !String(item.blobUrl).includes('//')
+        ? cleanText(item.blobUrl, 600)
+        : '',
     contentType: cleanText(item?.contentType, 100),
     sizeBytes: Number.isFinite(item?.sizeBytes) ? Math.max(0, Math.min(item.sizeBytes, 50_000_000)) : 0,
   })).filter(item => item.blobUrl);

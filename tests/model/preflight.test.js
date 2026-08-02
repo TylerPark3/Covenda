@@ -65,8 +65,8 @@ test('--force starts anyway, for working on pages that need no database', () => 
 test('optional variables are reported as degraded, not as failure', () => {
   const { code, stdout } = runPreflight(GOOD);
   assert.equal(code, 0);
-  assert.match(stdout, /BLOB_READ_WRITE_TOKEN — video/);
   assert.match(stdout, /RESEND_API_KEY — sign-in/);
+  assert.doesNotMatch(stdout, /BLOB_READ_WRITE_TOKEN/, 'storage is backed by the existing Supabase server credentials');
 });
 
 test('the instructions the preflight prints match the documented ones', () => {

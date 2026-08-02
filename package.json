@@ -17,6 +17,9 @@
     "migrate": "node scripts/migrate.mjs",
     "local:force": "node scripts/preflight.mjs --force && vercel dev --listen 3000",
     "serve": "node server.js",
+    "build:static": "node scripts/build-static.mjs",
+    "storage:plan": "node scripts/setup-storage.mjs",
+    "storage:apply": "node scripts/setup-storage.mjs --apply",
     "preview": "node scripts/preview.mjs",
     "scan:deref": "node scripts/deref-scan.mjs",
     "land": "node scripts/land.mjs"

@@ -1,4 +1,4 @@
-// Playback for private blobs.
+// Playback for private recordings.
 //
 // The Blob store is private, which is the right posture — a recording of a student talking
 // through their own work is more personal than a résumé, and it should not be fetchable by
@@ -31,13 +31,18 @@ import { signedReadUrl } from './storage.js';
 export const TTL_SECONDS = 60 * 15;
 
 const BLOB_HOST = /^https:\/\/([a-z0-9]+)\.(private|public)\.blob\.vercel-storage\.com\/(.+)$/i;
+const STORAGE_KEY = /^(video-intros|exercise-recordings|project-files)\/[A-Za-z0-9._/-]+$/;
 
 // The hostname carries the access level, so a public blob needs no signing at all — the
 // uploader falls back to public when the store allows it.
 export function parseBlobUrl(url) {
-  const match = BLOB_HOST.exec(String(url || '').split('?')[0]);
-  if (!match) return null;
-  return { storeId: match[1], access: match[2].toLowerCase(), pathname: decodeURIComponent(match[3]) };
+  const clean = String(url || '').split('?')[0];
+  const match = BLOB_HOST.exec(clean);
+  if (match) return { storeId: match[1], access: match[2].toLowerCase(), pathname: decodeURIComponent(match[3]), legacy: true };
+  if (STORAGE_KEY.test(clean) && !clean.includes('..') && !clean.includes('//')) {
+    return { storeId: null, access: 'private', pathname: clean, legacy: false };
+  }
+  return null;
 }
 
 function serviceClient(env = process.env) {
@@ -92,6 +97,26 @@ export async function mayView(supabase, user, url, env = process.env) {
     if (materialUrls(row.materials).includes(clean)) return { ok: true, as: 'owner', parsed };
   }
 
+  // Project files are visible only to the company owner and the approved student. Query the
+  // caller's projects first, then compare object references in those rows and their messages;
+  // never scan every company's private attachments looking for a match.
+  if (parsed.pathname.startsWith('project-files/')) {
+    const [owned, assigned] = await Promise.all([
+      maybe(supabase.from('member_projects').select('id,attachments').eq('owner_user_id', user.id).limit(100), []),
+      maybe(supabase.from('member_projects').select('id,attachments').eq('assigned_student_user_id', user.id).limit(100), []),
+    ]);
+    const projects = [...(owned || []), ...(assigned || [])]
+      .filter((project, index, all) => all.findIndex(item => item.id === project.id) === index);
+    for (const project of projects) {
+      if (attachmentUrls(project.attachments).includes(clean)) return { ok: true, as: 'project-member', parsed };
+      const messages = await maybe(supabase.from('project_messages')
+        .select('attachments').eq('project_id', project.id).limit(200), []);
+      if ((messages || []).some(message => attachmentUrls(message.attachments).includes(clean))) {
+        return { ok: true, as: 'project-member', parsed };
+      }
+    }
+  }
+
   return { ok: false, reason: 'That recording is not shared with you.' };
 }
 
@@ -103,6 +128,12 @@ export function materialUrls(materials) {
     ...(Array.isArray(m.workSamples) ? m.workSamples : []),
     ...(Array.isArray(m.workSampleFiles) ? m.workSampleFiles.map(f => f?.url) : []),
   ].filter(Boolean).map(u => String(u).split('?')[0]);
+}
+
+export function attachmentUrls(attachments) {
+  return (Array.isArray(attachments) ? attachments : [])
+    .map(file => String(file?.blobUrl || '').split('?')[0])
+    .filter(Boolean);
 }
 
 // Degrades on a missing table rather than 500ing the whole playback — the same posture as
@@ -131,6 +162,7 @@ export async function signPlayback(parsed, { now = Date.now(), ttl = TTL_SECONDS
 }
 
 function rebuild(parsed) {
+  if (!parsed.legacy) return parsed.pathname;
   return `https://${parsed.storeId}.${parsed.access}.blob.vercel-storage.com/${parsed.pathname.split('/').map(encodeURIComponent).join('/')}`;
 }
 

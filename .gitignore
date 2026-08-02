@@ -1,6 +1,8 @@
 .vercel
 .env*
 node_modules
+dist/
+.wrangler/
 
 # Design handoff reference — adapted into styles.css/app.js, raw files not shipped
 design_handoff_covenda_motion/

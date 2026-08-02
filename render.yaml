@@ -1,0 +1,77 @@
+services:
+  - type: web
+    name: covenda-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm ci --omit=dev
+    startCommand: npm run serve
+    healthCheckPath: /healthz
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: uploads
+      - key: SUPABASE_PUBLIC_STORAGE_BUCKET
+        value: avatars
+      - key: COVENDA_UPLOAD_MAX_BYTES
+        sync: false
+      - key: COVENDA_SITE_URL
+        value: https://covenda.app
+      - key: APP_BASE_URL
+        value: https://covenda.app
+      - key: COVENDA_ADMIN_URL
+        value: https://covenda.app/admin.html
+      - key: COVENDA_ADMIN_EMAILS
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: COVENDA_NOTIFICATION_FROM
+        sync: false
+      - key: COVENDA_NOTIFICATION_EMAIL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_ANALYSIS_TOKEN
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_ID
+        sync: false
+      - key: GITHUB_OAUTH_CLIENT_SECRET
+        sync: false
+      - key: CONNECTOR_STATE_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CONNECT_ENABLED
+        sync: false
+      - key: COVENDA_IDENTITY_ENABLED
+        sync: false
+      - key: COVENDA_BATCH_APPLICATIONS_OPEN
+        sync: false
+      - key: COVENDA_CREDIT_GRANTS_ENABLED
+        sync: false
+      - key: COVENDA_DIGEST_ENABLED
+        sync: false
+      - key: COVENDA_BRIEF_METERING_ENABLED
+        sync: false
+      - key: COVENDA_BRIEF_FEE
+        sync: false
+      - key: COVENDA_PLATFORM_FEE_RATE
+        sync: false
+      - key: COVENDA_VERIFIED_PARTNERS
+        sync: false
+      - key: SYNTHETIC_DATA_ENABLED
+        sync: false

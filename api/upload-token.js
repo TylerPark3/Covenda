@@ -1,4 +1,4 @@
-// Direct-to-Blob uploads for recordings.
+// Direct-to-storage uploads for recordings.
 //
 // ── WHY THIS EXISTS ───────────────────────────────────────────────────────────────────
 // Recordings used to be POSTed through a serverless function, which buffered the whole file
@@ -8,20 +8,27 @@
 // status and no server log, which is about the least diagnosable failure available.
 //
 // This issues a short-lived, single-pathname, PUT-only URL. The browser sends the file
-// straight to Blob storage and the function never touches the bytes, so size stops mattering.
+// straight to private storage and the function never touches the bytes, so size stops mattering.
 //
 // ── WHY THE DELEGATION IS SO NARROW ───────────────────────────────────────────────────
 // The URL is a bearer credential: whoever holds it can write. So it is scoped to exactly one
 // pathname the client cannot choose, expires in ten minutes, carries its own size ceiling
 // enforced by the storage layer rather than by us, and permits nothing but `put`.
 
-import { signedUploadUrl } from './storage.js';
+import { signedUploadUrl, storageConfigured } from './storage.js';
 
 import { checkLimit, limitResponse, recordError } from './limits.js';
 import { authorizeMember } from './portal.js';
 
 export const MAX_BYTES = 400 * 1024 * 1024;   // a long screen share, with room to spare
 export const TTL_SECONDS = 60 * 10;
+
+export function uploadLimit(env = process.env) {
+  const configured = Number(env.COVENDA_UPLOAD_MAX_BYTES);
+  return Number.isFinite(configured)
+    ? Math.max(5 * 1024 * 1024, Math.min(MAX_BYTES, Math.floor(configured)))
+    : MAX_BYTES;
+}
 
 const KINDS = {
   video: { prefix: 'video-intros', types: ['video/webm', 'video/mp4', 'video/quicktime', 'video/x-matroska'] },
@@ -43,6 +50,7 @@ function sameOrigin(req) {
 }
 
 export default async function handler(req, res, dependencies = {}) {
+  const env = dependencies.env || process.env;
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return res.status(405).json({ ok: false, error: 'Method not allowed.' }); }
   if (!sameOrigin(req)) return res.status(403).json({ ok: false, error: 'Cross-origin uploads are not allowed.' });
@@ -61,7 +69,7 @@ export default async function handler(req, res, dependencies = {}) {
   if (!KINDS[kind].types.includes(contentType)) {
     return res.status(415).json({ ok: false, error: 'That is not a recording format we accept.' });
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!storageConfigured(env)) {
     return res.status(503).json({ ok: false, error: 'File storage is not configured on this deployment.' });
   }
 
@@ -79,8 +87,8 @@ export default async function handler(req, res, dependencies = {}) {
     // They are still enforced here — the handler validates contentType against KINDS and the
     // client is told MAX_BYTES — but a caller who ignores the response could push a larger
     // object. Tracked in TODOS rather than left as a silent downgrade.
-    const { uploadUrl, key } = await signedUploadUrl(pathname);
-    return res.status(200).json({ ok: true, uploadUrl, pathname: key, expiresIn: TTL_SECONDS });
+    const { uploadUrl, key } = await signedUploadUrl(pathname, { env });
+    return res.status(200).json({ ok: true, uploadUrl, pathname: key, maxBytes: uploadLimit(env), expiresIn: TTL_SECONDS });
   } catch (error) {
     await recordError('upload-token', 'error', error?.message || 'unknown', { userId: member.user.id, detail: { kind } });
     return res.status(500).json({ ok: false, error: 'Could not start the upload. Try again, or paste a link.' });
