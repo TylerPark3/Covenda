@@ -22,7 +22,6 @@ for (const directory of PUBLIC_DIRECTORIES) {
 }
 
 cpSync(join(root, 'deploy', 'cloudflare', '_headers'), join(output, '_headers'));
-cpSync(join(root, 'deploy', 'cloudflare', '_redirects'), join(output, '_redirects'));
 cpSync(join(root, 'deploy', 'cloudflare', '_routes.json'), join(output, '_routes.json'));
 writeFileSync(join(output, 'build-manifest.json'), `${JSON.stringify({
   generatedAt: new Date().toISOString(),
