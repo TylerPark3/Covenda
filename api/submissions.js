@@ -372,15 +372,20 @@ function referenceFor(type) {
   return `${prefix}-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
 }
 
+// Shape guard, not a truthiness check: these read a persisted `details` blob whose shape
+// varies by record vintage, and `x || []` still throws when x is a truthy non-array.
+// Found by scripts/deref-scan.mjs.
+const asList = v => (Array.isArray(v) ? v : []);
+
 function submissionSummary(record) {
   if (record.type === 'employer_intake') {
     return record.details.project.deliverable || 'Company problem submitted for scoping.';
   }
   if (record.type === 'student_interest') {
-    return record.details.interests.workTypes.join(', ') || 'Student interest profile submitted.';
+    return asList(record.details?.interests?.workTypes).join(', ') || 'Student interest profile submitted.';
   }
   if (record.type === 'university_partner') {
-    const count = record.details.roster.length;
+    const count = asList(record.details?.roster).length;
     return `${count} student${count === 1 ? '' : 's'} shared for pilot matching.`;
   }
   if (record.type === 'student_quick') {
@@ -389,7 +394,7 @@ function submissionSummary(record) {
       : 'Quick join — full profile pending.';
   }
   if (record.type === 'referrer_endorsement') {
-    const count = record.details.endorsements.length;
+    const count = asList(record.details?.endorsements).length;
     return `${count} student endorsement${count === 1 ? '' : 's'} from ${record.details.referrerType || 'a referrer'}.`;
   }
   if (record.type === 'role_application') {

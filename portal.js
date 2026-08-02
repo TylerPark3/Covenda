@@ -429,7 +429,8 @@ function renderFocus(){
   // A proposed trial waiting on the founder outranks everything else on this page.
 
   const root=$('#focusProject');root.replaceChildren();const role=state.dashboard.profile?.role;
-  const project=state.dashboard.projects.find(item=>!['complete','archived'].includes(item.status))||state.dashboard.projects[0];
+  const projects=asList(state.dashboard.projects);
+  const project=projects.find(item=>!['complete','archived'].includes(item.status))||projects[0];
   $('#focusTitle').textContent=role==='student'?'Your project tracker':'Project operations';
   if(role==='student')root.append(rungBadge());
   if(!project){
