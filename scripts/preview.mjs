@@ -6,9 +6,18 @@
 // "did the spacing land". This serves the same files from the same repo over plain Node —
 // the static pages work fully, and API routes are served by server.js when it can boot.
 //
-//   npm run preview              # http://localhost:4000
+//   npm run preview                # http://localhost:4000
 //   npm run preview -- --port 5000
-//   npm run preview -- --no-api  # static only, never tries to load api handlers
+//   npm run preview -- --no-api    # static only, never tries to load api handlers
+//   npm run preview -- --pretty    # allow /portal -> portal.html (production does NOT)
+//
+// ROUTING PARITY. This served extensionless URLs (/portal -> portal.html) in its first
+// version. Production does not: covenda.app/portal is a 404 and covenda.app/portal.html is
+// the real page. A preview that is MORE forgiving than production is the wrong way round —
+// it lets you build a link that works locally and 404s live, which is the exact failure a
+// preview is supposed to catch. So the default now matches production exactly, and the 404
+// page names the file you probably meant. --pretty restores the old behaviour if you want
+// it, and says so on startup.
 //
 // It deliberately does NOT mock authenticated state. A page that needs a session shows the
 // signed-out view, which is the honest thing to preview.
@@ -22,6 +31,7 @@ const args = process.argv.slice(2);
 const portArg = args.indexOf('--port');
 const PORT = Number(portArg >= 0 ? args[portArg + 1] : process.env.PORT || 4000);
 const NO_API = args.includes('--no-api');
+const PRETTY = args.includes('--pretty');
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -50,10 +60,13 @@ export function resolvePath(urlPath) {
   return full;
 }
 
-// Extensionless pretty URLs: /portal -> portal.html. Matches how the site is deployed.
-export function candidatesFor(full) {
+// Production (Vercel static) serves exact filenames only. Parity is the default; --pretty
+// opts into extensionless resolution for local convenience.
+export function candidatesFor(full, { pretty = false } = {}) {
   if (extname(full)) return [full];
-  return [`${full}.html`, join(full, 'index.html'), full];
+  // A bare directory still resolves to its index.html in production, so that stays.
+  const base = [join(full, 'index.html')];
+  return pretty ? [`${full}.html`, ...base, full] : base;
 }
 
 async function readFirst(paths) {
@@ -116,10 +129,18 @@ const server = createServer(async (req, res) => {
 
   const full = resolvePath(url);
   if (!full) { res.writeHead(403); res.end('Forbidden'); return; }
-  const found = await readFirst(candidatesFor(full));
+  const found = await readFirst(candidatesFor(full, { pretty: PRETTY }));
   if (!found) {
+    // Name the file they probably meant. This 404 is the point of the parity default:
+    // seeing it here is the whole reason it does not surprise you on covenda.app.
+    const guess = !extname(full) ? `${url.split('?')[0].replace(/\/$/, '')}.html` : null;
+    const hint = guess
+      ? `\nProduction serves exact filenames. Did you mean ${guess} ?`
+        + `\n(covenda.app/portal is a 404; covenda.app/portal.html is the page.)`
+        + `\n\nRun with --pretty to resolve extensionless URLs locally.`
+      : '';
     res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(`<pre>404 — ${url}\n\nnpm run preview serves files from ${ROOT}</pre>`);
+    res.end(`<pre>404 — ${url}${hint}\n\nServing from ${ROOT}</pre>`);
     return;
   }
   res.writeHead(200, {
@@ -133,9 +154,12 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   server.listen(PORT, () => {
     console.log(`\n  Covenda preview — no Vercel in the loop`);
     console.log(`  http://localhost:${PORT}\n`);
-    console.log(`  index.html   the marketing site`);
-    console.log(`  /portal      the member portal (signed-out view)`);
-    console.log(`  /admin       the operator console\n`);
+    console.log(`  /                 the marketing site`);
+    console.log(`  /portal.html      the member portal (signed-out view)`);
+    console.log(`  /admin.html       the operator console\n`);
+    console.log(PRETTY
+      ? '  --pretty: /portal resolves to portal.html. PRODUCTION DOES NOT DO THIS.\n'
+      : '  Routing matches production: exact filenames only.\n');
     if (NO_API) console.log('  API disabled (--no-api). Static files only.\n');
     else console.log('  API routes load lazily; failures warn and do not stop the server.\n');
   });
