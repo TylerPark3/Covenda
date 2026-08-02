@@ -5,6 +5,7 @@
 // miss the next sensitive file, so public delivery is an explicit list instead.
 
 export const PUBLIC_ROOT_FILES = Object.freeze([
+  '404.html',
   'admin.css',
   'admin.html',
   'admin.js',

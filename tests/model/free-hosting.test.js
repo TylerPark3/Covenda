@@ -9,7 +9,7 @@ const read = path => readFileSync(join(ROOT, path), 'utf8');
 
 test('the Cloudflare build publishes only the reviewed browser allowlist', () => {
   execFileSync(process.execPath, ['scripts/build-static.mjs'], { cwd: ROOT });
-  for (const publicFile of ['index.html', 'portal.js', 'assets/covenda-mark.svg', '_headers', '_routes.json']) {
+  for (const publicFile of ['index.html', '404.html', 'portal.js', 'assets/covenda-mark.svg', '_headers', '_routes.json']) {
     assert.ok(existsSync(join(ROOT, 'dist', publicFile)), `${publicFile} should be in the static build`);
   }
   for (const privateFile of ['package.json', 'server.js', 'api/portal.js', 'data/vertical-specializations.csv', 'supabase/config.toml']) {
