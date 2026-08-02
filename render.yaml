@@ -1,0 +1,102 @@
+# Render blueprint — the whole service, declared.
+#
+# Point Render at this repo and it reads this file: no console clicking, and the config is
+# reviewable in a pull request instead of living in somebody's browser tab.
+#
+# WHAT STILL HAS TO BE DONE BY HAND, AND WHY
+# Every secret below is `sync: false`, which tells Render "this value is not in the repo —
+# ask for it". That is not a limitation of this file; it is the migration's real work.
+# Vercel stores its env vars ENCRYPTED, which is write-only: `vercel env pull` returns
+# [SENSITIVE] and the dashboard will not display them. Nobody can export the values from
+# Vercel. Each one has to be re-read from the system that issued it — see deploy/RENDER.md.
+#
+# NOT a lift-and-shift: this runs server.js, one long-lived Node process, instead of ~28
+# serverless functions. api/storage.js and server.js were built for exactly this.
+
+services:
+  - type: web
+    name: covenda
+    runtime: node
+    plan: starter                 # 512MB / 0.5 CPU. Fine for one process; raise if uploads stall.
+    region: oregon
+    branch: main
+    buildCommand: npm ci
+    startCommand: npm start       # -> node server.js
+
+    # server.js answers this without touching the database, deliberately: it reports whether
+    # the process is up. A health check that fails when Supabase blips would restart a
+    # perfectly healthy server and turn a dependency hiccup into an outage.
+    healthCheckPath: /healthz
+
+    autoDeploy: true              # push to main -> deploy. Same contract as the Vercel integration.
+
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+
+      # ── Supabase ── dashboard > Project Settings > API
+      - { key: SUPABASE_URL, sync: false }
+      - { key: NEXT_PUBLIC_SUPABASE_URL, sync: false }
+      - { key: SUPABASE_ANON_KEY, sync: false }
+      - { key: NEXT_PUBLIC_SUPABASE_ANON_KEY, sync: false }
+      - { key: SUPABASE_PUBLISHABLE_KEY, sync: false }
+      - { key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, sync: false }
+      - { key: SUPABASE_SERVICE_ROLE_KEY, sync: false }
+      - { key: SUPABASE_SECRET_KEY, sync: false }
+      - { key: SUPABASE_JWT_SECRET, sync: false }
+
+      # ── Postgres ── Supabase dashboard > Project Settings > Database
+      - { key: POSTGRES_URL, sync: false }
+      - { key: POSTGRES_URL_NON_POOLING, sync: false }
+      - { key: POSTGRES_PRISMA_URL, sync: false }
+      - { key: POSTGRES_HOST, sync: false }
+      - { key: POSTGRES_USER, sync: false }
+      - { key: POSTGRES_PASSWORD, sync: false }
+      - { key: POSTGRES_DATABASE, sync: false }
+
+      # ── Payments ── dashboard.stripe.com > Developers > API keys
+      # The webhook secret is per-endpoint: a new Render URL needs a NEW endpoint in Stripe
+      # and the new signing secret that comes with it. Reusing the Vercel one fails signature
+      # verification silently — payments appear to work and webhooks never land.
+      - { key: STRIPE_SECRET_KEY, sync: false }
+      - { key: STRIPE_WEBHOOK_SECRET, sync: false }
+
+      # ── Mail ── resend.com > API Keys
+      - { key: RESEND_API_KEY, sync: false }
+      - { key: COVENDA_NOTIFICATION_FROM, sync: false }
+
+      # ── Model calls ── console.anthropic.com
+      - { key: ANTHROPIC_API_KEY, sync: false }
+
+      # ── Object storage ──────────────────────────────────────────────────────────────
+      # api/storage.js already reads and writes Supabase Storage, and the last @vercel/blob
+      # import is gone. These two exist only so historical absolute Blob URLs still resolve;
+      # once no record points at blob.vercel-storage.com they can be dropped entirely.
+      - { key: BLOB_READ_WRITE_TOKEN, sync: false }
+      - { key: BLOB_STORE_ID, sync: false }
+
+      # ── Covenda's own settings ── your values, not issued by any provider
+      - { key: COVENDA_ADMIN_EMAILS, sync: false }
+      - { key: COVENDA_CREDIT_GRANTS_ENABLED, sync: false }
+
+# ── The cron jobs ────────────────────────────────────────────────────────────────────────
+# On Vercel these were vercel.json crons; deploy/ carries systemd timers for a bare box.
+# On Render they are separate cron services hitting the same handlers, so all three hosting
+# paths run identical code. Each needs the same env vars as the web service.
+#
+# Uncomment once the web service is verified — a cron firing against a half-configured
+# deployment is a bad first thing to debug.
+#
+#  - type: cron
+#    name: covenda-roles
+#    runtime: node
+#    schedule: "0 * * * *"
+#    buildCommand: npm ci
+#    startCommand: node -e "import('./api/roles-cron.js').then(m => m.default())"
+#
+#  - type: cron
+#    name: covenda-batch-review
+#    runtime: node
+#    schedule: "0 9 * * *"
+#    buildCommand: npm ci
+#    startCommand: node -e "import('./api/batch-review-cron.js').then(m => m.default())"
