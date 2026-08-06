@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import postgres from 'postgres';
 import { Resend } from 'resend';
 import { checkLimit, requestSubject } from './limits.js';
+import { putObject } from './storage.js';
 
 // Single source of truth for what the API accepts and the reference it mints.
 // The Supabase migration constraints MUST allow exactly these — a test
@@ -632,7 +633,7 @@ export async function persistSubmission(record, {
   env = process.env,
   createSupabaseClient = createClient,
   insertPostgresRecord = insertPostgresSubmission,
-  putBlob = put,
+  putBlob = putObject,
   logger = console,
 } = {}) {
   const configuration = supabaseConfiguration(env);
@@ -699,11 +700,12 @@ export async function persistSubmission(record, {
     });
   }
 
+  // Privacy is the bucket's, not this call's. The old provider took `access` per write, so a
+  // typo here could publish a submission; api/storage.js writes to a private bucket and hands
+  // out short-lived signed URLs instead. Passing `access` now would only look reassuring.
   await putBlob(submissionBlobPath(record), JSON.stringify(record, null, 2), {
-    access: 'private',
     addRandomSuffix: true,
     contentType: 'application/json',
-    cacheControlMaxAge: 60,
   });
   return {
     backend: 'blob',

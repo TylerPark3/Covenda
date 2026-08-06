@@ -33,7 +33,7 @@ test('the batch review is scheduled and reports rather than executes', () => {
   const src = readFileSync(new URL('../../api/batch-review-cron.js', import.meta.url), 'utf8');
   assert.match(src, /executed: false/, 'nobody is removed by a cron job');
   assert.doesNotMatch(src, /\.delete\(\)/, 'and nothing is deleted');
-  assert.match(src, /x-vercel-cron/, 'and a public caller is refused');
+  assert.match(src, /if \(rejectUnauthorisedCron\(req, res\)\) return;/, 'and a public caller is refused');
 });
 
 test('activity is read from what a member did, never from a login', () => {

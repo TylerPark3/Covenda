@@ -138,3 +138,27 @@ test('an unconfigured deployment fails with a sentence, not a stack', async () =
   await assert.rejects(() => putObject('a/b', Buffer.from('x'), { env: bare }), /Storage is not configured/);
   await assert.rejects(() => getObject('a/b', { env: bare }), /Storage is not configured/);
 });
+
+// ── The bucket exists in the schema, not in somebody's browser history ─────────────────
+// The adapter shipped writing to a bucket that no migration created, so a first upload in a
+// fresh environment failed with "Bucket not found" after the request had already been accepted.
+test('a migration creates the bucket the adapter writes to, and keeps it private', () => {
+  const dir = new URL('../../supabase/migrations/', import.meta.url);
+  const sql = readdirSync(dir)
+    .filter(f => f.endsWith('.sql'))
+    .map(f => readFileSync(new URL(f, dir), 'utf8'))
+    .join('\n');
+  assert.match(sql, /insert into storage\.buckets/, 'the bucket is created by a migration');
+  assert.ok(sql.includes(`'${BUCKET}'`), `the migration names ${BUCKET}, the same bucket the adapter uses`);
+  assert.doesNotMatch(sql, /storage\.buckets[\s\S]{0,200}public\)\s*\n?values[^;]*true/,
+    'these are student résumés and recordings — the bucket is never created public');
+});
+
+// api/storage.js defaults to 'uploads' and render.yaml names it explicitly. If the two ever
+// disagree, uploads land in a bucket the migration never made private.
+test('the deployed bucket name matches the adapter default', () => {
+  const render = readFileSync(new URL('../../render.yaml', import.meta.url), 'utf8');
+  const declared = render.match(/key: SUPABASE_STORAGE_BUCKET,?\s*(?:value:|\n\s*value:) (\w+)/);
+  assert.ok(declared, 'render.yaml names the bucket rather than relying on a default argument');
+  assert.equal(declared[1], BUCKET);
+});

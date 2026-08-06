@@ -95,3 +95,66 @@ test('the host is replaceable: no vendor package remains', () => {
   assert.ok(!Object.keys(pkg.dependencies).some(d => d.startsWith('@vercel/')));
   assert.ok(pkg.dependencies.express, 'the shim needs express');
 });
+
+// ── Render ─────────────────────────────────────────────────────────────────────────────
+// The systemd units above describe the same deployment for a box we rent. render.yaml
+// describes it for a host we don't. Both are checked against vercel.json rather than against
+// each other, so adding a cron to one and forgetting the other fails here instead of in
+// production, where a skipped job is silent by nature.
+const render = readFileSync(new URL('../../render.yaml', import.meta.url), 'utf8');
+
+test('every vercel.json cron has a Render job on the same schedule', () => {
+  for (const cron of vercelJson.crons) {
+    const name = cron.path.split('/').pop();
+    assert.match(render, new RegExp(`name: covenda-${name}\\b`), `${cron.path} has a Render job`);
+    assert.ok(render.includes(`schedule: "${cron.schedule}"`), `${cron.path} keeps its schedule`);
+    assert.ok(render.includes(`/api/${name}"`), 'it calls the same endpoint the platform called');
+  }
+  // Three jobs and no more: a stray cron would double-run a batch.
+  assert.equal(render.match(/^ {2}- type: cron$/gm).length, vercelJson.crons.length);
+});
+
+test('the Render crons authenticate, and hold only the secret they need', () => {
+  const jobs = render.split(/^ {2}- type: cron$/m).slice(1);
+  assert.equal(jobs.length, vercelJson.crons.length);
+  for (const job of jobs) {
+    assert.match(job, /Authorization: Bearer \$CRON_SECRET/, 'the job authenticates');
+    // The header contains a colon-space, which YAML reads as a mapping unless the whole command
+    // is quoted. Unquoted, the file does not parse and the deploy fails at the host rather than
+    // here — which is a slow way to learn about a punctuation error.
+    assert.match(job, /startCommand: '.*'$/m, 'the command is quoted');
+    assert.match(job, /key: CRON_SECRET/, 'and is given the secret to authenticate with');
+    // A job that only calls an HTTP endpoint has no business holding the payment keys.
+    assert.doesNotMatch(job, /STRIPE_|ANTHROPIC_|SUPABASE_SERVICE_ROLE/,
+      'a cron holds the one secret it needs, not the whole set');
+  }
+});
+
+// The sketch this replaced ran `node -e "import('./api/roles-cron.js').then(m => m.default())"`.
+// A handler's signature is (req, res); called with neither it reads req.headers off undefined
+// and dies before doing any work, every night, reporting only a crash.
+test('a cron invokes the endpoint, not the handler with no request', () => {
+  assert.doesNotMatch(render, /import\(['"]\.\/api\/.*\)\.then\(m => m\.default\(\)\)/,
+    'a handler is never called without a req and res');
+});
+
+test('the web service starts the shim and is health-checked without the database', () => {
+  // Either spelling is fine; what matters is that it is the one long-lived process.
+  assert.match(render, /startCommand: (npm start|node server\.js)/);
+  assert.equal(pkg.scripts.start, 'node server.js', 'and `npm start` resolves to the shim');
+  assert.match(render, /healthCheckPath: \/healthz/);
+  assert.match(render, /buildCommand: npm ci/, 'the lockfile is the build input, not npm install');
+});
+
+test('render.yaml declares secrets without containing one', () => {
+  // Every secret is prompted for and stored by the host. A value here would be a value in the
+  // git history, which no rotation afterwards can undo.
+  const secretish = /\{ key: ((?:SUPABASE|RESEND|STRIPE|ANTHROPIC|BLOB|POSTGRES|GITHUB|CRON|CONNECTOR)_[A-Z0-9_]*), ([^}]*)\}/g;
+  const found = [...render.matchAll(secretish)];
+  assert.ok(found.length > 15, 'the file enumerates the secrets rather than a token few');
+  for (const [, key, rest] of found) {
+    // SUPABASE_STORAGE_BUCKET is a bucket name, not a credential, and is supposed to carry one.
+    if (key === 'SUPABASE_STORAGE_BUCKET') continue;
+    assert.match(rest, /sync: false/, `${key} is asked for, never committed`);
+  }
+});

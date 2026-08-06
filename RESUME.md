@@ -30,6 +30,31 @@ npx vercel alias set <the-deployment-url-it-printed> covenda.app
 - Working with Dylan on the same repo. He pushes to `main` too — always `git fetch` before
   pushing, and never force. A rejected push means he got there first; merge, do not override.
 
+## Moving off Vercel to Render — in progress
+
+`render.yaml` describes the whole deployment: one web service running `node server.js`, and
+three cron jobs calling the same endpoints `vercel.json` scheduled. Nothing in `api/` needed to
+change — `api/storage.js` had already removed the last `@vercel/*` package. The old Vercel
+project stays up read-only until the new one is confirmed, and `BLOB_READ_WRITE_TOKEN` has to be
+carried across: every file uploaded before the storage swap still lives on Vercel Blob and is
+still fetched from there by absolute URL.
+
+Three things still need a human, because they need credentials this machine does not have:
+
+1. Set the env vars on Render. **24 of the 47 in Vercel export as `[SENSITIVE]`** and have to be
+   copied from the dashboard by hand; `vercel env pull` will not give them to you.
+2. `npm run migrate` against production — including the new `20260806100000_storage_bucket.sql`.
+   The `uploads` bucket `api/storage.js` writes to was never created by anything. A first upload
+   against a missing bucket fails *after* the request has been accepted.
+3. Generate a `CRON_SECRET` and set it on Render. There was never one in production — see below.
+
+**The cron endpoints were open.** All three checked `req.headers['x-vercel-cron'] || authorization
+=== \`Bearer ${process.env.CRON_SECRET || ''}\``. The first half trusts a header the caller
+writes. The second half, with the secret unset — which it was — compares against the literal
+`"Bearer "`, so sending exactly that ran the job. `api/cron-auth.js` now requires a configured
+secret and constant-time compares it; an unset secret admits nobody. Setting `CRON_SECRET` on
+Render is therefore not optional: without it the jobs get 401 and stop running silently.
+
 ## Migrations
 
 Run `npm run sql` and paste the bundle after any migration change. The applied head is not

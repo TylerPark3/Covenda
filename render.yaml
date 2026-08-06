@@ -79,24 +79,75 @@ services:
       - { key: COVENDA_ADMIN_EMAILS, sync: false }
       - { key: COVENDA_CREDIT_GRANTS_ENABLED, sync: false }
 
+      # The bucket api/storage.js writes to. Named here rather than left to a default argument,
+      # so the deployment says which bucket it uses. supabase/migrations creates it, private.
+      - { key: SUPABASE_STORAGE_BUCKET, value: uploads }
+
+      # Invent a new one; there is nothing to carry over, because Vercel never had it set. That
+      # is not an oversight to replicate — see the note on the cron jobs below.
+      - { key: CRON_SECRET, sync: false }
+
 # ── The cron jobs ────────────────────────────────────────────────────────────────────────
-# On Vercel these were vercel.json crons; deploy/ carries systemd timers for a bare box.
-# On Render they are separate cron services hitting the same handlers, so all three hosting
-# paths run identical code. Each needs the same env vars as the web service.
+# On Vercel these were vercel.json crons; deploy/ carries systemd timers for a bare box. On
+# Render they are separate cron services hitting the same handlers, so all three hosting paths
+# run identical code.
 #
-# Uncomment once the web service is verified — a cron firing against a half-configured
-# deployment is a bad first thing to debug.
+# ── Why curl and not `node -e "import(...).then(m => m.default())"` ──────────────────────
+# A handler's signature is (req, res). Invoked with neither, it reads `req.headers` off
+# undefined and dies before doing any work — the job would have failed every night while
+# reporting only a crash. Calling the endpoint runs the same code the way it expects to be
+# called, and stays reproducible by hand with the identical curl.
 #
-#  - type: cron
-#    name: covenda-roles
-#    runtime: node
-#    schedule: "0 * * * *"
-#    buildCommand: npm ci
-#    startCommand: node -e "import('./api/roles-cron.js').then(m => m.default())"
+# ── CRON_SECRET is not optional ─────────────────────────────────────────────────────────
+# It was never set on Vercel. The handlers' old check treated an unset secret as "compare
+# against the literal string `Bearer `", so anything sending exactly that ran the job, as did
+# anything sending the `x-vercel-cron` header the caller writes itself. api/cron-auth.js now
+# requires a configured secret. Consequence to know about: without CRON_SECRET set on Render,
+# these jobs get 401 and stop — quietly, because a cron that does nothing looks like a cron
+# with nothing to do.
 #
-#  - type: cron
-#    name: covenda-batch-review
-#    runtime: node
-#    schedule: "0 9 * * *"
-#    buildCommand: npm ci
-#    startCommand: node -e "import('./api/batch-review-cron.js').then(m => m.default())"
+# Schedules are UTC and copied from vercel.json rather than re-invented. Unlike the systemd
+# timers there is no Persistent=true here: a run missed while the service is down is skipped,
+# not replayed, so each handler stays idempotent.
+
+  - type: cron
+    name: covenda-labels-cron
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    schedule: "0 4 * * *"
+    buildCommand: "echo 'no build: this job only calls the running app'"
+    startCommand: 'curl -fsS --max-time 300 -H "Authorization: Bearer $CRON_SECRET" "https://$APP_HOST/api/labels-cron"'
+    envVars:
+      - { key: CRON_SECRET, sync: false }
+      - key: APP_HOST
+        fromService: { type: web, name: covenda, property: host }
+
+  - type: cron
+    name: covenda-batch-review-cron
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    schedule: "0 5 1,15 * *"
+    buildCommand: "echo 'no build: this job only calls the running app'"
+    startCommand: 'curl -fsS --max-time 300 -H "Authorization: Bearer $CRON_SECRET" "https://$APP_HOST/api/batch-review-cron"'
+    envVars:
+      - { key: CRON_SECRET, sync: false }
+      - key: APP_HOST
+        fromService: { type: web, name: covenda, property: host }
+
+  - type: cron
+    name: covenda-roles-cron
+    runtime: node
+    plan: starter
+    region: oregon
+    branch: main
+    schedule: "0 6 * * *"
+    buildCommand: "echo 'no build: this job only calls the running app'"
+    startCommand: 'curl -fsS --max-time 300 -H "Authorization: Bearer $CRON_SECRET" "https://$APP_HOST/api/roles-cron"'
+    envVars:
+      - { key: CRON_SECRET, sync: false }
+      - key: APP_HOST
+        fromService: { type: web, name: covenda, property: host }

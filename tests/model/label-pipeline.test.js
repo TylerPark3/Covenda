@@ -68,7 +68,9 @@ test('every event carries a match id so a trial can be assembled', () => {
 test('the nightly job is registered and refuses a public caller', () => {
   const cron = JSON.parse(readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8'));
   assert.ok(cron.crons.some(c => c.path === '/api/labels-cron'), 'events without a job never become labels');
+  // It used to be enough that the file mentioned x-vercel-cron. That header is written by the
+  // caller, so asserting its presence was asserting the hole. The gate is api/cron-auth.js now,
+  // and "refuses a public caller" is checked there against an actual request.
   const src = readFileSync(new URL('../../api/labels-cron.js', import.meta.url), 'utf8');
-  assert.match(src, /x-vercel-cron/);
-  assert.match(src, /Not authorised/);
+  assert.match(src, /if \(rejectUnauthorisedCron\(req, res\)\) return;/);
 });

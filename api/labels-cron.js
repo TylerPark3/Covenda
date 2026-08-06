@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 
 import { scorerGate } from './hardening.js';
 import { materializeLabels } from './match-events.js';
+import { rejectUnauthorisedCron } from './cron-auth.js';
 
 function serviceClient(env = process.env) {
   const url = env.SUPABASE_URL;
@@ -42,11 +43,7 @@ export async function labelReadiness(db) {
 }
 
 export default async function handler(req, res) {
-  // Vercel cron sends this header; a stray public request must not be able to run the job.
-  const isCron = req.headers['x-vercel-cron'] || req.headers.authorization === `Bearer ${process.env.CRON_SECRET || ''}`;
-  if (!isCron && process.env.NODE_ENV === 'production') {
-    return res.status(401).json({ ok: false, error: 'Not authorised.' });
-  }
+  if (rejectUnauthorisedCron(req, res)) return;
   const db = serviceClient();
   if (!db) return res.status(503).json({ ok: false, error: 'Not configured.' });
 

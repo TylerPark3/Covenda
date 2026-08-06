@@ -479,7 +479,19 @@ test('persistSubmission falls back to private Blob storage if Supabase is unavai
   assert.equal(result.fallbackReason, 'supabase-write-failed');
   assert.match(blobPath, /^submissions\/employer_intake\/2026\/07\/21\/.+EMP-QA2026\.json$/);
   assert.equal(JSON.parse(blobBody).reference, 'EMP-QA2026');
-  assert.equal(blobOptions.access, 'private');
+  assert.equal(blobOptions.contentType, 'application/json');
+  assert.equal(blobOptions.addRandomSuffix, true);
+});
+
+// This fallback only runs when both primary stores are already down, so no test ever reached
+// its default argument — every one of them injects a fake. That let `putBlob = put` survive
+// the removal of @vercel/blob as a reference to a name that no longer existed, and the losing
+// path would have thrown ReferenceError instead of saving the submission.
+test('the fallback default is a real function, not a dangling import', async () => {
+  const { putObject } = await import('../api/storage.js');
+  const source = readFileSync(new URL('../api/submissions.js', import.meta.url), 'utf8');
+  assert.match(source, /putBlob = putObject/, 'the default is bound to the storage adapter');
+  assert.equal(typeof putObject, 'function');
 });
 
 test('persistSubmission also falls back when the database client throws', async () => {

@@ -14,6 +14,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 import { BOARDS, boardUrl, parseBoard } from './roles.js';
+import { rejectUnauthorisedCron } from './cron-auth.js';
 
 function serviceClient(env = process.env) {
   const url = env.SUPABASE_URL;
@@ -78,9 +79,7 @@ export async function syncRoles(db, { boards = BOARDS, fetchImpl = fetch, now = 
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
-  const isCron = req.headers['x-vercel-cron']
-    || req.headers.authorization === `Bearer ${process.env.CRON_SECRET || ''}`;
-  if (!isCron) return res.status(401).json({ ok: false, error: 'Cron only.' });
+  if (rejectUnauthorisedCron(req, res)) return;
 
   const db = serviceClient();
   if (!db) return res.status(500).json({ ok: false, error: 'No service credentials.' });
